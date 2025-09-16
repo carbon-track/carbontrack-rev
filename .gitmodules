@@ -1,0 +1,6 @@
+[submodule "backend"]
+	path = backend
+	url = https://github.com/carbon-track/backend
+[submodule "frontend"]
+	path = frontend
+	url = https://github.com/carbon-track/frontend
