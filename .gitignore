@@ -1,0 +1,9 @@
+/node_modules/
+/dist/
+/vendor/
+.env
+/public/gitpull.php
+*.zip
+.github/
+.git/
+.vscode/
