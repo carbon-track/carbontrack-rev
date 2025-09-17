@@ -1,7 +1,7 @@
 /node_modules/
 /dist/
 /vendor/
-.env
+/backend/.env
 /public/gitpull.php
 *.zip
 .git/
