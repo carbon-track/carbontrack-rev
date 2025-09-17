@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -9,8 +9,8 @@ import { adminAPI } from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
-import { Loader2, RefreshCw, Edit, Trash2, RotateCcw, Star, Image as ImageIcon } from 'lucide-react';
-import FileUpload from '@/components/FileUpload';
+import { Loader2, RefreshCw, Edit, Trash2, RotateCcw, Star, Image as ImageIcon, Upload } from 'lucide-react';
+import { uploadViaPresign } from '@/lib/r2Upload';
 import R2Image from '@/components/common/R2Image';
 
 const DEFAULT_FORM = {
@@ -29,7 +29,9 @@ export function AvatarManagement() {
   const [avatars, setAvatars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [formValues, setFormValues] = useState(DEFAULT_FORM);
+  const avatarInputRef = useRef(null);
 
   const fetchAvatars = async () => {
     try {
@@ -75,14 +77,36 @@ export function AvatarManagement() {
     setFormValues((prev) => ({ ...prev, [field]: checked }));
   };
 
-  const handleUploadSuccess = (result) => {
-    if (!result) return;
-    const info = result.data || result;
-    setFormValues((prev) => ({
-      ...prev,
-      file_path: info.file_path || prev.file_path,
-    }));
-    toast.success(t('admin.avatars.uploadSuccess', '头像文件上传成功'));
+  const handleAvatarFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t('admin.avatars.fileTooLarge', '文件大小不能超过5MB'));
+      event.target.value = '';
+      return;
+    }
+    setUploadingAvatar(true);
+    const category = (formValues.category || 'default').trim() || 'default';
+    try {
+      const result = await uploadViaPresign(file, {
+        directory: `avatars/${category}`,
+        entityType: 'avatar',
+        entityId: formValues.id || undefined,
+      });
+      const info = result?.data || result;
+      setFormValues((prev) => ({
+        ...prev,
+        file_path: info.file_path || prev.file_path,
+      }));
+      toast.success(t('admin.avatars.uploadSuccess', '头像文件上传成功'));
+    } catch (err) {
+      toast.error(err?.message || t('admin.avatars.uploadFailed', '头像文件上传失败'));
+    } finally {
+      setUploadingAvatar(false);
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -344,13 +368,30 @@ export function AvatarManagement() {
                 <label className="text-sm font-medium text-gray-700">
                   {t('admin.avatars.fields.icon', '上传头像图片')}
                 </label>
-                <FileUpload
-                  multiple={false}
-                  directory={`avatars/${formValues.category || 'default'}`}
-                  entityType="avatar"
-                  onUploadSuccess={handleUploadSuccess}
+                <input
+                  ref={avatarInputRef}
+                  type="file"
                   accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarFileChange}
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="flex items-center gap-2"
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  {t('admin.avatars.selectFile', '选择图片并上传')}
+                </Button>
+                <p className="text-xs text-gray-500">
+                  {t('admin.avatars.uploadHint', '支持 JPG/PNG/WebP，单个不超过5MB。')}
+                </p>
                 {formValues.file_path && (
                   <div className="mt-2 w-20 h-20 rounded-full overflow-hidden border">
                     <R2Image

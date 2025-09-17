@@ -18,9 +18,39 @@ export function ActivityDetailModal({ activity, isOpen, onClose }) {
   const getDescription = (a) => a.description || a.notes || a.note || a.remark || a.comments || '';
   const images = Array.isArray(activity.images) ? activity.images
     : (Array.isArray(activity.proof_images) ? activity.proof_images : []);
+
+  const toNormalizedImage = (img) => {
+    if (!img) return null;
+
+    if (typeof img === 'string') {
+      const trimmed = img.trim();
+      if (!trimmed) return null;
+      if (/^https?:\/\//i.test(trimmed)) {
+        return { url: trimmed };
+      }
+      return { file_path: trimmed };
+    }
+
+    if (typeof img !== 'object') return null;
+
+    const presignedUrl = typeof img.presigned_url === 'string' ? img.presigned_url : null;
+    const publicUrl = typeof img.public_url === 'string' ? img.public_url : null;
+    const rawUrl = typeof img.url === 'string' ? img.url : null;
+    const httpUrl = rawUrl && /^https?:\/\//i.test(rawUrl) ? rawUrl : null;
+    const inferredFilePath = img.file_path || img.path || img.key || (!httpUrl && rawUrl ? rawUrl : null);
+
+    return {
+      url: presignedUrl || publicUrl || httpUrl || null,
+      presigned_url: presignedUrl || null,
+      file_path: inferredFilePath || null,
+      thumbnail_path: img.thumbnail_path || img.preview_path || null,
+      original_name: img.original_name || img.name || null,
+    };
+  };
+
   const normalizedImages = images
-    .map((img) => typeof img === 'string' ? { url: img } : ({ url: img.public_url || img.url || img.file_path || '', original_name: img.original_name }))
-    .filter(i => i.url);
+    .map(toNormalizedImage)
+    .filter((item) => item && (item.presigned_url || item.url || item.file_path));
 
   const getStatusBadge = (status) => {
     switch (status) {

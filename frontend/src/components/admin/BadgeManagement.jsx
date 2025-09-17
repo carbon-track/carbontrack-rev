@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -9,8 +9,8 @@ import { adminAPI } from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
-import { Loader2, RefreshCw, Edit, Sparkles, Trash2, Award } from 'lucide-react';
-import FileUpload from '@/components/FileUpload';
+import { Loader2, RefreshCw, Edit, Sparkles, Trash2, Award, Upload } from 'lucide-react';
+import { uploadViaPresign } from '@/lib/r2Upload';
 import R2Image from '@/components/common/R2Image';
 
 const DEFAULT_FORM = {
@@ -37,7 +37,9 @@ export function BadgeManagement() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [triggering, setTriggering] = useState(false);
+  const [uploadingIcon, setUploadingIcon] = useState(false);
   const [formValues, setFormValues] = useState(DEFAULT_FORM);
+  const iconInputRef = useRef(null);
 
   const fetchBadges = async () => {
     try {
@@ -80,15 +82,36 @@ export function BadgeManagement() {
     setFormValues((prev) => ({ ...prev, [field]: checked }));
   };
 
-  const handleUploadSuccess = (result) => {
-    if (!result) return;
-    const info = result.data || result;
-    setFormValues((prev) => ({
-      ...prev,
-      icon_path: info.file_path || prev.icon_path,
-      icon_thumbnail_path: info.thumbnail_path || prev.icon_thumbnail_path,
-    }));
-    toast.success(t('admin.badges.uploadSuccess', '图标上传成功'));
+  const handleIconFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t('admin.badges.fileTooLarge', '文件大小不能超过5MB'));
+      event.target.value = '';
+      return;
+    }
+    setUploadingIcon(true);
+    try {
+      const result = await uploadViaPresign(file, {
+        directory: 'badges',
+        entityType: 'badge',
+        entityId: formValues.id || undefined,
+      });
+      const info = result?.data || result;
+      setFormValues((prev) => ({
+        ...prev,
+        icon_path: info.file_path || prev.icon_path,
+        icon_thumbnail_path: info.thumbnail_path || prev.icon_thumbnail_path,
+      }));
+      toast.success(t('admin.badges.uploadSuccess', '徽章图标上传成功'));
+    } catch (err) {
+      toast.error(err?.message || t('admin.badges.uploadFailed', '徽章图标上传失败'));
+    } finally {
+      setUploadingIcon(false);
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -378,17 +401,34 @@ export function BadgeManagement() {
                 <label className="text-sm font-medium text-gray-700">
                   {t('admin.badges.fields.icon', '徽章图标')}
                 </label>
-                <FileUpload
-                  multiple={false}
-                  directory="badges"
-                  entityType="badge"
-                  onUploadSuccess={handleUploadSuccess}
+                <input
+                  ref={iconInputRef}
+                  type="file"
                   accept="image/*"
+                  className="hidden"
+                  onChange={handleIconFileChange}
                 />
-                {formValues.icon_path && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => iconInputRef.current?.click()}
+                  disabled={uploadingIcon}
+                  className="flex items-center gap-2"
+                >
+                  {uploadingIcon ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  {t('admin.badges.selectIcon', '选择图标并上传')}
+                </Button>
+                <p className="text-xs text-gray-500">
+                  {t('admin.badges.uploadHint', '支持 JPG/PNG/WebP，单个不超过5MB。')}
+                </p>
+                {(formValues.icon_path || formValues.icon_thumbnail_path) && (
                   <div className="mt-2 w-20 h-20 rounded-full overflow-hidden border">
                     <R2Image
-                      filePath={formValues.icon_path}
+                      filePath={formValues.icon_path || formValues.icon_thumbnail_path}
                       alt={formValues.name_zh || formValues.name_en}
                       className="w-full h-full object-cover"
                     />

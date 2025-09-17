@@ -8,7 +8,10 @@ import api from './api';
  * @param {Object} options { directory, entityType, entityId, sha256 }
  * @returns {Promise<object>} presign data
  */
-export async function presignFile(file, { directory = 'activities', entityType = 'carbon_record', entityId = null, sha256 } = {}) {
+export async function presignFile(
+  file,
+  { directory = 'activities', entityType = 'carbon_record', entityId = null, sha256, expiresIn = 600 } = {}
+) {
   const body = {
     original_name: file.name,
     directory,
@@ -16,7 +19,8 @@ export async function presignFile(file, { directory = 'activities', entityType =
     file_size: file.size,
     entity_type: entityType,
     entity_id: entityId,
-    sha256
+    sha256,
+    expires_in: expiresIn
   };
   const res = await api.post('/files/presign', body);
   if (!res.data?.success) throw new Error(res.data?.message || 'Presign failed');
@@ -52,39 +56,56 @@ export async function confirmUpload(meta) {
  */
 export async function uploadViaPresign(file, opts = {}) {
   const presign = await presignFile(file, opts);
-  if (presign.duplicate) {
-    // Duplicate: already stored; no PUT needed
-    return {
-      url: presign.public_url,
+  const buildResult = (extra = {}) => {
+    const result = {
+      url: presign.public_url || null,
       file_path: presign.file_path,
+      thumbnail_path: presign.thumbnail_path || null,
+      presigned_url: presign.presigned_url || null,
       original_name: file.name,
       mime_type: file.type,
       size: file.size,
-      duplicate: true
+      ...extra,
     };
-  }
-  await putFile(file, presign);
-  if (presign.confirm_required) {
-    try {
-      await confirmUpload({
-        file_path: presign.file_path,
-        original_name: file.name,
-        entity_type: opts.entityType || 'carbon_record',
-        entity_id: opts.entityId || null
-      });
-    } catch (e) {
-      // Soft fail confirm so user not blocked
-  console.warn('Confirm upload failed', e);
-    }
-  }
-  return {
-    url: presign.public_url,
+    result.duplicate = Boolean(extra.duplicate ?? result.duplicate ?? false);
+    if (extra.file_path) result.file_path = extra.file_path;
+    if (extra.thumbnail_path) result.thumbnail_path = extra.thumbnail_path;
+    if (extra.url) result.url = extra.url;
+    if (extra.presigned_url) result.presigned_url = extra.presigned_url;
+    return result;
+  };
+
+  const confirmPayload = {
     file_path: presign.file_path,
     original_name: file.name,
-    mime_type: file.type,
-    size: file.size,
-    duplicate: false
+    entity_type: opts.entityType || 'carbon_record',
+    entity_id: opts.entityId || null,
   };
+
+  if (presign.duplicate) {
+    let confirmedMeta = null;
+    if (presign.confirm_required) {
+      try {
+        confirmedMeta = await confirmUpload(confirmPayload);
+      } catch (e) {
+        console.warn('Confirm upload failed for duplicate', e);
+      }
+    }
+    return buildResult({ duplicate: true, ...(confirmedMeta || {}) });
+  }
+
+  await putFile(file, presign);
+
+  let confirmMeta = null;
+  if (presign.confirm_required !== false) {
+    try {
+      confirmMeta = await confirmUpload(confirmPayload);
+    } catch (e) {
+      console.warn('Confirm upload failed', e);
+    }
+  }
+
+  return buildResult({ duplicate: false, ...(confirmMeta || {}) });
 }
 
 /**
