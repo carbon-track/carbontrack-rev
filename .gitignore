@@ -8,3 +8,14 @@
 .git/
 .vscode/
 /.tmp_backup/
+
+# Backend ignores
+/backend/vendor/
+/backend/.phpunit.cache/
+/backend/.phpunit.result.cache
+/backend/test.db
+
+# Frontend ignores  
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
