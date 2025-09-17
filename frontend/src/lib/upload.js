@@ -318,7 +318,7 @@ export class FileUploader {
   /**
    * 生成预签名URL
    */
-  async generatePresignedUrl(filePath, expiresIn = 3600) {
+  async generatePresignedUrl(filePath, expiresIn = 600) {
     try {
       const encodedPath = encodeURIComponent(filePath);
       const response = await api.get(`/files/${encodedPath}/presigned-url`, {
