@@ -1,6 +1,6 @@
 # CarbonTrack AI Agent Instructions
 
-This document provides essential guidance for AI agents working on the CarbonTrack codebase.
+This document provides essential guidance for AI agents working on the CarbonTrack codebase. PHP is configured on Windows environments, so do not use WSL or linux system to run php unit tests.
 
 ## Architecture Overview
 
