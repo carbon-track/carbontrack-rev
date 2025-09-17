@@ -4,7 +4,6 @@
 .env
 /public/gitpull.php
 *.zip
-.github/
 .git/
 .vscode/
 /.tmp_backup/
