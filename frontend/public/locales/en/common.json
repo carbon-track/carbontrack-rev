@@ -207,7 +207,18 @@
     "badgeAutoTriggerFailed": "Failed to trigger auto grant",
     "badgeUnlocked": "Unlocked",
     "badgeLocked": "Locked",
-    "badgeAwardedAt": "Unlocked on"
+    "badgeAwardedAt": "Unlocked on",
+    "monthlyAchievementsDescription": "Track how your climate impact evolves each month.",
+    "currentMonthAchievement": "{{month}} snapshot",
+    "monthlyPointsLabel": "Points earned",
+    "monthlyPointsWithUnit": "{{points}} pts",
+    "monthlyCarbonLabel": "Carbon saved",
+    "monthlyCarbonSaved": "{{amount}} kg",
+    "monthlyRecordsLabel": "Records submitted",
+    "monthlyRecords": "{{count}} records",
+    "previousMonths": "Previous months",
+    "monthlyCarbonSummary": "{{carbon}} kg saved · {{records}} records",
+    "monthlyPointsShort": "+{{points}} pts"
   },
   "achievements": {
     "title": "My Achievements",
@@ -689,7 +700,25 @@
         "status": "Status",
         "points": "Points",
         "actions": "Actions"
-      }
+      },
+      "selectUserHint": "Select at least one user first",
+      "selectedCount": "Selected {{count}} users",
+      "bulkAwardBadges": "Award badges",
+      "selectAll": "Select all users on this page",
+      "selectUser": "Select user {{username}}",
+      "toggleStatusButton": "Toggle user status",
+      "toggleAdminButton": "Toggle admin role",
+      "awardBadgeButton": "Award badge",
+      "deleteButton": "Delete user",
+      "confirmToggleStatusTitle": "Confirm status change",
+      "confirmToggleAdminTitle": "Confirm role change",
+      "confirmDeleteTitle": "Delete user",
+      "adjustPointsTitle": "Adjust points",
+      "adjustPointsDescription": "Adjust points for {{username}}",
+      "adjustPointsDelta": "Points delta",
+      "adjustPointsHint": "Positive numbers add points, negative numbers deduct points",
+      "adjustPointsReason": "Adjustment reason",
+      "adjustPointsReasonPlaceholder": "Explain why this adjustment is needed (for audit logs)"
     },
     "products": {
       "title": "Product Management",
@@ -792,7 +821,12 @@
       "copyNdjson": "Copy NDJSON",
       "maxRecords": "(max 1000)",
       "advancedQuery": "Advanced Query",
-      "perTypeLimit": "Limit / Type"
+      "perTypeLimit": "Limit / Type",
+      "subtitle": "Filter and inspect system, audit, and error logs in one place.",
+      "columnSettings": "Columns",
+      "errorType": "Error Type",
+      "dateFrom": "Date from",
+      "dateTo": "Date to"
     },
     "badges": {
       "listTitle": "Achievement Badges",
@@ -850,7 +884,129 @@
       "autoEnabled": "Enabled",
       "autoDisabled": "Disabled",
       "award": "Award",
-      "revoke": "Revoke"
+      "revoke": "Revoke",
+      "listHint": "Streamline quick award/revoke, stats and automation controls.",
+      "bulkAward": "Bulk award",
+      "metrics": {
+        "total": "Total badges",
+        "totalHint": "How many badges have been created",
+        "active": "Active",
+        "activeHint": "Badges visible and obtainable by users",
+        "auto": "Auto award",
+        "autoHint": "Badges with automation enabled"
+      },
+      "ruleBuilder": {
+        "parseFailed": "Unable to parse JSON into visual rules, please fix the format.",
+        "title": "Automatic award rules",
+        "modeAll": "All conditions required",
+        "modeAny": "Any condition is enough",
+        "description": "Build the automation logic visually and we will generate structured rules.",
+        "requireAllHint": "Badge is awarded only when every condition passes",
+        "requireAnyHint": "Badge is awarded when any condition passes",
+        "empty": "No conditions yet. Click below to add one.",
+        "valueHint": "Use integers or numbers with up to two decimals",
+        "toggle": {
+          "visual": "Visual builder",
+          "json": "Advanced JSON"
+        },
+        "addRule": "Add condition",
+        "preview": "Rule JSON preview (auto-saved on submit)",
+        "fields": {
+          "metric": "Metric",
+          "operator": "Operator",
+          "value": "Threshold",
+          "label": "Label (optional)",
+          "labelPlaceholder": "Short description for admins",
+          "description": "Description (optional)",
+          "descriptionPlaceholder": "Help other admins understand the condition"
+        },
+        "metric": {
+          "carbonSaved": "Total carbon saved (kg)",
+          "carbonSavedHint": "Carbon savings from approved activities",
+          "pointsEarned": "Total points earned",
+          "pointsEarnedHint": "Sum of points from approved activities",
+          "pointsBalance": "Current points balance",
+          "pointsBalanceHint": "User's current balance",
+          "approvedRecords": "Approved records",
+          "approvedRecordsHint": "Number of activities approved by moderators",
+          "totalRecords": "Total submissions",
+          "totalRecordsHint": "All submitted activities regardless of status",
+          "daysSinceRegistration": "Days since registration",
+          "daysSinceRegistrationHint": "How long the user has been registered"
+        },
+        "operator": {
+          "gte": "≥",
+          "gt": ">",
+          "lte": "≤",
+          "lt": "<",
+          "eq": "=",
+          "neq": "≠"
+        },
+        "templates": {
+          "carbonChampion": "Carbon champion",
+          "carbonChampionDesc": "Carbon saved ≥ 100 kg and 10 approved records",
+          "pointsMaster": "Points master",
+          "pointsMasterDesc": "Points earned ≥ 5000 or balance ≥ 2000",
+          "veteran": "Veteran member",
+          "veteranDesc": "Registered 365 days and submitted 50 records"
+        }
+      },
+      "bulkAwardDialog": {
+        "dialogTitle": "Bulk award badges",
+        "dialogDescription": "Pick badges and users; each combination will run sequentially.",
+        "badgeSelection": "Choose badges to award",
+        "selectAllBadges": "Select all badges",
+        "clearAllBadges": "Clear selection",
+        "noBadges": "No badges available yet. Create one first.",
+        "selectedSummary": "Selected: {{summary}}",
+        "noBadgeSelected": "No badge selected",
+        "badgeCountSummary": "{{count}} badges",
+        "userSelection": "Choose target users",
+        "userSelectionHint": "Search by username or email, then manage the list below.",
+        "userSearchPlaceholder": "Search username, email or ID",
+        "noUserFound": "No matching users",
+        "startSearchHint": "Enter a keyword to search users.",
+        "noEmail": "No email",
+        "selectedUsers": "Selected users",
+        "noUserSelected": "No users selected",
+        "selectBadgeError": "Select at least one badge",
+        "selectUserError": "Select at least one user",
+        "success": "Successfully awarded {{count}} times",
+        "partialFailed": "{{failed}} operations failed",
+        "progress": "Progress: {{processed}} / {{total}} · success {{success}} · failed {{failed}}",
+        "tipUsers": "Select multiple users to process sequentially.",
+        "tipBadges": "Choose one or many badges; each will be processed in order.",
+        "confirm": "Start awarding",
+        "noDescription": "No description"
+      },
+      "bulkRevokeDialog": {
+        "dialogTitle": "Bulk revoke badges",
+        "dialogDescription": "Pick badges and users to revoke from sequentially.",
+        "badgeSelection": "Choose badges to revoke",
+        "selectAllBadges": "Select all badges",
+        "clearAllBadges": "Clear selection",
+        "noBadges": "No badges available yet. Create one first.",
+        "selectedSummary": "Selected: {{summary}}",
+        "noBadgeSelected": "No badge selected",
+        "badgeCountSummary": "{{count}} badges",
+        "userSelection": "Choose users to revoke from",
+        "userSelectionHint": "Search by username or email, then manage the list below.",
+        "userSearchPlaceholder": "Search username, email or ID",
+        "noUserFound": "No matching users",
+        "startSearchHint": "Enter a keyword to search users.",
+        "noEmail": "No email",
+        "selectedUsers": "Selected users",
+        "noUserSelected": "No users selected",
+        "selectBadgeError": "Select at least one badge",
+        "selectUserError": "Select at least one user",
+        "success": "Successfully revoked {{count}} times",
+        "partialFailed": "{{failed}} operations failed",
+        "progress": "Progress: {{processed}} / {{total}} · success {{success}} · failed {{failed}}",
+        "tipUsers": "Select multiple users to revoke sequentially.",
+        "tipBadges": "Choose one or many badges; each will be processed in order.",
+        "confirm": "Start revoking",
+        "noDescription": "No description"
+      }
     },
     "avatars": {
       "listTitle": "Avatar Library",
@@ -904,6 +1060,35 @@
       "setDefault": "Set default",
       "restore": "Restore",
       "delete": "Delete"
+    },
+    "subtitle": "Run every corner of CarbonTrack from one place",
+    "command": {
+      "placeholder": "Quickly jump or run an action",
+      "noResults": "No matching results",
+      "navigation": "Navigation",
+      "quickActions": "Quick actions",
+      "searchUsers": "Search users",
+      "searchUsersHint": "Go to user management and focus the search field",
+      "createBadge": "Create badge",
+      "createBadgeHint": "Open badge management in create mode",
+      "reviewActivities": "Review activities",
+      "reviewActivitiesHint": "Open pending carbon activity reviews",
+      "sendBroadcast": "Send broadcast",
+      "sendBroadcastHint": "Compose a new broadcast message",
+      "open": "Search / Ctrl + K"
+    },
+    "footer": {
+      "tip": "Tip: press Ctrl + K to open the command palette"
+    },
+    "header": {
+      "section": "Current section",
+      "quickBadge": "Quick create badge",
+      "quickActions": "Quick actions",
+      "quickActionsHint": "Use the command palette to access common tasks",
+      "pending": "Pending reminders",
+      "pendingHint": "Each module surfaces items waiting for attention",
+      "security": "Security notice",
+      "securityHint": "Keep this console accessible to administrators only"
     }
   },
   "home": {

@@ -11,6 +11,11 @@ import RawView from '../../components/logs/RawView';
 import RequestIdRelatedDrawer from '../../components/logs/RequestIdRelatedDrawer';
 import JsonTreeViewer from '../../components/logs/JsonTreeViewer';
 import AuditDiffViewer from '../../components/logs/AuditDiffViewer';
+import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/Button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { ScrollArea } from '../../components/ui/scroll-area';
+import { Switch } from '../../components/ui/switch';
 
 function JsonViewer({ data }) {
   const json = useMemo(() => {
@@ -138,14 +143,20 @@ export default function SystemLogsPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold flex items-center gap-4">
-        统一日志中心
-        <div className="flex gap-2 text-xs">
-          <button onClick={()=>setView('table')} className={`px-2 py-1 rounded ${view==='table'?'bg-blue-600 text-white':'bg-gray-200'}`}>表格</button>
-          <button onClick={()=>setView('timeline')} className={`px-2 py-1 rounded ${view==='timeline'?'bg-blue-600 text-white':'bg-gray-200'}`}>时间线</button>
-            <button onClick={()=>setView('raw')} className={`px-2 py-1 rounded ${view==='raw'?'bg-blue-600 text-white':'bg-gray-200'}`}>原始</button>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold">统一日志中心</h1>
+        <div className="flex gap-2">
+          <Button size="sm" variant={view === 'table' ? 'default' : 'outline'} onClick={() => setView('table')}>
+            表格
+          </Button>
+          <Button size="sm" variant={view === 'timeline' ? 'default' : 'outline'} onClick={() => setView('timeline')}>
+            时间线
+          </Button>
+          <Button size="sm" variant={view === 'raw' ? 'default' : 'outline'} onClick={() => setView('raw')}>
+            原始
+          </Button>
         </div>
-      </h1>
+      </div>
 
       <div className="flex flex-wrap gap-2 text-sm items-end">
         <div className="flex flex-col">
@@ -212,13 +223,22 @@ export default function SystemLogsPage() {
           ))}
         </div>
         <div className="flex items-center gap-3 pl-4 border-l ml-2 relative">
-          <label className="flex items-center gap-1 text-xs">
-            <input type="checkbox" checked={autoRefresh} onChange={e=>setAutoRefresh(e.target.checked)} /> 自动刷新
-          </label>
-          <button onClick={()=>refetch()} className="px-2 py-1 bg-gray-200 rounded text-xs">刷新</button>
-          <button onClick={()=>doExport('csv')} className="px-2 py-1 bg-gray-200 rounded text-xs">Export CSV</button>
-          <button onClick={()=>doExport('ndjson')} className="px-2 py-1 bg-gray-200 rounded text-xs">Export NDJSON</button>
-          <button onClick={()=>setShowColChooser(s=>!s)} className="px-2 py-1 bg-gray-200 rounded text-xs">列</button>
+          <div className="flex items-center gap-2 text-xs text-gray-600">
+            <Switch id="logs-auto-refresh" checked={autoRefresh} onCheckedChange={setAutoRefresh} />
+            <label htmlFor="logs-auto-refresh">自动刷新</label>
+          </div>
+          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => refetch()}>
+            刷新
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => doExport('csv')}>
+            Export CSV
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => doExport('ndjson')}>
+            Export NDJSON
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setShowColChooser(s => !s)}>
+            列
+          </Button>
           {showColChooser && (
             <div className="absolute top-full right-0 mt-1 bg-white border rounded shadow-lg p-3 z-50 w-64">
               <h4 className="font-semibold text-xs mb-1">列显示 (点击切换)</h4>
@@ -270,13 +290,17 @@ export default function SystemLogsPage() {
         <RawView system={system} audit={audit} error={errorLogs} onExportCsv={()=>doExport('csv')} onExportNdjson={()=>doExport('ndjson')} />
       )}
 
-  {selectedSystemId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-40">
-          <div className="bg-white rounded shadow-lg w-full max-w-4xl p-6 space-y-4 relative">
-            <button className="absolute top-2 right-2 text-gray-500" onClick={()=>setSelectedSystemId(null)}>✕</button>
-            <h2 className="text-xl font-semibold">系统日志详情 #{selectedSystemId}</h2>
-            {loadingDetail && <div>加载详情...</div>}
-            {detailData?.data && (
+  <Dialog open={Boolean(selectedSystemId)} onOpenChange={(open) => !open && setSelectedSystemId(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>系统日志详情 #{selectedSystemId}</DialogTitle>
+            <DialogDescription>
+              Request ID: {detailData?.data?.request_id || '-'}
+            </DialogDescription>
+          </DialogHeader>
+          {loadingDetail && <div className="text-sm text-muted-foreground">加载详情...</div>}
+          {detailData?.data && (
+            <ScrollArea className="max-h-[70vh] pr-2">
               <div className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4 text-sm">
                   <div><strong>Request ID:</strong> {detailData.data.request_id}</div>
@@ -290,14 +314,14 @@ export default function SystemLogsPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold">Request Body</h3>
-                    <button className="text-blue-600 text-xs" onClick={()=>copy(detailData.data.request_body)}>复制</button>
+                    <button className="text-blue-600 text-xs" onClick={() => copy(detailData.data.request_body)}>复制</button>
                   </div>
                   <JsonTreeViewer value={safeParse(detailData.data.request_body)} />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold">Response Body</h3>
-                    <button className="text-blue-600 text-xs" onClick={()=>copy(detailData.data.response_body)}>复制</button>
+                    <button className="text-blue-600 text-xs" onClick={() => copy(detailData.data.response_body)}>复制</button>
                   </div>
                   <JsonTreeViewer value={safeParse(detailData.data.response_body)} />
                 </div>
@@ -305,16 +329,16 @@ export default function SystemLogsPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold">Server Meta</h3>
-                      <button className="text-blue-600 text-xs" onClick={()=>copy(detailData.data.server_meta)}>复制</button>
+                      <button className="text-blue-600 text-xs" onClick={() => copy(detailData.data.server_meta)}>复制</button>
                     </div>
                     <JsonTreeViewer value={safeParse(detailData.data.server_meta)} />
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <RequestIdRelatedDrawer open={!!requestDrawerId} requestId={requestDrawerId} onClose={()=>setRequestDrawerId(null)} loading={loadingRelated} system={related.system} audit={related.audit} error={related.error} />
     </div>
@@ -343,14 +367,16 @@ function ActiveFilters({ parsed, onRemove }) {
   const tokenEntries = Object.entries(parsed.tokens||{}).filter(([k,v])=>v && typeof v !== 'object');
   if (tokenEntries.length===0 && !parsed.free) return null;
   return (
-    <div className="text-[10px] text-gray-600 flex flex-wrap gap-1">
-      {tokenEntries.map(([k,v])=> (
-        <span key={k} className="px-1 py-0.5 bg-gray-100 border rounded flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+      {tokenEntries.map(([k, v]) => (
+        <Badge key={k} variant="secondary" className="flex items-center gap-1">
           <span>{k}:{String(v)}</span>
-          <button className="text-red-500" onClick={()=>onRemove(k)} title="移除">×</button>
-        </span>
+          <button type="button" className="text-red-500" onClick={() => onRemove(k)} title="移除">×</button>
+        </Badge>
       ))}
-      {parsed.free && <span className="px-1 py-0.5 bg-blue-50 border rounded" title="自由文本">{parsed.free}</span>}
+      {parsed.free && (
+        <Badge variant="outline" title="自由文本">{parsed.free}</Badge>
+      )}
     </div>
   );
 }

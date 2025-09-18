@@ -279,7 +279,18 @@
     "badgeAutoTriggerFailed": "触发自动授予失败",
     "badgeUnlocked": "已解锁",
     "badgeLocked": "待解锁",
-    "badgeAwardedAt": "解锁时间"
+    "badgeAwardedAt": "解锁时间",
+    "monthlyAchievementsDescription": "追踪你每月的碳减排表现",
+    "currentMonthAchievement": "{{month}} 成就概览",
+    "monthlyPointsLabel": "积分获得",
+    "monthlyPointsWithUnit": "{{points}} 积分",
+    "monthlyCarbonLabel": "碳减排",
+    "monthlyCarbonSaved": "{{amount}} 千克",
+    "monthlyRecordsLabel": "记录次数",
+    "monthlyRecords": "{{count}} 条",
+    "previousMonths": "历史月份",
+    "monthlyCarbonSummary": "{{carbon}} 千克减排 · {{records}} 条记录",
+    "monthlyPointsShort": "+{{points}} 积分"
   },
   "achievements": {
     "title": "我的成就",
@@ -760,7 +771,25 @@
         "status": "状态",
         "points": "积分",
         "actions": "操作"
-      }
+      },
+      "selectUserHint": "请先选择用户",
+      "selectedCount": "已选择 {{count}} 位用户",
+      "bulkAwardBadges": "批量授予徽章",
+      "selectAll": "选择当前页所有用户",
+      "selectUser": "选择用户 {{username}}",
+      "toggleStatusButton": "切换用户状态",
+      "toggleAdminButton": "切换管理员权限",
+      "awardBadgeButton": "授予徽章",
+      "deleteButton": "删除用户",
+      "confirmToggleStatusTitle": "确认修改状态",
+      "confirmToggleAdminTitle": "确认切换角色",
+      "confirmDeleteTitle": "确认删除用户",
+      "adjustPointsTitle": "调整积分",
+      "adjustPointsDescription": "为用户 {{username}} 调整积分",
+      "adjustPointsDelta": "积分变动值",
+      "adjustPointsHint": "输入正数表示增加积分，负数表示扣减积分",
+      "adjustPointsReason": "调整说明",
+      "adjustPointsReasonPlaceholder": "请输入调整原因，便于审计记录"
     },
     "activities": {
       "title": "活动管理",
@@ -863,7 +892,12 @@
       "copyNdjson": "复制 NDJSON",
       "maxRecords": "(最多1000)",
       "advancedQuery": "高级查询",
-      "perTypeLimit": "每类限制"
+      "perTypeLimit": "每类限制",
+      "subtitle": "结合筛选与高级语法快速定位系统审计与异常日志。",
+      "columnSettings": "列显示",
+      "errorType": "错误类型",
+      "dateFrom": "起始日期",
+      "dateTo": "结束日期"
     },
     "badges": {
       "listTitle": "成就徽章列表",
@@ -921,7 +955,129 @@
       "autoEnabled": "已开启",
       "autoDisabled": "未开启",
       "award": "授予",
-      "revoke": "收回"
+      "revoke": "收回",
+      "listHint": "支持快速授予/收回、刷新与自动规则触发。",
+      "bulkAward": "批量授予",
+      "metrics": {
+        "total": "徽章总数",
+        "totalHint": "已创建的所有成就徽章数量",
+        "active": "启用中",
+        "activeHint": "当前对用户可见并可获得的徽章数量",
+        "auto": "自动授予",
+        "autoHint": "开启自动授予规则的徽章数量"
+      },
+      "ruleBuilder": {
+        "parseFailed": "当前 JSON 无法解析为可视化规则，请检查格式。",
+        "title": "自动授予规则",
+        "modeAll": "全部条件满足",
+        "modeAny": "任一条件满足",
+        "description": "通过可视化条件编辑器定义系统自动授予徽章的触发条件。",
+        "requireAllHint": "所有条件都满足时授予",
+        "requireAnyHint": "满足任意条件即可授予",
+        "empty": "还没有添加条件，点击下方按钮开始创建。",
+        "valueHint": "建议填写整数或带两位小数的数值",
+        "toggle": {
+          "visual": "图形化编辑",
+          "json": "JSON 高级模式"
+        },
+        "addRule": "添加条件",
+        "preview": "生成的规则 JSON 预览（保存时自动写入）",
+        "fields": {
+          "metric": "度量维度",
+          "operator": "比较符",
+          "value": "阈值",
+          "label": "条件标签（可选）",
+          "labelPlaceholder": "用于说明条件的简短标题",
+          "description": "条件说明（可选）",
+          "descriptionPlaceholder": "帮助其他管理员理解该条件"
+        },
+        "metric": {
+          "carbonSaved": "累计碳减排量 (kg)",
+          "carbonSavedHint": "用户通过审核的活动累计节省的碳排放量",
+          "pointsEarned": "累计获得积分",
+          "pointsEarnedHint": "所有通过审核的活动奖励积分总和",
+          "pointsBalance": "当前积分余额",
+          "pointsBalanceHint": "用户当前账户剩余积分",
+          "approvedRecords": "审核通过的记录数",
+          "approvedRecordsHint": "成功通过审核的碳减排活动数量",
+          "totalRecords": "提交的记录总数",
+          "totalRecordsHint": "无论状态如何的活动提交总量",
+          "daysSinceRegistration": "注册天数",
+          "daysSinceRegistrationHint": "用户注册至今的天数"
+        },
+        "operator": {
+          "gte": "≥",
+          "gt": ">",
+          "lte": "≤",
+          "lt": "<",
+          "eq": "=",
+          "neq": "≠"
+        },
+        "templates": {
+          "carbonChampion": "碳减排先锋",
+          "carbonChampionDesc": "累计碳减排 ≥ 100 kg 且审核通过记录 ≥ 10 条",
+          "pointsMaster": "积分达人",
+          "pointsMasterDesc": "累计获取积分 ≥ 5000 或积分余额 ≥ 2000",
+          "veteran": "资深会员",
+          "veteranDesc": "注册超过 365 天并累计提交 50 条记录"
+        }
+      },
+      "bulkAwardDialog": {
+        "dialogTitle": "批量授予徽章",
+        "dialogDescription": "选择徽章与用户，系统会逐一授予并记录日志。",
+        "badgeSelection": "选择要授予的徽章",
+        "selectAllBadges": "全选徽章",
+        "clearAllBadges": "清空选择",
+        "noBadges": "暂无可用徽章，请先创建。",
+        "selectedSummary": "已选择：{{summary}}",
+        "noBadgeSelected": "未选择徽章",
+        "badgeCountSummary": "{{count}} 个徽章",
+        "userSelection": "选择要授予的用户",
+        "userSelectionHint": "支持通过用户名或邮箱搜索，或从下方列表移除。",
+        "userSearchPlaceholder": "搜索用户名、邮箱或ID",
+        "noUserFound": "未找到匹配的用户",
+        "startSearchHint": "输入关键词以搜索目标用户。",
+        "noEmail": "无邮箱",
+        "selectedUsers": "已选择的用户",
+        "noUserSelected": "暂未选择用户",
+        "selectBadgeError": "请至少选择一个徽章",
+        "selectUserError": "请至少选择一个用户",
+        "success": "已成功授予 {{count}} 次徽章",
+        "partialFailed": "{{failed}} 条操作失败",
+        "progress": "处理进度：{{processed}} / {{total}} · 成功 {{success}} · 失败 {{failed}}",
+        "tipUsers": "可多选用户，系统会逐一授予并记录操作日志。",
+        "tipBadges": "徽章选择支持单选或多选，将逐个执行。",
+        "confirm": "开始授予",
+        "noDescription": "暂无描述"
+      },
+      "bulkRevokeDialog": {
+        "dialogTitle": "批量收回徽章",
+        "dialogDescription": "选择徽章与用户，系统会逐一收回并记录日志。",
+        "badgeSelection": "选择需要收回的徽章",
+        "selectAllBadges": "全选徽章",
+        "clearAllBadges": "清空选择",
+        "noBadges": "暂无可用徽章，请先创建。",
+        "selectedSummary": "已选择：{{summary}}",
+        "noBadgeSelected": "未选择需收回的徽章",
+        "badgeCountSummary": "{{count}} 个徽章",
+        "userSelection": "选择需要收回的用户",
+        "userSelectionHint": "支持通过用户名或邮箱搜索，或从下方列表移除。",
+        "userSearchPlaceholder": "搜索用户名、邮箱或ID",
+        "noUserFound": "未找到匹配的用户",
+        "startSearchHint": "输入关键词以搜索目标用户。",
+        "noEmail": "无邮箱",
+        "selectedUsers": "已选择的用户",
+        "noUserSelected": "暂未选择用户",
+        "selectBadgeError": "请至少选择一个徽章",
+        "selectUserError": "请至少选择一个用户",
+        "success": "已成功收回 {{count}} 次徽章",
+        "partialFailed": "{{failed}} 条操作失败",
+        "progress": "处理进度：{{processed}} / {{total}} · 成功 {{success}} · 失败 {{failed}}",
+        "tipUsers": "可多选用户，系统会逐一收回并记录操作日志。",
+        "tipBadges": "徽章选择支持单选或多选，将逐个执行。",
+        "confirm": "开始收回",
+        "noDescription": "暂无描述"
+      }
     },
     "avatars": {
       "listTitle": "头像库",
@@ -975,6 +1131,35 @@
       "setDefault": "设为默认",
       "restore": "恢复",
       "delete": "删除"
+    },
+    "subtitle": "集中管理 CarbonTrack 平台的一切",
+    "command": {
+      "placeholder": "快速跳转或执行操作",
+      "noResults": "没有匹配的结果",
+      "navigation": "界面导航",
+      "quickActions": "快捷操作",
+      "searchUsers": "搜索用户",
+      "searchUsersHint": "打开用户管理并聚焦搜索框",
+      "createBadge": "创建新徽章",
+      "createBadgeHint": "跳转到徽章管理并开启新建模式",
+      "reviewActivities": "待审核活动",
+      "reviewActivitiesHint": "查看并处理碳减排活动审核",
+      "sendBroadcast": "发布平台公告",
+      "sendBroadcastHint": "打开广播中心发送新公告",
+      "open": "搜索 / Ctrl + K"
+    },
+    "footer": {
+      "tip": "提示：使用 Ctrl + K 调出指挥面板"
+    },
+    "header": {
+      "section": "当前板块",
+      "quickBadge": "快速创建徽章",
+      "quickActions": "常用操作",
+      "quickActionsHint": "在指挥面板中聚合所有常用入口",
+      "pending": "待处理提醒",
+      "pendingHint": "各模块会在自己的页面提示待处理数量",
+      "security": "安全状态",
+      "securityHint": "请确保仅管理员访问该后台"
     }
   },
   "common": {

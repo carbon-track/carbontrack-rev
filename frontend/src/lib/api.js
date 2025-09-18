@@ -249,6 +249,9 @@ export const adminAPI = {
   // 获取用户列表
   getUsers: (params = {}) => api.get('/admin/users', { params }),
   
+  // 调整用户积分
+  adjustUserPoints: (id, data) => api.post('/admin/users/' + id + '/points/adjust', data),
+  
   // 获取待审核交易
   getPendingTransactions: (params = {}) => api.get('/admin/transactions/pending', { params }),
   

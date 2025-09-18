@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Leaf, Award, TrendingUp, Users } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { carbonAPI, badgeAPI } from '../../lib/api';
@@ -92,6 +92,33 @@ export function Dashboard() {
   const handleViewAllActivities = () => {
     window.location.href = '/activities';
   };
+
+  const monthFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'long',
+  }), []);
+
+  const monthlyAchievements = useMemo(() => {
+    const list = Array.isArray(stats.monthly_achievements) ? stats.monthly_achievements : [];
+    return list.map((item) => {
+      const rawMonth = item?.month || '';
+      let label = rawMonth;
+      if (rawMonth) {
+        const date = new Date(`${rawMonth}-01T00:00:00`);
+        if (!Number.isNaN(date.getTime())) {
+          label = monthFormatter.format(date);
+        }
+      }
+
+      return {
+        month: rawMonth,
+        label,
+        points: Number(item?.points_earned ?? item?.points ?? 0),
+        carbon: Number(item?.carbon_saved ?? 0),
+        records: Number(item?.records_count ?? 0),
+      };
+    });
+  }, [stats.monthly_achievements, monthFormatter]);
 
   const handleTriggerBadgeAuto = async () => {
     try {
@@ -225,21 +252,93 @@ export function Dashboard() {
             isAdmin={isAdmin}
           />
           {/* 本月成就 */}
-          {stats.monthly_achievements && stats.monthly_achievements.length > 0 && (
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-yellow-800 mb-4 flex items-center gap-2">
-                <Award className="h-5 w-5" />
-                {t('dashboard.monthlyAchievements')}
-              </h3>
-              <div className="space-y-2">
-                {stats.monthly_achievements.map((achievement, index) => (
-                  <div key={index} className="flex items-center gap-3 text-sm">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <span className="text-yellow-700">{achievement.name}</span>
-                    <span className="text-yellow-600">+{achievement.points} {t('dashboard.points')}</span>
-                  </div>
-                ))}
+          {monthlyAchievements.length > 0 && (
+            <div className="bg-white border rounded-lg shadow-sm p-6 space-y-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <h3 className="text-lg font-semibold text-amber-700 flex items-center gap-2">
+                    <Award className="h-5 w-5" />
+                    {t('dashboard.monthlyAchievements', '本月成就')}
+                  </h3>
+                  <p className="text-sm text-amber-600">
+                    {t('dashboard.monthlyAchievementsDescription', '追踪你每月的碳减排表现')}
+                  </p>
+                </div>
               </div>
+
+              {(() => {
+                const current = monthlyAchievements[0];
+                const history = monthlyAchievements.slice(1, 4);
+                return (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4">
+                      <p className="text-sm font-medium text-amber-700">
+                        {t('dashboard.currentMonthAchievement', '{{month}} 成就概览', { month: current.label })}
+                      </p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                        <div className="flex flex-col">
+                          <span className="text-xs text-amber-500 uppercase tracking-wide">
+                            {t('dashboard.monthlyPointsLabel', '积分获得')}
+                          </span>
+                          <span className="text-lg font-semibold text-amber-700">
+                            {t('dashboard.monthlyPointsWithUnit', '{{points}} 积分', {
+                              points: current.points.toLocaleString(),
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs text-amber-500 uppercase tracking-wide">
+                            {t('dashboard.monthlyCarbonLabel', '碳减排')}
+                          </span>
+                          <span className="text-lg font-semibold text-amber-700">
+                            {t('dashboard.monthlyCarbonSaved', '{{amount}} 千克', {
+                              amount: current.carbon.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs text-amber-500 uppercase tracking-wide">
+                            {t('dashboard.monthlyRecordsLabel', '记录次数')}
+                          </span>
+                          <span className="text-lg font-semibold text-amber-700">
+                            {t('dashboard.monthlyRecords', '{{count}} 条', {
+                              count: current.records.toLocaleString(),
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {history.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">
+                          {t('dashboard.previousMonths', '历史月份')}
+                        </p>
+                        <div className="space-y-2">
+                          {history.map((item) => (
+                            <div key={item.month || item.label} className="flex items-center justify-between rounded-md border border-amber-100 bg-amber-50/60 px-3 py-2 text-sm">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-amber-700">{item.label}</span>
+                                <span className="text-xs text-amber-500">
+                                  {t('dashboard.monthlyCarbonSummary', '{{carbon}} 千克减排 · {{records}} 条记录', {
+                                    carbon: item.carbon.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+                                    records: item.records.toLocaleString(),
+                                  })}
+                                </span>
+                              </div>
+                              <span className="text-sm font-semibold text-amber-700">
+                                {t('dashboard.monthlyPointsShort', '+{{points}} 积分', {
+                                  points: item.points.toLocaleString(),
+                                })}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
           

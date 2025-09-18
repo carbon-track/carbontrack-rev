@@ -1,17 +1,32 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { adminAPI } from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
-import { Loader2, RefreshCw, Edit, Sparkles, Trash2, Award, Upload } from 'lucide-react';
+import {
+  Loader2,
+  RefreshCw,
+  Edit,
+  Sparkles,
+  Trash2,
+  Award,
+  Upload,
+  BarChart3,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
 import { uploadViaPresign } from '@/lib/r2Upload';
 import R2Image from '@/components/common/R2Image';
+import BadgeBulkAwardDialog from './badges/BadgeBulkAwardDialog';
+import BadgeRuleBuilder from './badges/BadgeRuleBuilder';
 
 const DEFAULT_FORM = {
   id: null,
@@ -31,14 +46,43 @@ const DEFAULT_FORM = {
   message_body_en: '',
 };
 
-export function BadgeManagement() {
+const DEFAULT_CRITERIA = { all: true, rules: [] };
+
+const normalizeCriteria = (raw) => {
+  if (!raw) {
+    return DEFAULT_CRITERIA;
+  }
+  let data = raw;
+  if (typeof raw === 'string') {
+    try {
+      data = JSON.parse(raw);
+    } catch (_err) {
+      return null;
+    }
+  }
+  if (Array.isArray(data)) {
+    return { all: true, rules: data };
+  }
+  if (typeof data === 'object') {
+    const rules = Array.isArray(data.rules) ? data.rules : Array.isArray(data.conditions) ? data.conditions : [];
+    const flag = data.all ?? data.all_required ?? data.requireAll ?? true;
+    return { all: Boolean(flag), rules: rules.map((rule) => ({ ...rule })) };
+  }
+  return null;
+};
+
+export default function BadgeManagement() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [badges, setBadges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [triggering, setTriggering] = useState(false);
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [formValues, setFormValues] = useState(DEFAULT_FORM);
+  const [criteriaMode, setCriteriaMode] = useState('builder');
+  const [ruleBuilderValue, setRuleBuilderValue] = useState(DEFAULT_CRITERIA);
+  const [bulkDialog, setBulkDialog] = useState({ open: false, badgeIds: [], mode: 'award', presetUsers: [] });
   const iconInputRef = useRef(null);
 
   const fetchBadges = async () => {
@@ -48,7 +92,7 @@ export function BadgeManagement() {
       if (response.data?.success) {
         setBadges(response.data.data || []);
       }
-    } catch (err) {
+    } catch (_err) {
       toast.error(t('admin.badges.loadFailed', '加载徽章列表失败'));
     } finally {
       setLoading(false);
@@ -59,18 +103,46 @@ export function BadgeManagement() {
     fetchBadges();
   }, []);
 
+  useEffect(() => {
+    if (searchParams.get('create') === '1') {
+      resetForm();
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('create');
+        return next;
+      }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   const resetForm = () => {
     setFormValues(DEFAULT_FORM);
+    setRuleBuilderValue(DEFAULT_CRITERIA);
+    setCriteriaMode('builder');
+    if (iconInputRef.current) {
+      iconInputRef.current.value = '';
+    }
   };
 
   const handleEdit = (badge) => {
+    const normalizedCriteria = normalizeCriteria(badge?.auto_grant_criteria);
     setFormValues({
       ...DEFAULT_FORM,
       ...badge,
-      auto_grant_criteria: badge.auto_grant_criteria
-        ? JSON.stringify(badge.auto_grant_criteria, null, 2)
-        : '',
+      auto_grant_criteria: normalizedCriteria
+        ? JSON.stringify(normalizedCriteria, null, 2)
+        : badge.auto_grant_criteria
+          ? JSON.stringify(badge.auto_grant_criteria, null, 2)
+          : '',
     });
+    if (normalizedCriteria) {
+      setRuleBuilderValue(normalizedCriteria);
+      setCriteriaMode('builder');
+    } else if (badge.auto_grant_criteria) {
+      setCriteriaMode('json');
+    } else {
+      setRuleBuilderValue(DEFAULT_CRITERIA);
+      setCriteriaMode('builder');
+    }
   };
 
   const handleInputChange = (e) => {
@@ -80,6 +152,27 @@ export function BadgeManagement() {
 
   const handleToggle = (field) => (checked) => {
     setFormValues((prev) => ({ ...prev, [field]: checked }));
+  };
+
+  const handleCriteriaModeChange = (next) => {
+    if (!next) return;
+    if (next === 'builder') {
+      const parsed = normalizeCriteria(formValues.auto_grant_criteria);
+      if (parsed) {
+        setRuleBuilderValue(parsed);
+        setFormValues((prev) => ({ ...prev, auto_grant_criteria: JSON.stringify(parsed, null, 2) }));
+        setCriteriaMode('builder');
+      } else {
+        toast.error(t('admin.badges.ruleBuilder.parseFailed', '当前 JSON 无法解析为可视化规则，请检查格式。'));
+      }
+    } else {
+      setCriteriaMode(next);
+    }
+  };
+
+  const handleRuleBuilderChange = (nextValue) => {
+    setRuleBuilderValue(nextValue);
+    setFormValues((prev) => ({ ...prev, auto_grant_criteria: JSON.stringify(nextValue, null, 2) }));
   };
 
   const handleIconFileChange = async (event) => {
@@ -124,20 +217,26 @@ export function BadgeManagement() {
       icon_path: formValues.icon_path,
       icon_thumbnail_path: formValues.icon_thumbnail_path,
       sort_order: Number(formValues.sort_order) || 0,
-      is_active: !!formValues.is_active,
-      auto_grant_enabled: !!formValues.auto_grant_enabled,
+      is_active: Boolean(formValues.is_active),
+      auto_grant_enabled: Boolean(formValues.auto_grant_enabled),
       message_title_zh: formValues.message_title_zh,
       message_title_en: formValues.message_title_en,
       message_body_zh: formValues.message_body_zh,
       message_body_en: formValues.message_body_en,
     };
 
-    if (formValues.auto_grant_criteria) {
-      try {
-        payload.auto_grant_criteria = JSON.parse(formValues.auto_grant_criteria);
-      } catch (err) {
-        toast.error(t('admin.badges.criteriaParseFailed', '自动授予规则 JSON 解析失败'));
-        return;
+    if (payload.auto_grant_enabled) {
+      if (criteriaMode === 'builder') {
+        payload.auto_grant_criteria = ruleBuilderValue;
+      } else if (formValues.auto_grant_criteria) {
+        try {
+          payload.auto_grant_criteria = JSON.parse(formValues.auto_grant_criteria);
+        } catch (_err) {
+          toast.error(t('admin.badges.criteriaParseFailed', '自动授予规则 JSON 解析失败'));
+          return;
+        }
+      } else {
+        payload.auto_grant_criteria = null;
       }
     } else {
       payload.auto_grant_criteria = null;
@@ -161,38 +260,19 @@ export function BadgeManagement() {
     }
   };
 
-  const handleAward = async (badgeId) => {
-    const input = window.prompt(t('admin.badges.awardPrompt', '请输入要授予的用户 ID'));
-    if (!input) return;
-    const userId = Number(input);
-    if (!Number.isInteger(userId) || userId <= 0) {
-      toast.error(t('admin.badges.invalidUserId', '用户 ID 无效'));
-      return;
+  const handleBulkDialogComplete = ({ failed }) => {
+    if (!failed) {
+      setBulkDialog((prev) => ({ ...prev, open: false }));
     }
-
-    try {
-      await adminAPI.awardBadge(badgeId, { user_id: userId });
-      toast.success(t('admin.badges.awardSuccess', '徽章已授予指定用户'));
-    } catch (err) {
-      toast.error(err.response?.data?.message || t('admin.badges.awardFailed', '授予徽章失败'));
-    }
+    fetchBadges();
   };
 
-  const handleRevoke = async (badgeId) => {
-    const input = window.prompt(t('admin.badges.revokePrompt', '请输入要收回的用户 ID'));
-    if (!input) return;
-    const userId = Number(input);
-    if (!Number.isInteger(userId) || userId <= 0) {
-      toast.error(t('admin.badges.invalidUserId', '用户 ID 无效'));
-      return;
-    }
+  const handleAward = (badge) => {
+    setBulkDialog({ open: true, badgeIds: badge ? [badge.id] : [], mode: 'award', presetUsers: [] });
+  };
 
-    try {
-      await adminAPI.revokeBadge(badgeId, { user_id: userId });
-      toast.success(t('admin.badges.revokeSuccess', '徽章已收回'));
-    } catch (err) {
-      toast.error(err.response?.data?.message || t('admin.badges.revokeFailed', '收回徽章失败'));
-    }
+  const handleRevoke = (badge) => {
+    setBulkDialog({ open: true, badgeIds: badge ? [badge.id] : [], mode: 'revoke', presetUsers: [] });
   };
 
   const handleTriggerAuto = async () => {
@@ -200,10 +280,10 @@ export function BadgeManagement() {
       setTriggering(true);
       const response = await adminAPI.triggerBadgeAuto();
       const summary = response.data?.data;
-      toast.success(
-        t('admin.badges.autoTriggered', '已触发自动授予流程') +
-          (summary ? ` (${summary.awarded || 0} / ${summary.users || 0})` : '')
-      );
+      const awarded = summary && typeof summary.awarded !== 'undefined' ? summary.awarded : 0;
+      const users = summary && typeof summary.users !== 'undefined' ? summary.users : 0;
+      const extra = summary ? ' (' + awarded + ' / ' + users + ')' : '';
+      toast.success(t('admin.badges.autoTriggered', '已触发自动授予流程') + extra);
     } catch (err) {
       toast.error(err.response?.data?.message || t('admin.badges.autoTriggerFailed', '触发自动授予失败'));
     } finally {
@@ -213,15 +293,61 @@ export function BadgeManagement() {
   };
 
   const formattedBadges = useMemo(() => badges || [], [badges]);
+  const activeBadges = useMemo(() => formattedBadges.filter((badge) => badge.is_active), [formattedBadges]);
+  const autoBadges = useMemo(() => formattedBadges.filter((badge) => badge.auto_grant_enabled), [formattedBadges]);
 
   return (
     <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{t('admin.badges.metrics.total', '徽章总数')}</CardTitle>
+            <Award className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formattedBadges.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {t('admin.badges.metrics.totalHint', '已创建的所有成就徽章数量')}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{t('admin.badges.metrics.active', '启用中')}</CardTitle>
+            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeBadges.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {t('admin.badges.metrics.activeHint', '当前对用户可见并可获得的徽章数量')}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{t('admin.badges.metrics.auto', '自动授予')}</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{autoBadges.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {t('admin.badges.metrics.autoHint', '开启自动授予规则的徽章数量')}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{t('admin.badges.listTitle', '成就徽章列表')}</CardTitle>
-          <div className="flex items-center gap-2">
+          <div>
+            <CardTitle>{t('admin.badges.listTitle', '成就徽章列表')}</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {t('admin.badges.listHint', '支持快速授予/收回、刷新与自动规则触发。')}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={fetchBadges} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={'h-4 w-4 mr-2 ' + (loading ? 'animate-spin' : '')} />
               {t('common.refresh', '刷新')}
             </Button>
             <Button variant="outline" onClick={handleTriggerAuto} disabled={triggering}>
@@ -231,6 +357,10 @@ export function BadgeManagement() {
                 <Sparkles className="h-4 w-4 mr-2" />
               )}
               {t('admin.badges.triggerAuto', '触发自动授予')}
+            </Button>
+            <Button variant="outline" onClick={() => handleAward(null)}>
+              <Users className="h-4 w-4 mr-2" />
+              {t('admin.badges.bulkAward', '批量授予')}
             </Button>
             <Button onClick={resetForm} variant="secondary">
               {t('admin.badges.newBadge', '新建徽章')}
@@ -272,62 +402,76 @@ export function BadgeManagement() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {formattedBadges.map((badge) => (
-                    <tr key={badge.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="w-12 h-12 rounded-full bg-gray-100 border overflow-hidden flex items-center justify-center">
-                          {badge.icon_path ? (
-                            <R2Image
-                              src={badge.icon_presigned_url || badge.icon_url}
-                              filePath={!badge.icon_presigned_url && !badge.icon_url ? badge.icon_path : undefined}
-                              alt={badge.name_zh || badge.name_en}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Award className="h-5 w-5 text-gray-400" />
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{badge.name_zh || badge.name_en}</div>
-                        <div className="text-xs text-gray-500">{badge.name_en}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={badge.is_active ? 'success' : 'secondary'}>
-                          {badge.is_active
-                            ? t('admin.badges.active', '启用')
-                            : t('admin.badges.inactive', '停用')}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={badge.auto_grant_enabled ? 'outline' : 'secondary'}>
-                          {badge.auto_grant_enabled
-                            ? t('admin.badges.autoEnabled', '已开启')
-                            : t('admin.badges.autoDisabled', '未开启')}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{badge.sort_order}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {badge.updated_at
-                          ? format(new Date(badge.updated_at), 'yyyy-MM-dd HH:mm')
-                          : '--'}
-                      </td>
-                      <td className="px-4 py-3 text-right space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(badge)}>
-                          <Edit className="h-4 w-4 mr-1" />
-                          {t('common.edit', '编辑')}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleAward(badge.id)}>
-                          <Sparkles className="h-4 w-4 mr-1" />
-                          {t('admin.badges.award', '授予')}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleRevoke(badge.id)}>
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          {t('admin.badges.revoke', '收回')}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                  {formattedBadges.map((badge) => {
+                    const ruleCount = Array.isArray(badge.auto_grant_criteria?.rules)
+                      ? badge.auto_grant_criteria.rules.length
+                      : Array.isArray(badge.auto_grant_criteria)
+                        ? badge.auto_grant_criteria.length
+                        : 0;
+                    return (
+                      <tr key={badge.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="w-12 h-12 rounded-full bg-gray-100 border overflow-hidden flex items-center justify-center">
+                            {badge.icon_path ? (
+                              <R2Image
+                                src={badge.icon_presigned_url || badge.icon_url}
+                                filePath={!badge.icon_presigned_url && !badge.icon_url ? badge.icon_path : undefined}
+                                alt={badge.name_zh || badge.name_en}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Award className="h-5 w-5 text-gray-400" />
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">{badge.name_zh || badge.name_en}</div>
+                          <div className="text-xs text-gray-500">{badge.name_en}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={badge.is_active ? 'success' : 'secondary'}>
+                            {badge.is_active
+                              ? t('admin.badges.active', '启用')
+                              : t('admin.badges.inactive', '停用')}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <Badge variant={badge.auto_grant_enabled ? 'outline' : 'secondary'}>
+                              {badge.auto_grant_enabled
+                                ? t('admin.badges.autoEnabled', '已开启')
+                                : t('admin.badges.autoDisabled', '未开启')}
+                            </Badge>
+                            {badge.auto_grant_enabled && ruleCount > 0 && (
+                              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                {t('admin.badges.ruleBuilder.ruleCount', '{{count}} 条规则', { count: ruleCount })}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{badge.sort_order}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
+                          {badge.updated_at
+                            ? format(new Date(badge.updated_at), 'yyyy-MM-dd HH:mm')
+                            : '--'}
+                        </td>
+                        <td className="px-4 py-3 text-right space-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(badge)}>
+                            <Edit className="h-4 w-4 mr-1" />
+                            {t('common.edit', '编辑')}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleAward(badge)}>
+                            <Sparkles className="h-4 w-4 mr-1" />
+                            {t('admin.badges.award', '授予')}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleRevoke(badge)}>
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            {t('admin.badges.revoke', '收回')}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {formattedBadges.length === 0 && !loading && (
                     <tr>
                       <td colSpan={7} className="px-4 py-6 text-center text-sm text-gray-500">
@@ -351,200 +495,239 @@ export function BadgeManagement() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('admin.badges.fields.nameZh', '中文名称')}
-                </label>
-                <Input
-                  name="name_zh"
-                  value={formValues.name_zh}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('admin.badges.fields.nameEn', '英文名称')}
-                </label>
-                <Input
-                  name="name_en"
-                  value={formValues.name_en}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('admin.badges.fields.descZh', '中文描述')}
-                </label>
-                <Textarea
-                  name="description_zh"
-                  value={formValues.description_zh}
-                  onChange={handleInputChange}
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('admin.badges.fields.descEn', '英文描述')}
-                </label>
-                <Textarea
-                  name="description_en"
-                  value={formValues.description_en}
-                  onChange={handleInputChange}
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('admin.badges.fields.icon', '徽章图标')}
-                </label>
-                <input
-                  ref={iconInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleIconFileChange}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => iconInputRef.current?.click()}
-                  disabled={uploadingIcon}
-                  className="flex items-center gap-2"
-                >
-                  {uploadingIcon ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  {t('admin.badges.selectIcon', '选择图标并上传')}
-                </Button>
-                <p className="text-xs text-gray-500">
-                  {t('admin.badges.uploadHint', '支持 JPG/PNG/WebP，单个不超过5MB。')}
-                </p>
-                {(formValues.icon_path || formValues.icon_thumbnail_path) && (
-                  <div className="mt-2 w-20 h-20 rounded-full overflow-hidden border">
-                    <R2Image
-                      filePath={formValues.icon_path || formValues.icon_thumbnail_path}
-                      alt={formValues.name_zh || formValues.name_en}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">
-                    {t('admin.badges.fields.sortOrder', '排序')}
+                    {t('admin.badges.fields.nameZh', '中文名称')}
                   </label>
                   <Input
-                    type="number"
-                    name="sort_order"
-                    value={formValues.sort_order}
+                    name="name_zh"
+                    value={formValues.name_zh}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {t('admin.badges.fields.nameEn', '英文名称')}
+                  </label>
+                  <Input
+                    name="name_en"
+                    value={formValues.name_en}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {t('admin.badges.fields.descZh', '中文描述')}
+                  </label>
+                  <Textarea
+                    name="description_zh"
+                    value={formValues.description_zh}
+                    onChange={handleInputChange}
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {t('admin.badges.fields.descEn', '英文描述')}
+                  </label>
+                  <Textarea
+                    name="description_en"
+                    value={formValues.description_en}
+                    onChange={handleInputChange}
+                    rows={3}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      {t('admin.badges.fields.sort', '排序权重')}
+                    </label>
+                    <Input
+                      type="number"
+                      name="sort_order"
+                      value={formValues.sort_order}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border p-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">
+                        {t('admin.badges.fields.isActive', '是否启用')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('admin.badges.fields.isActiveHint', '停用后用户将无法再获得该徽章')}
+                      </p>
+                    </div>
+                    <Switch checked={formValues.is_active} onCheckedChange={handleToggle('is_active')} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {t('admin.badges.fields.icon', '徽章图标')}
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-lg border bg-muted overflow-hidden flex items-center justify-center">
+                      {formValues.icon_path ? (
+                        <R2Image
+                          src={formValues.icon_presigned_url || formValues.icon_url}
+                          filePath={!formValues.icon_presigned_url && !formValues.icon_url ? formValues.icon_path : undefined}
+                          alt={formValues.name_zh || formValues.name_en}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Award className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Button asChild variant="outline" disabled={uploadingIcon}>
+                        <label className="flex cursor-pointer items-center gap-2">
+                          {uploadingIcon ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                          {t('admin.badges.fields.uploadIcon', '上传图标')}
+                        </label>
+                      </Button>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        ref={iconInputRef}
+                        onChange={handleIconFileChange}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {t('admin.badges.fields.iconHint', '建议使用 256x256 PNG / WebP，小于 5MB')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-lg border bg-muted/40 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">
+                        {t('admin.badges.fields.autoGrantTitle', '自动授予规则')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('admin.badges.fields.autoGrantHint', '开启后系统会按照规则定期评估并授予徽章')}
+                      </p>
+                    </div>
+                    <Switch checked={formValues.auto_grant_enabled} onCheckedChange={handleToggle('auto_grant_enabled')} />
+                  </div>
+
+                  {formValues.auto_grant_enabled && (
+                    <div className="space-y-4">
+                      <ToggleGroup
+                        type="single"
+                        value={criteriaMode}
+                        onValueChange={handleCriteriaModeChange}
+                        variant="outline"
+                      >
+                        <ToggleGroupItem value="builder">
+                          {t('admin.badges.ruleBuilder.toggle.visual', '图形化编辑')}
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="json">
+                          {t('admin.badges.ruleBuilder.toggle.json', 'JSON 高级模式')}
+                        </ToggleGroupItem>
+                      </ToggleGroup>
+
+                      {criteriaMode === 'builder' ? (
+                        <BadgeRuleBuilder value={ruleBuilderValue} onChange={handleRuleBuilderChange} />
+                      ) : (
+                        <Textarea
+                          className="font-mono"
+                          rows={12}
+                          value={formValues.auto_grant_criteria}
+                          onChange={(e) => setFormValues((prev) => ({ ...prev, auto_grant_criteria: e.target.value }))}
+                          placeholder={JSON.stringify(DEFAULT_CRITERIA, null, 2)}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {t('admin.badges.fields.messageTitleZh', '通知标题（中文）')}
+                  </label>
+                  <Input
+                    name="message_title_zh"
+                    value={formValues.message_title_zh}
                     onChange={handleInputChange}
                   />
                 </div>
-                <div className="flex items-center justify-between bg-gray-50 border rounded-md px-3 py-2">
-                  <span className="text-sm text-gray-700">{t('admin.badges.fields.active', '是否启用')}</span>
-                  <Switch
-                    checked={formValues.is_active}
-                    onCheckedChange={handleToggle('is_active')}
-                    aria-label={t('admin.badges.fields.active', '是否启用')}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {t('admin.badges.fields.messageTitleEn', '通知标题（英文）')}
+                  </label>
+                  <Input
+                    name="message_title_en"
+                    value={formValues.message_title_en}
+                    onChange={handleInputChange}
                   />
                 </div>
-                <div className="flex items-center justify-between bg-gray-50 border rounded-md px-3 py-2">
-                  <span className="text-sm text-gray-700">{t('admin.badges.fields.autoGrant', '自动授予')}</span>
-                  <Switch
-                    checked={formValues.auto_grant_enabled}
-                    onCheckedChange={handleToggle('auto_grant_enabled')}
-                    aria-label={t('admin.badges.fields.autoGrant', '自动授予')}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {t('admin.badges.fields.messageBodyZh', '通知内容（中文）')}
+                  </label>
+                  <Textarea
+                    name="message_body_zh"
+                    value={formValues.message_body_zh}
+                    onChange={handleInputChange}
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {t('admin.badges.fields.messageBodyEn', '通知内容（英文）')}
+                  </label>
+                  <Textarea
+                    name="message_body_en"
+                    value={formValues.message_body_en}
+                    onChange={handleInputChange}
+                    rows={3}
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('admin.badges.fields.autoCriteria', '自动授予规则 (JSON)')}
-                </label>
-                <Textarea
-                  name="auto_grant_criteria"
-                  value={formValues.auto_grant_criteria}
-                  onChange={handleInputChange}
-                  rows={6}
-                  placeholder='{"rules":[{"metric":"total_carbon_saved","operator":">=","value":100}],"all_required":true}'
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('admin.badges.fields.messageTitleZh', '系统信件标题（中文）')}
-                </label>
-                <Input
-                  name="message_title_zh"
-                  value={formValues.message_title_zh}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('admin.badges.fields.messageTitleEn', '系统信件标题（英文）')}
-                </label>
-                <Input
-                  name="message_title_en"
-                  value={formValues.message_title_en}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('admin.badges.fields.messageBodyZh', '系统信件内容（中文）')}
-                </label>
-                <Textarea
-                  name="message_body_zh"
-                  value={formValues.message_body_zh}
-                  onChange={handleInputChange}
-                  rows={4}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('admin.badges.fields.messageBodyEn', '系统信件内容（英文）')}
-                </label>
-                <Textarea
-                  name="message_body_en"
-                  value={formValues.message_body_en}
-                  onChange={handleInputChange}
-                  rows={4}
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button type="submit" disabled={saving}>
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-4 w-4 mr-2" />
-                  )}
-                  {formValues.id
-                    ? t('admin.badges.updateAction', '保存修改')
-                    : t('admin.badges.createAction', '创建徽章')}
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  {t('common.cancel', '取消')}
-                </Button>
-              </div>
+            <div className="flex items-center justify-end gap-3">
+              <Button type="button" variant="ghost" onClick={resetForm}>
+                {t('common.reset', '重置')}
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {formValues.id ? t('common.saveChanges', '保存修改') : t('common.create', '创建')}
+              </Button>
             </div>
           </form>
         </CardContent>
       </Card>
+
+      <BadgeBulkAwardDialog
+        open={bulkDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBulkDialog({ open: false, badgeIds: [], mode: 'award', presetUsers: [] });
+          } else {
+            setBulkDialog((prev) => ({ ...prev, open: true }));
+          }
+        }}
+        badges={formattedBadges}
+        defaultSelectedBadgeIds={bulkDialog.badgeIds}
+        presetUsers={bulkDialog.presetUsers}
+        onCompleted={handleBulkDialogComplete}
+        mode={bulkDialog.mode}
+      />
     </div>
   );
 }
-
-export default BadgeManagement;
