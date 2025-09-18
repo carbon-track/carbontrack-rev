@@ -67,7 +67,7 @@ api.interceptors.response.use(
           toast.error(`请求失败 (ReqID: ${rid})，请联系管理员并提供该编号。`);
         }
       }
-    } catch (_) {}
+    } catch { /* noop */ }
 
     return Promise.reject(error);
   }
@@ -247,7 +247,25 @@ export const profileAPI = {
 
 export const adminAPI = {
   // 获取用户列表
-  getUsers: (params = {}) => api.get('/admin/users', { params }),
+  getUsers: (params = {}) => {
+    const query = { ...params };
+    if (typeof query.search === 'string') {
+      const trimmed = query.search.trim();
+      if (trimmed) {
+        query.q = trimmed;
+      }
+      delete query.search;
+    }
+    if (typeof query.role === 'string' && query.is_admin === undefined) {
+      if (query.role === 'admin') {
+        query.is_admin = 1;
+      } else if (query.role === 'user') {
+        query.is_admin = 0;
+      }
+      delete query.role;
+    }
+    return api.get('/admin/users', { params: query });
+  },
   
   // 调整用户积分
   adjustUserPoints: (id, data) => api.post('/admin/users/' + id + '/points/adjust', data),

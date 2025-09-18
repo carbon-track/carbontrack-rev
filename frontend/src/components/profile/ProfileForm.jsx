@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -20,26 +20,26 @@ export function ProfileForm({ user, onUpdateSuccess }) {
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const normalizedUser = useMemo(() => ({
+    username: user?.username || '',
+    email: user?.email || '',
+    real_name: user?.real_name || '',
+    school: user?.school ?? user?.school_name ?? '',
+    class_name: user?.class_name || '',
+  }), [user]);
+  const formattedUpdatedAt = useMemo(() => {
+    if (!user?.updated_at) return '';
+    const dateValue = new Date(user.updated_at);
+    return Number.isNaN(dateValue.getTime()) ? user.updated_at : dateValue.toLocaleString();
+  }, [user?.updated_at]);
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(profileSchema(t)),
-    defaultValues: {
-      username: user?.username || '',
-      email: user?.email || '',
-      real_name: user?.real_name || '',
-      school: user?.school || '',
-      class_name: user?.class_name || '',
-    },
+    defaultValues: normalizedUser,
   });
 
   useEffect(() => {
-    reset({
-      username: user?.username || '',
-      email: user?.email || '',
-      real_name: user?.real_name || '',
-      school: user?.school || '',
-      class_name: user?.class_name || '',
-    });
-  }, [user, reset]);
+    reset(normalizedUser);
+  }, [normalizedUser, reset]);
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
@@ -57,6 +57,24 @@ export function ProfileForm({ user, onUpdateSuccess }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-lg border bg-muted/40 p-4">
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">{t('profile.userId', '用户ID')}</p>
+          <p className="text-sm font-medium break-words">{user?.id ?? '—'}</p>
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">{t('profile.uuid', 'UUID')}</p>
+          <p className="text-sm font-medium break-all">{user?.uuid || '—'}</p>
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">{t('profile.points', '积分')}</p>
+          <p className="text-sm font-medium">{user?.points ?? 0}</p>
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">{t('profile.lastUpdated', '最近更新')}</p>
+          <p className="text-sm font-medium break-words">{formattedUpdatedAt || '—'}</p>
+        </div>
+      </div>
       <div>
         <label htmlFor="username" className="block text-sm font-medium text-gray-700">
           {t('profile.username')}

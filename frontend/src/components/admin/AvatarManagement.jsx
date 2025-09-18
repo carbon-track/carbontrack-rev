@@ -171,16 +171,24 @@ export function AvatarManagement() {
   };
 
   const toggleActive = async (avatar) => {
+    const nextActive = !avatar.is_active;
     try {
-      await adminAPI.updateAvatar(avatar.id, { is_active: !avatar.is_active });
-      toast.success(!avatar.is_active
+      await adminAPI.updateAvatar(avatar.id, { is_active: nextActive });
+      toast.success(nextActive
         ? t('admin.avatars.enabled', '头像已启用')
         : t('admin.avatars.disabled', '头像已停用'));
-      fetchAvatars();
+      setAvatars((prev) => prev.map((item) => (item.id === avatar.id ? { ...item, is_active: nextActive } : item)));
+      setFormValues((prev) => {
+        if (prev.id !== avatar.id) {
+          return prev;
+        }
+        return { ...prev, is_active: nextActive };
+      });
     } catch (err) {
       toast.error(err.response?.data?.message || t('admin.avatars.toggleFailed', '更新头像状态失败'));
     }
   };
+
 
   const setDefault = async (avatarId) => {
     try {
@@ -418,10 +426,11 @@ export function AvatarManagement() {
                 <p className="text-xs text-gray-500">
                   {t('admin.avatars.uploadHint', '支持 JPG/PNG/WebP，单个不超过5MB。')}
                 </p>
-                {formValues.file_path && (
+                {(formValues.icon_presigned_url || formValues.icon_url || formValues.file_path) && (
                   <div className="mt-2 w-20 h-20 rounded-full overflow-hidden border">
                     <R2Image
-                      filePath={formValues.file_path}
+                      src={formValues.icon_presigned_url || formValues.icon_url}
+                      filePath={!formValues.icon_presigned_url && !formValues.icon_url ? formValues.file_path : undefined}
                       alt={formValues.name}
                       className="w-full h-full object-cover"
                     />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import { useTranslation } from '../hooks/useTranslation';
 import { userAPI } from '../lib/api';
@@ -19,13 +19,14 @@ export default function ProfilePage() {
     { staleTime: Infinity } // User data is relatively static, can be cached longer
   );
 
-  const user = userData?.data?.data;
+  const responsePayload = userData?.data ?? null;
+  const user = responsePayload?.data ?? responsePayload ?? null;
 
   const handleProfileUpdateSuccess = () => {
     queryClient.invalidateQueries('currentUser'); // Invalidate to refetch updated user data
   };
 
-  const handleAvatarChange = (newAvatarId) => {
+  const handleAvatarChange = () => {
     // Optionally update local state or re-fetch user data if needed
     queryClient.invalidateQueries('currentUser');
   };
@@ -45,6 +46,18 @@ export default function ProfilePage() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>{t('common.error')}</AlertTitle>
           <AlertDescription>{t('profile.loadError')}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <Alert variant="warning">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('common.notice', '提示')}</AlertTitle>
+          <AlertDescription>{t('profile.noUserData', '暂未获取到个人资料，请稍后重试。')}</AlertDescription>
         </Alert>
       </div>
     );

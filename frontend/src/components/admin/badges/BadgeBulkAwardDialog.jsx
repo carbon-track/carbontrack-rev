@@ -200,22 +200,37 @@ export function BadgeBulkAwardDialog({
 
   const renderBadgeCard = (badge) => {
     const checked = selectedBadgeIds.has(badge.id);
+    const handleKeyDown = (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleBadge(badge.id);
+      }
+    };
+
     return (
-      <button
+      <div
         key={badge.id}
-        type="button"
+        role="button"
+        tabIndex={0}
+        aria-pressed={checked}
         className={cn(
-          'flex w-full flex-col items-start gap-2 rounded-lg border p-4 text-left transition hover:border-primary',
+          'flex w-full flex-col items-start gap-2 rounded-lg border p-4 text-left transition hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40',
           checked ? 'border-primary bg-primary/5' : 'border-border'
         )}
         onClick={() => toggleBadge(badge.id)}
+        onKeyDown={handleKeyDown}
       >
         <div className="flex w-full items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Award className={cn('h-5 w-5', checked ? 'text-primary' : 'text-muted-foreground')} />
             <span className="font-medium leading-tight">{badge.name_zh || badge.name_en}</span>
           </div>
-          <Checkbox checked={checked} onCheckedChange={() => toggleBadge(badge.id)} />
+          <Checkbox
+            checked={checked}
+            onCheckedChange={() => toggleBadge(badge.id)}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          />
         </div>
         <p className="text-xs text-muted-foreground line-clamp-2">
           {badge.description_zh || badge.description_en || t([...i18nBase, 'noDescription'].join('.'), '暂无描述')}

@@ -79,10 +79,30 @@ export function UserManagement() {
   const [selectedUsersMap, setSelectedUsersMap] = useState(new Map());
   const [bulkDialog, setBulkDialog] = useState({ open: false, presetUsers: [] });
 
-  const filterParams = { ...filters };
+  const apiFilterParams = useMemo(() => {
+    const base = {
+      page: filters.page,
+      limit: filters.limit,
+      sort: filters.sort,
+    };
+    const trimmedSearch = filters.search.trim();
+    if (trimmedSearch) {
+      base.q = trimmedSearch;
+    }
+    if (filters.status) {
+      base.status = filters.status;
+    }
+    if (filters.role === 'admin') {
+      base.is_admin = 1;
+    } else if (filters.role === 'user') {
+      base.is_admin = 0;
+    }
+    return base;
+  }, [filters]);
+
   const usersQuery = useQuery(
-    ['adminUsers', filterParams],
-    () => adminAPI.getUsers(filterParams),
+    ['adminUsers', apiFilterParams],
+    () => adminAPI.getUsers(apiFilterParams),
     { keepPreviousData: true }
   );
 

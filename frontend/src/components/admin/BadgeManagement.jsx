@@ -342,19 +342,19 @@ export default function BadgeManagement() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
+        <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0 space-y-1">
             <CardTitle>{t('admin.badges.listTitle', '成就徽章列表')}</CardTitle>
             <p className="text-sm text-muted-foreground">
               {t('admin.badges.listHint', '支持快速授予/收回、刷新与自动规则触发。')}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={fetchBadges} disabled={loading}>
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            <Button className="w-full sm:w-auto" variant="outline" onClick={fetchBadges} disabled={loading}>
               <RefreshCw className={'h-4 w-4 mr-2 ' + (loading ? 'animate-spin' : '')} />
               {t('common.refresh', '刷新')}
             </Button>
-            <Button variant="outline" onClick={handleTriggerAuto} disabled={triggering}>
+            <Button className="w-full sm:w-auto" variant="outline" onClick={handleTriggerAuto} disabled={triggering}>
               {triggering ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
@@ -362,11 +362,11 @@ export default function BadgeManagement() {
               )}
               {t('admin.badges.triggerAuto', '触发自动授予')}
             </Button>
-            <Button variant="outline" onClick={() => handleAward(null)}>
+            <Button className="w-full sm:w-auto" variant="outline" onClick={() => handleAward(null)}>
               <Users className="h-4 w-4 mr-2" />
               {t('admin.badges.bulkAward', '批量授予')}
             </Button>
-            <Button onClick={resetForm} variant="secondary">
+            <Button className="w-full sm:w-auto" onClick={resetForm} variant="secondary">
               {t('admin.badges.newBadge', '新建徽章')}
             </Button>
           </div>
@@ -459,19 +459,21 @@ export default function BadgeManagement() {
                             ? format(new Date(badge.updated_at), 'yyyy-MM-dd HH:mm')
                             : '--'}
                         </td>
-                        <td className="px-4 py-3 text-right space-x-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(badge)}>
-                            <Edit className="h-4 w-4 mr-1" />
-                            {t('common.edit', '编辑')}
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleAward(badge)}>
-                            <Sparkles className="h-4 w-4 mr-1" />
-                            {t('admin.badges.award', '授予')}
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleRevoke(badge)}>
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            {t('admin.badges.revoke', '收回')}
-                          </Button>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button className="w-full sm:w-auto" variant="ghost" size="sm" onClick={() => handleEdit(badge)}>
+                              <Edit className="h-4 w-4 mr-1" />
+                              {t('common.edit', '编辑')}
+                            </Button>
+                            <Button className="w-full sm:w-auto" variant="ghost" size="sm" onClick={() => handleAward(badge)}>
+                              <Sparkles className="h-4 w-4 mr-1" />
+                              {t('admin.badges.award', '授予')}
+                            </Button>
+                            <Button className="w-full sm:w-auto" variant="ghost" size="sm" onClick={() => handleRevoke(badge)}>
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              {t('admin.badges.revoke', '收回')}
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -708,11 +710,11 @@ export default function BadgeManagement() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3">
-              <Button type="button" variant="ghost" onClick={resetForm}>
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <Button className="w-full sm:w-auto" type="button" variant="ghost" onClick={resetForm}>
                 {t('common.reset', '重置')}
               </Button>
-              <Button type="submit" disabled={saving}>
+              <Button className="w-full sm:w-auto" type="submit" disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {formValues.id ? t('common.saveChanges', '保存修改') : t('common.create', '创建')}
               </Button>
