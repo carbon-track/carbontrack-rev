@@ -19,10 +19,30 @@ const DEFAULT_FORM = {
   description: '',
   category: 'default',
   file_path: '',
+  icon_url: '',
+  icon_presigned_url: '',
   sort_order: 0,
   is_active: true,
   is_default: false,
 };
+const normalizeAvatar = (avatar = {}) => {
+  if (!avatar || typeof avatar !== 'object') {
+    return { ...DEFAULT_FORM };
+  }
+  const rawFilePath = typeof avatar.file_path === 'string' && avatar.file_path ? avatar.file_path : '';
+  const normalizedPath = rawFilePath || (typeof avatar.icon_path === 'string' && avatar.icon_path ? `/${avatar.icon_path.replace(/^\/+, '')}` : '');
+  const iconUrl = avatar.icon_url || avatar.url || avatar.image_url || '';
+  return {
+    ...avatar,
+    file_path: normalizedPath,
+    icon_path: avatar.icon_path || normalizedPath.replace(/^\/+/, ''),
+    icon_url: iconUrl,
+    icon_presigned_url: avatar.icon_presigned_url || '',
+    image_url: avatar.image_url || iconUrl || '',
+    url: avatar.url || iconUrl || '',
+  };
+};
+
 
 export function AvatarManagement() {
   const { t } = useTranslation();
@@ -38,7 +58,8 @@ export function AvatarManagement() {
       setLoading(true);
       const response = await adminAPI.getAvatars({ include_inactive: true });
       if (response.data?.success) {
-        setAvatars(response.data.data || []);
+        const items = (response.data.data || []).map((item) => normalizeAvatar(item));
+        setAvatars(items);
       }
     } catch (err) {
       toast.error(t('admin.avatars.loadFailed', '加载头像列表失败'));
@@ -52,19 +73,22 @@ export function AvatarManagement() {
   }, []);
 
   const resetForm = () => {
-    setFormValues(DEFAULT_FORM);
+    setFormValues({ ...DEFAULT_FORM });
   };
 
   const handleEdit = (avatar) => {
+    const normalized = normalizeAvatar(avatar);
     setFormValues({
-      id: avatar.id,
-      name: avatar.name || '',
-      description: avatar.description || '',
-      category: avatar.category || 'default',
-      file_path: avatar.file_path || '',
-      sort_order: avatar.sort_order || 0,
-      is_active: avatar.is_active === undefined ? true : !!avatar.is_active,
-      is_default: !!avatar.is_default,
+      id: normalized.id,
+      name: normalized.name || '',
+      description: normalized.description || '',
+      category: normalized.category || 'default',
+      file_path: normalized.file_path || '',
+      icon_url: normalized.icon_url || normalized.image_url || '',
+      icon_presigned_url: normalized.icon_presigned_url || '',
+      sort_order: normalized.sort_order || 0,
+      is_active: normalized.is_active === undefined ? true : !!normalized.is_active,
+      is_default: !!normalized.is_default,
     });
   };
 
@@ -97,6 +121,8 @@ export function AvatarManagement() {
       setFormValues((prev) => ({
         ...prev,
         file_path: info.file_path || prev.file_path,
+        icon_url: info.url || info.public_url || prev.icon_url,
+        icon_presigned_url: info.presigned_url || prev.icon_presigned_url,
       }));
       toast.success(t('admin.avatars.uploadSuccess', '头像文件上传成功'));
     } catch (err) {

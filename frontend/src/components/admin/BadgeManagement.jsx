@@ -36,6 +36,8 @@ const DEFAULT_FORM = {
   description_en: '',
   icon_path: '',
   icon_thumbnail_path: '',
+  icon_url: '',
+  icon_presigned_url: '',
   sort_order: 0,
   is_active: true,
   auto_grant_enabled: false,
@@ -195,6 +197,8 @@ export default function BadgeManagement() {
         ...prev,
         icon_path: info.file_path || prev.icon_path,
         icon_thumbnail_path: info.thumbnail_path || prev.icon_thumbnail_path,
+        icon_url: info.url || info.public_url || prev.icon_url,
+        icon_presigned_url: info.presigned_url || prev.icon_presigned_url,
       }));
       toast.success(t('admin.badges.uploadSuccess', '徽章图标上传成功'));
     } catch (err) {
@@ -587,15 +591,19 @@ export default function BadgeManagement() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Button asChild variant="outline" disabled={uploadingIcon}>
-                        <label className="flex cursor-pointer items-center gap-2">
-                          {uploadingIcon ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Upload className="h-4 w-4" />
-                          )}
-                          {t('admin.badges.fields.uploadIcon', '上传图标')}
-                        </label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={uploadingIcon}
+                        onClick={() => iconInputRef.current?.click()}
+                        className="flex items-center gap-2"
+                      >
+                        {uploadingIcon ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4" />
+                        )}
+                        {t('admin.badges.fields.uploadIcon', '上传图标')}
                       </Button>
                       <input
                         type="file"
