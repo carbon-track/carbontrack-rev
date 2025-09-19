@@ -322,7 +322,9 @@
       "recordAnother": "Record Another Activity",
       "goToDashboard": "Go to Dashboard",
       "calculationFailed": "Failed to calculate carbon reduction",
-      "submitFailed": "Failed to submit activity"
+      "submitFailed": "Failed to submit activity",
+      "inputDescription": "Enter the activity data to calculate carbon savings and points.",
+      "previewAutoUpdate": "Updates in real time as you edit."
     },
     "status": {
       "pending": "Pending",
@@ -336,7 +338,8 @@
       "points": "Points",
       "status": "Status",
       "date": "Date",
-      "actions": "Actions"
+      "actions": "Actions",
+      "images": "Images"
     },
     "history": {
       "title": "Activity History",
@@ -471,7 +474,8 @@
       "loadFailed": "Failed to load products",
       "exchangeFailed": "Exchange failed, please try again",
       "loginRequired": "Please log in before making an exchange"
-    }
+    },
+    "stock": "In stock: {{count}}"
   },
   "messages": {
     "title": "Message Center",
@@ -585,7 +589,12 @@
       "systemNotifications": "System notifications",
       "saveSuccess": "Profile updated successfully",
       "saveFailed": "Failed to update profile"
-    }
+    },
+    "lastUpdated": "Last updated",
+    "noUserData": "User profile is not available yet. Please try again later.",
+    "points": "Points",
+    "userId": "User ID",
+    "uuid": "UUID"
   },
   "admin": {
     "title": "Admin Panel",
@@ -608,7 +617,8 @@
       "exchanges": "Exchanges",
       "broadcast": "Broadcast",
       "badges": "Badges",
-      "avatars": "Avatars"
+      "avatars": "Avatars",
+      "audit": "Audit logs"
     },
     "broadcast": {
       "title": "Broadcast Center",
@@ -722,7 +732,43 @@
       "delete": "Delete Product",
       "confirmDelete": "Are you sure you want to delete this product?",
       "deleteSuccess": "Product deleted successfully",
-      "deleteFailed": "Failed to delete product"
+      "deleteFailed": "Failed to delete product",
+      "addProduct": "Add product",
+      "category": "Category",
+      "createFailed": "Failed to create product.",
+      "createSuccess": "Product created.",
+      "editProduct": "Edit product",
+      "form": {
+        "category": "Category",
+        "description": "Description",
+        "imageUrl": "Image URL",
+        "name": "Product name",
+        "price": "Required points",
+        "status": "Status",
+        "stock": "Stock",
+        "stockHint": "Use -1 for unlimited stock."
+      },
+      "noProductsFound": "No products found",
+      "searchPlaceholder": "Search by product name...",
+      "status": "Status",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "statusOutOfStock": "Out of stock",
+      "table": {
+        "actions": "Actions",
+        "category": "Category",
+        "image": "Image",
+        "name": "Name",
+        "price": "Points required",
+        "status": "Status",
+        "stock": "Stock"
+      },
+      "tryDifferentFilters": "Try adjusting filters or search terms.",
+      "unlimited": "Unlimited",
+      "updateFailed": "Failed to update product.",
+      "updateSuccess": "Product updated.",
+      "deleteTitle": "Delete product",
+      "unnamed": "this product"
     },
     "exchanges": {
       "title": "Exchange Management",
@@ -731,7 +777,50 @@
       "completed": "Completed",
       "cancelled": "Cancelled",
       "approve": "Approve",
-      "reject": "Reject"
+      "reject": "Reject",
+      "action": {
+        "cancel": "Cancel",
+        "complete": "Mark as completed",
+        "process": "Mark as processing",
+        "reject": "Reject",
+        "ship": "Mark as shipped"
+      },
+      "confirmUpdateStatus": "Confirm changing status to {{status}}?",
+      "detail": {
+        "address": "Shipping address",
+        "adminNotes": "Admin notes",
+        "exchangeDate": "Exchange date",
+        "exchangeId": "Exchange ID",
+        "phone": "Contact phone",
+        "product": "Product",
+        "status": "Status",
+        "title": "Exchange details",
+        "totalPoints": "Total points",
+        "user": "User"
+      },
+      "noExchangesFound": "No exchanges found",
+      "promptNotes": "Enter admin notes (optional):",
+      "searchPlaceholder": "Search by user, product or order number",
+      "status": {
+        "cancelled": "Cancelled",
+        "completed": "Completed",
+        "pending": "Pending",
+        "processing": "Processing",
+        "rejected": "Rejected",
+        "shipped": "Shipped"
+      },
+      "table": {
+        "date": "Date",
+        "product": "Product",
+        "quantity": "Quantity",
+        "status": "Status",
+        "totalPoints": "Total points",
+        "user": "User"
+      },
+      "tryDifferentFilters": "Try adjusting filters or search terms.",
+      "updateFailed": "Failed to update exchange status.",
+      "updateSuccess": "Exchange status updated.",
+      "notesRequired": "Please enter handling notes."
     },
     "activities": {
       "title": "Activity Management",
@@ -762,7 +851,18 @@
         "points": "Points",
         "status": "Status",
         "date": "Date"
-      }
+      },
+      "dialog": {
+        "approveAction": "Approve",
+        "approveDescription": "This will award points and notify the user.",
+        "approveTitle": "Confirm approval",
+        "reasonLabel": "Rejection reason",
+        "reasonPlaceholder": "Briefly explain why the activity is rejected",
+        "rejectAction": "Reject",
+        "rejectDescription": "Please provide a reason; the submitter will be notified.",
+        "rejectTitle": "Reject activity"
+      },
+      "rejectReasonRequired": "Please provide a rejection reason."
     },
     "audit": {
       "title": "Audit Logs",
@@ -845,7 +945,14 @@
         "messageTitleZh": "Notification Title (Chinese)",
         "messageTitleEn": "Notification Title (English)",
         "messageBodyZh": "Notification Body (Chinese)",
-        "messageBodyEn": "Notification Body (English)"
+        "messageBodyEn": "Notification Body (English)",
+        "autoGrantTitle": "Auto award rules",
+        "autoGrantHint": "When enabled, the system periodically evaluates users and awards the badge.",
+        "iconHint": "Use a 256x256 PNG or WebP under 5MB.",
+        "isActive": "Active",
+        "isActiveHint": "When disabled, users can no longer earn this badge.",
+        "sort": "Sort weight",
+        "uploadIcon": "Upload icon"
       },
       "updateSuccess": "Badge updated",
       "createSuccess": "Badge created",
@@ -943,7 +1050,9 @@
           "pointsMasterDesc": "Points earned ≥ 5000 or balance ≥ 2000",
           "veteran": "Veteran member",
           "veteranDesc": "Registered 365 days and submitted 50 records"
-        }
+        },
+        "ruleCount": "{{count}} rules",
+        "selectMetric": "Select metric"
       },
       "bulkAwardDialog": {
         "dialogTitle": "Bulk award badges",
@@ -1053,7 +1162,9 @@
       "disable": "Disable",
       "setDefault": "Set default",
       "restore": "Restore",
-      "delete": "Delete"
+      "delete": "Delete",
+      "default": "Default",
+      "deleteTitle": "Remove avatar"
     },
     "subtitle": "Run every corner of CarbonTrack from one place",
     "command": {
@@ -1197,7 +1308,20 @@
       "oldest": "Oldest First",
       "pointsHighToLow": "Points: High to Low",
       "pointsLowToHigh": "Points: Low to High"
-    }
+    },
+    "actions": "Actions",
+    "add": "Add",
+    "autoRefresh": "Auto refresh",
+    "create": "Create",
+    "notice": "Notice",
+    "points": "Points",
+    "refreshNow": "Refresh now",
+    "remove": "Remove",
+    "retry": "Retry",
+    "saveChanges": "Save changes",
+    "saving": "Saving...",
+    "selected": "Selected",
+    "uploading": "Uploading..."
   },
   "images": {
     "none": "No images",
@@ -1217,7 +1341,8 @@
     "max": "Maximum value is {{max}}",
     "numeric": "Please enter a number",
     "positive": "Please enter a positive number",
-    "integer": "Please enter an integer"
+    "integer": "Please enter an integer",
+    "passwordMismatch": "Passwords do not match"
   },
   "errors": {
     "loadFailed": "Failed to load",
@@ -1251,7 +1376,8 @@
     "page": "Page {{current}} of {{total}}",
     "total": "{{total}} total records",
     "pageSize": "Show",
-    "items": "items per page"
+    "items": "items per page",
+    "showing": "Showing {{start}}-{{end}} of {{total}} items"
   },
   "date": {
     "today": "Today",

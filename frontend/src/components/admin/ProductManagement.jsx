@@ -5,6 +5,16 @@ import { formatNumber } from '../../lib/utils';
 import { adminAPI, productAPI } from '../../lib/api';
 import { Loader2, Edit, Trash2, PlusCircle, Search, Filter, Image as ImageIcon } from 'lucide-react';
 import { Button } from '../ui/Button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 import { Input } from '../ui/Input';
 import { Alert, AlertTitle, AlertDescription } from '../ui/Alert';
 import { Pagination } from '../ui/Pagination';
@@ -27,6 +37,7 @@ export function ProductManagement() {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, product: null });
 
   const { data, isLoading, error, isFetching } = useQuery(
     ['adminProducts', filters],
@@ -99,10 +110,23 @@ export function ProductManagement() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteProduct = (product) => {
-    if (window.confirm(t('admin.products.confirmDelete', { name: product.name }))) {
-      deleteProductMutation.mutate(product.id);
+  const requestDeleteProduct = (product) => {
+    setDeleteDialog({ open: true, product });
+  };
+
+  const closeDeleteDialog = () => {
+    setDeleteDialog({ open: false, product: null });
+  };
+
+  const handleConfirmDeleteProduct = () => {
+    if (!deleteDialog.product) {
+      return;
     }
+    deleteProductMutation.mutate(deleteDialog.product.id, {
+      onSettled: () => {
+        closeDeleteDialog();
+      },
+    });
   };
 
   const productsContainer = data?.data || data;
@@ -245,7 +269,7 @@ export function ProductManagement() {
                       <Button variant="ghost" size="sm" onClick={() => handleEditProduct(product)} className="mr-2">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteProduct(product)} className="text-red-600 hover:text-red-800">
+                      <Button variant="ghost" size="sm" onClick={() => requestDeleteProduct(product)} className="text-red-600 hover:text-red-800">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </td>
@@ -263,6 +287,32 @@ export function ProductManagement() {
           />
         </>
       )}
+
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => (!open ? closeDeleteDialog() : null)}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('admin.products.deleteTitle', '删除商品')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('admin.products.confirmDelete', { name: deleteDialog.product?.name || t('admin.products.unnamed', '该商品') })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={closeDeleteDialog}>{t('common.cancel', '取消')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteProduct}
+              className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-600"
+              disabled={deleteProductMutation.isLoading}
+            >
+              {deleteProductMutation.isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              {t('common.confirm', '确认')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {isModalOpen && (
         <ProductFormModal

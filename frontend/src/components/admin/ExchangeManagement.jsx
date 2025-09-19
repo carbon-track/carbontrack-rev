@@ -6,6 +6,15 @@ import { adminAPI } from '../../lib/api';
 import { Loader2, CheckCircle, XCircle, Eye, Search, Filter, Clock } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Textarea } from '../ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '../ui/Alert';
 import { Pagination } from '../ui/Pagination';
 import { prefetchPresignedUrls } from '../../lib/fileAccess';
@@ -24,6 +33,7 @@ export function ExchangeManagement() {
     sort: 'created_at_desc'
   });
   const [selectedExchange, setSelectedExchange] = useState(null);
+  const [statusDialog, setStatusDialog] = useState({ open: false, exchange: null, status: null, adminNotes: '', error: '' });
 
   const { data, isLoading, error, isFetching } = useQuery(
     ['adminExchanges', filters],
@@ -58,15 +68,40 @@ export function ExchangeManagement() {
     setSelectedExchange(exchange);
   };
 
-  const handleUpdateStatus = (exchangeId, status) => {
-    let admin_notes = '';
-    if (status === 'rejected' || status === 'cancelled') {
-      admin_notes = prompt(t('admin.exchanges.promptNotes'));
-      if (admin_notes === null) return; // User cancelled prompt
+  const openStatusDialog = (exchange, status) => {
+    setStatusDialog({ open: true, exchange, status, adminNotes: '', error: '' });
+  };
+
+  const closeStatusDialog = () => {
+    setStatusDialog({ open: false, exchange: null, status: null, adminNotes: '', error: '' });
+  };
+
+  const handleStatusNotesChange = (event) => {
+    const value = event.target.value;
+    setStatusDialog((prev) => ({ ...prev, adminNotes: value, error: value.trim() ? '' : prev.error }));
+  };
+
+  const handleConfirmStatus = () => {
+    if (!statusDialog.exchange || !statusDialog.status) {
+      return;
     }
-    if (window.confirm(t('admin.exchanges.confirmUpdateStatus', { status: t(`admin.exchanges.status.${status}`) }))) {
-      updateExchangeStatusMutation.mutate({ id: exchangeId, status, admin_notes });
+
+    const requiresNotes = statusDialog.status === 'rejected' || statusDialog.status === 'cancelled';
+    const trimmedNotes = statusDialog.adminNotes.trim();
+
+    if (requiresNotes && !trimmedNotes) {
+      setStatusDialog((prev) => ({ ...prev, error: t('admin.exchanges.notesRequired', '请填写处理说明') }));
+      return;
     }
+
+    updateExchangeStatusMutation.mutate(
+      {
+        id: statusDialog.exchange.id,
+        status: statusDialog.status,
+        admin_notes: requiresNotes ? trimmedNotes : undefined,
+      },
+      { onSettled: () => closeStatusDialog() }
+    );
   };
 
   const exchanges = data?.data?.data || [];
@@ -81,6 +116,9 @@ export function ExchangeManagement() {
       prefetchPresignedUrls(paths).catch(() => {});
     }
   }, [exchanges]);
+
+  const statusRequiresNotes = statusDialog.status === 'rejected' || statusDialog.status === 'cancelled';
+  const statusLabel = statusDialog.status ? t(`admin.exchanges.status.${statusDialog.status}`) : '';
 
   return (
     <div className="space-y-6">
@@ -202,26 +240,26 @@ export function ExchangeManagement() {
                       </Button>
                       {exchange.status === 'pending' && (
                         <>
-                          <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(exchange.id, 'processing')} className="mr-2 text-blue-600 hover:text-blue-800">
+                          <Button variant="ghost" size="sm" onClick={() => openStatusDialog(exchange, 'processing')} className="mr-2 text-blue-600 hover:text-blue-800">
                             {t('admin.exchanges.action.process')}
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(exchange.id, 'rejected')} className="text-red-600 hover:text-red-800">
+                          <Button variant="ghost" size="sm" onClick={() => openStatusDialog(exchange, 'rejected')} className="text-red-600 hover:text-red-800">
                             {t('admin.exchanges.action.reject')}
                           </Button>
                         </>
                       )}
                       {exchange.status === 'processing' && (
                         <>
-                          <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(exchange.id, 'shipped')} className="mr-2 text-purple-600 hover:text-purple-800">
+                          <Button variant="ghost" size="sm" onClick={() => openStatusDialog(exchange, 'shipped')} className="mr-2 text-purple-600 hover:text-purple-800">
                             {t('admin.exchanges.action.ship')}
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(exchange.id, 'cancelled')} className="text-red-600 hover:text-red-800">
+                          <Button variant="ghost" size="sm" onClick={() => openStatusDialog(exchange, 'cancelled')} className="text-red-600 hover:text-red-800">
                             {t('admin.exchanges.action.cancel')}
                           </Button>
                         </>
                       )}
                       {exchange.status === 'shipped' && (
-                        <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(exchange.id, 'completed')} className="text-green-600 hover:text-green-800">
+                        <Button variant="ghost" size="sm" onClick={() => openStatusDialog(exchange, 'completed')} className="text-green-600 hover:text-green-800">
                           {t('admin.exchanges.action.complete')}
                         </Button>
                       )}
@@ -275,6 +313,9 @@ function ExchangeDetailModal({ isOpen, onClose, exchange }) {
         return null;
     }
   };
+
+  const statusRequiresNotes = statusDialog.status === 'rejected' || statusDialog.status === 'cancelled';
+  const statusLabel = statusDialog.status ? t(`admin.exchanges.status.${statusDialog.status}`) : '';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

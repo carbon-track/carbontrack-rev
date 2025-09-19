@@ -7,6 +7,15 @@ import { adminAPI } from '../../lib/api';
 import { Loader2, CheckCircle, XCircle, Eye, Search, Filter, MessageSquare, Clock } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Textarea } from '../ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '../ui/Alert';
 import { Pagination } from '../ui/Pagination';
 import { ActivityDetailModal } from '../activities/ActivityDetailModal';
@@ -24,6 +33,7 @@ export function ActivityReview() {
     sort: 'created_at_asc' // Oldest first for review
   });
   const [selectedActivity, setSelectedActivity] = useState(null);
+  const [decisionDialog, setDecisionDialog] = useState({ open: false, mode: null, activity: null, reason: '', error: '' });
   // 自动刷新控制
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshIntervalMs, setRefreshIntervalMs] = useState(15000); // 15s 默认
@@ -108,16 +118,48 @@ export function ActivityReview() {
     setSelectedActivity(activity);
   };
 
-  const handleApprove = (activityId) => {
-    if (window.confirm(t('admin.activities.confirmApprove')))
-    reviewActivityMutation.mutate({ id: activityId, status: 'approved' });
+  const closeDecisionDialog = () => {
+    setDecisionDialog({ open: false, mode: null, activity: null, reason: '', error: '' });
   };
 
-  const handleReject = (activityId) => {
-    const reason = prompt(t('admin.activities.promptRejectionReason'));
-    if (reason) {
-      reviewActivityMutation.mutate({ id: activityId, status: 'rejected', admin_notes: reason });
+  const openApproveDialog = (activity) => {
+    setDecisionDialog({ open: true, mode: 'approve', activity, reason: '', error: '' });
+  };
+
+  const openRejectDialog = (activity) => {
+    setDecisionDialog({ open: true, mode: 'reject', activity, reason: '', error: '' });
+  };
+
+  const handleDecisionReasonChange = (event) => {
+    const value = event.target.value;
+    setDecisionDialog((prev) => ({ ...prev, reason: value, error: value.trim() ? '' : prev.error }));
+  };
+
+  const handleDecisionConfirm = () => {
+    if (!decisionDialog.activity) {
+      return;
     }
+
+    const basePayload = { id: decisionDialog.activity.id };
+
+    if (decisionDialog.mode === 'approve') {
+      reviewActivityMutation.mutate(
+        { ...basePayload, status: 'approved' },
+        { onSettled: closeDecisionDialog }
+      );
+      return;
+    }
+
+    const trimmedReason = decisionDialog.reason.trim();
+    if (!trimmedReason) {
+      setDecisionDialog((prev) => ({ ...prev, error: t('admin.activities.rejectReasonRequired', '请填写拒绝原因') }));
+      return;
+    }
+
+    reviewActivityMutation.mutate(
+      { ...basePayload, status: 'rejected', admin_notes: trimmedReason },
+      { onSettled: closeDecisionDialog }
+    );
   };
 
   return (
@@ -276,10 +318,10 @@ export function ActivityReview() {
                       </Button>
                       {activity.status === 'pending' && (
                         <>
-                          <Button variant="ghost" size="sm" onClick={() => handleApprove(activity.id)} className="mr-2 text-green-600 hover:text-green-800">
+                          <Button variant="ghost" size="sm" onClick={() => openApproveDialog(activity)} className="mr-2 text-green-600 hover:text-green-800">
                             <CheckCircle className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleReject(activity.id)} className="text-red-600 hover:text-red-800">
+                          <Button variant="ghost" size="sm" onClick={() => openRejectDialog(activity)} className="text-red-600 hover:text-red-800">
                             <XCircle className="h-4 w-4" />
                           </Button>
                         </>
@@ -307,6 +349,65 @@ export function ActivityReview() {
         isOpen={!!selectedActivity}
         onClose={() => setSelectedActivity(null)}
       />
+      <Dialog open={decisionDialog.open} onOpenChange={(open) => (!open ? closeDecisionDialog() : null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {decisionDialog.mode === 'approve'
+                ? t('admin.activities.dialog.approveTitle', '确认通过审核')
+                : t('admin.activities.dialog.rejectTitle', '拒绝该活动')}
+            </DialogTitle>
+            <DialogDescription>
+              {decisionDialog.mode === 'approve'
+                ? t('admin.activities.dialog.approveDescription', '该活动将计入用户积分并发送通知。')
+                : t('admin.activities.dialog.rejectDescription', '请填写拒绝原因，我们会通知提交者。')}
+            </DialogDescription>
+          </DialogHeader>
+          {decisionDialog.activity && (
+            <div className="mb-4 rounded-xl border border-emerald-200/40 bg-emerald-50/40 px-3 py-2 text-sm text-emerald-700">
+              <span className="font-medium">{decisionDialog.activity.activity_name}</span> · {decisionDialog.activity.user_username}
+            </div>
+          )}
+          {decisionDialog.mode === 'reject' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700" htmlFor="reject-reason">
+                {t('admin.activities.dialog.reasonLabel', '拒绝原因')}
+              </label>
+              <Textarea
+                id="reject-reason"
+                rows={4}
+                value={decisionDialog.reason}
+                onChange={handleDecisionReasonChange}
+                placeholder={t('admin.activities.dialog.reasonPlaceholder', '请简要说明拒绝的原因')}
+              />
+              {decisionDialog.error && (
+                <p className="text-xs text-red-500">{decisionDialog.error}</p>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDecisionDialog}>
+              {t('common.cancel', '取消')}
+            </Button>
+            <Button
+              variant={decisionDialog.mode === 'reject' ? 'destructive' : 'default'}
+              onClick={handleDecisionConfirm}
+              disabled={reviewActivityMutation.isLoading}
+            >
+              {reviewActivityMutation.isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : decisionDialog.mode === 'approve' ? (
+                <CheckCircle className="mr-2 h-4 w-4" />
+              ) : (
+                <XCircle className="mr-2 h-4 w-4" />
+              )}
+              {decisionDialog.mode === 'approve'
+                ? t('admin.activities.dialog.approveAction', '通过审核')
+                : t('admin.activities.dialog.rejectAction', '拒绝活动')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

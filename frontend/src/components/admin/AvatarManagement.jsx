@@ -5,6 +5,16 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { adminAPI } from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
 import { toast } from 'react-hot-toast';
@@ -68,6 +78,8 @@ export function AvatarManagement() {
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [formValues, setFormValues] = useState(DEFAULT_FORM);
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, avatar: null });
+  const [isDeleting, setIsDeleting] = useState(false);
   const avatarInputRef = useRef(null);
 
   const fetchAvatars = useCallback(async () => {
@@ -221,16 +233,29 @@ export function AvatarManagement() {
     }
   };
 
-  const deleteAvatar = async (avatarId) => {
-    if (!window.confirm(t('admin.avatars.deleteConfirm', '确定要停用并移除该头像吗？'))) {
+  const closeDeleteDialog = () => {
+    setDeleteDialog({ open: false, avatar: null });
+    setIsDeleting(false);
+  };
+
+  const requestDeleteAvatar = (avatar) => {
+    setDeleteDialog({ open: true, avatar });
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!deleteDialog.avatar) {
       return;
     }
     try {
-      await adminAPI.deleteAvatar(avatarId);
+      setIsDeleting(true);
+      await adminAPI.deleteAvatar(deleteDialog.avatar.id);
       toast.success(t('admin.avatars.deleteSuccess', '头像已删除'));
+      closeDeleteDialog();
       fetchAvatars();
     } catch (error) {
       toast.error(error.response?.data?.message || t('admin.avatars.deleteFailed', '删除头像失败'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -353,7 +378,7 @@ export function AvatarManagement() {
                             {t('admin.avatars.restore', '恢复')}
                           </Button>
                         ) : (
-                          <Button variant="ghost" size="sm" onClick={() => deleteAvatar(avatar.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => requestDeleteAvatar(avatar)}>
                             <Trash2 className="h-4 w-4 mr-1" />
                             {t('admin.avatars.delete', '删除')}
                           </Button>
@@ -508,6 +533,33 @@ export function AvatarManagement() {
           </form>
         </CardContent>
       </Card>
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => (!open ? closeDeleteDialog() : null)}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('admin.avatars.deleteTitle', '移除头像')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('admin.avatars.deleteConfirm', '确定要停用并移除该头像吗？')}
+              {deleteDialog.avatar?.name ? ` (${deleteDialog.avatar.name})` : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={closeDeleteDialog}>{t('common.cancel', '取消')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAvatar}
+              className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-600"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              {t('common.confirm', '确认')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }

@@ -368,7 +368,7 @@
       "submit": "提交记录",
       "submitDesc": "确认信息并提交您的碳减排记录",
       "step2Of3": "第2步，共3步",
-      "inputDescription": "请输入您的活动数据，系统将自动计算碳减排量和积分",
+      "inputDescription": "请输入活动数据以计算碳减排和积分。",
       "dataValue": "数据值",
       "dataPlaceholder": "请输入数值",
       "dataRequired": "请输入活动数据",
@@ -395,7 +395,8 @@
       "recordAnother": "记录其他活动",
       "goToDashboard": "返回仪表板",
       "calculationFailed": "计算失败，请稍后重试",
-      "submitFailed": "提交失败，请稍后重试"
+      "submitFailed": "提交失败，请稍后重试",
+      "previewAutoUpdate": "输入后实时更新预览。"
     },
     "status": {
       "pending": "待审核",
@@ -409,7 +410,8 @@
       "points": "积分",
       "status": "状态",
       "date": "日期",
-      "actions": "操作"
+      "actions": "操作",
+      "images": "图片"
     },
     "history": {
       "title": "活动历史",
@@ -544,7 +546,8 @@
       "loadFailed": "加载商品失败",
       "exchangeFailed": "兑换失败，请重试",
       "loginRequired": "请先登录后再进行兑换"
-    }
+    },
+    "stock": "库存：{{count}}"
   },
   "messages": {
     "title": "消息中心",
@@ -658,7 +661,12 @@
       "systemNotifications": "系统通知",
       "saveSuccess": "个人资料更新成功",
       "saveFailed": "更新个人资料失败"
-    }
+    },
+    "lastUpdated": "最近更新",
+    "noUserData": "暂未获取到个人资料，请稍后重试。",
+    "points": "积分",
+    "userId": "用户 ID",
+    "uuid": "UUID"
   },
   "admin": {
     "title": "管理后台",
@@ -681,7 +689,8 @@
       "exchanges": "兑换管理",
       "broadcast": "广播中心",
       "badges": "徽章管理",
-      "avatars": "头像管理"
+      "avatars": "头像管理",
+      "audit": "审计日志"
     },
     "broadcast": {
       "title": "广播中心",
@@ -783,7 +792,9 @@
       "adjustPointsDelta": "积分变动值",
       "adjustPointsHint": "输入正数表示增加积分，负数表示扣减积分",
       "adjustPointsReason": "调整说明",
-      "adjustPointsReasonPlaceholder": "请输入调整原因，便于审计记录"
+      "adjustPointsReasonPlaceholder": "请输入调整原因，便于审计记录",
+      "disable": "禁用",
+      "enable": "启用"
     },
     "activities": {
       "title": "活动管理",
@@ -814,7 +825,18 @@
         "points": "积分",
         "status": "状态",
         "date": "日期"
-      }
+      },
+      "dialog": {
+        "approveAction": "通过审核",
+        "approveDescription": "该活动将计入用户积分并发送通知。",
+        "approveTitle": "确认通过审核",
+        "reasonLabel": "拒绝原因",
+        "reasonPlaceholder": "请简要说明拒绝的原因",
+        "rejectAction": "拒绝活动",
+        "rejectDescription": "请填写拒绝原因，我们会通知提交者。",
+        "rejectTitle": "拒绝该活动"
+      },
+      "rejectReasonRequired": "请填写拒绝原因"
     },
     "products": {
       "title": "商品管理",
@@ -824,7 +846,43 @@
       "delete": "删除商品",
       "confirmDelete": "确定要删除此商品吗？",
       "deleteSuccess": "商品删除成功",
-      "deleteFailed": "删除商品失败"
+      "deleteFailed": "删除商品失败",
+      "addProduct": "新增商品",
+      "category": "商品分类",
+      "createFailed": "创建商品失败。",
+      "createSuccess": "商品创建成功。",
+      "editProduct": "编辑商品",
+      "form": {
+        "category": "商品分类",
+        "description": "商品描述",
+        "imageUrl": "图片地址",
+        "name": "商品名称",
+        "price": "所需积分",
+        "status": "上架状态",
+        "stock": "库存数量",
+        "stockHint": "填 -1 表示不限库存。"
+      },
+      "noProductsFound": "暂无商品数据",
+      "searchPlaceholder": "按商品名称搜索",
+      "status": "状态",
+      "statusActive": "已上架",
+      "statusInactive": "已下架",
+      "statusOutOfStock": "库存不足",
+      "table": {
+        "actions": "操作",
+        "category": "分类",
+        "image": "图片",
+        "name": "名称",
+        "price": "所需积分",
+        "status": "状态",
+        "stock": "库存"
+      },
+      "tryDifferentFilters": "尝试调整筛选条件或搜索关键词。",
+      "unlimited": "不限",
+      "updateFailed": "更新商品失败。",
+      "updateSuccess": "商品更新成功。",
+      "deleteTitle": "删除商品",
+      "unnamed": "该商品"
     },
     "exchanges": {
       "title": "兑换管理",
@@ -833,7 +891,50 @@
       "completed": "已完成",
       "cancelled": "已取消",
       "approve": "通过",
-      "reject": "拒绝"
+      "reject": "拒绝",
+      "action": {
+        "cancel": "取消兑换",
+        "complete": "标记为已完成",
+        "process": "标记为处理中",
+        "reject": "驳回申请",
+        "ship": "标记为已发货"
+      },
+      "confirmUpdateStatus": "确定要将状态更新为 {{status}} 吗？",
+      "detail": {
+        "address": "收货地址",
+        "adminNotes": "管理员备注",
+        "exchangeDate": "兑换时间",
+        "exchangeId": "兑换编号",
+        "phone": "联系电话",
+        "product": "兑换商品",
+        "status": "当前状态",
+        "title": "兑换详情",
+        "totalPoints": "消耗积分",
+        "user": "兑换用户"
+      },
+      "noExchangesFound": "暂无兑换记录",
+      "promptNotes": "请输入备注（可选）：",
+      "searchPlaceholder": "按用户、商品或单号搜索",
+      "status": {
+        "cancelled": "已取消",
+        "completed": "已完成",
+        "pending": "待处理",
+        "processing": "处理中",
+        "rejected": "已驳回",
+        "shipped": "已发货"
+      },
+      "table": {
+        "date": "日期",
+        "product": "兑换商品",
+        "quantity": "数量",
+        "status": "状态",
+        "totalPoints": "消耗积分",
+        "user": "用户"
+      },
+      "tryDifferentFilters": "尝试调整筛选条件或搜索关键词。",
+      "updateFailed": "更新兑换状态失败。",
+      "updateSuccess": "兑换状态已更新。",
+      "notesRequired": "请填写处理说明"
     },
     "audit": {
       "title": "审计日志",
@@ -916,7 +1017,14 @@
         "messageTitleZh": "系统信件标题（中文）",
         "messageTitleEn": "系统信件标题（英文）",
         "messageBodyZh": "系统信件内容（中文）",
-        "messageBodyEn": "系统信件内容（英文）"
+        "messageBodyEn": "系统信件内容（英文）",
+        "autoGrantTitle": "自动授予规则",
+        "autoGrantHint": "开启后系统会按规则定期评估并授予徽章。",
+        "iconHint": "建议使用 256x256 的 PNG 或 WebP，大小不超过 5MB。",
+        "isActive": "是否启用",
+        "isActiveHint": "停用后用户将无法再获取该徽章。",
+        "sort": "排序权重",
+        "uploadIcon": "上传图标"
       },
       "updateSuccess": "徽章已更新",
       "createSuccess": "徽章已创建",
@@ -1014,7 +1122,9 @@
           "pointsMasterDesc": "累计获取积分 ≥ 5000 或积分余额 ≥ 2000",
           "veteran": "资深会员",
           "veteranDesc": "注册超过 365 天并累计提交 50 条记录"
-        }
+        },
+        "ruleCount": "{{count}} 条规则",
+        "selectMetric": "选择指标"
       },
       "bulkAwardDialog": {
         "dialogTitle": "批量授予徽章",
@@ -1124,7 +1234,9 @@
       "disable": "停用",
       "setDefault": "设为默认",
       "restore": "恢复",
-      "delete": "删除"
+      "delete": "删除",
+      "default": "默认",
+      "deleteTitle": "移除头像"
     },
     "subtitle": "集中管理 CarbonTrack 平台的一切",
     "command": {
@@ -1203,7 +1315,20 @@
       "oldest": "最旧优先",
       "pointsHighToLow": "积分：从高到低",
       "pointsLowToHigh": "积分：从低到高"
-    }
+    },
+    "actions": "操作",
+    "add": "添加",
+    "autoRefresh": "自动刷新",
+    "create": "创建",
+    "notice": "提示",
+    "points": "积分",
+    "refreshNow": "立即刷新",
+    "remove": "移除",
+    "retry": "重试",
+    "saveChanges": "保存修改",
+    "saving": "保存中...",
+    "selected": "已选择",
+    "uploading": "正在上传..."
   },
   "validation": {
     "required": "此字段为必填项",
@@ -1216,7 +1341,8 @@
     "max": "最大值为{{max}}",
     "numeric": "请输入数字",
     "positive": "请输入正数",
-    "integer": "请输入整数"
+    "integer": "请输入整数",
+    "passwordMismatch": "两次输入的密码不一致"
   },
   "errors": {
     "loadFailed": "加载失败",
@@ -1250,7 +1376,8 @@
     "page": "第{{current}}页，共{{total}}页",
     "total": "共{{total}}条记录",
     "pageSize": "每页显示",
-    "items": "条"
+    "items": "条",
+    "showing": "显示第 {{start}}-{{end}} 条，共 {{total}} 条"
   },
   "date": {
     "today": "今天",
