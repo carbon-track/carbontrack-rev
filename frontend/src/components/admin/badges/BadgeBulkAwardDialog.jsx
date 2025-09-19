@@ -243,7 +243,7 @@ export function BadgeBulkAwardDialog({
             <Badge variant="outline">{t('admin.badges.autoEnabled', '自动授予')}</Badge>
           ) : null}
         </div>
-      </button>
+      </div>
     );
   };
 
@@ -383,7 +383,7 @@ export function BadgeBulkAwardDialog({
                       onClick={() => handleRemoveUser(user.id)}
                     >
                       <X className="h-4 w-4" />
-                    </Button>
+                      </Button>
                   </div>
                 ))}
               </div>

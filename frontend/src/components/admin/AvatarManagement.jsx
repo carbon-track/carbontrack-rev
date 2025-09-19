@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -25,17 +25,34 @@ const DEFAULT_FORM = {
   is_active: true,
   is_default: false,
 };
+const sanitizeCategory = (category) => {
+  const raw = typeof category === 'string' ? category : '';
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return 'default';
+  }
+  const normalized = trimmed
+    .replace(/[^A-Za-z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[-_]+|[-_]+$/g, '')
+    .toLowerCase();
+  return normalized || 'default';
+};
+
 const normalizeAvatar = (avatar = {}) => {
   if (!avatar || typeof avatar !== 'object') {
     return { ...DEFAULT_FORM };
   }
   const rawFilePath = typeof avatar.file_path === 'string' && avatar.file_path ? avatar.file_path : '';
-  const normalizedPath = rawFilePath || (typeof avatar.icon_path === 'string' && avatar.icon_path ? `/${avatar.icon_path.replace(/^\/+, '')}` : '');
+  const sanitizedIconPath = typeof avatar.icon_path === 'string' ? avatar.icon_path.replace(/^[/]+/, '') : '';
+  const normalizedPath = rawFilePath || (sanitizedIconPath ? `/${sanitizedIconPath}` : '');
   const iconUrl = avatar.icon_url || avatar.url || avatar.image_url || '';
+  const normalizedCategory = sanitizeCategory(avatar.category);
   return {
     ...avatar,
+    category: normalizedCategory,
     file_path: normalizedPath,
-    icon_path: avatar.icon_path || normalizedPath.replace(/^\/+/, ''),
+    icon_path: sanitizedIconPath || normalizedPath.replace(/^[/]+/, ''),
     icon_url: iconUrl,
     icon_presigned_url: avatar.icon_presigned_url || '',
     image_url: avatar.image_url || iconUrl || '',
@@ -53,7 +70,7 @@ export function AvatarManagement() {
   const [formValues, setFormValues] = useState(DEFAULT_FORM);
   const avatarInputRef = useRef(null);
 
-  const fetchAvatars = async () => {
+  const fetchAvatars = useCallback(async () => {
     try {
       setLoading(true);
       const response = await adminAPI.getAvatars({ include_inactive: true });
@@ -61,16 +78,17 @@ export function AvatarManagement() {
         const items = (response.data.data || []).map((item) => normalizeAvatar(item));
         setAvatars(items);
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Avatar list fetch failed:', error);
       toast.error(t('admin.avatars.loadFailed', '加载头像列表失败'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     fetchAvatars();
-  }, []);
+  }, [fetchAvatars]);
 
   const resetForm = () => {
     setFormValues({ ...DEFAULT_FORM });
@@ -82,7 +100,7 @@ export function AvatarManagement() {
       id: normalized.id,
       name: normalized.name || '',
       description: normalized.description || '',
-      category: normalized.category || 'default',
+      category: sanitizeCategory(normalized.category),
       file_path: normalized.file_path || '',
       icon_url: normalized.icon_url || normalized.image_url || '',
       icon_presigned_url: normalized.icon_presigned_url || '',
@@ -94,7 +112,10 @@ export function AvatarManagement() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormValues((prev) => ({ ...prev, [name]: value }));
+    setFormValues((prev) => ({
+      ...prev,
+      [name]: name === 'category' ? sanitizeCategory(value) : value,
+    }));
   };
 
   const handleToggle = (field) => (checked) => {
@@ -110,7 +131,7 @@ export function AvatarManagement() {
       return;
     }
     setUploadingAvatar(true);
-    const category = (formValues.category || 'default').trim() || 'default';
+    const category = sanitizeCategory(formValues.category);
     try {
       const result = await uploadViaPresign(file, {
         directory: `avatars/${category}`,
@@ -125,8 +146,8 @@ export function AvatarManagement() {
         icon_presigned_url: info.presigned_url || prev.icon_presigned_url,
       }));
       toast.success(t('admin.avatars.uploadSuccess', '头像文件上传成功'));
-    } catch (err) {
-      toast.error(err?.message || t('admin.avatars.uploadFailed', '头像文件上传失败'));
+    } catch (error) {
+      toast.error(error?.message || t('admin.avatars.uploadFailed', '头像文件上传失败'));
     } finally {
       setUploadingAvatar(false);
       if (event.target) {
@@ -145,7 +166,7 @@ export function AvatarManagement() {
     const payload = {
       name: formValues.name,
       description: formValues.description,
-      category: formValues.category || 'default',
+      category: sanitizeCategory(formValues.category),
       file_path: formValues.file_path,
       sort_order: Number(formValues.sort_order) || 0,
       is_active: !!formValues.is_active,
@@ -163,8 +184,8 @@ export function AvatarManagement() {
       }
       resetForm();
       fetchAvatars();
-    } catch (err) {
-      toast.error(err.response?.data?.message || t('admin.avatars.saveFailed', '保存头像失败'));
+    } catch (error) {
+      toast.error(error.response?.data?.message || t('admin.avatars.saveFailed', '保存头像失败'));
     } finally {
       setSaving(false);
     }
@@ -184,8 +205,8 @@ export function AvatarManagement() {
         }
         return { ...prev, is_active: nextActive };
       });
-    } catch (err) {
-      toast.error(err.response?.data?.message || t('admin.avatars.toggleFailed', '更新头像状态失败'));
+    } catch (error) {
+      toast.error(error.response?.data?.message || t('admin.avatars.toggleFailed', '更新头像状态失败'));
     }
   };
 
@@ -195,8 +216,8 @@ export function AvatarManagement() {
       await adminAPI.setDefaultAvatar(avatarId);
       toast.success(t('admin.avatars.setDefaultSuccess', '已设为默认头像'));
       fetchAvatars();
-    } catch (err) {
-      toast.error(err.response?.data?.message || t('admin.avatars.setDefaultFailed', '设置默认头像失败'));
+    } catch (error) {
+      toast.error(error.response?.data?.message || t('admin.avatars.setDefaultFailed', '设置默认头像失败'));
     }
   };
 
@@ -208,8 +229,8 @@ export function AvatarManagement() {
       await adminAPI.deleteAvatar(avatarId);
       toast.success(t('admin.avatars.deleteSuccess', '头像已删除'));
       fetchAvatars();
-    } catch (err) {
-      toast.error(err.response?.data?.message || t('admin.avatars.deleteFailed', '删除头像失败'));
+    } catch (error) {
+      toast.error(error.response?.data?.message || t('admin.avatars.deleteFailed', '删除头像失败'));
     }
   };
 
@@ -218,8 +239,8 @@ export function AvatarManagement() {
       await adminAPI.restoreAvatar(avatarId);
       toast.success(t('admin.avatars.restoreSuccess', '头像已恢复'));
       fetchAvatars();
-    } catch (err) {
-      toast.error(err.response?.data?.message || t('admin.avatars.restoreFailed', '恢复头像失败'));
+    } catch (error) {
+      toast.error(error.response?.data?.message || t('admin.avatars.restoreFailed', '恢复头像失败'));
     }
   };
 

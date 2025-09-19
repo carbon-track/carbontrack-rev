@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -58,7 +58,7 @@ const normalizeCriteria = (raw) => {
   if (typeof raw === 'string') {
     try {
       data = JSON.parse(raw);
-    } catch (_err) {
+    } catch {
       return null;
     }
   }
@@ -87,23 +87,23 @@ export default function BadgeManagement() {
   const [bulkDialog, setBulkDialog] = useState({ open: false, badgeIds: [], mode: 'award', presetUsers: [] });
   const iconInputRef = useRef(null);
 
-  const fetchBadges = async () => {
+  const fetchBadges = useCallback(async () => {
     try {
       setLoading(true);
       const response = await adminAPI.getBadges();
       if (response.data?.success) {
         setBadges(response.data.data || []);
       }
-    } catch (_err) {
+    } catch {
       toast.error(t('admin.badges.loadFailed', '加载徽章列表失败'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     fetchBadges();
-  }, []);
+  }, [fetchBadges]);
 
   useEffect(() => {
     if (searchParams.get('create') === '1') {
@@ -235,7 +235,7 @@ export default function BadgeManagement() {
       } else if (formValues.auto_grant_criteria) {
         try {
           payload.auto_grant_criteria = JSON.parse(formValues.auto_grant_criteria);
-        } catch (_err) {
+        } catch {
           toast.error(t('admin.badges.criteriaParseFailed', '自动授予规则 JSON 解析失败'));
           return;
         }

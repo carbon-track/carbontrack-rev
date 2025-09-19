@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Button } from '../../ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Copy, Check } from 'lucide-react';
 
 const AuditJsonField = ({ json, title }) => {
