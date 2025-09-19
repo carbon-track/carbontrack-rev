@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { Loader2, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import R2Image from '../common/R2Image';
+import { buildAvatarDisplayProps } from '../../lib/avatarUtils';
 
 export function AvatarSelector({ currentAvatarId, onAvatarChange }) {
   const { t } = useTranslation();
@@ -33,6 +34,24 @@ export function AvatarSelector({ currentAvatarId, onAvatarChange }) {
   );
 
   const avatars = avatarsData?.data?.data || [];
+
+  const AvatarThumbnail = ({ avatar }) => {
+    const { src, filePath, alt, fallbackInitial } = buildAvatarDisplayProps(avatar);
+    const fallback = (
+      <div className="w-full aspect-square flex items-center justify-center text-xs text-gray-400 bg-gray-100 rounded-md">
+        {fallbackInitial || 'IMG'}
+      </div>
+    );
+    return (
+      <R2Image
+        src={src || undefined}
+        filePath={!src && filePath ? filePath : undefined}
+        alt={alt || avatar?.name}
+        className="w-full h-auto rounded-md object-cover"
+        fallback={fallback}
+      />
+    );
+  };
 
   const handleSelectAvatar = (avatarId) => {
     setSelectedAvatar(avatarId);
@@ -71,13 +90,7 @@ export function AvatarSelector({ currentAvatarId, onAvatarChange }) {
               ${selectedAvatar === avatar.id ? 'border-green-500' : 'border-gray-200 hover:border-gray-300'}`}
             onClick={() => handleSelectAvatar(avatar.id)}
           >
-            <R2Image
-              src={avatar.image_url && avatar.image_url.startsWith('http') ? avatar.image_url : undefined}
-              filePath={!avatar.image_url || avatar.image_url.startsWith('http') ? undefined : avatar.image_url}
-              alt={avatar.name}
-              className="w-full h-auto rounded-md object-cover"
-              fallback={<div className="w-full aspect-square flex items-center justify-center text-xs text-gray-400 bg-gray-100 rounded-md">IMG</div>}
-            />
+            <AvatarThumbnail avatar={avatar} />
             {selectedAvatar === avatar.id && (
               <div className="absolute top-1 right-1 bg-green-500 rounded-full p-1">
                 <CheckCircle className="h-4 w-4 text-white" />
