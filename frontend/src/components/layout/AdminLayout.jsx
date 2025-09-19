@@ -174,7 +174,7 @@ export default function AdminLayout() {
                     {t('admin.title')}
                   </div>
                   <p className="mt-3 text-xs leading-relaxed text-slate-500">
-                    {t('admin.subtitle', '集中管理 CarbonTrack 平台的一切')}
+                    {t('admin.subtitle', '集中管理CarbonTrack的一切')}
                   </p>
                 </SidebarHeader>
                 <SidebarContent className="px-3 py-4">
@@ -263,41 +263,6 @@ export default function AdminLayout() {
                         <Award className="h-4 w-4" />
                         {t('admin.header.quickBadge', '快速创建徽章')}
                       </Button>
-                    </div>
-                  </div>
-                  <div className="grid w-full gap-4 md:grid-cols-3">
-                    <div className="group rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm transition-all hover:border-emerald-200 hover:shadow-md">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                          <Sparkles className="h-5 w-5" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-slate-900">{t('admin.header.quickActions', '常用操作')}</p>
-                          <p className="text-xs text-slate-500">{t('admin.header.quickActionsHint', '在指挥面板中聚合所有常用入口')}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="group rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm transition-all hover:border-emerald-200 hover:shadow-md">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                          <Clock className="h-5 w-5" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-slate-900">{t('admin.header.pending', '待处理提醒')}</p>
-                          <p className="text-xs text-slate-500">{t('admin.header.pendingHint', '各模块会在自己的页面提示待处理数量')}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="group rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm transition-all hover:border-emerald-200 hover:shadow-md">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                          <ShieldCheck className="h-5 w-5" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-slate-900">{t('admin.header.security', '安全状态')}</p>
-                          <p className="text-xs text-slate-500">{t('admin.header.securityHint', '请确保仅管理员访问该后台')}</p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </header>

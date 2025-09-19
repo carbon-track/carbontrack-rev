@@ -16,7 +16,16 @@ import {
   AlertDialogTitle,
 } from '../ui/alert-dialog';
 import { Input } from '../ui/Input';
+import { Textarea } from '../ui/textarea';
 import { Alert, AlertTitle, AlertDescription } from '../ui/Alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { Pagination } from '../ui/Pagination';
 // 预取私有图片（可选性能优化）
 import { prefetchPresignedUrls } from '../../lib/fileAccess';
@@ -333,7 +342,7 @@ export function ProductManagement() {
 
 import { useForm } from 'react-hook-form';
 
-function ProductFormModal({ onClose, product, categories, onSubmit, isSubmitting }) {
+function ProductFormModal({ isOpen, onClose, product, categories, onSubmit, isSubmitting }) {
   const { t } = useTranslation();
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     defaultValues: product || {
@@ -368,7 +377,6 @@ function ProductFormModal({ onClose, product, categories, onSubmit, isSubmitting
   }, [product, categories, reset]);
 
   const handleFormSubmit = (data) => {
-    // 将表单数据映射为后端所需字段
     const payload = {
       name: data.name,
       description: data.description,
@@ -382,63 +390,66 @@ function ProductFormModal({ onClose, product, categories, onSubmit, isSubmitting
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h3 className="text-xl font-semibold mb-4">
-            {product ? t('admin.products.editProduct') : t('admin.products.addProduct')}
-          </h3>
-          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+    <Dialog open={isOpen} onOpenChange={(open) => (!open ? onClose() : null)}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{product ? t('admin.products.editProduct') : t('admin.products.addProduct')}</DialogTitle>
+          <DialogDescription>
+            {t('admin.products.formModal.description', 'Update the storefront details for this reward.')}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700" htmlFor="product-name">{t('admin.products.form.name')}</label>
+            <Input id="product-name" {...register('name', { required: t('validation.required') })} />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700" htmlFor="product-description">{t('admin.products.form.description')}</label>
+            <Textarea id="product-description" {...register('description')} className="min-h-[120px]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700" htmlFor="product-category">{t('admin.products.form.category')}</label>
+            <select id="product-category" {...register('category', { required: t('validation.required') })} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+            {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700">{t('admin.products.form.name')}</label>
-              <Input {...register('name', { required: t('validation.required') })} />
-              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">{t('admin.products.form.description')}</label>
-              <textarea {...register('description')} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"></textarea>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">{t('admin.products.form.category')}</label>
-              <select {...register('category', { required: t('validation.required') })} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm">
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-              {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">{t('admin.products.form.price')}</label>
-              <Input type="number" {...register('price', { required: t('validation.required'), valueAsNumber: true, min: { value: 0, message: t('validation.min', { min: 0 }) } })} />
+              <label className="block text-sm font-medium text-gray-700" htmlFor="product-price">{t('admin.products.form.price')}</label>
+              <Input id="product-price" type="number" {...register('price', { required: t('validation.required'), valueAsNumber: true, min: { value: 0, message: t('validation.min', { min: 0 }) } })} />
               {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price.message}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">{t('admin.products.form.stock')}</label>
-              <Input type="number" {...register('stock', { required: t('validation.required'), valueAsNumber: true, min: { value: -1, message: t('validation.min', { min: -1 }) } })} />
+              <label className="block text-sm font-medium text-gray-700" htmlFor="product-stock">{t('admin.products.form.stock')}</label>
+              <Input id="product-stock" type="number" {...register('stock', { required: t('validation.required'), valueAsNumber: true, min: { value: -1, message: t('validation.min', { min: -1 }) } })} />
               <p className="text-xs text-gray-500 mt-1">{t('admin.products.form.stockHint')}</p>
               {errors.stock && <p className="text-red-500 text-xs mt-1">{errors.stock.message}</p>}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">{t('admin.products.form.imageUrl')}</label>
-              <Input {...register('image_url')} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">{t('admin.products.form.status')}</label>
-              <select {...register('status')} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm">
-                <option value="active">{t('admin.products.statusActive')}</option>
-                <option value="inactive">{t('admin.products.statusInactive')}</option>
-              </select>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>{t('common.cancel')}</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? t('common.saving') : t('common.save')}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700" htmlFor="product-image">{t('admin.products.form.imageUrl')}</label>
+            <Input id="product-image" {...register('image_url')} placeholder="https://" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700" htmlFor="product-status">{t('admin.products.form.status')}</label>
+            <select id="product-status" {...register('status')} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+              <option value="active">{t('admin.products.statusActive')}</option>
+              <option value="inactive">{t('admin.products.statusInactive')}</option>
+            </select>
+          </div>
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>{t('common.cancel')}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? t('common.saving') : t('common.save')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

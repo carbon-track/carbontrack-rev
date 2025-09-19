@@ -279,6 +279,70 @@ export function ExchangeManagement() {
         </>
       )}
 
+      <Dialog open={statusDialog.open} onOpenChange={(open) => (!open ? closeStatusDialog() : null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {t('admin.exchanges.statusDialog.title', { status: statusLabel || statusDialog.status || '' })}
+            </DialogTitle>
+            <DialogDescription>
+              {t('admin.exchanges.statusDialog.description', { status: statusLabel || statusDialog.status || '' })}
+            </DialogDescription>
+          </DialogHeader>
+          {statusDialog.exchange && (
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+              <div className="flex items-center justify-between text-slate-700">
+                <span className="font-semibold text-slate-900">{statusDialog.exchange.user_username}</span>
+                <span>{formatDateSafe(statusDialog.exchange.created_at, 'yyyy-MM-dd HH:mm', '--')}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-900">{statusDialog.exchange.product_name}</span>
+                <span className="font-medium text-red-600">-{formatNumber(statusDialog.exchange.total_points)} {t('common.points')}</span>
+              </div>
+              {statusDialog.exchange.contact_phone && (
+                <p className="text-xs text-slate-500">{statusDialog.exchange.contact_phone}</p>
+              )}
+              {statusDialog.exchange.shipping_address && (
+                <p className="text-xs text-slate-500">{statusDialog.exchange.shipping_address}</p>
+              )}
+            </div>
+          )}
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="exchange-status-notes">
+                {statusRequiresNotes
+                  ? t('admin.exchanges.statusDialog.notesRequiredLabel')
+                  : t('admin.exchanges.statusDialog.notesLabel')}
+              </label>
+              <Textarea
+                id="exchange-status-notes"
+                value={statusDialog.adminNotes}
+                onChange={handleStatusNotesChange}
+                rows={statusRequiresNotes ? 4 : 3}
+                placeholder={t('admin.exchanges.statusDialog.notesPlaceholder')}
+              />
+              {statusDialog.error && (
+                <p className="text-xs text-red-500">{statusDialog.error}</p>
+              )}
+              {!statusRequiresNotes && (
+                <p className="text-xs text-slate-500">{t('admin.exchanges.statusDialog.notesOptional')}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeStatusDialog} disabled={updateExchangeStatusMutation.isLoading}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleConfirmStatus} disabled={updateExchangeStatusMutation.isLoading}>
+              {updateExchangeStatusMutation.isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {t('admin.exchanges.statusDialog.confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {selectedExchange && (
         <ExchangeDetailModal
           isOpen={!!selectedExchange}
@@ -314,71 +378,69 @@ function ExchangeDetailModal({ isOpen, onClose, exchange }) {
     }
   };
 
-  const statusRequiresNotes = statusDialog.status === 'rejected' || statusDialog.status === 'cancelled';
-  const statusLabel = statusDialog.status ? t(`admin.exchanges.status.${statusDialog.status}`) : '';
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h3 className="text-xl font-semibold mb-4">{t('admin.exchanges.detail.title')}</h3>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-gray-500">{t('admin.exchanges.detail.exchangeId')}</p>
-              <p className="text-gray-900">{exchange.id}</p>
+    <Dialog open={isOpen} onOpenChange={(open) => (!open ? onClose() : null)}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t('admin.exchanges.detail.title')}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-900">#{exchange.id}</span>
+              <span className="text-slate-500">{formatDateSafe(exchange.created_at, 'yyyy-MM-dd HH:mm', '--')}</span>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">{t('admin.exchanges.detail.user')}</p>
-              <p className="text-gray-900">{exchange.user_username} ({exchange.user_email})</p>
+            <div className="text-slate-700">
+              <p className="font-medium">{exchange.user_username}</p>
+              {exchange.user_email && <p className="text-xs text-slate-500">{exchange.user_email}</p>}
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">{t('admin.exchanges.detail.product')}</p>
-              <div className="flex items-center mt-1">
-                {exchange.product_image_url && (
-                  <R2Image
-                    src={exchange.product_image_url.startsWith('http') ? exchange.product_image_url : undefined}
-                    filePath={exchange.product_image_url.startsWith('http') ? undefined : exchange.product_image_url}
-                    alt={exchange.product_name}
-                    className="h-10 w-10 rounded-full object-cover mr-2"
-                    fallback={<div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 mr-2">IMG</div>}
-                  />
-                )}
-                <p className="text-gray-900">{exchange.product_name} x {formatNumber(exchange.quantity)}</p>
+            <div className="flex items-center gap-3">
+              {exchange.product_image_url && (
+                <R2Image
+                  src={exchange.product_image_url.startsWith('http') ? exchange.product_image_url : undefined}
+                  filePath={exchange.product_image_url.startsWith('http') ? undefined : exchange.product_image_url}
+                  alt={exchange.product_name}
+                  className="h-12 w-12 rounded-lg object-cover"
+                  fallback={<div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center text-[10px] text-gray-400">IMG</div>}
+                />
+              )}
+              <div className="text-sm text-slate-700">
+                <p className="font-medium text-slate-900">{exchange.product_name} x {formatNumber(exchange.quantity)}</p>
+                <p className="text-xs text-slate-500">-{formatNumber(exchange.total_points)} {t('common.points')}</p>
               </div>
             </div>
+          </div>
+
+          <div className="grid gap-3 text-sm text-slate-600">
             <div>
-              <p className="text-sm font-medium text-gray-500">{t('admin.exchanges.detail.totalPoints')}</p>
-              <p className="text-red-600 font-semibold">-{formatNumber(exchange.total_points)} {t('common.points')}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">{t('admin.exchanges.detail.status')}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">{t('admin.exchanges.detail.status')}</p>
               {getStatusBadge(exchange.status)}
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">{t('admin.exchanges.detail.exchangeDate')}</p>
-              <p className="text-gray-900">{formatDateSafe(exchange.created_at, 'yyyy-MM-dd HH:mm')}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">{t('admin.exchanges.detail.address')}</p>
-              <p className="text-gray-900">{exchange.shipping_address}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">{t('admin.exchanges.detail.phone')}</p>
-              <p className="text-gray-900">{exchange.contact_phone}</p>
-            </div>
+            {exchange.shipping_address && (
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">{t('admin.exchanges.detail.address')}</p>
+                <p className="text-slate-800">{exchange.shipping_address}</p>
+              </div>
+            )}
+            {exchange.contact_phone && (
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">{t('admin.exchanges.detail.phone')}</p>
+                <p className="text-slate-800">{exchange.contact_phone}</p>
+              </div>
+            )}
             {exchange.admin_notes && (
               <div>
-                <p className="text-sm font-medium text-gray-500">{t('admin.exchanges.detail.adminNotes')}</p>
-                <p className="text-gray-900 bg-gray-50 p-3 rounded-md">{exchange.admin_notes}</p>
+                <p className="text-xs uppercase tracking-wide text-slate-500">{t('admin.exchanges.detail.adminNotes')}</p>
+                <p className="rounded-lg bg-slate-50 p-3 text-slate-800">{exchange.admin_notes}</p>
               </div>
             )}
           </div>
-          <div className="flex justify-end mt-6">
-            <Button onClick={onClose}>{t('common.close')}</Button>
-          </div>
         </div>
-      </div>
-    </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>{t('common.close')}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

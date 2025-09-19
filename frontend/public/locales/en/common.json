@@ -748,6 +748,9 @@
         "stock": "Stock",
         "stockHint": "Use -1 for unlimited stock."
       },
+      "formModal": {
+        "description": "Update the storefront details for this reward."
+      },
       "noProductsFound": "No products found",
       "searchPlaceholder": "Search by product name...",
       "status": "Status",
@@ -784,6 +787,15 @@
         "process": "Mark as processing",
         "reject": "Reject",
         "ship": "Mark as shipped"
+      },
+      "statusDialog": {
+        "title": "Update status to {{status}}",
+        "description": "Confirm updating this exchange to {{status}}. The user will see the change immediately.",
+        "notesLabel": "Processing notes",
+        "notesRequiredLabel": "Processing notes (required)",
+        "notesPlaceholder": "Explain how you handled this request.",
+        "notesOptional": "Optional: share context with the user about this update.",
+        "confirm": "Confirm update"
       },
       "confirmUpdateStatus": "Confirm changing status to {{status}}?",
       "detail": {
