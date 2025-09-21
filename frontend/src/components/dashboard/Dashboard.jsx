@@ -41,7 +41,7 @@ export function Dashboard() {
     );
 
     if (entry?.avatar_url) {
-      const isExternal = /^https?:\\/\\//i.test(entry.avatar_url);
+      const isExternal = /^https?:\/\//i.test(entry.avatar_url);
       return (
         <R2Image
           src={isExternal ? entry.avatar_url : undefined}

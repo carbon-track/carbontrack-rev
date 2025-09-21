@@ -47,7 +47,7 @@ export function parseLogQuery(input) {
     if (m) {
       let [, k, op, v] = m;
       k = k.trim(); v = v.trim();
-      if (v.startsWith(""") && v.endsWith(""")) v = v.slice(1,-1);
+      if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1);
       const mapped = KEY_MAP[k] || k;
       if (RANGE_KEYS.has(mapped) && /^(>=|<=|>|<)$/.test(op)) {
         ranges[mapped] = ranges[mapped] || {};
