@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { format } from 'date-fns';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -14,12 +15,18 @@ import {
   Shield,
   Ban,
   Users as UsersIcon,
+  Eye,
+  Leaf,
+  ClipboardList,
+  CalendarDays,
+  Award,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Alert, AlertTitle, AlertDescription } from '../ui/Alert';
 import { Pagination } from '../ui/Pagination';
 import { Checkbox } from '../ui/checkbox';
+import { Switch } from '../ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,17 +60,37 @@ const DEFAULT_FILTERS = {
   sort: 'created_at_desc',
 };
 
+const normalizeUser = (user = {}) => {
+  const toNumber = (value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  };
+  return {
+    ...user,
+    is_admin: user.is_admin === true || user.is_admin === 1 || user.is_admin === '1',
+    points: toNumber(user.points),
+    total_transactions: toNumber(user.total_transactions),
+    earned_points: toNumber(user.earned_points),
+    total_carbon_saved: toNumber(user.total_carbon_saved),
+    badges_awarded: toNumber(user.badges_awarded),
+    badges_revoked: toNumber(user.badges_revoked),
+    active_badges: toNumber(user.active_badges),
+    days_since_registration: toNumber(user.days_since_registration),
+  };
+};
+
 function normalizeUsersResponse(response) {
   const payload = response?.data?.data || response?.data || {};
   if (Array.isArray(payload.users)) {
     return {
-      users: payload.users,
+      users: payload.users.map(normalizeUser),
       pagination: payload.pagination || {},
     };
   }
   const nested = payload.data || {};
+  const users = Array.isArray(nested.users) ? nested.users.map(normalizeUser) : [];
   return {
-    users: Array.isArray(nested.users) ? nested.users : [],
+    users,
     pagination: nested.pagination || {},
   };
 }

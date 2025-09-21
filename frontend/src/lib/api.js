@@ -266,6 +266,8 @@ export const adminAPI = {
     }
     return api.get('/admin/users', { params: query });
   },
+  getUserOverview: (id) => api.get(`/admin/users/${id}/overview`),
+  getUserBadges: (id, params = {}) => api.get(`/admin/users/${id}/badges`, { params }),
   
   // 调整用户积分
   adjustUserPoints: (id, data) => api.post('/admin/users/' + id + '/points/adjust', data),
@@ -338,6 +340,7 @@ export const adminAPI = {
   awardBadge: (id, data) => api.post(`/admin/badges/${id}/award`, data),
   revokeBadge: (id, data) => api.post(`/admin/badges/${id}/revoke`, data),
   triggerBadgeAuto: (data = {}) => api.post('/admin/badges/auto-trigger', data),
+  getBadgeRecipients: (id, params = {}) => api.get(`/admin/badges/${id}/recipients`, { params }),
 
 };
 
