@@ -10,6 +10,7 @@ import { QuickActions } from './QuickActions';
 import AchievementBadges from './AchievementBadges';
 import { Alert, AlertDescription } from '../ui/Alert';
 import { toast } from 'react-hot-toast';
+import R2Image from '../common/R2Image';
 
 export function Dashboard() {
   const { t } = useTranslation();
@@ -23,6 +24,37 @@ export function Dashboard() {
   const [error, setError] = useState('');
   const didFetchRef = useRef(false);
   const isAdmin = Boolean(user?.is_admin);
+
+  const getInitial = (value) => {
+    if (!value) return 'C';
+    const trimmed = String(value).trim();
+    return trimmed ? trimmed.charAt(0).toUpperCase() : 'C';
+  };
+
+  const renderLeaderboardAvatar = (entry, sizeClass = 'h-8 w-8') => {
+    const displayName = entry?.username || entry?.name || '';
+    const initial = getInitial(displayName);
+    const fallback = (
+      <div className={`${sizeClass} rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-semibold`}>
+        {initial}
+      </div>
+    );
+
+    if (entry?.avatar_url) {
+      const isExternal = /^https?:\\/\\//i.test(entry.avatar_url);
+      return (
+        <R2Image
+          src={isExternal ? entry.avatar_url : undefined}
+          filePath={!isExternal ? entry.avatar_url : undefined}
+          alt={displayName || 'avatar'}
+          className={`${sizeClass} rounded-full object-cover border border-white shadow-sm`}
+          fallback={fallback}
+        />
+      );
+    }
+
+    return fallback;
+  };
 
   // 先声明，供后续 useEffect 使用，避免 TDZ 报错
   // 合并数据请求，避免 useEffect 使用时触发 TDZ
@@ -350,24 +382,30 @@ export function Dashboard() {
                 {t('dashboard.leaderboard')}
               </h3>
               <div className="space-y-3">
-                {stats.leaderboard.slice(0, 5).map((user, index) => (
-                  <div key={user.id} className="flex items-center gap-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                      index === 0 ? 'bg-yellow-500 text-white' :
-                      index === 1 ? 'bg-gray-400 text-white' :
-                      index === 2 ? 'bg-orange-500 text-white' :
-                      'bg-gray-200 text-gray-600'
-                    }`}>
-                      {index + 1}
+                {stats.leaderboard.slice(0, 5).map((entry, index) => {
+                  const displayName = entry.username || entry.name || '—';
+                  return (
+                    <div key={entry.id ?? `${index}-${displayName}`} className="flex items-center gap-3">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                        index === 0 ? 'bg-yellow-500 text-white' :
+                        index === 1 ? 'bg-gray-400 text-white' :
+                        index === 2 ? 'bg-orange-500 text-white' :
+                        'bg-gray-200 text-gray-600'
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {renderLeaderboardAvatar(entry)}
+                        <span className="truncate text-sm text-blue-700 font-medium">{displayName}</span>
+                      </div>
+                      {Number.isFinite(entry.total_points) ? (
+                        <span className="text-sm text-blue-600">
+                          {entry.total_points} {t('common.points')}
+                        </span>
+                      ) : null}
                     </div>
-                    <span className="flex-1 text-sm text-blue-700">
-                      {user.username}
-                    </span>
-                    <span className="text-sm text-blue-600">
-                      {user.total_points} {t('dashboard.points')}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

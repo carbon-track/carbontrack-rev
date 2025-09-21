@@ -37,20 +37,38 @@ export function ActivitySelector({ onActivitySelect, selectedActivity }) {
         
         if (response?.data?.success) {
           const payload = response?.data?.data;
-          // 后端返回 { data: { activities: [], categories: [], total: number } }
-          const activitiesData = Array.isArray(payload?.activities)
+          const rawActivities = Array.isArray(payload?.activities)
             ? payload.activities
             : Array.isArray(payload)
               ? payload
               : [];
 
-          setActivities(activitiesData);
-          setFilteredActivities(activitiesData);
+          const normalized = rawActivities
+            .filter((activity) => {
+              if (!activity) return false;
+              if (activity.deleted_at) return false;
+              if (Object.prototype.hasOwnProperty.call(activity, 'is_active') && activity.is_active === false) {
+                return false;
+              }
+              return true;
+            })
+            .map((activity) => ({
+              ...activity,
+              carbon_factor: Number(activity.carbon_factor ?? activity.factor ?? 0),
+              sort_order: Number(activity.sort_order ?? 0),
+            }))
+            .sort((a, b) => {
+              const orderDiff = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+              if (orderDiff !== 0) return orderDiff;
+              return (a.name_zh || '').localeCompare(b.name_zh || '');
+            });
 
-          // 提取分类（优先使用后端 categories，否则从活动推导）
+          setActivities(normalized);
+          setFilteredActivities(normalized);
+
           const uniqueCategories = Array.isArray(payload?.categories)
             ? payload.categories
-            : [...new Set(activitiesData.map((activity) => activity.category).filter(Boolean))];
+            : [...new Set(normalized.map((activity) => activity.category).filter(Boolean))];
           setCategories(uniqueCategories);
         } else {
           setError(response?.data?.message || t('errors.loadFailed'));

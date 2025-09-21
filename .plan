@@ -1,0 +1,3 @@
+1. Review current user avatar URL handling in UserController and related services.
+2. Update backend to generate Cloudflare R2 presigned URLs for avatars returned in stats/leaderboard responses.
+3. Ensure frontend components use the provided avatar URLs with fallbacks.

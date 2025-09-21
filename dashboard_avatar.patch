@@ -1,0 +1,97 @@
+diff --git a/frontend/src/components/dashboard/Dashboard.jsx b/frontend/src/components/dashboard/Dashboard.jsx
+index f0f9d3c8..00000000 100644
+--- a/frontend/src/components/dashboard/Dashboard.jsx
++++ b/frontend/src/components/dashboard/Dashboard.jsx
+@@
+-import { Alert, AlertDescription } from '../ui/Alert';
+-import { toast } from 'react-hot-toast';
++import { Alert, AlertDescription } from '../ui/Alert';
++import { toast } from 'react-hot-toast';
++import R2Image from '../common/R2Image';
+@@
+ export function Dashboard() {
+   const { t } = useTranslation();
+   const [user, setUser] = useState(null);
+@@
+   const didFetchRef = useRef(false);
+   const isAdmin = Boolean(user?.is_admin);
+ 
++  const getInitial = (value) => {
++    if (!value) return 'C';
++    const trimmed = String(value).trim();
++    return trimmed ? trimmed.charAt(0).toUpperCase() : 'C';
++  };
++
++  const renderLeaderboardAvatar = (entry, sizeClass = 'h-8 w-8') => {
++    const displayName = entry?.username || entry?.name || '';
++    const initial = getInitial(displayName || user?.username);
++    const fallback = (
++      <div className={`${sizeClass} rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-semibold`}>
++        {initial}
++      </div>
++    );
++
++    if (entry?.avatar_url) {
++      const isExternal = /^https?:\/\//i.test(entry.avatar_url);
++      return (
++        <R2Image
++          src={isExternal ? entry.avatar_url : undefined}
++          filePath={!isExternal ? entry.avatar_url : undefined}
++          alt={displayName || 'avatar'}
++          className={`${sizeClass} rounded-full object-cover border border-white shadow-sm`}
++          fallback={fallback}
++        />
++      );
++    }
++
++    return fallback;
++  };
++
+@@
+-                <div className="space-y-3">
+-                  {stats.leaderboard.slice(0, 5).map((user, index) => (
+-                    <div key={user.id} className="flex items-center gap-3">
+-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+-                        index === 0 ? 'bg-yellow-500 text-white' :
+-                        index === 1 ? 'bg-gray-400 text-white' :
+-                        index === 2 ? 'bg-orange-500 text-white' :
+-                        'bg-blue-200 text-blue-900'
+-                      }`}>
+-                        {index + 1}
+-                      </div>
+-                      <span className="flex-1 truncate">{user.username || user.name}</span>
+-                      {user.total_points ? (
+-                        <span className="text-xs font-medium text-blue-800">{user.total_points} {t('common.points')}</span>
+-                      ) : null}
+-                    </div>
+-                  ))}
+-                </div>
++                <div className="space-y-3">
++                  {stats.leaderboard.slice(0, 5).map((entry, index) => {
++                    const displayName = entry.username || entry.name || t('dashboard.anonymous', '匿名用户');
++                    return (
++                      <div key={entry.id ?? `${index}-${displayName}`} className="flex items-center gap-3">
++                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
++                          index === 0 ? 'bg-yellow-500 text-white'
++                            : index === 1 ? 'bg-gray-400 text-white'
++                            : index === 2 ? 'bg-orange-500 text-white'
++                            : 'bg-blue-200 text-blue-900'
++                        }`}>
++                          {index + 1}
++                        </div>
++                        <div className="flex items-center gap-3 flex-1 min-w-0">
++                          {renderLeaderboardAvatar(entry)}
++                          <span className="truncate font-medium text-blue-900">{displayName}</span>
++                        </div>
++                        {Number.isFinite(entry.total_points) ? (
++                          <span className="text-xs font-medium text-blue-800">
++                            {entry.total_points} {t('common.points')}
++                          </span>
++                        ) : null}
++                      </div>
++                    );
++                  })}
++                </div>
+               </div>
+             </div>
+           )}

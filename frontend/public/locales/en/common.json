@@ -874,7 +874,63 @@
         "rejectDescription": "Please provide a reason; the submitter will be notified.",
         "rejectTitle": "Reject activity"
       },
-      "rejectReasonRequired": "Please provide a rejection reason."
+      "rejectReasonRequired": "Please provide a rejection reason.",
+      "tab": {
+        "library": "Activity Library",
+        "review": "Record Review"
+      },
+      "library": {
+        "title": "Activity Library",
+        "description": "Maintain the catalogue of carbon-reduction activities available to users.",
+        "create": "Create Activity",
+        "edit": "Edit Activity",
+        "searchPlaceholder": "Search by name or description...",
+        "empty": "No activities match the current filters.",
+        "validationError": "Please complete all required fields.",
+        "confirmDelete": "Disable and archive this activity?",
+        "saveSuccess": "Activity saved successfully",
+        "deleteSuccess": "Activity archived",
+        "restoreSuccess": "Activity restored",
+        "toggleActiveSuccess": "Activity status updated",
+        "fields": {
+          "name_zh": "Name (Chinese)",
+          "name_en": "Name (English)",
+          "category": "Category",
+          "unit": "Unit",
+          "carbon_factor": "Carbon factor",
+          "description_zh": "Description (Chinese)",
+          "description_en": "Description (English)",
+          "icon": "Icon key",
+          "sort_order": "Sort order",
+          "is_active": "Active"
+        },
+        "filters": {
+          "search": "Search",
+          "category": "Category",
+          "status": "Status"
+        },
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "deleted": "Deleted",
+          "all": "All"
+        },
+        "table": {
+          "name": "Name",
+          "category": "Category",
+          "unit": "Unit",
+          "carbon_factor": "Carbon factor",
+          "status": "Status",
+          "updated_at": "Updated",
+          "actions": "Actions"
+        },
+        "actions": {
+          "save": "Save",
+          "cancel": "Cancel",
+          "delete": "Disable",
+          "restore": "Restore"
+        }
+      }
     },
     "audit": {
       "title": "Audit Logs",

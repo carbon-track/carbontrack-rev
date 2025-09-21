@@ -836,7 +836,63 @@
         "rejectDescription": "请填写拒绝原因，我们会通知提交者。",
         "rejectTitle": "拒绝该活动"
       },
-      "rejectReasonRequired": "请填写拒绝原因"
+      "rejectReasonRequired": "请填写拒绝原因",
+      "tab": {
+        "library": "活动库",
+        "review": "记录审核"
+      },
+      "library": {
+        "title": "活动库管理",
+        "description": "维护计算器可用的碳减排活动。",
+        "create": "新增活动",
+        "edit": "编辑活动",
+        "searchPlaceholder": "按名称或描述搜索…",
+        "empty": "没有符合筛选条件的活动。",
+        "validationError": "请填写必填字段。",
+        "confirmDelete": "确定要禁用并归档该活动吗？",
+        "saveSuccess": "活动保存成功",
+        "deleteSuccess": "活动已归档",
+        "restoreSuccess": "活动已恢复",
+        "toggleActiveSuccess": "活动状态已更新",
+        "fields": {
+          "name_zh": "名称（中文）",
+          "name_en": "名称（英文）",
+          "category": "分类",
+          "unit": "单位",
+          "carbon_factor": "碳系数",
+          "description_zh": "描述（中文）",
+          "description_en": "描述（英文）",
+          "icon": "图标标识",
+          "sort_order": "排序值",
+          "is_active": "启用"
+        },
+        "filters": {
+          "search": "搜索",
+          "category": "分类",
+          "status": "状态"
+        },
+        "status": {
+          "active": "已启用",
+          "inactive": "已停用",
+          "deleted": "已归档",
+          "all": "全部"
+        },
+        "table": {
+          "name": "名称",
+          "category": "分类",
+          "unit": "单位",
+          "carbon_factor": "碳系数",
+          "status": "状态",
+          "updated_at": "更新时间",
+          "actions": "操作"
+        },
+        "actions": {
+          "save": "保存",
+          "cancel": "取消",
+          "delete": "禁用",
+          "restore": "恢复"
+        }
+      }
     },
     "products": {
       "title": "商品管理",

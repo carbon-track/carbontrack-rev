@@ -24,6 +24,37 @@ const isHttpUrl = (value) => typeof value === 'string' && /^https?:\/\//i.test(v
 export default function AchievementsPage() {
   const { t } = useTranslation();
 
+  const getInitial = (value) => {
+    if (!value) return 'C';
+    const trimmed = String(value).trim();
+    return trimmed ? trimmed.charAt(0).toUpperCase() : 'C';
+  };
+
+  const renderLeaderboardAvatar = (entry, sizeClass = 'h-8 w-8') => {
+    const displayName = entry?.username || entry?.name || '';
+    const initial = getInitial(displayName);
+    const fallback = (
+      <div className={`${sizeClass} rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-semibold`}>
+        {initial}
+      </div>
+    );
+
+    if (entry?.avatar_url) {
+      const isExternal = /^https?:\\/\\//i.test(entry.avatar_url);
+      return (
+        <R2Image
+          src={isExternal ? entry.avatar_url : undefined}
+          filePath={!isExternal ? entry.avatar_url : undefined}
+          alt={displayName || 'avatar'}
+          className={`${sizeClass} rounded-full object-cover border border-white shadow-sm`}
+          fallback={fallback}
+        />
+      );
+    }
+
+    return fallback;
+  };
+
   const {
     data: badgeListData,
     isLoading: badgesLoading,
