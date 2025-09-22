@@ -3,13 +3,23 @@
 namespace CarbonTrack\Services;
 
 use Monolog\Logger;
+use PHPMailer\PHPMailer\PHPMailer;
 
 class EmailService
 {
-    protected $mailer;
+    protected ?PHPMailer $mailer = null;
     protected $config;
     protected $logger;
     protected bool $forceSimulation = false;
+
+    private const TAG_ACTIVITY_NAME = '{{activity_name}}';
+    private const TAG_POINTS_EARNED = '{{points_earned}}';
+    private const TAG_REASON = '{{reason}}';
+    private const TAG_PRODUCT_NAME = '{{product_name}}';
+    private const TAG_QUANTITY = '{{quantity}}';
+    private const TAG_TOTAL_POINTS = '{{total_points}}';
+    private const TAG_STATUS = '{{status}}';
+    private const TAG_ADMIN_NOTES = '{{admin_notes}}';
 
     public function __construct(array $config, Logger $logger)
     {
@@ -17,9 +27,8 @@ class EmailService
         $this->logger = $logger;
         $this->forceSimulation = $this->normalizeForceSimulation($config['force_simulation'] ?? false);
 
-        if (!$this->forceSimulation && class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
-            $className = 'PHPMailer\\PHPMailer\\PHPMailer';
-            $this->mailer = new $className(true);
+        if (!$this->forceSimulation && class_exists(PHPMailer::class)) {
+            $this->mailer = new PHPMailer(true);
             $this->configureMailer();
         } else {
             $this->mailer = null;
@@ -98,20 +107,20 @@ class EmailService
     public function sendEmail(string $toEmail, string $toName, string $subject, string $bodyHtml, string $bodyText = ""): bool
     {
         try {
-            $canSend = !$this->forceSimulation && $this->mailer && method_exists($this->mailer, 'send');
+            $mailer = $this->mailer;
 
-            if ($canSend) {
-                $this->mailer->clearAddresses();
-                if (method_exists($this->mailer, 'clearAttachments')) {
-                    $this->mailer->clearAttachments();
+            if (!$this->forceSimulation && $mailer instanceof PHPMailer) {
+                $mailer->clearAddresses();
+                if (method_exists($mailer, 'clearAttachments')) {
+                    $mailer->clearAttachments();
                 }
-                $this->mailer->addAddress($toEmail, $toName);
+                $mailer->addAddress($toEmail, $toName);
 
-                $this->mailer->Subject = $subject;
-                $this->mailer->Body = $bodyHtml;
-                $this->mailer->AltBody = $bodyText ?: strip_tags($bodyHtml);
+                $mailer->Subject = $subject;
+                $mailer->Body = $bodyHtml;
+                $mailer->AltBody = $bodyText ?: strip_tags($bodyHtml);
 
-                $this->mailer->send();
+                $mailer->send();
                 $this->logger->info('Email sent successfully', ['to' => $toEmail, 'subject' => $subject]);
                 return true;
             }
@@ -155,8 +164,8 @@ class EmailService
         $htmlTemplate = file_get_contents($this->config['templates_path'] . 'activity_approved.html');
         $textTemplate = file_get_contents($this->config['templates_path'] . 'activity_approved.txt');
 
-        $bodyHtml = str_replace(['{{activity_name}}', '{{points_earned}}'], [$activityName, $pointsEarned], $htmlTemplate);
-        $bodyText = str_replace(['{{activity_name}}', '{{points_earned}}'], [$activityName, $pointsEarned], $textTemplate);
+        $bodyHtml = str_replace([self::TAG_ACTIVITY_NAME, self::TAG_POINTS_EARNED], [$activityName, $pointsEarned], $htmlTemplate);
+        $bodyText = str_replace([self::TAG_ACTIVITY_NAME, self::TAG_POINTS_EARNED], [$activityName, $pointsEarned], $textTemplate);
 
         return $this->sendEmail($toEmail, $toName, $subject, $bodyHtml, $bodyText);
     }
@@ -167,8 +176,8 @@ class EmailService
         $htmlTemplate = file_get_contents($this->config['templates_path'] . 'activity_rejected.html');
         $textTemplate = file_get_contents($this->config['templates_path'] . 'activity_rejected.txt');
 
-        $bodyHtml = str_replace(['{{activity_name}}', '{{reason}}'], [$activityName, $reason], $htmlTemplate);
-        $bodyText = str_replace(['{{activity_name}}', '{{reason}}'], [$activityName, $reason], $textTemplate);
+        $bodyHtml = str_replace([self::TAG_ACTIVITY_NAME, self::TAG_REASON], [$activityName, $reason], $htmlTemplate);
+        $bodyText = str_replace([self::TAG_ACTIVITY_NAME, self::TAG_REASON], [$activityName, $reason], $textTemplate);
 
         return $this->sendEmail($toEmail, $toName, $subject, $bodyHtml, $bodyText);
     }
@@ -179,8 +188,8 @@ class EmailService
         $htmlTemplate = file_get_contents($this->config['templates_path'] . 'exchange_confirmation.html');
         $textTemplate = file_get_contents($this->config['templates_path'] . 'exchange_confirmation.txt');
 
-        $bodyHtml = str_replace(['{{product_name}}', '{{quantity}}', '{{total_points}}'], [$productName, $quantity, $totalPoints], $htmlTemplate);
-        $bodyText = str_replace(['{{product_name}}', '{{quantity}}', '{{total_points}}'], [$productName, $quantity, $totalPoints], $textTemplate);
+        $bodyHtml = str_replace([self::TAG_PRODUCT_NAME, self::TAG_QUANTITY, self::TAG_TOTAL_POINTS], [$productName, $quantity, $totalPoints], $htmlTemplate);
+        $bodyText = str_replace([self::TAG_PRODUCT_NAME, self::TAG_QUANTITY, self::TAG_TOTAL_POINTS], [$productName, $quantity, $totalPoints], $textTemplate);
 
         return $this->sendEmail($toEmail, $toName, $subject, $bodyHtml, $bodyText);
     }
@@ -191,8 +200,8 @@ class EmailService
         $htmlTemplate = file_get_contents($this->config['templates_path'] . 'exchange_status_update.html');
         $textTemplate = file_get_contents($this->config['templates_path'] . 'exchange_status_update.txt');
 
-        $bodyHtml = str_replace(['{{product_name}}', '{{status}}', '{{admin_notes}}'], [$productName, $status, $adminNotes], $htmlTemplate);
-        $bodyText = str_replace(['{{product_name}}', '{{status}}', '{{admin_notes}}'], [$productName, $status, $adminNotes], $textTemplate);
+        $bodyHtml = str_replace([self::TAG_PRODUCT_NAME, self::TAG_STATUS, self::TAG_ADMIN_NOTES], [$productName, $status, $adminNotes], $htmlTemplate);
+        $bodyText = str_replace([self::TAG_PRODUCT_NAME, self::TAG_STATUS, self::TAG_ADMIN_NOTES], [$productName, $status, $adminNotes], $textTemplate);
 
         return $this->sendEmail($toEmail, $toName, $subject, $bodyHtml, $bodyText);
     }
