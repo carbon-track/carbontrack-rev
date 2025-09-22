@@ -1195,6 +1195,13 @@
         "error_line": "行号",
         "error_time": "时间"
       },
+      "drawer": {
+        "title": "请求 ID：{{id}}",
+        "refresh": "刷新",
+        "loading": "正在加载关联日志...",
+        "auditTitle": "审计（{{count}}）",
+        "errorsTitle": "错误（{{count}}）"
+      },
       "dateFrom": "起始日期",
       "dateTo": "结束日期"
     },

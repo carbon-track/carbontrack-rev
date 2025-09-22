@@ -1100,6 +1100,13 @@
         "error_line": "Line",
         "error_time": "Time"
       },
+      "drawer": {
+        "title": "Request ID: {{id}}",
+        "refresh": "Refresh",
+        "loading": "Loading related logs...",
+        "auditTitle": "Audit ({{count}})",
+        "errorsTitle": "Errors ({{count}})"
+      },
       "dateFrom": "Date from",
       "dateTo": "Date to"
     },
