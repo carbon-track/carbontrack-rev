@@ -141,7 +141,7 @@ export function ExchangeManagement() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin.exchanges.status')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin.exchanges.statusLabel')}</label>
             <select
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}

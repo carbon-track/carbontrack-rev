@@ -815,6 +815,7 @@
       "pending": "Pending",
       "completed": "Completed",
       "cancelled": "Cancelled",
+      "statusLabel": "Status",
       "approve": "Approve",
       "reject": "Reject",
       "action": {

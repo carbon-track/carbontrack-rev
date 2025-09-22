@@ -230,7 +230,7 @@ export default function AdminLayout() {
                 </SidebarFooter>
               </Sidebar>
               <SidebarInset className="relative flex flex-1 flex-col bg-transparent">
-                <header className="sticky top-16 z-30 flex flex-col gap-5 border-b border-transparent px-6 pt-6 pb-4 md:px-10">
+                <header className=" top-16 z-30 flex flex-col gap-5 border-b border-transparent px-6 pt-6 pb-4 md:px-10">
                   <div className="flex flex-wrap items-center gap-4">
                     <SidebarTrigger className="md:hidden" />
                     <div className="flex flex-col gap-2">

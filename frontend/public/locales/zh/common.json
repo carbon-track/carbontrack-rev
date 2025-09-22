@@ -1008,6 +1008,7 @@
       "pending": "待处理",
       "completed": "已完成",
       "cancelled": "已取消",
+      "statusLabel": "状态",
       "approve": "通过",
       "reject": "拒绝",
       "action": {
