@@ -21,9 +21,7 @@ export default function OnboardingPage() {
   const { t } = useTranslation();
   const user = userManager.getUser();
   const [schools, setSchools] = useState([]);
-  const [classes, setClasses] = useState([]); // 保留变量但不再展示班级 UI
   const [schoolQuery, setSchoolQuery] = useState('');
-  const [classQuery, setClassQuery] = useState(''); // class 相关已废弃
   const [selectedSchoolId, setSelectedSchoolId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -55,49 +53,12 @@ export default function OnboardingPage() {
     debouncedLoadSchools(schoolQuery.trim());
   }, [schoolQuery]);
 
-  useEffect(() => {
-    if (!selectedSchoolId) {
-      setClasses([]);
-      return;
-    }
-    loadClasses(selectedSchoolId, classQuery.trim());
-  }, [selectedSchoolId]);
-
-  const loadClasses = async (sid, search = '') => {
-    try {
-      const res = await schoolAPI.getClasses(sid, { search, limit: 20, page: 1 });
-      const list = res.data?.data?.classes || [];
-      setClasses(list);
-    } catch (e) {
-      console.error('Load classes failed:', e);
-    }
-  };
-
-  const debouncedLoadClasses = useMemo(() => debounce((q) => {
-    if (selectedSchoolId) {
-      loadClasses(selectedSchoolId, q);
-    }
-  }, 300), [selectedSchoolId]);
-
-  useEffect(() => {
-    debouncedLoadClasses(classQuery.trim());
-  }, [classQuery]);
-
   const ensureSchool = async (nameOrId) => {
     if (!nameOrId) return null;
     if (/^\d+$/.test(String(nameOrId))) return parseInt(String(nameOrId), 10);
     // 文本名称则创建或获取
     const res = await schoolAPI.createOrFetchSchool({ name: nameOrId });
     return res.data?.data?.school?.id || null;
-  };
-
-  const ensureClass = async (sid, name) => {
-    if (!sid || !name) return null;
-    // 如果已存在名称匹配，直接返回
-    const exists = classes.find(c => c.name.toLowerCase() === name.toLowerCase());
-    if (exists) return exists.id;
-    const res = await schoolAPI.createClass(sid, { name });
-    return res.data?.data?.class?.id || null;
   };
 
   const onSubmit = async (e) => {

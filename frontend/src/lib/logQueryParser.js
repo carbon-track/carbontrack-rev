@@ -38,7 +38,7 @@ export function parseLogQuery(input) {
   const tokens = {};
   const ranges = {};
   const rest = [];
-  const regex = /(\"[^\"]+\"|\S+)/g;
+  const regex = /("[^"]+"|\S+)/g;
   const parts = (input || '').match(regex) || [];
   for (const partRaw of parts) {
     const part = partRaw.trim();
@@ -60,7 +60,7 @@ export function parseLogQuery(input) {
       }
       tokens[mapped] = v;
     } else {
-      rest.push(part.replace(/^\"|\"$/g,''));
+      rest.push(part.replace(/^"|"$/g, ''));
     }
   }
   return { tokens, free: rest.join(' '), ranges, raw: input };

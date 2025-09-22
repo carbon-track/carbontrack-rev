@@ -46,7 +46,7 @@ export default function AdminPage() {
   // 加载审计日志
   const [auditPage, setAuditPage] = useState(1);
   const [auditLimit] = useState(50);
-  const [auditFilters, setAuditFilters] = useState({});
+  const [auditFilters] = useState({});
 
   const { data: auditData, isLoading: auditLoading, isError: auditError, refetch: refetchAudit } = useQuery(
     ['adminLogs', auditPage, auditLimit, auditFilters],
@@ -364,7 +364,7 @@ export default function AdminPage() {
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">{t('admin.tabs.audit')}</h2>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => auditQuery.refetch()}>
+                <Button variant="outline" size="sm" onClick={() => refetchAudit()}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   {t('common.refresh')}
                 </Button>

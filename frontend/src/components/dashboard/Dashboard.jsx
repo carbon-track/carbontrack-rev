@@ -157,7 +157,7 @@ export function Dashboard() {
       await badgeAPI.triggerAuto();
       toast.success(t('dashboard.badgeAutoTriggered', '已触发自动授予流程'));
       await fetchDashboardData();
-    } catch (err) {
+    } catch {
       toast.error(t('dashboard.badgeAutoTriggerFailed', '触发自动授予失败'));
     }
   };

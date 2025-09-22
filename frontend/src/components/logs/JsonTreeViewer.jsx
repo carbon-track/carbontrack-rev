@@ -1,63 +1,465 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
+import {
+  ChevronRight,
+  ChevronDown,
+  ChevronsDown,
+  ChevronsUp,
+  Copy,
+  FileJson,
+  Search
+} from 'lucide-react';
 
-function getType(val){
-  if (val === null) return 'null';
-  if (Array.isArray(val)) return 'array';
-  return typeof val;
+import { useTranslation } from '../../hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { Input } from '../ui/Input';
+import { Button } from '../ui/Button';
+import { Badge } from '../ui/badge';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+
+const ROOT_PATH = [];
+const ROOT_KEY = '$';
+
+function getType(value) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
 }
 
-const INDENT = 14;
+function isExpandableType(type) {
+  return type === 'object' || type === 'array';
+}
 
-function Node({ data, name, path, level, collapsedDefault, search, onCopy }) {
-  const type = getType(data);
-  const [open, setOpen] = useState(!collapsedDefault && level < 1);
-  const toggle = () => setOpen(o=>!o);
-  const match = search && (String(name).toLowerCase().includes(search) || (type !== 'object' && type !== 'array' && String(data).toLowerCase().includes(search)));
-  const baseStyle = match ? 'bg-yellow-100' : '';
-
-  if (type === 'object' || type === 'array') {
-    const entries = type === 'object' ? Object.entries(data || {}) : data.map((v,i)=>[i,v]);
-    return (
-      <div className={`font-mono text-[11px] leading-snug ${baseStyle}`}> 
-        <div style={{paddingLeft: level*INDENT}} className="flex items-start gap-1">
-          <button onClick={toggle} className="text-xs w-4 select-none">{open?'-':'+'}</button>
-          <span className="text-blue-700">{name !== undefined ? name+':' : ''}</span>
-          <span className="text-purple-600">{type === 'array' ? `Array(${entries.length})` : `Object(${entries.length})`}</span>
-          <button onClick={()=>onCopy(path)} className="ml-1 text-gray-400 hover:text-gray-600" title="Copy path">📋</button>
-        </div>
-        {open && entries.map(([k,v]) => (
-          <Node key={k} data={v} name={k} path={path.concat(k)} level={level+1} collapsedDefault={collapsedDefault} search={search} onCopy={onCopy} />
-        ))}
-      </div>
-    );
+function formatValue(value, type) {
+  switch (type) {
+    case 'string':
+      return `"${value}"`;
+    case 'number':
+    case 'boolean':
+      return String(value);
+    case 'null':
+      return 'null';
+    case 'undefined':
+      return 'undefined';
+    default:
+      return String(value);
   }
+}
+
+function valueClass(type) {
+  switch (type) {
+    case 'string':
+      return 'text-emerald-600';
+    case 'number':
+      return 'text-sky-600';
+    case 'boolean':
+      return 'text-purple-600';
+    case 'null':
+    case 'undefined':
+      return 'text-muted-foreground';
+    default:
+      return 'text-foreground';
+  }
+}
+
+function getPathKey(path) {
+  if (!path || path.length === 0) return ROOT_KEY;
+  return `${ROOT_KEY}${path
+    .map((segment) => (typeof segment === 'number' ? `[${segment}]` : `.${segment}`))
+    .join('')}`;
+}
+
+function pathToString(path) {
+  if (!path || path.length === 0) return ROOT_KEY;
+  return path.reduce((acc, segment) => {
+    if (typeof segment === 'number') {
+      return `${acc}[${segment}]`;
+    }
+    return `${acc}.${segment}`;
+  }, ROOT_KEY);
+}
+
+function collectExpandablePaths(value, path = [], result = new Set()) {
+  const type = getType(value);
+  if (!isExpandableType(type)) return result;
+
+  result.add(getPathKey(path));
+  const entries = type === 'array'
+    ? value.map((child, index) => [index, child])
+    : Object.entries(value || {});
+
+  entries.forEach(([key, child]) => {
+    collectExpandablePaths(child, path.concat(key), result);
+  });
+
+  return result;
+}
+
+function findMatches(value, term, path = [], matches = []) {
+  if (term === '') return matches;
+  const type = getType(value);
+
+  if (type === 'object') {
+    Object.entries(value || {}).forEach(([key, child]) => {
+      const keyMatch = key.toLowerCase().includes(term);
+      if (keyMatch) matches.push(path.concat(key));
+      findMatches(child, term, path.concat(key), matches);
+    });
+  } else if (type === 'array') {
+    value.forEach((child, index) => {
+      findMatches(child, term, path.concat(index), matches);
+    });
+  } else if (String(value ?? '').toLowerCase().includes(term)) {
+    matches.push(path);
+  }
+
+  return matches;
+}
+
+function ancestorsOf(path) {
+  const ancestors = [];
+  for (let i = 0; i <= path.length; i += 1) {
+    ancestors.push(getPathKey(path.slice(0, i)));
+  }
+  return ancestors;
+}
+
+function normaliseName(name, fallback) {
+  if (name === undefined) return fallback;
+  if (typeof name === 'number') return `[${name}]`;
+  return name;
+}
+
+const JsonNode = React.memo(function JsonNode({
+  name,
+  value,
+  path,
+  searchTerm,
+  labels,
+  typeLabels,
+  expandedPaths,
+  onToggle,
+  onCopyPath,
+  onCopyValue
+}) {
+  const type = getType(value);
+  const expandable = isExpandableType(type);
+  const pathKey = getPathKey(path);
+  const isExpanded = expandedPaths.has(pathKey);
+  const displayName = normaliseName(name, labels.root);
+
+  const entries = useMemo(() => {
+    if (!expandable) return [];
+    if (type === 'array') {
+      return value.map((item, index) => [index, item]);
+    }
+    return Object.entries(value || {});
+  }, [expandable, type, value]);
+
+  const valueString = !expandable ? String(value ?? '') : '';
+  const matches = Boolean(
+    searchTerm && (
+      (displayName && displayName.toLowerCase().includes(searchTerm)) ||
+      (!expandable && valueString.toLowerCase().includes(searchTerm))
+    )
+  );
+
+  const typeLabel = typeLabels[type] || typeLabels.unknown;
+  const countLabel = expandable ? `${entries.length}` : undefined;
+
   return (
-    <div style={{paddingLeft: level*INDENT}} className={`font-mono text-[11px] flex items-start gap-1 ${baseStyle}`}>
-      <span className="text-blue-700">{name !== undefined ? name+':' : ''}</span>
-      <span className="text-green-700 break-all">{JSON.stringify(data)}</span>
-      <button onClick={()=>onCopy(path)} className="ml-1 text-gray-400 hover:text-gray-600" title="Copy path">📋</button>
-      <button onClick={()=>onCopy(JSON.stringify(data))} className="ml-1 text-gray-400 hover:text-gray-600" title="Copy value">⧉</button>
+    <div className={cn('group relative border-l border-muted-foreground/20 pl-3', matches && 'bg-amber-50/60')}>
+      <div className="flex items-start gap-2 py-1">
+        <button
+          type="button"
+          className={cn(
+            'mt-1 flex h-4 w-4 items-center justify-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground',
+            !expandable && 'opacity-0'
+          )}
+          onClick={() => expandable && onToggle(path)}
+          aria-label={isExpanded ? labels.collapse : labels.expand}
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-3 w-3" />
+          ) : (
+            <ChevronRight className="h-3 w-3" />
+          )}
+        </button>
+        <div className="flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[12px] text-foreground">{displayName}</span>
+            <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+              {typeLabel}
+              {countLabel ? ` · ${countLabel}` : ''}
+            </Badge>
+          </div>
+          {!expandable && (
+            <div className={cn('font-mono text-[11px] break-all', valueClass(type))}>
+              {formatValue(value, type)}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1 pt-0.5 opacity-0 transition group-hover:opacity-100">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                onClick={() => onCopyPath(path)}
+                aria-label={labels.copyPath}
+              >
+                <FileJson className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{labels.copyPath}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                onClick={() => onCopyValue(value)}
+                aria-label={labels.copyValue}
+              >
+                <Copy className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{labels.copyValue}</TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+      {expandable && isExpanded && entries.length > 0 && (
+        <div className="pl-4">
+          {entries.map(([childName, childValue]) => (
+            <JsonNode
+              key={typeof childName === 'number' ? childName : String(childName)}
+              name={childName}
+              value={childValue}
+              path={path.concat(childName)}
+              searchTerm={searchTerm}
+              labels={labels}
+              typeLabels={typeLabels}
+              expandedPaths={expandedPaths}
+              onToggle={onToggle}
+              onCopyPath={onCopyPath}
+              onCopyValue={onCopyValue}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
-}
+});
 
-export function JsonTreeViewer({ value, collapsed = false }) {
+JsonNode.displayName = 'JsonNode';
+
+export function JsonTreeViewer({ value, collapsed = false, maxHeight = '20rem', className }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const searchLower = search.trim().toLowerCase();
-  const onCopy = useCallback((target)=>{
-    const text = Array.isArray(target) ? '$.'+target.join('.') : target;
-    navigator.clipboard.writeText(text);
-  },[]);
-  const data = useMemo(()=> value, [value]);
+  const [expanded, setExpanded] = useState(new Set([ROOT_KEY]));
+  const [feedback, setFeedback] = useState('');
+  const feedbackTimer = useRef();
+
+  const data = useMemo(() => value, [value]);
+  const searchTerm = search.trim().toLowerCase();
+
+  const typeLabels = useMemo(
+    () => ({
+      object: t('common.jsonViewer.typeLabels.object'),
+      array: t('common.jsonViewer.typeLabels.array'),
+      string: t('common.jsonViewer.typeLabels.string'),
+      number: t('common.jsonViewer.typeLabels.number'),
+      boolean: t('common.jsonViewer.typeLabels.boolean'),
+      null: t('common.jsonViewer.typeLabels.null'),
+      undefined: t('common.jsonViewer.typeLabels.undefined'),
+      unknown: t('common.jsonViewer.typeLabels.unknown')
+    }),
+    [t]
+  );
+
+  const labels = useMemo(
+    () => ({
+      root: t('common.jsonViewer.root'),
+      searchPlaceholder: t('common.jsonViewer.searchPlaceholder'),
+      expandAll: t('common.jsonViewer.expandAll'),
+      collapseAll: t('common.jsonViewer.collapseAll'),
+      copyJson: t('common.jsonViewer.copyJson'),
+      copyPath: t('common.jsonViewer.copyPath'),
+      copyValue: t('common.jsonViewer.copyValue'),
+      expand: t('common.jsonViewer.expandNode'),
+      collapse: t('common.jsonViewer.collapseNode'),
+      copied: t('common.jsonViewer.copied'),
+      noData: t('common.jsonViewer.noData')
+    }),
+    [t]
+  );
+
+  const defaultExpanded = useMemo(() => {
+    const defaults = new Set([ROOT_KEY]);
+    if (!collapsed) {
+      const type = getType(data);
+      const entries = type === 'array'
+        ? data.map((_, index) => [index, data[index]])
+        : Object.entries(data || {});
+      entries.forEach(([key, child]) => {
+        if (isExpandableType(getType(child))) {
+          defaults.add(getPathKey([key]));
+        }
+      });
+    }
+    return defaults;
+  }, [data, collapsed]);
+
+  useEffect(() => {
+    setExpanded(defaultExpanded);
+  }, [defaultExpanded]);
+
+  const showFeedback = useCallback((message) => {
+    setFeedback(message);
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    feedbackTimer.current = setTimeout(() => setFeedback(''), 1200);
+  }, []);
+
+  useEffect(() => () => {
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+  }, []);
+
+  useEffect(() => {
+    if (!searchTerm) return;
+    const matches = findMatches(data, searchTerm);
+    if (matches.length === 0) return;
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      matches.forEach((matchPath) => {
+        ancestorsOf(matchPath).forEach((ancestorKey) => next.add(ancestorKey));
+      });
+      return next;
+    });
+  }, [data, searchTerm]);
+
+  const expandablePaths = useMemo(() => collectExpandablePaths(data), [data]);
+
+  const handleToggle = useCallback((path) => {
+    const key = getPathKey(path);
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleExpandAll = useCallback(() => {
+    setExpanded(new Set(expandablePaths));
+  }, [expandablePaths]);
+
+  const handleCollapseAll = useCallback(() => {
+    setExpanded(new Set([ROOT_KEY]));
+  }, []);
+
+  const copyToClipboard = useCallback((text) => {
+    if (!text && text !== '') return;
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          showFeedback(labels.copied);
+        })
+        .catch(() => {});
+    }
+  }, [labels.copied, showFeedback]);
+
+  const handleCopyJson = useCallback(() => {
+    try {
+      const json = JSON.stringify(data, null, 2);
+      copyToClipboard(json);
+    } catch (error) {
+      copyToClipboard(String(data));
+    }
+  }, [copyToClipboard, data]);
+
+  const handleCopyPath = useCallback((path) => {
+    copyToClipboard(pathToString(path));
+  }, [copyToClipboard]);
+
+  const handleCopyValue = useCallback((valueToCopy) => {
+    const type = getType(valueToCopy);
+    const text = isExpandableType(type)
+      ? JSON.stringify(valueToCopy, null, 2)
+      : String(valueToCopy ?? '');
+    copyToClipboard(text);
+  }, [copyToClipboard]);
+
   return (
-    <div className="border rounded bg-white flex flex-col h-80">
-      <div className="p-1 border-b flex items-center gap-2">
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search" className="text-xs border px-2 py-1 rounded w-40" />
-        <span className="text-[10px] text-gray-500">{getType(data)}</span>
+    <div
+      className={cn('border rounded bg-background text-xs shadow-sm', className)}
+      style={{ maxHeight, display: 'flex', flexDirection: 'column' }}
+    >
+      <div className="flex items-center gap-2 border-b bg-muted/30 px-2 py-2">
+        <div className="relative flex-1">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={labels.searchPlaceholder}
+            className="h-8 w-full pl-7 text-xs"
+          />
+          <span className="pointer-events-none absolute left-2 top-1/2 flex -translate-y-1/2 text-muted-foreground">
+            <Search className="h-3.5 w-3.5" />
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleExpandAll}
+            className="h-8 w-8"
+            aria-label={labels.expandAll}
+          >
+            <ChevronsDown className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleCollapseAll}
+            className="h-8 w-8"
+            aria-label={labels.collapseAll}
+          >
+            <ChevronsUp className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleCopyJson}
+            className="h-8 w-8"
+            aria-label={labels.copyJson}
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+        </div>
+        {feedback && (
+          <span className="ml-2 text-[10px] text-muted-foreground">{feedback}</span>
+        )}
       </div>
-      <div className="flex-1 overflow-auto p-1">
-        <Node data={data} path={[]} level={0} collapsedDefault={collapsed} search={searchLower} onCopy={onCopy} />
+      <div className="flex-1 overflow-auto px-2 py-2">
+        {data === undefined || data === null ? (
+          <div className="text-xs text-muted-foreground">{labels.noData}</div>
+        ) : (
+          <JsonNode
+            name={labels.root}
+            value={data}
+            path={ROOT_PATH}
+            searchTerm={searchTerm}
+            labels={labels}
+            typeLabels={typeLabels}
+            expandedPaths={expanded}
+            onToggle={handleToggle}
+            onCopyPath={handleCopyPath}
+            onCopyValue={handleCopyValue}
+          />
+        )}
       </div>
     </div>
   );
@@ -65,7 +467,9 @@ export function JsonTreeViewer({ value, collapsed = false }) {
 
 JsonTreeViewer.propTypes = {
   value: PropTypes.any,
-  collapsed: PropTypes.bool
+  collapsed: PropTypes.bool,
+  maxHeight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  className: PropTypes.string
 };
 
 export default JsonTreeViewer;

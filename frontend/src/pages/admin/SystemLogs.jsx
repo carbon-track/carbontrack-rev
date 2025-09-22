@@ -1,7 +1,8 @@
-/* eslint-disable jsx-a11y/label-has-associated-control */
-/* eslint-disable react/prop-types */
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { FixedSizeList as List } from 'react-window';
+import { RefreshCw, Download, Columns2, X, Loader2 } from 'lucide-react';
+
+import { useTranslation } from '../../hooks/useTranslation';
 import { useSystemLogDetail } from '../../hooks/useSystemLogs';
 import { useLogSearch } from '../../hooks/useLogSearch';
 import { parseLogQuery } from '../../lib/logQueryParser';
@@ -11,328 +12,648 @@ import RawView from '../../components/logs/RawView';
 import RequestIdRelatedDrawer from '../../components/logs/RequestIdRelatedDrawer';
 import JsonTreeViewer from '../../components/logs/JsonTreeViewer';
 import AuditDiffViewer from '../../components/logs/AuditDiffViewer';
-import { Badge } from '../../components/ui/badge';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { Switch } from '../../components/ui/switch';
+import { Label } from '../../components/ui/label';
+import { Input } from '../../components/ui/Input';
+import { ToggleGroup, ToggleGroupItem } from '../../components/ui/toggle-group';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
+import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
+import { cn } from '../../lib/utils';
 
-function JsonViewer({ data }) {
-  const json = useMemo(() => {
-    try { return JSON.stringify(data, null, 2); } catch { return String(data); }
-  }, [data]);
-  return (
-    <pre className="bg-gray-900 text-green-300 text-xs p-4 rounded overflow-auto max-h-96">
-      {json}
-    </pre>
-  );
-}
+const SYSTEM_COLUMNS = ['id', 'method', 'path', 'status_code', 'user_id', 'duration_ms', 'created_at', 'ops'];
+const AUDIT_COLUMNS = ['id', 'actor_type', 'action', 'operation_category', 'status', 'user_id', 'ip_address', 'created_at', 'ops'];
+const ERROR_COLUMNS = ['id', 'error_type', 'error_message', 'error_file', 'error_line', 'error_time', 'ops'];
 
-function safeParse(val) {
-  if (val == null) return null;
-  if (typeof val === 'object') return val;
-  try { return JSON.parse(val); } catch { return val; }
+const COLUMN_STORAGE_KEYS = {
+  system: 'logCols_system',
+  audit: 'logCols_audit',
+  error: 'logCols_error'
+};
+
+function loadStoredColumns(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) && parsed.length ? parsed : fallback;
+  } catch (error) {
+    console.warn('Failed to load stored columns', error);
+    return fallback;
+  }
 }
 
 export default function SystemLogsPage() {
+  const { t } = useTranslation();
+
   const [q, setQ] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [activeTypes, setActiveTypes] = useState(['system','audit','error']);
+  const [activeTypes, setActiveTypes] = useState(['system', 'audit', 'error']);
   const [limitPerType, setLimitPerType] = useState(50);
   const [selectedSystemId, setSelectedSystemId] = useState(null);
-  const [view, setView] = useState('table'); // table | timeline | raw
+  const [view, setView] = useState('table');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [requestDrawerId, setRequestDrawerId] = useState(null);
-  const [related, setRelated] = useState({ system:[], audit:[], error:[] });
+  const [related, setRelated] = useState({ system: [], audit: [], error: [] });
   const [loadingRelated, setLoadingRelated] = useState(false);
-  // column chooser state
-  const SYSTEM_COLS = ['id','method','path','status_code','user_id','duration_ms','created_at','ops'];
-  const AUDIT_COLS = ['id','actor_type','action','operation_category','status','user_id','ip_address','created_at','ops'];
-  const ERROR_COLS = ['id','error_type','error_message','error_file','error_line','error_time','ops'];
-  const [systemCols, setSystemCols] = useState(()=>{
-    try { return JSON.parse(localStorage.getItem('logCols_system')) || SYSTEM_COLS; } catch { return SYSTEM_COLS; }
-  });
-  const [auditCols, setAuditCols] = useState(()=>{
-    try { return JSON.parse(localStorage.getItem('logCols_audit')) || AUDIT_COLS; } catch { return AUDIT_COLS; }
-  });
-  const [errorCols, setErrorCols] = useState(()=>{
-    try { return JSON.parse(localStorage.getItem('logCols_error')) || ERROR_COLS; } catch { return ERROR_COLS; }
-  });
-  const [showColChooser, setShowColChooser] = useState(false);
-  const saveCols = (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} };
-  const toggleCol = (type, col) => {
-    if (col === 'id' || col === 'ops') return; // always keep essential
-    if (type === 'system') {
-      setSystemCols(c => { const next = c.includes(col) ? c.filter(x=>x!==col) : [...c, col]; saveCols('logCols_system', next); return next; });
-    } else if (type === 'audit') {
-      setAuditCols(c => { const next = c.includes(col) ? c.filter(x=>x!==col) : [...c, col]; saveCols('logCols_audit', next); return next; });
-    } else if (type === 'error') {
-      setErrorCols(c => { const next = c.includes(col) ? c.filter(x=>x!==col) : [...c, col]; saveCols('logCols_error', next); return next; });
-    }
-  };
-  // new row highlight tracking
+  const [exporting, setExporting] = useState(false);
+
+  const [systemCols, setSystemCols] = useState(() => loadStoredColumns(COLUMN_STORAGE_KEYS.system, SYSTEM_COLUMNS));
+  const [auditCols, setAuditCols] = useState(() => loadStoredColumns(COLUMN_STORAGE_KEYS.audit, AUDIT_COLUMNS));
+  const [errorCols, setErrorCols] = useState(() => loadStoredColumns(COLUMN_STORAGE_KEYS.error, ERROR_COLUMNS));
+
   const prevMaxSystemId = useRef(0);
   const [highlightIds, setHighlightIds] = useState(new Set());
 
-  const parsed = useMemo(()=> parseLogQuery(q || ''), [q]);
-  const extraParams = useMemo(()=>{
-    const p = {};
-    const t = parsed.tokens || {};
-    // direct mapping if present
-    ['method','status_code','user_id','request_id','path','action','audit_status','error_type'].forEach(k=>{ if (t[k]) p[k] = t[k]; });
-    if (parsed.ranges?.duration_ms) {
-      const r = parsed.ranges.duration_ms;
-      if (r['>'] || r['>=']) p.min_duration = r['>'] || r['>='];
-      if (r['<'] || r['<=']) p.max_duration = r['<'] || r['<='];
+  const parsedQuery = useMemo(() => parseLogQuery(q || ''), [q]);
+
+  const extraParams = useMemo(() => {
+    const params = {};
+    const tokens = parsedQuery.tokens || {};
+
+    ['method', 'status_code', 'user_id', 'request_id', 'path', 'action', 'audit_status', 'error_type'].forEach((key) => {
+      if (tokens[key]) params[key] = tokens[key];
+    });
+
+    if (parsedQuery.ranges?.duration_ms) {
+      const durationRange = parsedQuery.ranges.duration_ms;
+      if (durationRange['>'] || durationRange['>=']) params.min_duration = durationRange['>'] || durationRange['>='];
+      if (durationRange['<'] || durationRange['<=']) params.max_duration = durationRange['<'] || durationRange['<='];
     }
-    return p;
-  }, [parsed]);
-  const { data, isLoading, error, refetch } = useLogSearch({ q: parsed.free || q, date_from: dateFrom, date_to: dateTo, types: activeTypes, limit_per_type: limitPerType, ...extraParams });
+
+    return params;
+  }, [parsedQuery]);
+
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching
+  } = useLogSearch({
+    q: parsedQuery.free || q,
+    date_from: dateFrom,
+    date_to: dateTo,
+    types: activeTypes,
+    limit_per_type: limitPerType,
+    ...extraParams
+  });
+
   const { data: detailData, isLoading: loadingDetail } = useSystemLogDetail(selectedSystemId);
 
-  // auto refresh effect
-  useEffect(()=>{
-    if (!autoRefresh) return; 
-    const id = setInterval(()=>{ refetch(); }, 8000);
-    return ()=>clearInterval(id);
+  useEffect(() => {
+    if (!autoRefresh) return undefined;
+    const timer = setInterval(() => {
+      refetch();
+    }, 8000);
+    return () => clearInterval(timer);
   }, [autoRefresh, refetch]);
 
-  // expose parsed tokens for badge display
-  const parsedTokens = parsed;
+  const copy = useCallback((text) => {
+    if (text == null) return;
+    try {
+      const value = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
+      navigator.clipboard.writeText(value);
+    } catch (error) {
+      console.warn('Failed to copy content', error);
+    }
+  }, []);
 
-  const copy = (text) => {
-    navigator.clipboard.writeText(typeof text === 'string' ? text : JSON.stringify(text, null, 2));
-  };
-
-  const system = data?.data?.system?.items || [];
-  const audit = data?.data?.audit?.items || [];
+  const systemLogs = data?.data?.system?.items || [];
+  const auditLogs = data?.data?.audit?.items || [];
   const errorLogs = data?.data?.error?.items || [];
 
-  // update highlight on system logs
-  useEffect(()=>{
-    if (system.length === 0) return;
-    const currentMax = Math.max(...system.map(r=>r.id));
-    if (prevMaxSystemId.current === 0) { prevMaxSystemId.current = currentMax; return; }
-    if (currentMax > prevMaxSystemId.current) {
-      const newOnes = system.filter(r=>r.id > prevMaxSystemId.current).map(r=>r.id);
-      setHighlightIds(new Set(newOnes));
+  useEffect(() => {
+    if (!systemLogs.length) return;
+    const currentMax = Math.max(...systemLogs.map((log) => log.id));
+    if (prevMaxSystemId.current === 0) {
       prevMaxSystemId.current = currentMax;
-      // clear highlight after timeout
-      setTimeout(()=> setHighlightIds(new Set()), 4000);
+      return;
     }
-  }, [system]);
+    if (currentMax > prevMaxSystemId.current) {
+      const incomingIds = systemLogs.filter((log) => log.id > prevMaxSystemId.current).map((log) => log.id);
+      setHighlightIds(new Set(incomingIds));
+      prevMaxSystemId.current = currentMax;
+      const timeout = setTimeout(() => setHighlightIds(new Set()), 4000);
+      return () => clearTimeout(timeout);
+    }
+    return undefined;
+  }, [systemLogs]);
 
-  const toggleType = (t) => {
-    setActiveTypes(prev => prev.includes(t) ? prev.filter(x=>x!==t) : [...prev, t]);
-  };
+  const handleTypeChange = useCallback((next) => {
+    if (!next) return;
+    setActiveTypes(next);
+  }, []);
 
-  const openRelated = async (requestId) => {
+  const saveColumns = useCallback((storageKey, next) => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(next));
+    } catch (error) {
+      console.warn('Failed to persist selected columns', error);
+    }
+  }, []);
+
+  const toggleColumn = useCallback((type, column) => {
+    if (column === 'id' || column === 'ops') return;
+    if (type === 'system') {
+      setSystemCols((current) => {
+        const next = current.includes(column) ? current.filter((col) => col !== column) : [...current, column];
+        saveColumns(COLUMN_STORAGE_KEYS.system, next);
+        return next;
+      });
+    } else if (type === 'audit') {
+      setAuditCols((current) => {
+        const next = current.includes(column) ? current.filter((col) => col !== column) : [...current, column];
+        saveColumns(COLUMN_STORAGE_KEYS.audit, next);
+        return next;
+      });
+    } else if (type === 'error') {
+      setErrorCols((current) => {
+        const next = current.includes(column) ? current.filter((col) => col !== column) : [...current, column];
+        saveColumns(COLUMN_STORAGE_KEYS.error, next);
+        return next;
+      });
+    }
+  }, [saveColumns]);
+
+  const openRelated = useCallback(async (requestId) => {
     setRequestDrawerId(requestId);
     setLoadingRelated(true);
-    try { const r = await fetchRelatedLogs(requestId); setRelated(r?.data || r); } finally { setLoadingRelated(false); }
-  };
+    try {
+      const response = await fetchRelatedLogs(requestId);
+      setRelated(response?.data || response || { system: [], audit: [], error: [] });
+    } finally {
+      setLoadingRelated(false);
+    }
+  }, []);
 
-  const doExport = async (fmt) => {
-    const blob = await exportLogs({ q, date_from: dateFrom, date_to: dateTo, types: activeTypes, limit_per_type: limitPerType }, fmt);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `logs_${Date.now()}.${fmt === 'csv' ? 'csv' : 'ndjson'}`; a.click();
-    setTimeout(()=> URL.revokeObjectURL(url), 2000);
-  };
+  const doExport = useCallback(async (format) => {
+    setExporting(true);
+    try {
+      const blob = await exportLogs(
+        {
+          q,
+          date_from: dateFrom,
+          date_to: dateTo,
+          types: activeTypes,
+          limit_per_type: limitPerType,
+          ...extraParams
+        },
+        format
+      );
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `logs_${Date.now()}.${format === 'csv' ? 'csv' : 'ndjson'}`;
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } finally {
+      setExporting(false);
+    }
+  }, [q, dateFrom, dateTo, activeTypes, limitPerType, extraParams]);
+
+  const hasResults = systemLogs.length + auditLogs.length + errorLogs.length > 0;
+  const activeFilterEntries = Object.entries(parsedQuery.tokens || {}).filter(([, value]) => value && typeof value !== 'object');
+  const hasActiveFilters = activeFilterEntries.length > 0 || Boolean(parsedQuery.free);
+
+  const columnLabel = useCallback(
+    (key) => t(`admin.systemLogs.columns.${key}`, { defaultValue: key }),
+    [t]
+  );
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">统一日志中心</h1>
-        <div className="flex gap-2">
-          <Button size="sm" variant={view === 'table' ? 'default' : 'outline'} onClick={() => setView('table')}>
-            表格
-          </Button>
-          <Button size="sm" variant={view === 'timeline' ? 'default' : 'outline'} onClick={() => setView('timeline')}>
-            时间线
-          </Button>
-          <Button size="sm" variant={view === 'raw' ? 'default' : 'outline'} onClick={() => setView('raw')}>
-            原始
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2 text-sm items-end">
-        <div className="flex flex-col">
-          <label htmlFor="log-q" className="text-xs text-gray-500">关键字 / 高级查询</label>
-          <input id="log-q" value={q} onChange={e=>setQ(e.target.value)} placeholder="method:POST status:500 dur>800 action:CREATE free text" className="border p-2 rounded w-80 font-mono" />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500">Method</label>
-          <input value={extraParams.method||''} onChange={e=>setQ(prev=>mergeToken(prev,'method', e.target.value))} className="border p-2 rounded w-28 font-mono text-xs" placeholder="GET" />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500">Status</label>
-          <input value={extraParams.status_code||''} onChange={e=>setQ(prev=>mergeToken(prev,'status', e.target.value))} className="border p-2 rounded w-24 font-mono text-xs" placeholder="200" />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500">User ID</label>
-          <input value={extraParams.user_id||''} onChange={e=>setQ(prev=>mergeToken(prev,'user', e.target.value))} className="border p-2 rounded w-24 font-mono text-xs" placeholder="123" />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500">ReqID</label>
-          <input value={extraParams.request_id||''} onChange={e=>setQ(prev=>mergeToken(prev,'rid', e.target.value))} className="border p-2 rounded w-40 font-mono text-xs" placeholder="uuid" />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500">Path 包含</label>
-          <input value={extraParams.path||''} onChange={e=>setQ(prev=>mergeToken(prev,'path', e.target.value))} className="border p-2 rounded w-48 font-mono text-xs" placeholder="/api/v1" />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500">耗时 &gt;=</label>
-          <input value={extraParams.min_duration||''} onChange={e=>setQ(prev=>mergeRange(prev,'dur','>', e.target.value))} className="border p-2 rounded w-24 font-mono text-xs" placeholder="ms" />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500">耗时 &lt;=</label>
-          <input value={extraParams.max_duration||''} onChange={e=>setQ(prev=>mergeRange(prev,'dur','<', e.target.value))} className="border p-2 rounded w-24 font-mono text-xs" placeholder="ms" />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500">Audit Action</label>
-          <input value={extraParams.action||''} onChange={e=>setQ(prev=>mergeToken(prev,'action', e.target.value))} className="border p-2 rounded w-32 font-mono text-xs" placeholder="CREATE" />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500">Audit 状态</label>
-          <input value={extraParams.audit_status||''} onChange={e=>setQ(prev=>mergeToken(prev,'astatus', e.target.value))} className="border p-2 rounded w-28 font-mono text-xs" placeholder="SUCCESS" />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500">错误类型</label>
-          <input value={extraParams.error_type||''} onChange={e=>setQ(prev=>mergeToken(prev,'etype', e.target.value))} className="border p-2 rounded w-40 font-mono text-xs" placeholder="RuntimeError" />
-        </div>
-        <div className="flex flex-col">
-          <label htmlFor="date-from" className="text-xs text-gray-500">起始日期</label>
-          <input id="date-from" type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} className="border p-2 rounded" />
-        </div>
-        <div className="flex flex-col">
-          <label htmlFor="date-to" className="text-xs text-gray-500">结束日期</label>
-          <input id="date-to" type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} className="border p-2 rounded" />
-        </div>
-        <div className="flex flex-col">
-          <label htmlFor="limit-per" className="text-xs text-gray-500">每类条数</label>
-            <input id="limit-per" type="number" value={limitPerType} min={1} max={200} onChange={e=>setLimitPerType(Number(e.target.value)||50)} className="border p-2 rounded w-28" />
-        </div>
-        <div className="flex items-center gap-2">
-          {['system','audit','error'].map(t => (
-            <label key={t} className="flex items-center gap-1 text-xs">
-              <input type="checkbox" checked={activeTypes.includes(t)} onChange={()=>toggleType(t)} /> {t}
-            </label>
-          ))}
-        </div>
-        <div className="flex items-center gap-3 pl-4 border-l ml-2 relative">
-          <div className="flex items-center gap-2 text-xs text-gray-600">
-            <Switch id="logs-auto-refresh" checked={autoRefresh} onCheckedChange={setAutoRefresh} />
-            <label htmlFor="logs-auto-refresh">自动刷新</label>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-1.5">
+              <CardTitle>{t('admin.systemLogs.title')}</CardTitle>
+              <CardDescription>{t('admin.systemLogs.subtitle')}</CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <ToggleGroup
+                type="single"
+                value={view}
+                onValueChange={(value) => value && setView(value)}
+                variant="outline"
+                size="sm"
+              >
+                <ToggleGroupItem value="table">{t('admin.systemLogs.views.table')}</ToggleGroupItem>
+                <ToggleGroupItem value="timeline">{t('admin.systemLogs.views.timeline')}</ToggleGroupItem>
+                <ToggleGroupItem value="raw">{t('admin.systemLogs.views.raw')}</ToggleGroupItem>
+              </ToggleGroup>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => refetch()}
+                disabled={isFetching}
+              >
+                <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
+                {t('admin.systemLogs.refresh')}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => doExport('csv')}
+                disabled={exporting}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {t('admin.systemLogs.exportCsv')}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => doExport('ndjson')}
+                disabled={exporting}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {t('admin.systemLogs.exportNdjson')}
+              </Button>
+              <ColumnSelector
+                systemCols={systemCols}
+                auditCols={auditCols}
+                errorCols={errorCols}
+                onToggle={toggleColumn}
+                columnLabel={columnLabel}
+                t={t}
+              />
+            </div>
           </div>
-          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => refetch()}>
-            刷新
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => doExport('csv')}>
-            Export CSV
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => doExport('ndjson')}>
-            Export NDJSON
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setShowColChooser(s => !s)}>
-            列
-          </Button>
-          {showColChooser && (
-            <div className="absolute top-full right-0 mt-1 bg-white border rounded shadow-lg p-3 z-50 w-64">
-              <h4 className="font-semibold text-xs mb-1">列显示 (点击切换)</h4>
-              <SectionCols title="System" cols={SYSTEM_COLS} active={systemCols} onToggle={(c)=>toggleCol('system', c)} />
-              <SectionCols title="Audit" cols={AUDIT_COLS} active={auditCols} onToggle={(c)=>toggleCol('audit', c)} />
-              <SectionCols title="Error" cols={ERROR_COLS} active={errorCols} onToggle={(c)=>toggleCol('error', c)} />
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="logs-auto-refresh"
+                checked={autoRefresh}
+                onCheckedChange={setAutoRefresh}
+              />
+              <Label htmlFor="logs-auto-refresh" className="text-sm text-muted-foreground">
+                {t('admin.systemLogs.autoRefresh')}
+              </Label>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>{t('admin.systemLogs.perTypeLimit')}</span>
+              <Input
+                id="limit-per-type"
+                type="number"
+                min={1}
+                max={200}
+                value={limitPerType}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  setLimitPerType(Number.isNaN(value) ? 50 : value);
+                }}
+                className="h-9 w-24"
+              />
+            </div>
+            <ToggleGroup
+              type="multiple"
+              value={activeTypes}
+              onValueChange={handleTypeChange}
+              variant="outline"
+              size="sm"
+              className="flex-wrap"
+            >
+              <ToggleGroupItem value="system">{t('admin.systemLogs.types.system')}</ToggleGroupItem>
+              <ToggleGroupItem value="audit">{t('admin.systemLogs.types.audit')}</ToggleGroupItem>
+              <ToggleGroupItem value="error">{t('admin.systemLogs.types.error')}</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <FilterField label={t('admin.systemLogs.filters.keyword')} htmlFor="log-search">
+              <Input
+                id="log-search"
+                value={q}
+                onChange={(event) => setQ(event.target.value)}
+                placeholder={t('admin.systemLogs.searchPlaceholder')}
+                className="font-mono"
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.filters.method')} htmlFor="log-method">
+              <Input
+                id="log-method"
+                value={extraParams.method || ''}
+                onChange={(event) => setQ((prev) => mergeToken(prev, 'method', event.target.value))}
+                placeholder={t('admin.systemLogs.placeholders.method')}
+                className="font-mono"
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.filters.status')} htmlFor="log-status">
+              <Input
+                id="log-status"
+                value={extraParams.status_code || ''}
+                onChange={(event) => setQ((prev) => mergeToken(prev, 'status', event.target.value))}
+                placeholder={t('admin.systemLogs.placeholders.status')}
+                className="font-mono"
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.filters.userId')} htmlFor="log-user-id">
+              <Input
+                id="log-user-id"
+                value={extraParams.user_id || ''}
+                onChange={(event) => setQ((prev) => mergeToken(prev, 'user', event.target.value))}
+                placeholder={t('admin.systemLogs.placeholders.userId')}
+                className="font-mono"
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.filters.requestId')} htmlFor="log-request-id">
+              <Input
+                id="log-request-id"
+                value={extraParams.request_id || ''}
+                onChange={(event) => setQ((prev) => mergeToken(prev, 'rid', event.target.value))}
+                placeholder={t('admin.systemLogs.placeholders.requestId')}
+                className="font-mono"
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.filters.path')} htmlFor="log-path">
+              <Input
+                id="log-path"
+                value={extraParams.path || ''}
+                onChange={(event) => setQ((prev) => mergeToken(prev, 'path', event.target.value))}
+                placeholder={t('admin.systemLogs.placeholders.path')}
+                className="font-mono"
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.filters.durationMin')} htmlFor="log-duration-min">
+              <Input
+                id="log-duration-min"
+                value={extraParams.min_duration || ''}
+                onChange={(event) => setQ((prev) => mergeRange(prev, 'dur', '>=', event.target.value))}
+                placeholder={t('admin.systemLogs.placeholders.duration')}
+                className="font-mono"
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.filters.durationMax')} htmlFor="log-duration-max">
+              <Input
+                id="log-duration-max"
+                value={extraParams.max_duration || ''}
+                onChange={(event) => setQ((prev) => setDurationUpper(prev, event.target.value))}
+                placeholder={t('admin.systemLogs.placeholders.duration')}
+                className="font-mono"
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.filters.auditAction')} htmlFor="log-audit-action">
+              <Input
+                id="log-audit-action"
+                value={extraParams.action || ''}
+                onChange={(event) => setQ((prev) => mergeToken(prev, 'action', event.target.value))}
+                placeholder={t('admin.systemLogs.placeholders.auditAction')}
+                className="font-mono"
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.filters.auditStatus')} htmlFor="log-audit-status">
+              <Input
+                id="log-audit-status"
+                value={extraParams.audit_status || ''}
+                onChange={(event) => setQ((prev) => mergeToken(prev, 'astatus', event.target.value))}
+                placeholder={t('admin.systemLogs.placeholders.auditStatus')}
+                className="font-mono"
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.filters.errorType')} htmlFor="log-error-type">
+              <Input
+                id="log-error-type"
+                value={extraParams.error_type || ''}
+                onChange={(event) => setQ((prev) => mergeToken(prev, 'etype', event.target.value))}
+                placeholder={t('admin.systemLogs.placeholders.errorType')}
+                className="font-mono"
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.dateFrom')} htmlFor="log-date-from">
+              <Input
+                id="log-date-from"
+                type="date"
+                value={dateFrom}
+                onChange={(event) => setDateFrom(event.target.value)}
+              />
+            </FilterField>
+            <FilterField label={t('admin.systemLogs.dateTo')} htmlFor="log-date-to">
+              <Input
+                id="log-date-to"
+                type="date"
+                value={dateTo}
+                onChange={(event) => setDateTo(event.target.value)}
+              />
+            </FilterField>
+          </div>
+        </CardContent>
+        {hasActiveFilters && (
+          <CardFooter className="pt-0">
+            <ActiveFilters
+              parsed={parsedQuery}
+              onRemove={(tokenKey) => setQ((prev) => removeToken(prev, tokenKey))}
+              t={t}
+            />
+          </CardFooter>
+        )}
+      </Card>
+
+      {isLoading && (
+        <Card>
+          <CardContent className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t('common.loading')}
+          </CardContent>
+        </Card>
+      )}
+
+      {isError && (
+        <Alert variant="destructive">
+          <AlertTitle>{t('common.error')}</AlertTitle>
+          <AlertDescription>{error?.message || t('errors.loadFailed')}</AlertDescription>
+        </Alert>
+      )}
+
+      {!isLoading && !isError && (
+        <>
+          {view === 'table' && (
+            <div className="space-y-6">
+              <SystemLogSection
+                title={t('admin.systemLogs.sections.system')}
+                items={systemLogs}
+                emptyText={t('admin.systemLogs.empty.system')}
+                columns={systemCols}
+                highlightIds={highlightIds}
+                onDetail={setSelectedSystemId}
+                onCopyReq={copy}
+                onRelated={openRelated}
+                columnLabel={columnLabel}
+                t={t}
+              />
+
+              <LogSection
+                title={t('admin.systemLogs.sections.audit')}
+                items={auditLogs}
+                emptyText={t('admin.systemLogs.empty.audit')}
+                headers={[
+                  'id',
+                  'actor_type',
+                  'action',
+                  'operation_category',
+                  'status',
+                  'user_id',
+                  'ip_address',
+                  'created_at'
+                ]}
+                columnLabel={columnLabel}
+                renderItem={(log) => (
+                  <ExpandableRow
+                    key={`audit-${log.id}`}
+                    summaryCells={[
+                      log.id,
+                      log.actor_type,
+                      log.action,
+                      log.operation_category || '- ',
+                      log.status,
+                      log.user_id || '-',
+                      log.ip_address || '-',
+                      log.created_at
+                    ]}
+                    detail={<AuditDetail log={log} columnLabel={columnLabel} />}
+                    t={t}
+                  />
+                )}
+              />
+
+              <LogSection
+                title={t('admin.systemLogs.sections.error')}
+                items={errorLogs}
+                emptyText={t('admin.systemLogs.empty.error')}
+                headers={['id', 'error_type', 'error_message', 'error_file', 'error_line', 'error_time']}
+                columnLabel={columnLabel}
+                renderItem={(log) => (
+                  <ExpandableRow
+                    key={`error-${log.id}`}
+                    summaryCells={[
+                      log.id,
+                      log.error_type,
+                      <span
+                        key="message"
+                        className="font-mono text-[11px] max-w-[240px] truncate"
+                        title={log.error_message}
+                      >
+                        {log.error_message}
+                      </span>,
+                      log.error_file?.split('/').pop() || '-',
+                      log.error_line,
+                      log.error_time
+                    ]}
+                    detail={<ErrorDetail log={log} columnLabel={columnLabel} />}
+                    t={t}
+                  />
+                )}
+              />
+
+              {!hasResults && (
+                <Card>
+                  <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                    {t('admin.systemLogs.noEvents')}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
-        </div>
-      </div>
 
-  <ActiveFilters parsed={parsedTokens} onRemove={(tokenKey)=>setQ(prev=>removeToken(prev, tokenKey))} />
+          {view === 'timeline' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{t('admin.systemLogs.views.timeline')}</CardTitle>
+                <CardDescription>{t('admin.systemLogs.timelineDescription')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TimelineView
+                  system={systemLogs}
+                  audit={auditLogs}
+                  error={errorLogs}
+                  onSelectRequest={openRelated}
+                  emptyLabel={t('admin.systemLogs.noEvents')}
+                />
+              </CardContent>
+            </Card>
+          )}
 
-      {isLoading && <div>加载中...</div>}
-      {error && <div className="text-red-500">加载失败</div>}
-
-      {view === 'table' && (
-        <div className="space-y-8">
-          <SystemLogSection
-            title="System Logs"
-            items={system}
-            emptyText="无系统日志"
-            columns={systemCols}
-            highlightIds={highlightIds}
-            onDetail={(id)=>setSelectedSystemId(id)}
-            onCopyReq={copy}
-            onRelated={openRelated}
-          />
-
-          <LogSection title="Audit Logs" items={audit} emptyText="无审计日志" renderItem={(log) => (
-            <ExpandableRow key={`audit-${log.id}`} summaryCells={[
-              log.id, log.actor_type, log.action, (log.operation_category || '-'), log.status, (log.user_id || '-'), (log.ip_address || '-'), log.created_at
-            ]} detail={<AuditDetail log={log} />} />
-          )} />
-
-          <LogSection title="Error Logs" items={errorLogs} emptyText="无错误日志" renderItem={(log) => (
-            <ExpandableRow key={`error-${log.id}`} summaryCells={[
-              log.id, log.error_type, <span className="font-mono text-[10px] max-w-[240px] inline-block truncate" title={log.error_message}>{log.error_message}</span>, (log.error_file?.split('/').pop()), log.error_line, log.error_time
-            ]} detail={<ErrorDetail log={log} />} />
-          )} />
-        </div>
+          {view === 'raw' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{t('admin.systemLogs.views.raw')}</CardTitle>
+                <CardDescription>{t('admin.systemLogs.rawDescription')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RawView
+                  system={systemLogs}
+                  audit={auditLogs}
+                  error={errorLogs}
+                  onExportCsv={() => doExport('csv')}
+                  onExportNdjson={() => doExport('ndjson')}
+                  labels={{
+                    copy: t('admin.systemLogs.copyNdjson'),
+                    exportNdjson: t('admin.systemLogs.exportNdjson'),
+                    exportCsv: t('admin.systemLogs.exportCsv'),
+                    records: t('admin.systemLogs.records'),
+                    maxHint: t('admin.systemLogs.maxRecords')
+                  }}
+                />
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
-      {view === 'timeline' && (
-        <TimelineView system={system} audit={audit} error={errorLogs} onSelectRequest={openRelated} />
-      )}
-
-      {view === 'raw' && (
-        <RawView system={system} audit={audit} error={errorLogs} onExportCsv={()=>doExport('csv')} onExportNdjson={()=>doExport('ndjson')} />
-      )}
-
-  <Dialog open={Boolean(selectedSystemId)} onOpenChange={(open) => !open && setSelectedSystemId(null)}>
+      <Dialog open={Boolean(selectedSystemId)} onOpenChange={(open) => !open && setSelectedSystemId(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>系统日志详情 #{selectedSystemId}</DialogTitle>
+            <DialogTitle>
+              {selectedSystemId
+                ? t('admin.systemLogs.dialog.titleWithId', { id: selectedSystemId })
+                : t('admin.systemLogs.dialog.title')}
+            </DialogTitle>
             <DialogDescription>
-              Request ID: {detailData?.data?.request_id || '-'}
+              {t('admin.systemLogs.dialog.requestId', {
+                id: detailData?.data?.request_id || t('common.none')
+              })}
             </DialogDescription>
           </DialogHeader>
-          {loadingDetail && <div className="text-sm text-muted-foreground">加载详情...</div>}
+          {loadingDetail && (
+            <div className="py-4 text-sm text-muted-foreground">{t('admin.systemLogs.dialog.loading')}</div>
+          )}
           {detailData?.data && (
             <ScrollArea className="max-h-[70vh] pr-2">
-              <div className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4 text-sm">
-                  <div><strong>Request ID:</strong> {detailData.data.request_id}</div>
-                  <div><strong>Method:</strong> {detailData.data.method}</div>
-                  <div className="md:col-span-2"><strong>Path:</strong> {detailData.data.path}</div>
-                  <div><strong>Status:</strong> {detailData.data.status_code}</div>
-                  <div><strong>User:</strong> {detailData.data.user_id || '-'}</div>
-                  <div><strong>Duration:</strong> {detailData.data.duration_ms} ms</div>
-                  <div className="md:col-span-2"><strong>Created:</strong> {detailData.data.created_at}</div>
+              <div className="space-y-6 text-sm">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <KeyVal label={t('admin.systemLogs.columns.request_id')} value={detailData.data.request_id} />
+                  <KeyVal label={t('admin.systemLogs.columns.method')} value={detailData.data.method} />
+                  <KeyVal label={t('admin.systemLogs.columns.path')} value={detailData.data.path} className="md:col-span-2" />
+                  <KeyVal label={t('admin.systemLogs.columns.status_code')} value={detailData.data.status_code} />
+                  <KeyVal label={t('admin.systemLogs.columns.user_id')} value={detailData.data.user_id || t('common.none')} />
+                  <KeyVal label={t('admin.systemLogs.columns.duration_ms')} value={`${detailData.data.duration_ms} ms`} />
+                  <KeyVal label={t('admin.systemLogs.columns.created_at')} value={detailData.data.created_at} className="md:col-span-2" />
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">Request Body</h3>
-                    <button className="text-blue-600 text-xs" onClick={() => copy(detailData.data.request_body)}>复制</button>
-                  </div>
-                  <JsonTreeViewer value={safeParse(detailData.data.request_body)} />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">Response Body</h3>
-                    <button className="text-blue-600 text-xs" onClick={() => copy(detailData.data.response_body)}>复制</button>
-                  </div>
-                  <JsonTreeViewer value={safeParse(detailData.data.response_body)} />
-                </div>
+
+                <JsonSection
+                  title={t('admin.systemLogs.requestBody')}
+                  value={detailData.data.request_body}
+                  onCopy={copy}
+                  copyLabel={t('common.copy')}
+                />
+                <JsonSection
+                  title={t('admin.systemLogs.responseBody')}
+                  value={detailData.data.response_body}
+                  onCopy={copy}
+                  copyLabel={t('common.copy')}
+                />
                 {detailData.data.server_meta && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">Server Meta</h3>
-                      <button className="text-blue-600 text-xs" onClick={() => copy(detailData.data.server_meta)}>复制</button>
-                    </div>
-                    <JsonTreeViewer value={safeParse(detailData.data.server_meta)} />
-                  </div>
+                  <JsonSection
+                    title={t('admin.systemLogs.serverMeta')}
+                    value={detailData.data.server_meta}
+                    onCopy={copy}
+                    copyLabel={t('common.copy')}
+                  />
                 )}
               </div>
             </ScrollArea>
@@ -340,169 +661,296 @@ export default function SystemLogsPage() {
         </DialogContent>
       </Dialog>
 
-      <RequestIdRelatedDrawer open={!!requestDrawerId} requestId={requestDrawerId} onClose={()=>setRequestDrawerId(null)} loading={loadingRelated} system={related.system} audit={related.audit} error={related.error} />
+      <RequestIdRelatedDrawer
+        open={Boolean(requestDrawerId)}
+        requestId={requestDrawerId}
+        onClose={() => setRequestDrawerId(null)}
+        loading={loadingRelated}
+        system={related.system}
+        audit={related.audit}
+        error={related.error}
+      />
     </div>
   );
 }
 
-// Helper to merge/update a simple key:value token inside the query string
-function mergeToken(prev, key, value) {
-  const parts = (prev || '').split(/\s+/).filter(Boolean).filter(p=>!p.startsWith(key+':'));
-  if (value) parts.push(`${key}:${value}`);
-  return parts.join(' ');
-}
-// Helper for range tokens dur>100 etc.
-function mergeRange(prev, key, op, value) {
-  const regex = new RegExp(`^${key}[<>]=?|$`);
-  const parts = (prev || '').split(/\s+/).filter(Boolean).filter(p=>!p.startsWith(`${key}>`) && !p.startsWith(`${key}<`) && !p.startsWith(`${key}>=`) && !p.startsWith(`${key}<=`));
-  if (value) parts.push(`${key}${op}${value}`);
-  return parts.join(' ');
-}
-function removeToken(prev, tokenKey) {
-  const parts = (prev || '').split(/\s+/).filter(Boolean).filter(p=>!p.startsWith(tokenKey+':'));
-  return parts.join(' ');
-}
-
-function ActiveFilters({ parsed, onRemove }) {
-  const tokenEntries = Object.entries(parsed.tokens||{}).filter(([k,v])=>v && typeof v !== 'object');
-  if (tokenEntries.length===0 && !parsed.free) return null;
+function FilterField({ label, htmlFor, children }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
-      {tokenEntries.map(([k, v]) => (
-        <Badge key={k} variant="secondary" className="flex items-center gap-1">
-          <span>{k}:{String(v)}</span>
-          <button type="button" className="text-red-500" onClick={() => onRemove(k)} title="移除">×</button>
-        </Badge>
-      ))}
-      {parsed.free && (
-        <Badge variant="outline" title="自由文本">{parsed.free}</Badge>
-      )}
+    <div className="space-y-1.5">
+      <Label htmlFor={htmlFor} className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </Label>
+      {children}
     </div>
   );
 }
-
-function LogSection({ title, items, emptyText, renderItem }) {
+function ColumnSelector({ systemCols, auditCols, errorCols, onToggle, columnLabel, t }) {
   return (
-    <div>
-      <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">{title} <span className="text-xs text-gray-500">({items.length})</span></h2>
-      <div className="overflow-auto border rounded">
-        <table className="w-full text-xs">
-          <thead className="bg-gray-100">
-            <tr>
-              {title === 'System Logs' && <>
-                <Th>ID</Th><Th>方法</Th><Th>路径</Th><Th>状态</Th><Th>用户</Th><Th>耗时</Th><Th>时间</Th><Th>操作</Th>
-              </>}
-              {title === 'Audit Logs' && <>
-                <Th>ID</Th><Th>类型</Th><Th>Action</Th><Th>分类</Th><Th>状态</Th><Th>用户</Th><Th>IP</Th><Th>时间</Th>
-              </>}
-              {title === 'Error Logs' && <>
-                <Th>ID</Th><Th>类型</Th><Th>信息</Th><Th>文件</Th><Th>行</Th><Th>时间</Th>
-              </>}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map(renderItem)}
-            {items.length === 0 && (
-              <tr><td colSpan={12} className="p-4 text-center text-gray-500">{emptyText}</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Columns2 className="mr-2 h-4 w-4" />
+          {t('admin.systemLogs.columnSettings')}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 space-y-4" align="end">
+        <ColumnGroup
+          title={t('admin.systemLogs.types.system')}
+          columns={SYSTEM_COLUMNS}
+          active={systemCols}
+          onToggle={(column) => onToggle('system', column)}
+          columnLabel={columnLabel}
+        />
+        <ColumnGroup
+          title={t('admin.systemLogs.types.audit')}
+          columns={AUDIT_COLUMNS}
+          active={auditCols}
+          onToggle={(column) => onToggle('audit', column)}
+          columnLabel={columnLabel}
+        />
+        <ColumnGroup
+          title={t('admin.systemLogs.types.error')}
+          columns={ERROR_COLUMNS}
+          active={errorCols}
+          onToggle={(column) => onToggle('error', column)}
+          columnLabel={columnLabel}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 
-function Th({ children }) { return <th className="p-2 text-left whitespace-nowrap">{children}</th>; }
-
-function SectionCols({ title, cols, active, onToggle }) {
+function ColumnGroup({ title, columns, active, onToggle, columnLabel }) {
   return (
-    <div className="mb-2">
-      <div className="text-[10px] font-semibold text-gray-600 mb-1">{title}</div>
-      <div className="flex flex-wrap gap-1">
-        {cols.map(c => (
-          <button key={c} onClick={()=>onToggle(c)} className={`text-[10px] px-1 py-0.5 border rounded ${active.includes(c)?'bg-blue-600 text-white':'bg-gray-100'}`}>{c}</button>
+    <div className="space-y-2">
+      <p className="text-[11px] font-semibold uppercase text-muted-foreground">{title}</p>
+      <div className="flex flex-wrap gap-2">
+        {columns.map((column) => (
+          <Button
+            key={column}
+            size="sm"
+            variant={active.includes(column) ? 'default' : 'outline'}
+            onClick={() => onToggle(column)}
+            className="h-8 text-xs"
+          >
+            {columnLabel(column)}
+          </Button>
         ))}
       </div>
     </div>
   );
 }
 
-function SystemLogSection({ title, items, emptyText, columns, highlightIds, onDetail, onCopyReq, onRelated }) {
+function ActiveFilters({ parsed, onRemove, t }) {
+  const entries = Object.entries(parsed.tokens || {}).filter(([, value]) => value && typeof value !== 'object');
+  if (entries.length === 0 && !parsed.free) {
+    return null;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      {entries.map(([key, value]) => (
+        <div key={key} className="flex items-center gap-1">
+          <Badge variant="secondary" className="font-mono">
+            {key}:{String(value)}
+          </Badge>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6 text-muted-foreground"
+            onClick={() => onRemove(key)}
+            aria-label={t('admin.systemLogs.activeFilters.remove', { key })}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      ))}
+      {parsed.free && (
+        <Badge variant="outline" className="font-mono">
+          {parsed.free}
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+function SystemLogSection({
+  title,
+  items,
+  emptyText,
+  columns,
+  highlightIds,
+  onDetail,
+  onCopyReq,
+  onRelated,
+  columnLabel,
+  t
+}) {
   const useVirtual = items.length > 120;
+
   const header = (
-    <thead className="bg-gray-100">
+    <thead className="bg-muted/60">
       <tr>
-        {columns.includes('id') && <Th>ID</Th>}
-        {columns.includes('method') && <Th>方法</Th>}
-        {columns.includes('path') && <Th>路径</Th>}
-        {columns.includes('status_code') && <Th>状态</Th>}
-        {columns.includes('user_id') && <Th>用户</Th>}
-        {columns.includes('duration_ms') && <Th>耗时</Th>}
-        {columns.includes('created_at') && <Th>时间</Th>}
-        {columns.includes('ops') && <Th>操作</Th>}
+        {columns.includes('id') && <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground">{columnLabel('id')}</th>}
+        {columns.includes('method') && <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground">{columnLabel('method')}</th>}
+        {columns.includes('path') && <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground">{columnLabel('path')}</th>}
+        {columns.includes('status_code') && <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground">{columnLabel('status_code')}</th>}
+        {columns.includes('user_id') && <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground">{columnLabel('user_id')}</th>}
+        {columns.includes('duration_ms') && <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground">{columnLabel('duration_ms')}</th>}
+        {columns.includes('created_at') && <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground">{columnLabel('created_at')}</th>}
+        {columns.includes('ops') && <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground">{columnLabel('ops')}</th>}
       </tr>
     </thead>
   );
-  const Row = ({ index, style }) => {
-    const log = items[index];
-    const hl = highlightIds.has(log.id) ? 'bg-yellow-50' : '';
+
+  const renderRow = (log) => {
+    const isHighlighted = highlightIds.has(log.id);
     return (
-      <tr key={log.id} style={style} className={`border-t hover:bg-gray-50 ${hl}`}>
-        {columns.includes('id') && <td className="p-2">{log.id}</td>}
-        {columns.includes('method') && <td className="p-2">{log.method}</td>}
-        {columns.includes('path') && <td className="p-2 font-mono text-xs max-w-xs truncate" title={log.path}>{log.path}</td>}
-        {columns.includes('status_code') && <td className="p-2">{log.status_code}</td>}
-        {columns.includes('user_id') && <td className="p-2">{log.user_id || '-'}</td>}
-        {columns.includes('duration_ms') && <td className="p-2">{log.duration_ms}</td>}
-        {columns.includes('created_at') && <td className="p-2">{log.created_at}</td>}
+      <tr key={log.id} className={cn('border-b text-xs transition-colors hover:bg-muted/30', isHighlighted && 'bg-amber-50')}>
+        {columns.includes('id') && <td className="px-3 py-2 font-medium">{log.id}</td>}
+        {columns.includes('method') && <td className="px-3 py-2 uppercase">{log.method}</td>}
+        {columns.includes('path') && (
+          <td className="px-3 py-2">
+            <span className="font-mono text-[11px]" title={log.path}>
+              {log.path}
+            </span>
+          </td>
+        )}
+        {columns.includes('status_code') && <td className="px-3 py-2">{log.status_code}</td>}
+        {columns.includes('user_id') && <td className="px-3 py-2">{log.user_id || '-'}</td>}
+        {columns.includes('duration_ms') && <td className="px-3 py-2">{log.duration_ms}</td>}
+        {columns.includes('created_at') && <td className="px-3 py-2 whitespace-nowrap">{log.created_at}</td>}
         {columns.includes('ops') && (
-          <td className="p-2 space-x-2">
-            <button className="text-blue-600" onClick={()=>onDetail(log.id)}>详情</button>
-            <button className="text-gray-600" onClick={()=>onCopyReq(log.request_id)}>复制ReqID</button>
-            {log.request_id && <button className="text-indigo-600" onClick={()=>onRelated(log.request_id)}>关联</button>}
+          <td className="px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <Button variant="link" className="h-auto p-0" onClick={() => onDetail(log.id)}>
+                {t('admin.systemLogs.details')}
+              </Button>
+              <Button variant="link" className="h-auto p-0 text-muted-foreground" onClick={() => onCopyReq(log.request_id)}>
+                {t('admin.systemLogs.copyReqId')}
+              </Button>
+              {log.request_id && (
+                <Button variant="link" className="h-auto p-0 text-indigo-600" onClick={() => onRelated(log.request_id)}>
+                  {t('admin.systemLogs.related')}
+                </Button>
+              )}
+            </div>
           </td>
         )}
       </tr>
     );
   };
+
   return (
-    <div>
-      <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">{title} <span className="text-xs text-gray-500">({items.length})</span></h2>
-      <div className="overflow-auto border rounded" style={{maxHeight: useVirtual ? 500 : 'auto'}}>
-        <table className="w-full text-xs">
-          {header}
-          {!useVirtual && (
-            <tbody>
-              {items.map(log => Row({ index: items.indexOf(log), style: {} }))}
-              {items.length === 0 && <tr><td colSpan={columns.length} className="p-4 text-center text-gray-500">{emptyText}</td></tr>}
-            </tbody>
-          )}
-        </table>
-        {useVirtual && (
-          <List height={500} itemCount={items.length} itemSize={38} width="100%" className="text-xs">
-            {({ index, style }) => (
-              <table style={style} className="w-full border-separate border-spacing-0"><tbody>{Row({ index, style: {} })}</tbody></table>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <div className="flex items-center gap-3">
+          <CardTitle className="text-lg">{title}</CardTitle>
+          <Badge variant="outline" className="text-xs">
+            {t('admin.systemLogs.recordCount', { count: items.length })}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full border-t text-xs">
+            {header}
+            {!useVirtual && (
+              <tbody>
+                {items.map((log) => renderRow(log))}
+                {items.length === 0 && (
+                  <tr>
+                    <td className="px-4 py-6 text-center text-muted-foreground" colSpan={columns.length}>
+                      {emptyText}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
             )}
-          </List>
-        )}
-      </div>
-    </div>
+          </table>
+          {useVirtual && (
+            <List height={480} itemCount={items.length} itemSize={44} width="100%">
+              {({ index, style }) => (
+                <table key={items[index].id} style={{ ...style, width: '100%' }} className="table-fixed text-xs">
+                  <tbody>{renderRow(items[index])}</tbody>
+                </table>
+              )}
+            </List>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+function LogSection({ title, items, emptyText, renderItem, headers, columnLabel }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <div className="flex items-center gap-3">
+          <CardTitle className="text-lg">{title}</CardTitle>
+          <Badge variant="outline" className="text-xs">
+            {items.length}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full border-t text-xs">
+            <thead className="bg-muted/60">
+              <tr>
+                {headers.map((header) => (
+                  <th
+                    key={header}
+                    className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground"
+                  >
+                    {columnLabel(header)}
+                  </th>
+                ))}
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-muted-foreground">
+                  {columnLabel('ops')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map(renderItem)}
+              {items.length === 0 && (
+                <tr>
+                  <td className="px-4 py-6 text-center text-muted-foreground" colSpan={headers.length + 1}>
+                    {emptyText}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
-function ExpandableRow({ summaryCells, detail }) {
-  const [open, setOpen] = React.useState(false);
+function ExpandableRow({ summaryCells, detail, t }) {
+  const [open, setOpen] = useState(false);
   return (
     <>
-      <tr className={`border-t hover:bg-gray-50 ${open ? 'bg-gray-50' : ''}`}> 
-        {summaryCells.map((c,i)=>(<td key={i} className="p-2 align-top">{c}</td>))}
-        <td className="p-2 text-right">
-          <button className="text-xs text-blue-600" onClick={()=>setOpen(o=>!o)}>{open? '收起' : '展开'}</button>
+      <tr className={cn('border-b', open && 'bg-muted/40')}>
+        {summaryCells.map((cell, index) => (
+          <td key={index} className="px-3 py-2 align-top">
+            {cell}
+          </td>
+        ))}
+        <td className="px-3 py-2 text-right">
+          <Button
+            variant="link"
+            className="h-auto p-0 text-xs"
+            onClick={() => setOpen((prev) => !prev)}
+          >
+            {open ? t('admin.systemLogs.actions.collapse') : t('admin.systemLogs.actions.expand')}
+          </Button>
         </td>
       </tr>
       {open && (
-        <tr className="bg-gray-50/60">
-          <td colSpan={summaryCells.length+1} className="p-3 border-t">
+        <tr className="border-b bg-muted/30">
+          <td colSpan={summaryCells.length + 1} className="px-3 py-3">
             {detail}
           </td>
         </tr>
@@ -511,16 +959,18 @@ function ExpandableRow({ summaryCells, detail }) {
   );
 }
 
-function AuditDetail({ log }) {
+function AuditDetail({ log, columnLabel }) {
   return (
     <div className="space-y-2 text-xs">
-      <KeyVal k="ID" v={log.id} />
-      <KeyVal k="Action" v={log.action} />
-      <KeyVal k="Category" v={log.operation_category || '-'} />
-      <KeyVal k="Actor Type" v={log.actor_type} />
-      <KeyVal k="Status" v={log.status} />
-  {log.details_raw && <div><div className="font-semibold mb-1">details_raw</div><JsonTreeViewer value={safeParse(log.details_raw)} /></div>}
-  {log.summary && <div><div className="font-semibold mb-1">summary</div><JsonTreeViewer value={safeParse(log.summary)} /></div>}
+      <KeyVal label={columnLabel('id')} value={log.id} />
+      <KeyVal label={columnLabel('action')} value={log.action} />
+      <KeyVal label={columnLabel('operation_category')} value={log.operation_category || '-'} />
+      <KeyVal label={columnLabel('actor_type')} value={log.actor_type} />
+      <KeyVal label={columnLabel('status')} value={log.status} />
+      {log.details_raw && (
+        <JsonTreeBlock title="details_raw" value={safeParse(log.details_raw)} />
+      )}
+      {log.summary && <JsonTreeBlock title="summary" value={safeParse(log.summary)} />}
       {(log.old_data || log.new_data) && (
         <div className="space-y-1">
           <AuditDiffViewer oldData={log.old_data} newData={log.new_data} />
@@ -530,19 +980,99 @@ function AuditDetail({ log }) {
   );
 }
 
-function ErrorDetail({ log }) {
+function ErrorDetail({ log, columnLabel }) {
   return (
     <div className="space-y-2 text-xs">
-      <KeyVal k="ID" v={log.id} />
-      <KeyVal k="Type" v={log.error_type} />
-      <KeyVal k="File" v={log.error_file} />
-      <KeyVal k="Line" v={log.error_line} />
-  <div><div className="font-semibold mb-1">message</div><JsonTreeViewer value={safeParse(log.error_message)} /></div>
-      {log.stack_trace && <pre className="text-[10px] bg-black/80 text-green-300 p-2 rounded overflow-auto max-h-64 whitespace-pre-wrap">{log.stack_trace}</pre>}
-  {log.context_json && <div><div className="font-semibold mb-1">context</div><JsonTreeViewer value={safeParse(log.context_json)} /></div>}
+      <KeyVal label={columnLabel('id')} value={log.id} />
+      <KeyVal label={columnLabel('error_type')} value={log.error_type} />
+      <KeyVal label={columnLabel('error_file')} value={log.error_file} />
+      <KeyVal label={columnLabel('error_line')} value={log.error_line} />
+      <JsonTreeBlock title="message" value={safeParse(log.error_message)} />
+      {log.stack_trace && (
+        <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-slate-900 p-3 font-mono text-[11px] text-green-300">
+          {log.stack_trace}
+        </pre>
+      )}
+      {log.context_json && <JsonTreeBlock title="context" value={safeParse(log.context_json)} />}
     </div>
   );
 }
 
-function KeyVal({ k, v }) { return <div><span className="font-semibold mr-2">{k}:</span><span className="font-mono break-all">{String(v ?? '-')}</span></div>; }
-function JsonBlock() { return null; }
+function JsonSection({ title, value, onCopy, copyLabel }) {
+  if (!value) return null;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <Button variant="link" className="h-auto p-0 text-xs" onClick={() => onCopy(value)}>
+          {copyLabel}
+        </Button>
+      </div>
+      <JsonTreeViewer value={safeParse(value)} />
+    </div>
+  );
+}
+
+function JsonTreeBlock({ title, value }) {
+  if (!value) return null;
+  return (
+    <div className="space-y-1">
+      <div className="text-[11px] font-semibold text-muted-foreground">{title}</div>
+      <JsonTreeViewer value={value} />
+    </div>
+  );
+}
+
+function KeyVal({ label, value, className }) {
+  return (
+    <div className={cn('space-x-2', className)}>
+      <span className="font-semibold">{label}:</span>
+      <span className="font-mono break-all text-xs">{String(value ?? '-')}</span>
+    </div>
+  );
+}
+
+function safeParse(value) {
+  if (value == null) return null;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    return value;
+  }
+}
+
+function mergeToken(previous, key, newValue) {
+  const parts = (previous || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => !token.startsWith());
+  if (newValue) parts.push();
+  return parts.join(' ');
+}
+
+function mergeRange(previous, key, operator, newValue) {
+  const parts = (previous || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) =>
+      !token.startsWith() &&
+      !token.startsWith() &&
+      !token.startsWith() &&
+      !token.startsWith()
+    );
+  if (newValue) parts.push();
+  return parts.join(' ');
+}
+
+function setDurationUpper(previous, value) {
+  return mergeRange(previous, 'dur', '<=', value);
+}
+
+function removeToken(previous, tokenKey) {
+  const parts = (previous || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => !token.startsWith());
+  return parts.join(' ');
+}

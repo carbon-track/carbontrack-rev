@@ -99,6 +99,29 @@
     "next": "下一张",
     "counter": "{{current}} / {{total}}"
   },
+  "jsonViewer": {
+    "root": "根",
+    "searchPlaceholder": "搜索键或值",
+    "expandAll": "全部展开",
+    "collapseAll": "全部折叠",
+    "copyJson": "复制 JSON",
+    "copyPath": "复制路径",
+    "copyValue": "复制值",
+    "expandNode": "展开节点",
+    "collapseNode": "折叠节点",
+    "copied": "已复制",
+    "noData": "暂无数据",
+    "typeLabels": {
+      "object": "对象",
+      "array": "数组",
+      "string": "字符串",
+      "number": "数字",
+      "boolean": "布尔",
+      "null": "Null",
+      "undefined": "Undefined",
+      "unknown": "未知"
+    }
+  },
   "auth": {
     "signIn": "登录",
     "signUp": "注册",
@@ -773,7 +796,9 @@
         "role": "角色",
         "status": "状态",
         "points": "积分",
-        "actions": "操作"
+        "actions": "操作",
+        "badges": "徽章",
+        "carbon": "累计减排 (kg)"
       },
       "selectUserHint": "请先选择用户",
       "selectedCount": "已选择 {{count}} 位用户",
@@ -794,7 +819,41 @@
       "adjustPointsReason": "调整说明",
       "adjustPointsReasonPlaceholder": "请输入调整原因，便于审计记录",
       "disable": "禁用",
-      "enable": "启用"
+      "enable": "启用",
+      "viewDetailsButton": "查看详情",
+      "badgeSummary": "徽章概览",
+      "badgeSummaryHint": "展示徽章授予和收回统计",
+      "showRevokedBadges": "显示已收回的徽章",
+      "badgesAwarded": "已授予",
+      "badgesRevoked": "已收回",
+      "badgesTotal": "总计",
+      "badgesAwardedCount": "已授予 {{count}} 枚",
+      "activeBadgesCount": "激活 {{count}} 枚",
+      "badgeStatusAwarded": "已授予",
+      "badgeStatusRevoked": "已收回",
+      "badgesLoadFailed": "徽章列表加载失败",
+      "badgesEmpty": "暂无徽章记录",
+      "detailTitle": "用户详情：{{username}}",
+      "detailTitleFallback": "用户详情",
+      "detailLoadFailed": "无法加载用户详情",
+      "detailEmpty": "暂无详情数据",
+      "badgeTable": {
+        "badge": "徽章",
+        "status": "状态",
+        "awardedAt": "授予时间"
+      },
+      "detail": {
+        "username": "用户名",
+        "role": "角色",
+        "status": "状态",
+        "registrationDays": "注册天数",
+        "lastLogin": "最近登录",
+        "pointsBalance": "积分余额",
+        "pointsEarned": "累计积分",
+        "carbonSaved": "累计碳减排 (kg)",
+        "recordsApproved": "已审核记录数",
+        "daysSinceRegistration": "注册天数"
+      }
     },
     "activities": {
       "title": "活动管理",
@@ -1026,17 +1085,53 @@
     },
     "systemLogs": {
       "title": "统一日志中心",
+      "subtitle": "结合筛选与高级语法快速定位系统审计与异常日志。",
       "views": {
         "table": "表格",
         "timeline": "时间线",
         "raw": "原始"
       },
+      "timelineDescription": "以时间线快速回顾系统、审计与错误日志事件。",
+      "rawDescription": "查看合并后的原始 JSON 数据并导出日志。",
       "searchPlaceholder": "status:500 method:POST error OR 更新",
       "autoRefresh": "自动刷新",
       "refresh": "刷新",
       "exportCsv": "导出 CSV",
       "exportNdjson": "导出 NDJSON",
-      "filters": "过滤",
+      "filtersLabel": "过滤",
+      "types": {
+        "system": "系统日志",
+        "audit": "审计日志",
+        "error": "错误日志"
+      },
+      "filtersGroup": "过滤",
+      "filtersTitle": "筛选条件",
+      "filters": {
+        "keyword": "关键字 / 高级查询",
+        "method": "请求方法",
+        "status": "状态码",
+        "userId": "用户 ID",
+        "requestId": "请求 ID",
+        "path": "路径包含",
+        "durationMin": "耗时 ≥",
+        "durationMax": "耗时 ≤",
+        "auditAction": "审计操作",
+        "auditStatus": "审计状态",
+        "errorType": "错误类型"
+      },
+      "placeholders": {
+        "method": "GET",
+        "status": "200",
+        "userId": "123",
+        "requestId": "uuid",
+        "path": "/api/v1",
+        "duration": "毫秒",
+        "auditAction": "CREATE",
+        "auditStatus": "SUCCESS",
+        "errorType": "RuntimeError"
+      },
+      "perTypeLimit": "每类限制",
+      "columnSettings": "列显示",
       "related": "关联",
       "noEvents": "无事件",
       "copyReqId": "复制ReqID",
@@ -1055,10 +1150,51 @@
       "copyNdjson": "复制 NDJSON",
       "maxRecords": "(最多1000)",
       "advancedQuery": "高级查询",
-      "perTypeLimit": "每类限制",
-      "subtitle": "结合筛选与高级语法快速定位系统审计与异常日志。",
-      "columnSettings": "列显示",
-      "errorType": "错误类型",
+      "sections": {
+        "system": "系统日志",
+        "audit": "审计日志",
+        "error": "错误日志"
+      },
+      "empty": {
+        "system": "暂无系统日志",
+        "audit": "暂无审计日志",
+        "error": "暂无错误日志"
+      },
+      "recordCount": "共 {{count}} 条",
+      "actions": {
+        "expand": "展开",
+        "collapse": "收起"
+      },
+      "activeFilters": {
+        "remove": "移除{{key}}筛选"
+      },
+      "dialog": {
+        "title": "系统日志详情",
+        "titleWithId": "系统日志详情 #{{id}}",
+        "requestId": "请求 ID：{{id}}",
+        "loading": "正在加载日志详情..."
+      },
+      "columns": {
+        "id": "ID",
+        "request_id": "请求ID",
+        "method": "方法",
+        "path": "路径",
+        "status_code": "状态码",
+        "user_id": "用户",
+        "duration_ms": "耗时 (ms)",
+        "created_at": "时间",
+        "ops": "操作",
+        "actor_type": "执行者类型",
+        "action": "操作",
+        "operation_category": "分类",
+        "status": "状态",
+        "ip_address": "IP 地址",
+        "error_type": "错误类型",
+        "error_message": "错误信息",
+        "error_file": "文件",
+        "error_line": "行号",
+        "error_time": "时间"
+      },
       "dateFrom": "起始日期",
       "dateTo": "结束日期"
     },
@@ -1118,7 +1254,8 @@
         "status": "状态",
         "auto": "自动",
         "sort": "排序",
-        "updated": "更新时间"
+        "updated": "更新时间",
+        "stats": "授予情况"
       },
       "active": "启用",
       "inactive": "停用",
@@ -1249,6 +1386,32 @@
         "tipBadges": "徽章选择支持单选或多选，将逐个执行。",
         "confirm": "开始收回",
         "noDescription": "暂无描述"
+      },
+      "stats": {
+        "summary": "已授予 {{awarded}} / 总记录 {{total}}",
+        "awardedUsers": "{{count}} 位用户获得",
+        "lastAwarded": "最近：{{time}}"
+      },
+      "viewRecipients": "查看获奖用户",
+      "recipients": {
+        "title": "徽章获奖用户",
+        "titleWithName": "徽章获奖用户：{{name}}",
+        "subtitle": "查看该徽章的授予记录，支持搜索和筛选。",
+        "status": {
+          "awarded": "已授予",
+          "revoked": "已收回",
+          "all": "全部"
+        },
+        "searchPlaceholder": "按用户名或邮箱搜索",
+        "totalCount": "共 {{count}} 人",
+        "loadFailed": "加载获奖用户失败，请稍后重试。",
+        "empty": "还没有授予记录。",
+        "table": {
+          "username": "用户名",
+          "email": "邮箱",
+          "status": "状态",
+          "awardedAt": "授予时间"
+        }
       }
     },
     "avatars": {

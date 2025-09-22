@@ -1,32 +1,65 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
 
-export default function RawView({ system = [], audit = [], error = [], onExportCsv, onExportNdjson }) {
-  const merged = [
-    ...system.map(r=>({...r, __type:'system'})),
-    ...audit.map(r=>({...r, __type:'audit'})),
-    ...error.map(r=>({...r, __type:'error'})),
-  ].sort((a,b)=>{
-    const ta = Date.parse(a.created_at || a.error_time || a.time || a.timestamp || 0) || 0;
-    const tb = Date.parse(b.created_at || b.error_time || b.time || b.timestamp || 0) || 0;
-    return tb - ta;
-  }).slice(0,1000);
+import { Button } from '../ui/Button';
 
-  const ndjson = merged.map(o=>JSON.stringify(o)).join('\n');
+const DEFAULT_LABELS = {
+  copy: 'Copy NDJSON',
+  exportNdjson: 'Export NDJSON',
+  exportCsv: 'Export CSV',
+  records: 'records',
+  maxHint: '(max 1000)'
+};
+
+export default function RawView({
+  system = [],
+  audit = [],
+  error = [],
+  onExportCsv,
+  onExportNdjson,
+  labels = {}
+}) {
+  const merged = useMemo(() => (
+    [
+      ...system.map((record) => ({ ...record, __type: 'system' })),
+      ...audit.map((record) => ({ ...record, __type: 'audit' })),
+      ...error.map((record) => ({ ...record, __type: 'error' }))
+    ]
+      .sort((a, b) => {
+        const ta = Date.parse(a.created_at || a.error_time || a.time || a.timestamp || 0) || 0;
+        const tb = Date.parse(b.created_at || b.error_time || b.time || b.timestamp || 0) || 0;
+        return tb - ta;
+      })
+      .slice(0, 1000)
+  ), [system, audit, error]);
+
+  const labelSet = { ...DEFAULT_LABELS, ...labels };
+  const ndjson = useMemo(() => merged.map((item) => JSON.stringify(item)).join('\n'), [merged]);
 
   const copyAll = () => {
-    navigator.clipboard.writeText(ndjson).catch(()=>{});
+    if (!ndjson) return;
+    navigator.clipboard.writeText(ndjson).catch(() => {});
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2 text-xs">
-        <button className="px-2 py-1 bg-gray-200 rounded" onClick={copyAll}>Copy NDJSON</button>
-        <button className="px-2 py-1 bg-gray-200 rounded" onClick={onExportNdjson}>Export NDJSON</button>
-        <button className="px-2 py-1 bg-gray-200 rounded" onClick={onExportCsv}>Export CSV</button>
-        <div className="text-gray-500 self-center">{merged.length} records (max 1000)</div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <Button size="sm" variant="outline" className="h-8 px-3" onClick={copyAll}>
+          {labelSet.copy}
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 px-3" onClick={onExportNdjson}>
+          {labelSet.exportNdjson}
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 px-3" onClick={onExportCsv}>
+          {labelSet.exportCsv}
+        </Button>
+        <div className="text-muted-foreground">
+          {merged.length} {labelSet.records} {labelSet.maxHint}
+        </div>
       </div>
-      <pre className="text-[10px] leading-tight bg-black text-green-300 p-3 rounded overflow-auto max-h-[60vh] whitespace-pre">{ndjson}</pre>
+      <pre className="max-h-[60vh] overflow-auto whitespace-pre rounded bg-black p-3 text-[10px] leading-tight text-green-300">
+        {ndjson}
+      </pre>
     </div>
   );
 }
@@ -36,5 +69,6 @@ RawView.propTypes = {
   audit: PropTypes.array,
   error: PropTypes.array,
   onExportCsv: PropTypes.func,
-  onExportNdjson: PropTypes.func
+  onExportNdjson: PropTypes.func,
+  labels: PropTypes.object
 };

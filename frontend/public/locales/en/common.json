@@ -703,7 +703,9 @@
         "role": "Role",
         "status": "Status",
         "points": "Points",
-        "actions": "Actions"
+        "actions": "Actions",
+        "badges": "Badges",
+        "carbon": "Carbon saved (kg)"
       },
       "selectUserHint": "Select at least one user first",
       "selectedCount": "Selected {{count}} users",
@@ -722,7 +724,41 @@
       "adjustPointsDelta": "Points delta",
       "adjustPointsHint": "Positive numbers add points, negative numbers deduct points",
       "adjustPointsReason": "Adjustment reason",
-      "adjustPointsReasonPlaceholder": "Explain why this adjustment is needed (for audit logs)"
+      "adjustPointsReasonPlaceholder": "Explain why this adjustment is needed (for audit logs)",
+      "viewDetailsButton": "View details",
+      "badgeSummary": "Badge overview",
+      "badgeSummaryHint": "Summary of badge awards and revocations",
+      "showRevokedBadges": "Show revoked badges",
+      "badgesAwarded": "Awarded",
+      "badgesRevoked": "Revoked",
+      "badgesTotal": "Total",
+      "badgesAwardedCount": "{{count}} badges awarded",
+      "activeBadgesCount": "{{count}} active badges",
+      "badgeStatusAwarded": "Awarded",
+      "badgeStatusRevoked": "Revoked",
+      "badgesLoadFailed": "Unable to load badge list",
+      "badgesEmpty": "No badge records yet",
+      "detailTitle": "User details: {{username}}",
+      "detailTitleFallback": "User details",
+      "detailLoadFailed": "Unable to load user details",
+      "detailEmpty": "No details available",
+      "badgeTable": {
+        "badge": "Badge",
+        "status": "Status",
+        "awardedAt": "Awarded at"
+      },
+      "detail": {
+        "username": "Username",
+        "role": "Role",
+        "status": "Status",
+        "registrationDays": "Registration days",
+        "lastLogin": "Last login",
+        "pointsBalance": "Points balance",
+        "pointsEarned": "Total points earned",
+        "carbonSaved": "Total carbon saved (kg)",
+        "recordsApproved": "Approved records",
+        "daysSinceRegistration": "Days since registration"
+      }
     },
     "products": {
       "title": "Product Management",
@@ -954,17 +990,53 @@
     },
     "systemLogs": {
       "title": "Unified Log Center",
+      "subtitle": "Filter and inspect system, audit, and error logs in one place.",
       "views": {
         "table": "Table",
         "timeline": "Timeline",
         "raw": "Raw"
       },
+      "timelineDescription": "Review system, audit, and error events on a unified timeline.",
+      "rawDescription": "Inspect merged raw JSON logs and export data fast.",
       "searchPlaceholder": "status:500 method:POST error OR update",
       "autoRefresh": "Auto Refresh",
       "refresh": "Refresh",
       "exportCsv": "Export CSV",
       "exportNdjson": "Export NDJSON",
-      "filters": "Filters",
+      "filtersLabel": "Filters",
+      "types": {
+        "system": "System Logs",
+        "audit": "Audit Logs",
+        "error": "Error Logs"
+      },
+      "filtersGroup": "Filters",
+      "filtersTitle": "Filters",
+      "filters": {
+        "keyword": "Keyword / Advanced query",
+        "method": "Method",
+        "status": "Status",
+        "userId": "User ID",
+        "requestId": "Request ID",
+        "path": "Path contains",
+        "durationMin": "Duration ≥",
+        "durationMax": "Duration ≤",
+        "auditAction": "Audit action",
+        "auditStatus": "Audit status",
+        "errorType": "Error type"
+      },
+      "placeholders": {
+        "method": "GET",
+        "status": "200",
+        "userId": "123",
+        "requestId": "uuid",
+        "path": "/api/v1",
+        "duration": "ms",
+        "auditAction": "CREATE",
+        "auditStatus": "SUCCESS",
+        "errorType": "RuntimeError"
+      },
+      "perTypeLimit": "Limit / Type",
+      "columnSettings": "Columns",
       "related": "Related",
       "noEvents": "No events",
       "copyReqId": "Copy ReqID",
@@ -983,10 +1055,51 @@
       "copyNdjson": "Copy NDJSON",
       "maxRecords": "(max 1000)",
       "advancedQuery": "Advanced Query",
-      "perTypeLimit": "Limit / Type",
-      "subtitle": "Filter and inspect system, audit, and error logs in one place.",
-      "columnSettings": "Columns",
-      "errorType": "Error Type",
+      "sections": {
+        "system": "System Logs",
+        "audit": "Audit Logs",
+        "error": "Error Logs"
+      },
+      "empty": {
+        "system": "No system logs",
+        "audit": "No audit logs",
+        "error": "No error logs"
+      },
+      "recordCount": "{{count}} records",
+      "actions": {
+        "expand": "Expand",
+        "collapse": "Collapse"
+      },
+      "activeFilters": {
+        "remove": "Remove {{key}} filter"
+      },
+      "dialog": {
+        "title": "System log detail",
+        "titleWithId": "System log #{{id}}",
+        "requestId": "Request ID: {{id}}",
+        "loading": "Loading log detail..."
+      },
+      "columns": {
+        "id": "ID",
+        "request_id": "Request ID",
+        "method": "Method",
+        "path": "Path",
+        "status_code": "Status",
+        "user_id": "User",
+        "duration_ms": "Duration (ms)",
+        "created_at": "Created",
+        "ops": "Actions",
+        "actor_type": "Actor type",
+        "action": "Action",
+        "operation_category": "Category",
+        "status": "Status",
+        "ip_address": "IP address",
+        "error_type": "Error type",
+        "error_message": "Error message",
+        "error_file": "File",
+        "error_line": "Line",
+        "error_time": "Time"
+      },
       "dateFrom": "Date from",
       "dateTo": "Date to"
     },
@@ -1046,7 +1159,8 @@
         "status": "Status",
         "auto": "Auto",
         "sort": "Sort",
-        "updated": "Updated"
+        "updated": "Updated",
+        "stats": "Award stats"
       },
       "active": "Active",
       "inactive": "Inactive",
@@ -1177,6 +1291,32 @@
         "tipBadges": "Choose one or many badges; each will be processed in order.",
         "confirm": "Start revoking",
         "noDescription": "No description"
+      },
+      "stats": {
+        "summary": "{{awarded}} awarded / {{total}} total records",
+        "awardedUsers": "{{count}} users awarded",
+        "lastAwarded": "Last: {{time}}"
+      },
+      "viewRecipients": "View recipients",
+      "recipients": {
+        "title": "Badge recipients",
+        "titleWithName": "Badge recipients: {{name}}",
+        "subtitle": "View award records, search users, and filter by status.",
+        "status": {
+          "awarded": "Awarded",
+          "revoked": "Revoked",
+          "all": "All"
+        },
+        "searchPlaceholder": "Search by username or email",
+        "totalCount": "{{count}} users",
+        "loadFailed": "Failed to load recipients. Please try again later.",
+        "empty": "No award records yet.",
+        "table": {
+          "username": "Username",
+          "email": "Email",
+          "status": "Status",
+          "awardedAt": "Awarded at"
+        }
       }
     },
     "avatars": {
@@ -1397,6 +1537,29 @@
     "prev": "Previous",
     "next": "Next",
     "counter": "{{current}} / {{total}}"
+  },
+  "jsonViewer": {
+    "root": "root",
+    "searchPlaceholder": "Search keys or values",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "copyJson": "Copy JSON",
+    "copyPath": "Copy path",
+    "copyValue": "Copy value",
+    "expandNode": "Expand node",
+    "collapseNode": "Collapse node",
+    "copied": "Copied",
+    "noData": "No data",
+    "typeLabels": {
+      "object": "Object",
+      "array": "Array",
+      "string": "String",
+      "number": "Number",
+      "boolean": "Boolean",
+      "null": "Null",
+      "undefined": "Undefined",
+      "unknown": "Unknown"
+    }
   },
   "validation": {
     "required": "This field is required",

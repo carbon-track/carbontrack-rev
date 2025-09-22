@@ -22,11 +22,13 @@ import {
   BarChart3,
   ShieldCheck,
   Users,
+  Eye,
 } from 'lucide-react';
 import { uploadViaPresign } from '@/lib/r2Upload';
 import R2Image from '@/components/common/R2Image';
 import BadgeBulkAwardDialog from './badges/BadgeBulkAwardDialog';
 import BadgeRuleBuilder from './badges/BadgeRuleBuilder';
+import BadgeRecipientsDialog from './badges/BadgeRecipientsDialog';
 
 const DEFAULT_FORM = {
   id: null,
@@ -47,6 +49,16 @@ const DEFAULT_FORM = {
   message_body_zh: '',
   message_body_en: '',
 };
+
+const DEFAULT_BADGE_STATS = {
+  total_records: 0,
+  unique_users: 0,
+  awarded_records: 0,
+  revoked_records: 0,
+  awarded_users: 0,
+  last_awarded_at: null,
+};
+
 
 const DEFAULT_CRITERIA = { all: true, rules: [] };
 
@@ -85,6 +97,7 @@ export default function BadgeManagement() {
   const [criteriaMode, setCriteriaMode] = useState('builder');
   const [ruleBuilderValue, setRuleBuilderValue] = useState(DEFAULT_CRITERIA);
   const [bulkDialog, setBulkDialog] = useState({ open: false, badgeIds: [], mode: 'award', presetUsers: [] });
+  const [recipientDialog, setRecipientDialog] = useState({ open: false, badge: null });
   const iconInputRef = useRef(null);
 
   const fetchBadges = useCallback(async () => {
@@ -279,6 +292,17 @@ export default function BadgeManagement() {
     setBulkDialog({ open: true, badgeIds: badge ? [badge.id] : [], mode: 'revoke', presetUsers: [] });
   };
 
+  const handleViewRecipients = (badge) => {
+    if (!badge) {
+      return;
+    }
+    setRecipientDialog({ open: true, badge });
+  };
+
+  const handleRecipientDialogChange = (open) => {
+    setRecipientDialog((prev) => ({ open, badge: open ? prev.badge : null }));
+  };
+
   const handleTriggerAuto = async () => {
     try {
       setTriggering(true);
@@ -392,6 +416,9 @@ export default function BadgeManagement() {
                       {t('admin.badges.table.status', '状态')}
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                      {t('admin.badges.table.stats', '授予情况')}
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
                       {t('admin.badges.table.auto', '自动授予')}
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
@@ -412,6 +439,7 @@ export default function BadgeManagement() {
                       : Array.isArray(badge.auto_grant_criteria)
                         ? badge.auto_grant_criteria.length
                         : 0;
+                    const stats = badge.stats || DEFAULT_BADGE_STATS;
                     return (
                       <tr key={badge.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
@@ -439,6 +467,19 @@ export default function BadgeManagement() {
                               : t('admin.badges.inactive', '停用')}
                           </Badge>
                         </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          <div className="flex flex-col gap-1">
+                            <span>{t('admin.badges.stats.summary', '{{awarded}} / {{total}}', { awarded: stats.awarded_records || 0, total: stats.total_records || 0 })}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {t('admin.badges.stats.awardedUsers', '{{count}} 位用户获得', { count: stats.awarded_users || 0 })}
+                            </span>
+                            {stats.last_awarded_at ? (
+                              <span className="text-[10px] text-muted-foreground">
+                                {t('admin.badges.stats.lastAwarded', '最近：{{time}}', { time: format(new Date(stats.last_awarded_at), 'yyyy-MM-dd HH:mm') })}
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-1">
                             <Badge variant={badge.auto_grant_enabled ? 'outline' : 'secondary'}>
@@ -465,6 +506,10 @@ export default function BadgeManagement() {
                               <Edit className="h-4 w-4 mr-1" />
                               {t('common.edit', '编辑')}
                             </Button>
+                            <Button className="w-full sm:w-auto" variant="ghost" size="sm" onClick={() => handleViewRecipients(badge)}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              {t('admin.badges.viewRecipients', '获奖用户')}
+                            </Button>
                             <Button className="w-full sm:w-auto" variant="ghost" size="sm" onClick={() => handleAward(badge)}>
                               <Sparkles className="h-4 w-4 mr-1" />
                               {t('admin.badges.award', '授予')}
@@ -480,7 +525,7 @@ export default function BadgeManagement() {
                   })}
                   {formattedBadges.length === 0 && !loading && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-6 text-center text-sm text-gray-500">
+                      <td colSpan={8} className="px-4 py-6 text-center text-sm text-gray-500">
                         {t('admin.badges.empty', '还没有创建任何徽章')}
                       </td>
                     </tr>
@@ -737,6 +782,11 @@ export default function BadgeManagement() {
         presetUsers={bulkDialog.presetUsers}
         onCompleted={handleBulkDialogComplete}
         mode={bulkDialog.mode}
+      />
+      <BadgeRecipientsDialog
+        open={recipientDialog.open}
+        onOpenChange={handleRecipientDialogChange}
+        badge={recipientDialog.badge}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from 'react-query';
 import { searchLogs } from '../lib/api/logSearch';
 
 export function useDebouncedValue(value, delay = 400) {
@@ -14,9 +14,9 @@ export function useDebouncedValue(value, delay = 400) {
 export function useLogSearch(params) {
   const debouncedQ = useDebouncedValue(params.q || '');
   const finalParams = { ...params, q: debouncedQ };
-  return useQuery({
-    queryKey: ['logSearch', finalParams],
-    queryFn: () => searchLogs(finalParams),
-    keepPreviousData: true,
-  });
+  return useQuery(
+    ['logSearch', finalParams],
+    () => searchLogs(finalParams),
+    { keepPreviousData: true }
+  );
 }

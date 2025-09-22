@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
 
-export function TimelineView({ system = [], audit = [], error = [], onSelectRequest }) {
+export function TimelineView({ system = [], audit = [], error = [], onSelectRequest, emptyLabel = 'No events' }) {
   // unify into events with timestamp
   const items = useMemo(() => {
     const mapTs = (v, type) => {
@@ -36,7 +36,7 @@ export function TimelineView({ system = [], audit = [], error = [], onSelectRequ
           </div>
         </div>
       ))}
-      {items.length === 0 && <div className="text-xs text-gray-400">No events</div>}
+      {items.length === 0 && <div className="text-xs text-gray-400">{emptyLabel}</div>}
     </div>
   );
 }
@@ -90,7 +90,8 @@ TimelineView.propTypes = {
   system: PropTypes.array,
   audit: PropTypes.array,
   error: PropTypes.array,
-  onSelectRequest: PropTypes.func
+  onSelectRequest: PropTypes.func,
+  emptyLabel: PropTypes.string
 };
 
 export default TimelineView;

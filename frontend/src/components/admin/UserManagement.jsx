@@ -49,6 +49,7 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
 import BadgeBulkAwardDialog from './badges/BadgeBulkAwardDialog';
+import R2Image from '@/components/common/R2Image';
 import { toast } from 'react-hot-toast';
 
 const DEFAULT_FILTERS = {
@@ -79,6 +80,28 @@ const normalizeUser = (user = {}) => {
   };
 };
 
+const normalizeUserBadgeEntry = (entry = {}) => {
+  const badge = entry.badge ? { ...entry.badge } : null;
+  const userBadge = entry.user_badge ? { ...entry.user_badge } : {};
+  return { badge, user_badge: userBadge };
+};
+
+const normalizeRecentBadge = (entry = {}) => normalizeUserBadgeEntry(entry);
+
+const normalizeMetrics = (metrics = {}) => ({
+  total_points_earned: Number(metrics.total_points_earned ?? 0),
+  total_points_balance: Number(metrics.total_points_balance ?? 0),
+  total_carbon_saved: Number(metrics.total_carbon_saved ?? 0),
+  total_records: Number(metrics.total_records ?? 0),
+  total_approved_records: Number(metrics.total_approved_records ?? 0),
+});
+
+const normalizeBadgeSummary = (summary = {}) => ({
+  awarded: Number(summary.awarded ?? 0),
+  revoked: Number(summary.revoked ?? 0),
+  total: Number(summary.total ?? (Number(summary.awarded ?? 0) + Number(summary.revoked ?? 0))),
+});
+
 function normalizeUsersResponse(response) {
   const payload = response?.data?.data || response?.data || {};
   if (Array.isArray(payload.users)) {
@@ -105,6 +128,8 @@ export function UserManagement() {
   const [pointsDialog, setPointsDialog] = useState({ open: false, user: null, delta: '', reason: '' });
   const [selectedUsersMap, setSelectedUsersMap] = useState(new Map());
   const [bulkDialog, setBulkDialog] = useState({ open: false, presetUsers: [] });
+  const [detailState, setDetailState] = useState({ open: false, userId: null });
+  const [showRevokedBadges, setShowRevokedBadges] = useState(false);
 
   const apiFilterParams = useMemo(() => {
     const base = {
@@ -137,6 +162,53 @@ export function UserManagement() {
     ['adminBadges', 'forAwarding'],
     () => adminAPI.getBadges({ limit: 200 }),
     { staleTime: 60000 }
+  );
+
+  const userOverviewQuery = useQuery(
+    ['adminUserOverview', detailState.userId],
+    () => adminAPI.getUserOverview(detailState.userId).then((res) => res.data?.data),
+    {
+      enabled: detailState.open && Boolean(detailState.userId),
+      select: (data) => {
+        if (!data) {
+          return null;
+        }
+        const metrics = normalizeMetrics(data.metrics || {});
+        const badgeSummary = normalizeBadgeSummary(data.badge_summary || {});
+        const recent = Array.isArray(data.recent_badges) ? data.recent_badges.map(normalizeRecentBadge) : [];
+        return {
+          ...data,
+          metrics,
+          badge_summary: badgeSummary,
+          recent_badges: recent,
+        };
+      },
+    }
+  );
+
+  const userBadgesQuery = useQuery(
+    ['adminUserBadges', detailState.userId, showRevokedBadges],
+    () =>
+      adminAPI
+        .getUserBadges(detailState.userId, { include_revoked: showRevokedBadges })
+        .then((res) => res.data?.data),
+    {
+      enabled: detailState.open && Boolean(detailState.userId),
+      select: (data) => {
+        if (!data) {
+          return null;
+        }
+        const summary = normalizeBadgeSummary(data.summary || {});
+        const metrics = normalizeMetrics(data.metrics || {});
+        const badges = Array.isArray(data.badges) ? data.badges.map(normalizeUserBadgeEntry) : [];
+        return {
+          ...data,
+          summary,
+          metrics,
+          badges,
+        };
+      },
+    }
   );
 
   const updateUserMutation = useMutation(
@@ -190,6 +262,35 @@ export function UserManagement() {
   }, [searchParams, setSearchParams]);
 
   const { users, pagination } = useMemo(() => normalizeUsersResponse(usersQuery.data), [usersQuery.data]);
+  const selectedUser = useMemo(() => {
+    if (!detailState.userId) {
+      return null;
+    }
+    return users.find((item) => item.id === detailState.userId) || null;
+  }, [detailState.userId, users]);
+
+  const overviewData = userOverviewQuery.data || null;
+  const badgeData = userBadgesQuery.data || null;
+  const badgeRows = Array.isArray(badgeData?.badges)
+    ? badgeData.badges
+    : Array.isArray(badgeData?.items)
+      ? badgeData.items
+      : [];
+  const badgeSummary = badgeData?.summary || overviewData?.badge_summary || { awarded: 0, revoked: 0, total: 0 };
+  const metricsCards = useMemo(() => {
+    if (!overviewData && !selectedUser) {
+      return [];
+    }
+    const metrics = overviewData?.metrics || {};
+    return [
+      { key: 'balance', label: t('admin.users.detail.pointsBalance', '积分余额'), value: selectedUser?.points ?? 0, icon: Award },
+      { key: 'earned', label: t('admin.users.detail.pointsEarned', '累计积分'), value: metrics.total_points_earned ?? 0, icon: Sparkles },
+      { key: 'carbon', label: t('admin.users.detail.carbonSaved', '累计碳减排 (kg)'), value: metrics.total_carbon_saved ?? 0, icon: Leaf },
+      { key: 'records', label: t('admin.users.detail.recordsApproved', '审核通过记录'), value: metrics.total_approved_records ?? 0, icon: ClipboardList },
+      { key: 'days', label: t('admin.users.detail.daysSinceRegistration', '注册天数'), value: selectedUser?.days_since_registration ?? metrics.days_since_registration ?? 0, icon: CalendarDays },
+    ];
+  }, [overviewData, selectedUser, t]);
+
   const selectedUsers = useMemo(() => Array.from(selectedUsersMap.values()), [selectedUsersMap]);
   const badgeOptions = useMemo(() => {
     const source = badgesQuery.data?.data?.data || badgesQuery.data?.data || [];
@@ -251,6 +352,19 @@ export function UserManagement() {
 
   const handleDeleteUser = (user) => {
     openConfirmDialog({ type: 'delete', user, payload: null });
+  };
+
+  const openUserDetail = (user) => {
+    if (!user) {
+      return;
+    }
+    setDetailState({ open: true, userId: user.id });
+    setShowRevokedBadges(false);
+  };
+
+  const closeUserDetail = () => {
+    setDetailState({ open: false, userId: null });
+    setShowRevokedBadges(false);
   };
 
   const openConfirmDialog = (config) => {
@@ -457,6 +571,8 @@ export function UserManagement() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.users.table.email')}</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.users.table.role')}</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.users.table.status')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.users.table.badges', '徽章')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.users.table.carbon', '碳减排')}</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.users.table.points')}</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.users.table.actions')}</th>
                   </tr>
@@ -477,6 +593,17 @@ export function UserManagement() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{renderRoleBadge(user)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{renderStatusBadge(user)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="flex flex-col">
+                            <span>{t('admin.users.badgesAwardedCount', '{{count}} 枚', { count: user.badges_awarded || 0 })}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {t('admin.users.activeBadgesCount', '激活 {{count}}', { count: user.active_badges || 0 })}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {Number(user.total_carbon_saved || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.points}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-1">
                           <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(user)} title={t('admin.users.toggleStatusButton', '切换用户状态')}>
@@ -485,6 +612,9 @@ export function UserManagement() {
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => openAdjustPoints(user)} title={t('admin.users.promptAdjustPoints', { username: user.username })}>
                             <PlusCircle className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openUserDetail(user)} title={t('admin.users.viewDetailsButton', '查看详情')}>
+                            <Eye className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)} title={t('admin.users.toggleAdminButton', '切换管理员权限')}>
                             <Shield className="h-4 w-4" />
@@ -585,6 +715,161 @@ export function UserManagement() {
               {t('common.confirm', '确认')}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={detailState.open} onOpenChange={(open) => (!open ? closeUserDetail() : null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedUser
+                ? t('admin.users.detailTitle', '用户详情：{{username}}', { username: selectedUser.username })
+                : t('admin.users.detailTitleFallback', '用户详情')}
+            </DialogTitle>
+            <DialogDescription>{selectedUser?.email || ''}</DialogDescription>
+          </DialogHeader>
+          {userOverviewQuery.isLoading ? (
+            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t('common.loading', '加载中...')}
+            </div>
+          ) : userOverviewQuery.error ? (
+            <p className="text-sm text-destructive">{t('admin.users.detailLoadFailed', '无法加载用户详情')}</p>
+          ) : overviewData ? (
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-lg border bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.username', '用户名')}</p>
+                  <p className="mt-1 text-sm font-medium text-gray-900">{selectedUser?.username}</p>
+                </div>
+                <div className="rounded-lg border bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.role', '角色')}</p>
+                  <p className="mt-1 text-sm font-medium text-gray-900">{renderRoleBadge(selectedUser)}</p>
+                </div>
+                <div className="rounded-lg border bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.status', '状态')}</p>
+                  <p className="mt-1 text-sm font-medium text-gray-900">{renderStatusBadge(selectedUser)}</p>
+                </div>
+                <div className="rounded-lg border bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.registrationDays', '注册天数')}</p>
+                  <p className="mt-1 text-sm font-medium text-gray-900">{selectedUser?.days_since_registration ?? 0}</p>
+                </div>
+                {selectedUser?.last_login_at && (
+                  <div className="rounded-lg border bg-white p-4 shadow-sm sm:col-span-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.lastLogin', '最近登录')}</p>
+                    <p className="mt-1 text-sm font-medium text-gray-900">
+                      {format(new Date(selectedUser.last_login_at), 'yyyy-MM-dd HH:mm')}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {metricsCards.map((card) => {
+                  const Icon = card.icon;
+                  return (
+                    <div key={card.key} className="rounded-lg border bg-white p-4 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{card.label}</p>
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <p className="mt-2 text-xl font-semibold">
+                        {Number(card.value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 className="text-base font-semibold">{t('admin.users.badgeSummary', '徽章概况')}</h4>
+                    <p className="text-sm text-muted-foreground">{t('admin.users.badgeSummaryHint', '展示授予和回收的徽章统计')}</p>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Switch checked={showRevokedBadges} onCheckedChange={(checked) => setShowRevokedBadges(Boolean(checked))} />
+                    <span>{t('admin.users.showRevokedBadges', '显示已收回的徽章')}</span>
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-lg border bg-white p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('admin.users.badgesAwarded', '授予')}</p>
+                    <p className="mt-2 text-2xl font-semibold">{badgeSummary.awarded}</p>
+                  </div>
+                  <div className="rounded-lg border bg-white p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('admin.users.badgesRevoked', '收回')}</p>
+                    <p className="mt-2 text-2xl font-semibold">{badgeSummary.revoked}</p>
+                  </div>
+                  <div className="rounded-lg border bg-white p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('admin.users.badgesTotal', '总数')}</p>
+                    <p className="mt-2 text-2xl font-semibold">{badgeSummary.total}</p>
+                  </div>
+                </div>
+
+                {userBadgesQuery.isLoading ? (
+                  <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t('common.loading', '加载中...')}
+                  </div>
+                ) : userBadgesQuery.error ? (
+                  <p className="text-sm text-destructive">{t('admin.users.badgesLoadFailed', '无法加载徽章列表')}</p>
+                ) : badgeRows.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium text-gray-500">{t('admin.users.badgeTable.badge', '徽章')}</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-500">{t('admin.users.badgeTable.status', '状态')}</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-500">{t('admin.users.badgeTable.awardedAt', '授予时间')}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {badgeRows.map((entry, index) => {
+                          const badge = entry.badge || {};
+                          const record = entry.user_badge || {};
+                          return (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="px-4 py-2">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 overflow-hidden rounded-full border bg-muted">
+                                    {badge.icon_url || badge.icon_presigned_url || badge.icon_path ? (
+                                      <R2Image
+                                        src={badge.icon_presigned_url || badge.icon_url}
+                                        filePath={!badge.icon_presigned_url && !badge.icon_url ? badge.icon_path : undefined}
+                                        alt={badge.name_zh || badge.name_en}
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <Award className="h-5 w-5 text-muted-foreground" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-gray-900">{badge.name_zh || badge.name_en || '-'}</p>
+                                    {badge.name_en && <p className="text-xs text-muted-foreground">{badge.name_en}</p>}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-2">
+                                <Badge variant={record.status === 'awarded' ? 'success' : 'secondary'}>{record.status === 'awarded' ? t('admin.users.badgeStatusAwarded', '已授予') : t('admin.users.badgeStatusRevoked', '已收回')}</Badge>
+                              </td>
+                              <td className="px-4 py-2 text-sm text-muted-foreground">
+                                {record.awarded_at ? format(new Date(record.awarded_at), 'yyyy-MM-dd HH:mm') : '--'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t('admin.users.badgesEmpty', '暂无徽章记录')}</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t('admin.users.detailEmpty', '暂无详情数据')}</p>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -115,7 +115,7 @@ export default function ActivityLibrary() {
     onError: () => toast.error(t('common.error')),
   });
 
-  const updateMutation = useMutation(({ id, data, mode }) => adminAPI.updateActivity(id, data), {
+  const updateMutation = useMutation((payload) => adminAPI.updateActivity(payload.id, payload.data), {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries('adminActivitiesLibrary');
       if (variables?.mode === 'toggle') {
