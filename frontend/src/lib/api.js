@@ -342,6 +342,8 @@ export const adminAPI = {
   triggerBadgeAuto: (data = {}) => api.post('/admin/badges/auto-trigger', data),
   getBadgeRecipients: (id, params = {}) => api.get(`/admin/badges/${id}/recipients`, { params }),
 
+  broadcastMessage: (data) => api.post('/admin/messages/broadcast', data),
+
 };
 
 // 工具函数

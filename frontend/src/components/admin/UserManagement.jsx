@@ -262,6 +262,8 @@ export function UserManagement() {
   }, [searchParams, setSearchParams]);
 
   const { users, pagination } = useMemo(() => normalizeUsersResponse(usersQuery.data), [usersQuery.data]);
+  const isInitialUsersLoading = usersQuery.isLoading && !usersQuery.data;
+  const isRefetchingUsers = usersQuery.isFetching && !!usersQuery.data;
   const selectedUser = useMemo(() => {
     if (!detailState.userId) {
       return null;
@@ -503,6 +505,13 @@ export function UserManagement() {
           </div>
         </div>
 
+        {isRefetchingUsers && (
+          <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            {t('admin.users.refreshing')}
+          </div>
+        )}
+
         {selectedUsers.length > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed bg-muted/60 p-3">
             <div className="flex items-center gap-2">
@@ -530,7 +539,7 @@ export function UserManagement() {
       </div>
 
       {(() => {
-        if (usersQuery.isLoading || usersQuery.isFetching) {
+        if (isInitialUsersLoading) {
           return (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-green-500" />

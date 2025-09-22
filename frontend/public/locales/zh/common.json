@@ -781,6 +781,7 @@
       "statusInactive": "禁用",
       "title": "用户管理",
       "description": "查看与管理平台用户",
+      "refreshing": "正在刷新...",
       "searchPlaceholder": "搜索用户名、邮箱或姓名",
       "noUsersFound": "未找到用户",
       "tryDifferentFilters": "请尝试修改筛选条件",

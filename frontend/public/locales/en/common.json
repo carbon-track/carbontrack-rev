@@ -686,6 +686,7 @@
       "statusInactive": "Inactive",
       "title": "User Management",
       "description": "View and manage platform users",
+      "refreshing": "Refreshing...",
       "searchPlaceholder": "Search by username, email or name",
       "noUsersFound": "No users found",
       "tryDifferentFilters": "Try adjusting filters",
