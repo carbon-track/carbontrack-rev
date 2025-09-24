@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useMutation, useQuery } from 'react-query';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -9,6 +9,7 @@ import { Textarea } from '../ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '../ui/Alert';
 import { Badge } from '../ui/Badge';
 import { Switch } from '../ui/switch';
+import { Checkbox } from '../ui/checkbox';
 import { Pagination } from '../ui/Pagination';
 import { cn } from '../../lib/utils';
 
@@ -27,6 +28,16 @@ const FILTERS_DEFAULT = {
   priority: 'any',
   scope: 'any',
   unreadOnly: false,
+};
+
+const RECIPIENT_SEARCH_DEFAULT = {
+  search: '',
+  fields: 'username,email,school,location',
+  school: '',
+  emailSuffix: '',
+  status: 'any',
+  isAdmin: 'any',
+  limit: 25,
 };
 
 const parseTargetUserIds = (raw) => {
@@ -109,6 +120,13 @@ export function BroadcastCenter() {
   const [expanded, setExpanded] = useState({});
   const [historyParams, setHistoryParams] = useState(HISTORY_DEFAULT_PARAMS);
   const [filters, setFilters] = useState(FILTERS_DEFAULT);
+  const [recipientForm, setRecipientForm] = useState(RECIPIENT_SEARCH_DEFAULT);
+  const [recipientPage, setRecipientPage] = useState(1);
+  const [recipientResults, setRecipientResults] = useState({ items: [], pagination: { page: 1, has_more: false, limit: RECIPIENT_SEARCH_DEFAULT.limit } });
+  const [recipientLoading, setRecipientLoading] = useState(false);
+  const [recipientError, setRecipientError] = useState(null);
+  const [selectedRecipients, setSelectedRecipients] = useState(() => new Map());
+  const [appliedFilters, setAppliedFilters] = useState([]);
 
   const customTargetIds = useMemo(() => {
     if (form.scope !== 'custom') {
@@ -116,6 +134,12 @@ export function BroadcastCenter() {
     }
     return parseTargetUserIds(form.target_users_text);
   }, [form.scope, form.target_users_text]);
+
+  const selectedRecipientList = useMemo(() => Array.from(selectedRecipients.values()), [selectedRecipients]);
+  const selectedRecipientIds = useMemo(
+    () => selectedRecipientList.map((entry) => Number(entry?.id ?? 0)).filter((id) => Number.isInteger(id) && id > 0),
+    [selectedRecipientList]
+  );
 
   const {
     data: historyResponse,
@@ -181,7 +205,13 @@ export function BroadcastCenter() {
   }, [filteredItems]);
 
   const setField = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === 'target_users_text' && typeof value === 'string' && value.trim().length > 0) {
+        next.scope = 'custom';
+      }
+      return next;
+    });
   };
 
   const updateFilters = (partial) => {
@@ -192,6 +222,176 @@ export function BroadcastCenter() {
   const resetFilters = () => {
     setFilters(FILTERS_DEFAULT);
     setHistoryParams((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const setRecipientField = (key, value) => {
+    setRecipientForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const ensureCustomScope = useCallback(() => {
+    setForm((prev) => (prev.scope === 'custom' ? prev : { ...prev, scope: 'custom' }));
+  }, [setForm]);
+
+  const buildRecipientParams = useCallback(
+    (overrides = {}) => {
+      const params = {};
+      const search = recipientForm.search.trim();
+      if (search) {
+        params.search = search;
+      }
+      const fields = recipientForm.fields.trim();
+      if (fields) {
+        params.fields = fields;
+      }
+      const school = recipientForm.school.trim();
+      if (school) {
+        params.school = school;
+      }
+      const emailSuffix = recipientForm.emailSuffix.trim();
+      if (emailSuffix) {
+        params.email_suffix = emailSuffix;
+      }
+      if (recipientForm.status && recipientForm.status !== 'any') {
+        params.status = recipientForm.status;
+      }
+      if (recipientForm.isAdmin && recipientForm.isAdmin !== 'any') {
+        params.is_admin = recipientForm.isAdmin;
+      }
+      const limit = overrides.limit ?? recipientForm.limit ?? 25;
+      params.limit = limit;
+      params.page = overrides.page ?? 1;
+      return params;
+    },
+    [recipientForm]
+  );
+
+  const loadRecipients = useCallback(
+    async (overrides = {}) => {
+      const params = buildRecipientParams(overrides);
+      setRecipientLoading(true);
+      setRecipientError(null);
+      try {
+        const res = await adminAPI.searchBroadcastRecipients(params);
+        const payload = res?.data ?? {};
+        const list = Array.isArray(payload.data) ? payload.data : [];
+        const pagination = payload.pagination ?? {};
+        const page = pagination.page ?? params.page ?? 1;
+        const limit = pagination.limit ?? params.limit ?? recipientForm.limit ?? 25;
+        const hasMore = Boolean(pagination.has_more);
+        setRecipientResults({ items: list, pagination: { page, limit, has_more: hasMore } });
+        setRecipientPage(page);
+      } catch (error) {
+        setRecipientError(error);
+        setRecipientResults((prev) => ({ ...prev, items: [] }));
+      } finally {
+        setRecipientLoading(false);
+      }
+    },
+    [buildRecipientParams, recipientForm.limit]
+  );
+
+  const handleRecipientSearch = async () => {
+    await loadRecipients({ page: 1 });
+  };
+
+  const handleRecipientPageChange = (direction) => {
+    if (direction === 'prev') {
+      const prevPage = Math.max(1, recipientResults.pagination.page - 1);
+      if (prevPage !== recipientResults.pagination.page) {
+        loadRecipients({ page: prevPage });
+      }
+      return;
+    }
+    if (recipientResults.pagination.has_more) {
+      loadRecipients({ page: recipientResults.pagination.page + 1 });
+    }
+  };
+
+  const clearRecipientSearch = () => {
+    setRecipientForm(RECIPIENT_SEARCH_DEFAULT);
+    setRecipientResults({ items: [], pagination: { page: 1, has_more: false, limit: RECIPIENT_SEARCH_DEFAULT.limit } });
+    setRecipientPage(1);
+    setRecipientError(null);
+  };
+
+  const toggleRecipientSelection = useCallback(
+    (recipient) => {
+      if (!recipient || recipient.id === undefined || recipient.id === null) {
+        return;
+      }
+      const id = Number(recipient.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        return;
+      }
+      ensureCustomScope();
+      setSelectedRecipients((prev) => {
+        const next = new Map(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.set(id, {
+            id,
+            username: recipient.username ?? null,
+            email: recipient.email ?? null,
+            school: recipient.school ?? null,
+          });
+        }
+        return next;
+      });
+    },
+    [ensureCustomScope]
+  );
+
+  const removeSelectedRecipient = (id) => {
+    setSelectedRecipients((prev) => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const clearSelectedRecipients = () => {
+    setSelectedRecipients(new Map());
+  };
+
+  const addAllRecipientsFromResults = () => {
+    if (!recipientResults.items.length) {
+      toast.error(t('admin.broadcast.recipients.emptySelection', 'No recipients in current result set.'));
+      return;
+    }
+    ensureCustomScope();
+    setSelectedRecipients((prev) => {
+      const next = new Map(prev);
+      recipientResults.items.forEach((item) => {
+        const id = Number(item?.id ?? 0);
+        if (Number.isInteger(id) && id > 0) {
+          next.set(id, {
+            id,
+            username: item.username ?? null,
+            email: item.email ?? null,
+            school: item.school ?? null,
+          });
+        }
+      });
+      return next;
+    });
+    toast.success(t('admin.broadcast.recipients.addedAll', 'Recipients added to selection.'));
+  };
+
+  const addFilterGroup = () => {
+    const params = buildRecipientParams();
+    const { page, limit, ...filterPayload } = params;
+    if (Object.keys(filterPayload).length === 0) {
+      toast.error(t('admin.broadcast.recipientFilters.empty', 'Please configure at least one filter condition.'));
+      return;
+    }
+    ensureCustomScope();
+    setAppliedFilters((prev) => [...prev, filterPayload]);
+    toast.success(t('admin.broadcast.recipientFilters.added', 'Filter added to broadcast payload.'));
+  };
+
+  const removeFilterGroup = (index) => {
+    setAppliedFilters((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   const validateForm = () => {
@@ -215,13 +415,41 @@ export function BroadcastCenter() {
     }
 
     if (form.scope === 'custom') {
-      const rawHasValue = form.target_users_text.trim().length > 0;
-      if (customTargetIds.length === 0) {
-        nextErrors.target_users_text = rawHasValue
-          ? t('admin.broadcast.validation.targetsInvalid')
-          : t('admin.broadcast.validation.targetsRequired');
-      } else {
-        payload.target_users = customTargetIds;
+      const manualInput = form.target_users_text.trim();
+      const combinedIds = new Set(selectedRecipientIds);
+
+      if (customTargetIds.length > 0) {
+        customTargetIds.forEach((id) => combinedIds.add(id));
+      } else if (manualInput.length > 0 && selectedRecipientIds.length === 0) {
+        nextErrors.target_users_text = t('admin.broadcast.validation.targetsInvalid');
+      }
+
+      if (combinedIds.size > 0) {
+        payload.target_users = Array.from(combinedIds);
+      }
+
+      if (combinedIds.size === 0 && appliedFilters.length === 0) {
+        nextErrors.target_users_text = t('admin.broadcast.validation.targetsRequired');
+      }
+
+      if (appliedFilters.length > 0) {
+        payload.target_filters = appliedFilters.map((filter) => ({ ...filter }));
+      }
+    }
+
+    if (form.scope !== 'custom') {
+      const combined = new Set();
+      if (selectedRecipientIds.length > 0) {
+        selectedRecipientIds.forEach((id) => combined.add(id));
+      }
+      if (customTargetIds.length > 0) {
+        customTargetIds.forEach((id) => combined.add(id));
+      }
+      if (combined.size > 0) {
+        payload.target_users = Array.from(combined);
+      }
+      if (appliedFilters.length > 0) {
+        payload.target_filters = appliedFilters.map((filter) => ({ ...filter }));
       }
     }
 
@@ -243,6 +471,7 @@ export function BroadcastCenter() {
           failed: failedIds,
           invalid: invalidIds,
           priority: data.priority ?? variables?.priority ?? 'normal',
+          emailDelivery: data.email_delivery ?? null,
         };
 
         toast.success(t('admin.broadcast.sendSuccess', { count: summaryPayload.sent }));
@@ -251,6 +480,8 @@ export function BroadcastCenter() {
         setErrors({});
         setResult(summaryPayload);
         setExpanded({});
+        setSelectedRecipients(new Map());
+        setAppliedFilters([]);
         refetchHistory();
       },
       onError: (error) => {
@@ -406,7 +637,7 @@ export function BroadcastCenter() {
           {errors.content && <p className="mt-1 text-sm text-red-600">{errors.content}</p>}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin.broadcast.form.priority')}</label>
             <select
@@ -437,28 +668,246 @@ export function BroadcastCenter() {
               <option value="custom">{t('admin.broadcast.scope.custom')}</option>
             </select>
           </div>
+        </div>
 
-          {form.scope === 'custom' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin.broadcast.form.targetUsers')}</label>
-              <Input
-                placeholder={t('admin.broadcast.form.targetUsersPlaceholder')}
-                value={form.target_users_text}
-                onChange={(event) => setField('target_users_text', event.target.value)}
-                error={Boolean(errors.target_users_text)}
-              />
-              {errors.target_users_text ? (
-                <p className="mt-1 text-sm text-red-600">{errors.target_users_text}</p>
-              ) : (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {customTargetIds.length > 0
-                    ? t('admin.broadcast.helper.customCount', { count: customTargetIds.length })
-                    : t('admin.broadcast.helper.customEmpty')}
+        {form.scope === 'custom' && (
+          <div className="space-y-4 rounded-lg border border-dashed bg-slate-50/60 p-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin.broadcast.form.targetUsers')}</label>
+                <Input
+                  placeholder={t('admin.broadcast.form.targetUsersPlaceholder')}
+                  value={form.target_users_text}
+                  onChange={(event) => setField('target_users_text', event.target.value)}
+                  error={Boolean(errors.target_users_text)}
+                />
+                {errors.target_users_text ? (
+                  <p className="mt-1 text-sm text-red-600">{errors.target_users_text}</p>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {customTargetIds.length > 0
+                      ? t('admin.broadcast.helper.customCount', { count: customTargetIds.length })
+                      : t('admin.broadcast.helper.customEmpty')}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-gray-700">{t('admin.broadcast.recipients.selected', 'Selected recipients')}</h4>
+                  {selectedRecipientIds.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={clearSelectedRecipients}>
+                      {t('common.clear', 'Clear')}
+                    </Button>
+                  )}
+                </div>
+                {selectedRecipientIds.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t('admin.broadcast.recipients.none', 'No individual recipients selected yet.')}</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedRecipientList.map((entry) => {
+                      const label = entry.username || entry.email || `#${entry.id}`;
+                      return (
+                        <Badge key={entry.id} variant="secondary" className="flex items-center gap-2">
+                          <span>{label}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeSelectedRecipient(entry.id)}
+                            className="text-xs text-muted-foreground hover:text-red-600"
+                            aria-label={t('common.remove', 'Remove')}
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {t('admin.broadcast.recipients.selectedCount', 'Total selected: {{count}}', {
+                    count: selectedRecipientIds.length,
+                  })}
                 </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-gray-700">{t('admin.broadcast.recipientFilters.title', 'Applied filter groups')}</h4>
+                {appliedFilters.length > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setAppliedFilters([])}>
+                    {t('common.clear', 'Clear')}
+                  </Button>
+                )}
+              </div>
+              {appliedFilters.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t('admin.broadcast.recipientFilters.empty', 'No filter groups added yet.')}</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {appliedFilters.map((filter, index) => (
+                    <Badge key={index} variant="outline" className="flex items-center gap-2">
+                      <span>{describeFilter(filter)}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFilterGroup(index)}
+                        className="text-xs text-muted-foreground hover:text-red-600"
+                        aria-label={t('common.remove', 'Remove')}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
               )}
             </div>
-          )}
-        </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700">{t('admin.broadcast.recipientSearch.title', 'Advanced recipient search')}</h4>
+                  <p className="text-xs text-muted-foreground">{t('admin.broadcast.recipientSearch.description', 'Filter users by school, email domain or other attributes, then select individuals or add the filter group to this broadcast.')}</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={addFilterGroup}>
+                  {t('admin.broadcast.recipientFilters.add', 'Add filter to broadcast')}
+                </Button>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-4">
+                <Input
+                  value={recipientForm.search}
+                  onChange={(event) => setRecipientField('search', event.target.value)}
+                  placeholder={t('admin.broadcast.recipientSearch.searchPlaceholder', 'Search text (name, email, school...)')}
+                />
+                <select
+                  value={recipientForm.fields}
+                  onChange={(event) => setRecipientField('fields', event.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="username,email,school,location">{t('admin.broadcast.recipientSearch.fields.all', 'All key fields')}</option>
+                  <option value="email">{t('admin.broadcast.recipientSearch.fields.email', 'Email')}</option>
+                  <option value="school,school_name">{t('admin.broadcast.recipientSearch.fields.school', 'School')}</option>
+                  <option value="location">{t('admin.broadcast.recipientSearch.fields.location', 'Location')}</option>
+                  <option value="username">{t('admin.broadcast.recipientSearch.fields.username', 'Username')}</option>
+                </select>
+                <Input
+                  value={recipientForm.school}
+                  onChange={(event) => setRecipientField('school', event.target.value)}
+                  placeholder={t('admin.broadcast.recipientSearch.schoolPlaceholder', 'School contains...')}
+                />
+                <Input
+                  value={recipientForm.emailSuffix}
+                  onChange={(event) => setRecipientField('emailSuffix', event.target.value)}
+                  placeholder={t('admin.broadcast.recipientSearch.emailPlaceholder', 'Email domain e.g. example.com')}
+                />
+                <select
+                  value={recipientForm.status}
+                  onChange={(event) => setRecipientField('status', event.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="any">{t('admin.broadcast.recipientSearch.status.any', 'Any status')}</option>
+                  <option value="active">{t('admin.broadcast.recipientSearch.status.active', 'Active')}</option>
+                  <option value="inactive">{t('admin.broadcast.recipientSearch.status.inactive', 'Inactive')}</option>
+                </select>
+                <select
+                  value={recipientForm.isAdmin}
+                  onChange={(event) => setRecipientField('isAdmin', event.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="any">{t('admin.broadcast.recipientSearch.role.any', 'All roles')}</option>
+                  <option value="1">{t('admin.broadcast.recipientSearch.role.admin', 'Admins')}</option>
+                  <option value="0">{t('admin.broadcast.recipientSearch.role.user', 'Regular users')}</option>
+                </select>
+                <select
+                  value={recipientForm.limit}
+                  onChange={(event) => setRecipientField('limit', Number(event.target.value) || 25)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  {[10, 25, 50, 100].map((value) => (
+                    <option key={value} value={value}>
+                      {t('admin.broadcast.recipientSearch.limit', { count: value })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" onClick={handleRecipientSearch} disabled={recipientLoading}>
+                  {recipientLoading ? t('common.loading', 'Loading...') : t('common.search', 'Search')}
+                </Button>
+                <Button type="button" variant="outline" onClick={addAllRecipientsFromResults} disabled={recipientLoading || recipientResults.items.length === 0}>
+                  {t('admin.broadcast.recipientSearch.addAll', 'Add visible recipients')}
+                </Button>
+                <Button type="button" variant="ghost" onClick={clearRecipientSearch} disabled={recipientLoading}>
+                  {t('common.reset', 'Reset')}
+                </Button>
+              </div>
+
+              {recipientError && (
+                <Alert variant="destructive">
+                  <AlertTitle>{t('admin.broadcast.recipientSearch.error', 'Search failed')}</AlertTitle>
+                  <AlertDescription>{recipientError.message ?? t('common.retry', 'Please retry later.')}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-3">
+                {recipientLoading && <p className="text-sm text-muted-foreground">{t('common.loading', 'Loading...')}</p>}
+                {!recipientLoading && recipientResults.items.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t('admin.broadcast.recipientSearch.noResults', 'No users match the current search conditions.')}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {recipientResults.items.map((item) => {
+                      const id = Number(item?.id ?? 0);
+                      const checked = selectedRecipients.has(id);
+                      const label = item.username || item.email || `#${id}`;
+                      return (
+                        <label
+                          key={id}
+                          className="flex items-start gap-3 rounded-md border border-gray-200 bg-white p-3 shadow-sm"
+                        >
+                          <Checkbox checked={checked} onCheckedChange={() => toggleRecipientSelection(item)} />
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-gray-800">{label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.email ? item.email : t('admin.broadcast.recipientSearch.noEmail', 'No email on file')}
+                              {item.school ? ` • ${item.school}` : ''}
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })}
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                      <p className="text-xs text-muted-foreground">
+                        {t('admin.broadcast.recipientSearch.pageInfo', {
+                          page: recipientResults.pagination.page,
+                        })}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRecipientPageChange('prev')}
+                          disabled={recipientLoading || recipientResults.pagination.page === 1}
+                        >
+                          {t('common.previous', 'Previous')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRecipientPageChange('next')}
+                          disabled={recipientLoading || !recipientResults.pagination.has_more}
+                        >
+                          {t('common.next', 'Next')}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={handlePreview} disabled={isSubmitting}>

@@ -40,12 +40,16 @@ export function Dashboard() {
       </div>
     );
 
-    if (entry?.avatar_url) {
-      const isExternal = /^https?:\/\//i.test(entry.avatar_url);
+    const avatarPath = entry?.avatar_path;
+    const avatarUrl = entry?.avatar_url;
+
+    if (avatarPath || avatarUrl) {
+      const isAbsolute = typeof avatarUrl === 'string' && /^https?:\/\//i.test(avatarUrl);
+      const resolvedFilePath = avatarPath || (!isAbsolute ? avatarUrl : undefined);
       return (
         <R2Image
-          src={isExternal ? entry.avatar_url : undefined}
-          filePath={!isExternal ? entry.avatar_url : undefined}
+          filePath={resolvedFilePath}
+          src={isAbsolute ? avatarUrl : undefined}
           alt={displayName || 'avatar'}
           className={`${sizeClass} rounded-full object-cover border border-white shadow-sm`}
           fallback={fallback}

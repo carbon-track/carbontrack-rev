@@ -7207,8 +7207,8 @@
           "Admin",
           "Message"
         ],
-        "summary": "广播系统消息",
-        "description": "向所有用户或指定用户ID列表发送系统公告。target_users 为空数组或缺失表示全部用户。",
+        "summary": "广播系统消息（带邮件通知）",
+        "description": "向所有或筛选后的用户发送系统公告。支持SMTP高优先级邮件抄送。",
         "security": [
           {
             "bearerAuth": []
@@ -7258,7 +7258,8 @@
               }
             }
           }
-        }
+        },
+        "parameters": []
       }
     },
     "/admin/messages/broadcasts": {
@@ -8978,6 +8979,116 @@
           },
           "500": {
             "description": "Server error"
+          }
+        }
+      }
+    },
+    "/admin/messages/broadcast/recipients": {
+      "get": {
+        "tags": [
+          "Admin",
+          "Message"
+        ],
+        "summary": "搜索广播收件人",
+        "description": "提供按关键字、学校、邮箱后缀等条件筛选广播目标用户的接口。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "逗号分隔的搜索字段"
+          },
+          {
+            "name": "school",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "school_id",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "email_suffix",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "is_admin",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "": "#/components/schemas/BroadcastRecipientSearchResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
           }
         }
       }
@@ -11680,6 +11791,13 @@
               "minimum": 1
             },
             "description": "Optional user id whitelist; omit to broadcast to all users"
+          },
+          "target_filters": {
+            "type": "array",
+            "description": "Advanced recipient filter groups. Each entry is merged with explicit target_users.",
+            "items": {
+              "": "#/components/schemas/BroadcastRecipientFilter"
+            }
           }
         }
       },
@@ -11725,13 +11843,18 @@
               "all",
               "custom"
             ]
+          },
+          "email_delivery": {
+            "": "#/components/schemas/BroadcastEmailDelivery",
+            "description": "高优先级广播的邮件发送统计信息。"
           }
         },
         "required": [
           "success",
           "sent_count",
           "total_targets"
-        ]
+        ],
+        "description": "广播发送结果。包含站内信与邮件发送状态。"
       },
       "BroadcastUserEntry": {
         "type": "object",
@@ -11832,8 +11955,20 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "actor_username": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "执行广播的管理员用户名。"
+          },
+          "email_delivery": {
+            "": "#/components/schemas/BroadcastEmailDelivery",
+            "description": "邮件投递统计信息。"
           }
-        }
+        },
+        "description": "历史广播记录条目。包含收件统计与邮件投递信息。"
       },
       "BroadcastHistoryResponse": {
         "type": "object",
@@ -11899,6 +12034,196 @@
           "thumbnail_path": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "BroadcastRecipientFilter": {
+        "type": "object",
+        "description": "Advanced filter options for selecting broadcast recipients.",
+        "properties": {
+          "search": {
+            "type": "string",
+            "description": "Free text search applied to selected fields."
+          },
+          "fields": {
+            "description": "Fields to search against (username, email, school, location, school_name).",
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "school": {
+            "type": "string"
+          },
+          "school_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "email_suffix": {
+            "type": "string",
+            "description": "Email suffix to match (e.g. example.com)."
+          },
+          "email_domain": {
+            "type": "string",
+            "description": "Alias for email_suffix."
+          },
+          "status": {
+            "type": "string"
+          },
+          "is_admin": {
+            "oneOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "0",
+                  "1",
+                  "true",
+                  "false"
+                ]
+              }
+            ]
+          },
+          "exclude_ids": {
+            "type": "array",
+            "description": "User ids to exclude from the filter result.",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 500
+          }
+        }
+      },
+      "BroadcastEmailDelivery": {
+        "type": "object",
+        "properties": {
+          "triggered": {
+            "type": "boolean",
+            "description": "Whether SMTP sending was attempted."
+          },
+          "attempted_recipients": {
+            "type": "integer",
+            "description": "Total recipients with valid email addresses."
+          },
+          "successful_chunks": {
+            "type": "integer",
+            "description": "Number of BCC batches successfully sent."
+          },
+          "failed_chunks": {
+            "type": "integer",
+            "description": "Number of BCC batches that failed."
+          },
+          "failed_recipient_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "missing_email_user_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Recipients that could not be emailed due to missing email addresses."
+          }
+        }
+      },
+      "BroadcastRecipient": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "username": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "school": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "school_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_admin": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "BroadcastRecipientSearchResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "": "#/components/schemas/BroadcastRecipient"
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "has_more": {
+                "type": "boolean"
+              }
+            }
           }
         }
       }

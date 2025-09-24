@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, 
@@ -8,7 +8,6 @@ import {
   Calculator, 
   BarChart3, 
   ShoppingBag, 
-  User, 
   Settings, 
   LogOut,
   Bell
@@ -18,6 +17,7 @@ import { checkAuthStatus, authAPI } from '../../lib/auth';
 import { useUnreadMessagesCount } from '../../hooks/useUnreadMessagesCount';
 import LanguageSwitcher from '../LanguageSwitcher';
 import { Button } from '../ui/Button';
+import R2Image from '../common/R2Image';
 
 export function Navbar() {
   const { t } = useTranslation();
@@ -32,6 +32,25 @@ export function Navbar() {
     const { isAuthenticated: authStatus, user: currentUser } = checkAuthStatus();
     setIsAuthenticated(authStatus);
     setUser(currentUser);
+
+    let cancelled = false;
+
+    if (authStatus) {
+      (async () => {
+        try {
+          const freshUser = await authAPI.getCurrentUser();
+          if (!cancelled && freshUser) {
+            setUser(freshUser);
+          }
+        } catch (error) {
+          console.error('Failed to refresh current user information', error);
+        }
+      })();
+    }
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -92,6 +111,40 @@ export function Navbar() {
     return true;
   });
 
+  const userInitial = useMemo(() => {
+    if (!user?.username) return 'C';
+    const trimmed = String(user.username).trim();
+    return trimmed ? trimmed.charAt(0).toUpperCase() : 'C';
+  }, [user?.username]);
+
+  const renderUserAvatar = (sizeClass = 'h-8 w-8') => {
+    const fallback = (
+      <div className={`${sizeClass} flex items-center justify-center rounded-full bg-green-100 text-green-600 text-sm font-semibold`}>
+        {userInitial}
+      </div>
+    );
+
+    const avatarPath = user?.avatar_path;
+    const avatarUrl = user?.avatar_url;
+
+    if (!avatarPath && !avatarUrl) {
+      return fallback;
+    }
+
+    const isAbsoluteUrl = typeof avatarUrl === 'string' && /^https?:\/\//i.test(avatarUrl);
+    const resolvedFilePath = avatarPath || (!isAbsoluteUrl ? avatarUrl : undefined);
+
+    return (
+      <R2Image
+        filePath={resolvedFilePath}
+        src={isAbsoluteUrl ? avatarUrl : undefined}
+        alt={user?.username || 'avatar'}
+        className={`${sizeClass} rounded-full border border-gray-200 object-cover`}
+        fallback={fallback}
+      />
+    );
+  };
+
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -151,8 +204,8 @@ export function Navbar() {
                 </Button>
                 {/* 用户菜单 */}
                 <div className="relative group">
-                  <Button variant="ghost" className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
+                  <Button variant="ghost" className="flex items-center gap-3">
+                    {renderUserAvatar('h-8 w-8')}
                     <span className="hidden lg:inline">{user?.username}</span>
                   </Button>
                   
@@ -248,7 +301,7 @@ export function Navbar() {
               {isAuthenticated ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-3 px-3 py-2">
-                    <User className="h-5 w-5 text-gray-400" />
+                    {renderUserAvatar('h-10 w-10')}
                     <span className="text-base font-medium text-gray-900">
                       {user?.username}
                     </span>

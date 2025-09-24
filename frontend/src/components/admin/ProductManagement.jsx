@@ -577,12 +577,13 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const payload = buildProductPayload(formValues);
-    if (!payload.name) {
+    const trimmedName = (formValues.name || '').trim();
+    if (!trimmedName) {
       toast.error(t('validation.required'));
       return;
     }
-    onSubmit(payload);
+    const nextValues = trimmedName === formValues.name ? formValues : { ...formValues, name: trimmedName };
+    onSubmit(nextValues);
   };
 
   const imagePath = formValues.image_path || (typeof formValues.image_url === 'string' && formValues.image_url.indexOf('http') !== 0 ? formValues.image_url : '');
@@ -896,3 +897,4 @@ function ProductTagSelector({ value, onChange, t }) {
 }
 
 export default ProductManagement;
+

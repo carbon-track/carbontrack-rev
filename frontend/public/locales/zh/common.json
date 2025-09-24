@@ -1024,7 +1024,7 @@
       "create": "创建商品",
       "edit": "编辑商品",
       "delete": "删除商品",
-      "confirmDelete": "确定要删除此商品吗？",
+      "confirmDelete": "确定要删除商品「{{name}}」吗？",
       "deleteSuccess": "商品删除成功",
       "deleteFailed": "删除商品失败",
       "addProduct": "新增商品",
@@ -1812,3 +1812,4 @@
     "unit": "单位"
   }
 }
+

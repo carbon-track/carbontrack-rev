@@ -347,6 +347,7 @@ export const adminAPI = {
 
   broadcastMessage: (data) => api.post('/admin/messages/broadcast', data),
   getBroadcasts: (params = {}) => api.get('/admin/messages/broadcasts', { params }),
+  searchBroadcastRecipients: (params = {}) => api.get('/admin/messages/broadcast/recipients', { params }),
 
 };
 
