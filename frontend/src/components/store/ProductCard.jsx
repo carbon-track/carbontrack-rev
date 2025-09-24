@@ -5,6 +5,7 @@ import { formatNumber } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
 import R2Image from '../common/R2Image';
+import { Badge } from '../ui/badge';
 
 export function ProductCard({ product, onExchange, userPoints = 0 }) {
   const { t } = useTranslation();
@@ -78,6 +79,16 @@ export function ProductCard({ product, onExchange, userPoints = 0 }) {
           </div>
         )}
         <p className="text-sm text-gray-600 line-clamp-3">{product.description}</p>
+
+        {Array.isArray(product.tags) && product.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {product.tags.map((tag, index) => (
+              <Badge key={`product-tag-${product.id}-${tag.id ?? tag.slug ?? index}`} variant="secondary" className="text-xs uppercase">
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+        )}
         {/* 积分和库存信息 */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -142,4 +153,3 @@ export function ProductCard({ product, onExchange, userPoints = 0 }) {
     </Card>
   );
 }
-

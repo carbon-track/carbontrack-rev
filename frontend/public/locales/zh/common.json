@@ -536,7 +536,14 @@
       "maxPoints": "最高积分",
       "activeFilters": "当前筛选条件",
       "priceRange": "价格范围",
-      "stockOnly": "仅显示有货"
+      "stockOnly": "仅显示有货",
+      "tags": "标签",
+      "tagPlaceholder": "搜索或输入标签，可直接新增",
+      "addTag": "添加标签",
+      "tagHint": "若没有匹配项，可直接按回车创建新标签。",
+      "suggestions": "推荐标签",
+      "noTagSuggestions": "暂无匹配标签",
+      "removeTag": "移除标签"
     },
     "exchange": {
       "button": "立即兑换",
@@ -717,27 +724,84 @@
     },
     "broadcast": {
       "title": "广播中心",
-      "description": "向全体或指定用户发送系统消息",
+      "description": "向全部或指定用户发送系统消息",
       "form": {
         "title": "标题",
-        "content": "内容",
+        "content": "正文",
         "priority": "优先级",
         "scope": "发送范围",
-        "targetUsers": "目标用户ID（逗号分隔）",
+        "targetUsers": "目标用户 ID（逗号分隔）",
         "targetUsersPlaceholder": "例如：1,2,3"
       },
       "scope": {
-        "all": "全体用户",
+        "all": "全部用户",
         "custom": "指定用户"
       },
+      "previewTargets": {
+        "all": "面向：全部用户",
+        "custom": "面向：{{count}} 位用户"
+      },
+      "helper": {
+        "customCount": "共有 {{count}} 个有效用户将接收此广播。",
+        "customEmpty": "请输入一个或多个正整数用户 ID，并用逗号或空格分隔。"
+      },
+      "validation": {
+        "general": "请先修正高亮字段后再继续。",
+        "titleRequired": "标题不能为空。",
+        "contentRequired": "正文内容不能为空。",
+        "priorityInvalid": "请选择有效的优先级。",
+        "targetsRequired": "请至少提供一个有效的用户 ID。",
+        "targetsInvalid": "用户 ID 只能为正整数。"
+      },
       "preview": "预览",
-      "previewPanel": "发送预览",
+      "previewPanel": "内容预览",
       "send": "发送",
       "sendSuccess": "发送成功（{{count}} 条）",
       "sendFailed": "发送失败",
       "noticeTitle": "提示",
-      "noticeDesc": "广播消息将以系统消息形式发送到用户消息中心。"
+      "noticeDesc": "广播消息将以系统通知形式发送到用户的消息中心。",
+      "sentBy": "由 {{actor}} 发送（ID: {{id}}）",
+      "summary": {
+        "broadcasts": "广播次数",
+        "targets": "目标人数",
+        "delivered": "送达次数",
+        "read": "已读人数",
+        "unread": "未读人数"
+      },
+      "filters": {
+        "search": "搜索",
+        "searchPlaceholder": "搜索标题、内容或发送人",
+        "priority": "优先级",
+        "scope": "范围",
+        "onlyUnread": "仅显示仍有未读用户的广播"
+      },
+      "export": {
+        "label": "导出 CSV",
+        "success": "已开始导出",
+        "error": "导出失败",
+        "empty": "没有可导出的数据，请调整筛选条件后再试。"
+      },
+      "result": {
+        "title": "投递结果",
+        "sent": "已送达",
+        "unread": "未读",
+        "targets": "目标总数",
+        "failed": "发送失败",
+        "invalid": "无效的用户 ID",
+        "none": "无",
+        "failedHint": "这些用户暂时未能收到通知，请稍后重试。",
+        "invalidHint": "以下 ID 在发送前被剔除，因为系统中未找到对应用户。"
+      },
+      "history": {
+        "title": "广播记录",
+        "description": "查看近期广播及投递情况。",
+        "empty": "暂无广播记录。",
+        "showDetails": "显示接收详情",
+        "hideDetails": "收起接收详情",
+        "more": "等 {{count}} 位用户"
+      }
     },
+
     "dashboard": {
       "title": "管理仪表盘",
       "description": "平台关键指标概览与近期趋势",
@@ -969,14 +1033,31 @@
       "createSuccess": "商品创建成功。",
       "editProduct": "编辑商品",
       "form": {
-        "category": "商品分类",
-        "description": "商品描述",
-        "imageUrl": "图片地址",
         "name": "商品名称",
-        "price": "所需积分",
+        "description": "商品描述",
+        "category": "商品分类",
+        "categoryPlaceholder": "选择或输入分类",
+        "uncategorized": "未分类",
+        "pointsRequired": "所需积分",
         "status": "上架状态",
         "stock": "库存数量",
-        "stockHint": "填 -1 表示不限库存。"
+        "stockHint": "填 -1 表示不限库存。",
+        "sortOrder": "排序权重",
+        "tags": "标签",
+        "tagPlaceholder": "输入或搜索标签，可直接回车创建",
+        "addTag": "添加标签",
+        "tagHint": "若没有匹配项，按回车即可快速创建新标签。",
+        "suggestions": "推荐标签",
+        "noSuggestions": "暂无匹配的标签",
+        "removeTag": "移除标签",
+        "image": "商品图片",
+        "chooseImage": "上传图片",
+        "removeImage": "移除图片",
+        "imageHint": "支持 PNG/JPG，大小不超过 5MB，文件将存储到 Cloudflare R2。",
+        "uploading": "正在上传...",
+        "uploadSuccess": "图片上传成功",
+        "uploadFailed": "图片上传失败，请稍后重试。",
+        "fileTooLarge": "图片大小不能超过 5MB。"
       },
       "formModal": {
         "description": "填写积分商品在商城展示时的详细信息。"
@@ -994,7 +1075,8 @@
         "name": "名称",
         "price": "所需积分",
         "status": "状态",
-        "stock": "库存"
+        "stock": "库存",
+        "tags": "标签"
       },
       "tryDifferentFilters": "尝试调整筛选条件或搜索关键词。",
       "unlimited": "不限",
@@ -1418,11 +1500,19 @@
         "table": {
           "username": "用户名",
           "email": "邮箱",
-          "status": "状态",
-          "awardedAt": "授予时间"
-        }
-      }
-    },
+        "status": "状态",
+        "awardedAt": "授予时间",
+        "actions": "操作"
+      },
+      "remove": "收回",
+      "removeConfirmTitle": "确认收回徽章",
+      "removeConfirmDescription": "将收回 {{username}} 当前的徽章，并记录在审计日志中。",
+      "removeConfirmDescriptionPlain": "将收回该用户当前的徽章，并记录在审计日志中。",
+      "removeAction": "确认收回",
+      "removeSuccess": "已收回该用户的徽章。",
+      "removeFailed": "收回徽章失败，请稍后再试。"
+    }
+  },
     "avatars": {
       "listTitle": "头像库",
       "loadFailed": "加载头像列表失败",
@@ -1538,6 +1628,7 @@
     "less": "收起",
     "all": "全部",
     "none": "无",
+    "unknown": "未知",
     "optional": "可选",
     "required": "必填",
     "select": "选择",

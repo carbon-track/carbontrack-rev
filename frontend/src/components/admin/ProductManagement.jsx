@@ -1,10 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { useTranslation } from '../../hooks/useTranslation';
-import { formatNumber } from '../../lib/utils';
-import { adminAPI, productAPI } from '../../lib/api';
-import { Loader2, Edit, Trash2, PlusCircle, Search, Filter, Image as ImageIcon } from 'lucide-react';
-import { Button } from '../ui/Button';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { Loader2, Edit, Trash2, PlusCircle, Search, Image as ImageIcon, X } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+
+import { useTranslation } from '@/hooks/useTranslation';
+import { adminAPI, productAPI } from '@/lib/api';
+import { formatNumber } from '@/lib/utils';
+import { uploadViaPresign } from '@/lib/r2Upload';
+import { prefetchPresignedUrls } from '@/lib/fileAccess';
+
+import R2Image from '@/components/common/R2Image';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/Alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,10 +24,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '../ui/alert-dialog';
-import { Input } from '../ui/Input';
-import { Textarea } from '../ui/textarea';
-import { Alert, AlertTitle, AlertDescription } from '../ui/Alert';
+} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -25,299 +32,447 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog';
-import { Pagination } from '../ui/Pagination';
-// 预取私有图片（可选性能优化）
-import { prefetchPresignedUrls } from '../../lib/fileAccess';
-import R2Image from '../common/R2Image';
-import { toast } from 'react-hot-toast';
-// date-fns format not used here
+} from '@/components/ui/dialog';
+import { Pagination } from '@/components/ui/Pagination';
 
+const DEFAULT_FORM = {
+  name: '',
+  description: '',
+  category: '',
+  points_required: 0,
+  stock: -1,
+  status: 'active',
+  sort_order: 0,
+  image_path: '',
+  image_url: '',
+  images: [],
+  tags: [],
+};
+
+const STATUS_OPTIONS = [
+  { value: 'active', labelKey: 'admin.products.statusActive' },
+  { value: 'inactive', labelKey: 'admin.products.statusInactive' },
+];
+
+const sanitizeNumber = (value, fallback = 0) => {
+  if (value === null || value === undefined || value === '') return fallback;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+};
+
+const slugify = (input) => {
+  if (!input) return '';
+  return input
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+};
+
+const randomSlug = () => 'tag-' + Math.random().toString(36).slice(2, 8);
+
+const normalizeTag = (tag) => {
+  if (!tag) {
+    return null;
+  }
+  if (typeof tag === 'string') {
+    const name = tag.trim();
+    if (!name) return null;
+    return {
+      id: null,
+      name,
+      slug: slugify(name) || randomSlug(),
+    };
+  }
+  const name = tag.name?.trim() || tag.label?.trim() || tag.value?.trim() || '';
+  if (!name) {
+    return null;
+  }
+  const id = tag.id !== undefined && tag.id !== null && tag.id !== '' ? Number(tag.id) : null;
+  const slug = slugify(tag.slug || name) || randomSlug();
+  return { id, name, slug };
+};
+
+const buildProductPayload = (form) => {
+  const cleanName = (form.name || '').trim();
+  const normalizedTags = (form.tags || [])
+    .map((item) => normalizeTag(item))
+    .filter(Boolean)
+    .reduce((acc, tag) => {
+      const exists = acc.find((current) => {
+        if (current.id && tag.id) {
+          return current.id === tag.id;
+        }
+        return current.slug === tag.slug;
+      });
+      if (!exists) {
+        acc.push(tag);
+      }
+      return acc;
+    }, []);
+
+  const imagesArray = Array.isArray(form.images) ? form.images.filter(Boolean) : [];
+
+  return {
+    name: cleanName,
+    description: form.description || '',
+    category: form.category || null,
+    points_required: sanitizeNumber(form.points_required),
+    stock: sanitizeNumber(form.stock, -1),
+    status: form.status || 'active',
+    sort_order: sanitizeNumber(form.sort_order, 0),
+    image_path: form.image_path || undefined,
+    image_url: form.image_url || undefined,
+    images: imagesArray.length ? imagesArray : undefined,
+    tags: normalizedTags,
+  };
+};
 export function ProductManagement() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+
   const [filters, setFilters] = useState({
     search: '',
     category: '',
     status: '',
     page: 1,
     limit: 10,
-    sort: 'created_at_desc'
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, product: null });
 
-  const { data, isLoading, error, isFetching } = useQuery(
+  const productsQuery = useQuery(
     ['adminProducts', filters],
-    () => adminAPI.getProducts(filters).then(r => r.data),
+    () => adminAPI.getProducts(filters).then((res) => res.data),
     { keepPreviousData: true }
   );
 
-  const { data: categoriesData } = useQuery('productCategories', () => productAPI.getCategories().then(r => r.data));
+  const categoriesQuery = useQuery('productCategories', () => productAPI.getCategories().then((res) => res.data));
 
-  const createProductMutation = useMutation(
-    (newProduct) => adminAPI.createProduct(newProduct),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('adminProducts');
-        toast.success(t('admin.products.createSuccess'));
-        setIsModalOpen(false);
-      },
-      onError: (err) => {
-        toast.error(t('admin.products.createFailed'));
-        console.error('Product creation failed:', err);
-      }
-    }
-  );
+  const createProduct = useMutation((payload) => adminAPI.createProduct(payload));
+  const updateProduct = useMutation(({ id, payload }) => adminAPI.updateProduct(id, payload));
+  const deleteProductMutation = useMutation((id) => adminAPI.deleteProduct(id));
 
-  const updateProductMutation = useMutation(
-    ({ id, data }) => adminAPI.updateProduct(id, data),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('adminProducts');
-        toast.success(t('admin.products.updateSuccess'));
-        setIsModalOpen(false);
-        setEditingProduct(null);
-      },
-      onError: (err) => {
-        toast.error(t('admin.products.updateFailed'));
-        console.error('Product update failed:', err);
-      }
-    }
-  );
+  const isSubmitting = createProduct.isLoading || updateProduct.isLoading;
 
-  const deleteProductMutation = useMutation(
-    (id) => adminAPI.deleteProduct(id),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('adminProducts');
-        toast.success(t('admin.products.deleteSuccess'));
-      },
-      onError: (err) => {
-        toast.error(t('admin.products.deleteFailed'));
-        console.error('Product deletion failed:', err);
-      }
-    }
-  );
-
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+  const productsContainer = productsQuery.data?.data || productsQuery.data || {};
+  const productsRaw = productsContainer.products || productsContainer.data || productsQuery.data || [];
+  const products = useMemo(() => (Array.isArray(productsRaw) ? productsRaw : []), [productsRaw]);
+  const pagination = productsContainer.pagination || {
+    page: filters.page,
+    limit: filters.limit,
+    total: products.length,
+    pages: 1,
+    current_page: filters.page,
+    per_page: filters.limit,
+    total_items: products.length,
+    total_pages: 1,
   };
 
-  const handlePageChange = (page) => {
-    setFilters(prev => ({ ...prev, page }));
-  };
+  const categories = useMemo(() => {
+    const source = categoriesQuery.data?.data || categoriesQuery.data?.categories || [];
+    if (!Array.isArray(source)) return [];
+    return source.map((item) => ({ id: item.category || item.id || item.name, name: item.category || item.name || item.id }));
+  }, [categoriesQuery.data]);
 
-  const handleAddProduct = () => {
-    setEditingProduct(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEditProduct = (product) => {
-    setEditingProduct(product);
-    setIsModalOpen(true);
-  };
-
-  const requestDeleteProduct = (product) => {
-    setDeleteDialog({ open: true, product });
-  };
-
-  const closeDeleteDialog = () => {
-    setDeleteDialog({ open: false, product: null });
-  };
-
-  const handleConfirmDeleteProduct = () => {
-    if (!deleteDialog.product) {
-      return;
-    }
-    deleteProductMutation.mutate(deleteDialog.product.id, {
-      onSettled: () => {
-        closeDeleteDialog();
-      },
-    });
-  };
-
-  const productsContainer = data?.data || data;
-  const productsArray = productsContainer?.data || productsContainer?.products || productsContainer || [];
-  const products = Array.isArray(productsArray) ? productsArray : [];
-  const pagination = productsContainer?.pagination || { page: filters.page, limit: filters.limit, total: products.length, pages: 1 };
-  const categoriesRaw = categoriesData?.data || categoriesData?.categories || [];
-  const categories = ((Array.isArray(categoriesRaw?.activities) ? categoriesRaw.activities : categoriesRaw) || []).map(c => ({ id: c.category || c.id || c.name, name: c.category || c.name || c.id }));
-
-  // 可选：预取当前页产品图片的签名URL，减少首次渲染闪烁
   useEffect(() => {
     const paths = products
-      .map(p => p.image_url)
-      .filter(Boolean)
-      .filter(u => !u.startsWith('http')); // 仅 file_path
+      .map((p) => p.image_path || (typeof p.image_url === 'string' && p.image_url.indexOf('http') !== 0 ? p.image_url : null))
+      .filter(Boolean);
     if (paths.length) {
       prefetchPresignedUrls(paths).catch(() => {});
     }
   }, [products]);
 
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
+  };
+
+  const handlePageChange = (page) => {
+    setFilters((prev) => ({ ...prev, page }));
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingProduct(null);
+  };
+
+  const openCreateModal = () => {
+    setEditingProduct(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (product) => {
+    setEditingProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteDialog.product) return;
+    deleteProductMutation.mutate(deleteDialog.product.id, {
+      onSuccess: () => {
+        toast.success(t('admin.products.deleteSuccess'));
+        queryClient.invalidateQueries('adminProducts');
+      },
+      onError: () => {
+        toast.error(t('admin.products.deleteFailed'));
+      },
+      onSettled: () => setDeleteDialog({ open: false, product: null }),
+    });
+  };
+
+  const handleSubmit = useCallback(
+    (formValues) => {
+      const payload = buildProductPayload(formValues);
+      if (editingProduct) {
+        updateProduct.mutate(
+          { id: editingProduct.id, payload },
+          {
+            onSuccess: () => {
+              toast.success(t('admin.products.updateSuccess'));
+              queryClient.invalidateQueries('adminProducts');
+              handleCloseModal();
+            },
+            onError: () => {
+              toast.error(t('admin.products.updateFailed'));
+            },
+          }
+        );
+        return;
+      }
+
+      createProduct.mutate(payload, {
+        onSuccess: () => {
+          toast.success(t('admin.products.createSuccess'));
+          queryClient.invalidateQueries('adminProducts');
+          handleCloseModal();
+        },
+        onError: () => {
+          toast.error(t('admin.products.createFailed'));
+        },
+      });
+    },
+    [createProduct, editingProduct, queryClient, t, updateProduct]
+  );
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold tracking-tight">{t('admin.products.title')}</h2>
-      <p className="text-muted-foreground">{t('admin.products.description')}</p>
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">{t('admin.products.title')}</h2>
+        <p className="text-muted-foreground">{t('admin.products.description')}</p>
+      </div>
 
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-grow">
+      <div className="rounded-lg border bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">{t('common.search')}</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">{t('common.search')}</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
-                  type="text"
                   value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  onChange={(event) => handleFilterChange('search', event.target.value)}
                   placeholder={t('admin.products.searchPlaceholder')}
                   className="pl-10"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin.products.category')}</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">{t('admin.products.category')}</label>
               <select
                 value={filters.category}
-                onChange={(e) => handleFilterChange('category', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                onChange={(event) => handleFilterChange('category', event.target.value)}
+                className="mt-0 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
               >
                 <option value="">{t('common.all')}</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin.products.status')}</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">{t('admin.products.status')}</label>
               <select
                 value={filters.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                onChange={(event) => handleFilterChange('status', event.target.value)}
+                className="mt-0 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
               >
                 <option value="">{t('common.all')}</option>
-                <option value="active">{t('admin.products.statusActive')}</option>
-                <option value="inactive">{t('admin.products.statusInactive')}</option>
-                {/* 后端仅支持 active/inactive */}
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {t(option.labelKey)}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
-          <Button onClick={handleAddProduct} className="ml-4 self-end">
-            <PlusCircle className="h-4 w-4 mr-2" /> {t('admin.products.addProduct')}
+          <Button onClick={openCreateModal} className="shrink-0">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            {t('admin.products.addProduct')}
           </Button>
         </div>
       </div>
-
-      {isLoading || isFetching ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+      {productsQuery.isLoading || productsQuery.isFetching ? (
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
         </div>
-      ) : error ? (
+      ) : productsQuery.error ? (
         <Alert variant="destructive">
           <AlertTitle>{t('common.error')}</AlertTitle>
           <AlertDescription>{t('errors.loadFailed')}</AlertDescription>
         </Alert>
       ) : products.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-lg shadow-sm border">
+        <div className="rounded-lg border bg-white p-16 text-center shadow-sm">
           <h3 className="text-xl font-semibold">{t('admin.products.noProductsFound')}</h3>
-          <p className="text-muted-foreground mt-2">{t('admin.products.tryDifferentFilters')}</p>
+          <p className="mt-2 text-muted-foreground">{t('admin.products.tryDifferentFilters')}</p>
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto bg-white rounded-lg shadow-sm border">
+          <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.products.table.image')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.products.table.name')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.products.table.category')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.products.table.price')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.products.table.stock')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.products.table.status')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.products.table.actions')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    {t('admin.products.table.image')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    {t('admin.products.table.name')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    {t('admin.products.table.category')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    {t('admin.products.table.price')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    {t('admin.products.table.stock')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    {t('admin.products.table.tags')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    {t('admin.products.table.status')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                    {t('admin.products.table.actions')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((product) => (
-                  <tr key={product.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.image_url ? (
-                        <R2Image
-                          src={product.image_url.startsWith('http') ? product.image_url : undefined}
-                          filePath={product.image_url.startsWith('http') ? undefined : product.image_url}
-                          alt={product.name}
-                          className="h-10 w-10 rounded-full object-cover"
-                          fallback={<div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-[10px] text-gray-400">IMG</div>}
-                        />
-                      ) : (
-                        <ImageIcon className="h-10 w-10 text-gray-300" />
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">{formatNumber(product.price ?? product.points_required)} {t('common.points')}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.stock === -1 ? t('admin.products.unlimited') : formatNumber(product.stock)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {product.stock === 0 ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          {t('admin.products.statusOutOfStock')}
-                        </span>
-                      ) : product.status === 'active' ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {t('admin.products.statusActive')}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          {t('admin.products.statusInactive')}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditProduct(product)} className="mr-2">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => requestDeleteProduct(product)} className="text-red-600 hover:text-red-800">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {products.map((product) => {
+                  const price = product.points_required !== undefined && product.points_required !== null ? product.points_required : product.price || 0;
+                  const isOutOfStock = product.stock === 0;
+                  const unlimited = product.stock === -1;
+                  const imagePath = product.image_path || (typeof product.image_url === 'string' && product.image_url.indexOf('http') !== 0 ? product.image_url : null);
+                  const httpImage = typeof product.image_url === 'string' && product.image_url.indexOf('http') === 0 ? product.image_url : null;
+
+                  return (
+                    <tr key={product.id}>
+                      <td className="px-6 py-4">
+                        {imagePath || httpImage ? (
+                          <R2Image
+                            filePath={imagePath || undefined}
+                            src={httpImage || undefined}
+                            alt={product.name}
+                            className="h-12 w-12 rounded-lg object-cover"
+                            fallback={<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">IMG</div>}
+                          />
+                        ) : (
+                          <ImageIcon className="h-10 w-10 text-gray-300" />
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                        <div className="text-sm text-gray-500">{product.description}</div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{product.category || t('admin.products.form.uncategorized')}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-green-600">
+                        {formatNumber(price, 0)} {t('common.points')}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {unlimited ? t('admin.products.unlimited') : formatNumber(product.stock, 0)}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div className="flex flex-wrap gap-1">
+                          {(product.tags || []).map((tag) => {
+                            const keyValue = String(product.id || 'product') + '-' + String(tag.id !== undefined && tag.id !== null ? tag.id : tag.slug || tag.name || 'tag');
+                            return (
+                              <Badge key={keyValue} variant="secondary" className="uppercase">
+                                {tag.name}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        {isOutOfStock ? (
+                          <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                            {t('admin.products.statusOutOfStock')}
+                          </span>
+                        ) : product.status === 'active' ? (
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                            {t('admin.products.statusActive')}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+                            {t('admin.products.statusInactive')}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right text-sm font-medium">
+                        <Button variant="ghost" size="sm" onClick={() => openEditModal(product)} className="mr-2">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteDialog({ open: true, product })}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           <Pagination
-            currentPage={pagination.current_page}
-            totalPages={pagination.total_pages}
+            currentPage={pagination.current_page || pagination.page}
+            totalPages={pagination.total_pages || pagination.pages || 1}
             onPageChange={handlePageChange}
-            itemsPerPage={pagination.per_page}
-            totalItems={pagination.total_items}
+            itemsPerPage={pagination.per_page || pagination.limit}
+            totalItems={pagination.total_items || pagination.total}
           />
         </>
       )}
-
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => (!open ? closeDeleteDialog() : null)}>
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => (!open ? setDeleteDialog({ open: false, product: null }) : null)}>
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('admin.products.deleteTitle', '删除商品')}</AlertDialogTitle>
+            <AlertDialogTitle>{t('admin.products.deleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('admin.products.confirmDelete', { name: deleteDialog.product?.name || t('admin.products.unnamed', '该商品') })}
+              {t('admin.products.confirmDelete', {
+                name: deleteDialog.product?.name || t('admin.products.unnamed'),
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={closeDeleteDialog}>{t('common.cancel', '取消')}</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setDeleteDialog({ open: false, product: null })}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleConfirmDeleteProduct}
+              onClick={handleDeleteConfirm}
               className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-600"
               disabled={deleteProductMutation.isLoading}
             >
-              {deleteProductMutation.isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
-              )}
-              {t('common.confirm', '确认')}
+              {deleteProductMutation.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              {t('common.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -326,124 +481,274 @@ export function ProductManagement() {
       {isModalOpen && (
         <ProductFormModal
           isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditingProduct(null);
-          }}
+          onClose={handleCloseModal}
+          onSubmit={handleSubmit}
           product={editingProduct}
           categories={categories}
-          onSubmit={editingProduct ? updateProductMutation.mutate : createProductMutation.mutate}
-          isSubmitting={createProductMutation.isLoading || updateProductMutation.isLoading}
+          isSubmitting={isSubmitting}
+          t={t}
         />
       )}
     </div>
   );
 }
 
-import { useForm } from 'react-hook-form';
-
-function ProductFormModal({ isOpen, onClose, product, categories, onSubmit, isSubmitting }) {
-  const { t } = useTranslation();
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
-    defaultValues: product || {
-      name: '',
-      description: '',
-      category: categories.length > 0 ? categories[0].id : '',
-      price: 0,
-      stock: -1,
-      image_url: '',
-      status: 'active',
-    }
-  });
+function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSubmitting, t }) {
+  const [formValues, setFormValues] = useState(DEFAULT_FORM);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
+    if (!isOpen) {
+      setFormValues(DEFAULT_FORM);
+      return;
+    }
+
     if (product) {
-      reset({
-        ...product,
-        category: product.category || (categories.length > 0 ? categories[0].id : ''),
-        price: product.price ?? product.points_required ?? 0,
+      setFormValues({
+        name: product.name || '',
+        description: product.description || '',
+        category: product.category || '',
+        points_required: product.points_required !== undefined && product.points_required !== null ? product.points_required : product.price || 0,
+        stock: product.stock !== undefined && product.stock !== null ? product.stock : -1,
+        status: product.status || 'active',
+        sort_order: product.sort_order !== undefined && product.sort_order !== null ? product.sort_order : 0,
+        image_path: product.image_path || (typeof product.image_url === 'string' && product.image_url.indexOf('http') !== 0 ? product.image_url : ''),
+        image_url: typeof product.image_url === 'string' ? product.image_url : '',
+        images: Array.isArray(product.images) ? product.images : [],
+        tags: Array.isArray(product.tags)
+          ? product.tags.map((tag) => ({ id: tag.id !== undefined ? tag.id : null, name: tag.name, slug: tag.slug || slugify(tag.name) }))
+          : [],
       });
     } else {
-      reset({
-        name: '',
-        description: '',
-        category: categories.length > 0 ? categories[0].id : '',
-        price: 0,
-        stock: -1,
-        image_url: '',
-        status: 'active',
-      });
+      setFormValues(DEFAULT_FORM);
     }
-  }, [product, categories, reset]);
+  }, [isOpen, product]);
 
-  const handleFormSubmit = (data) => {
-    const payload = {
-      name: data.name,
-      description: data.description,
-      category: data.category,
-      points_required: Number(data.price) || 0,
-      stock: Number(data.stock),
-      image_path: data.image_url || undefined,
-      status: data.status,
-    };
-    onSubmit(product ? { id: product.id, data: payload } : payload);
+  const handleChange = (field) => (event) => {
+    setFormValues((prev) => ({ ...prev, [field]: event.target.value }));
   };
+
+  const handleTagChange = (nextTags) => {
+    setFormValues((prev) => ({ ...prev, tags: nextTags }));
+  };
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t('admin.products.form.fileTooLarge', '图片大小不能超过 5MB'));
+      event.target.value = '';
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const result = await uploadViaPresign(file, {
+        directory: 'products',
+        entityType: 'product',
+        entityId: product ? product.id : undefined,
+      });
+      const imageData = {
+        file_path: result.file_path,
+        url: result.url || result.public_url || '',
+        thumbnail_path: result.thumbnail_path || null,
+      };
+      setFormValues((prev) => ({
+        ...prev,
+        image_path: result.file_path || prev.image_path,
+        image_url: result.url || result.public_url || prev.image_url,
+        images: [imageData],
+      }));
+      toast.success(t('admin.products.form.uploadSuccess', '图片上传成功'));
+    } catch (error) {
+      toast.error(t('admin.products.form.uploadFailed', '图片上传失败，请重试'));
+    } finally {
+      setUploading(false);
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFormValues((prev) => ({ ...prev, image_path: '', image_url: '', images: [] }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const payload = buildProductPayload(formValues);
+    if (!payload.name) {
+      toast.error(t('validation.required'));
+      return;
+    }
+    onSubmit(payload);
+  };
+
+  const imagePath = formValues.image_path || (typeof formValues.image_url === 'string' && formValues.image_url.indexOf('http') !== 0 ? formValues.image_url : '');
+  const externalImage = formValues.image_url && formValues.image_url.indexOf('http') === 0 ? formValues.image_url : '';
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => (!open ? onClose() : null)}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{product ? t('admin.products.editProduct') : t('admin.products.addProduct')}</DialogTitle>
-          <DialogDescription>
-            {t('admin.products.formModal.description', 'Update the storefront details for this reward.')}
-          </DialogDescription>
+          <DialogDescription>{t('admin.products.formModal.description')}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="product-name">{t('admin.products.form.name')}</label>
-            <Input id="product-name" {...register('name', { required: t('validation.required') })} />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="product-description">{t('admin.products.form.description')}</label>
-            <Textarea id="product-description" {...register('description')} className="min-h-[120px]" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="product-category">{t('admin.products.form.category')}</label>
-            <select id="product-category" {...register('category', { required: t('validation.required') })} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-            {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700" htmlFor="product-price">{t('admin.products.form.price')}</label>
-              <Input id="product-price" type="number" {...register('price', { required: t('validation.required'), valueAsNumber: true, min: { value: 0, message: t('validation.min', { min: 0 }) } })} />
-              {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price.message}</p>}
+            <div className="md:col-span-2">
+              <label htmlFor="product-name" className="block text-sm font-medium text-gray-700">
+                {t('admin.products.form.name')}
+              </label>
+              <Input
+                id="product-name"
+                value={formValues.name}
+                onChange={handleChange('name')}
+                required
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700" htmlFor="product-stock">{t('admin.products.form.stock')}</label>
-              <Input id="product-stock" type="number" {...register('stock', { required: t('validation.required'), valueAsNumber: true, min: { value: -1, message: t('validation.min', { min: -1 }) } })} />
-              <p className="text-xs text-gray-500 mt-1">{t('admin.products.form.stockHint')}</p>
-              {errors.stock && <p className="text-red-500 text-xs mt-1">{errors.stock.message}</p>}
+              <label htmlFor="product-category" className="block text-sm font-medium text-gray-700">
+                {t('admin.products.form.category')}
+              </label>
+              <select
+                id="product-category"
+                value={formValues.category}
+                onChange={handleChange('category')}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
+              >
+                <option value="">{t('admin.products.form.categoryPlaceholder')}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="product-status" className="block text-sm font-medium text-gray-700">
+                {t('admin.products.form.status')}
+              </label>
+              <select
+                id="product-status"
+                value={formValues.status}
+                onChange={handleChange('status')}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {t(option.labelKey)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="product-points" className="block text-sm font-medium text-gray-700">
+                {t('admin.products.form.pointsRequired')}
+              </label>
+              <Input
+                id="product-points"
+                type="number"
+                min={0}
+                value={formValues.points_required}
+                onChange={handleChange('points_required')}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="product-stock" className="block text-sm font-medium text-gray-700">
+                {t('admin.products.form.stock')}
+              </label>
+              <Input
+                id="product-stock"
+                type="number"
+                value={formValues.stock}
+                onChange={handleChange('stock')}
+              />
+              <p className="mt-1 text-xs text-gray-500">{t('admin.products.form.stockHint')}</p>
+            </div>
+            <div>
+              <label htmlFor="product-sort-order" className="block text-sm font-medium text-gray-700">
+                {t('admin.products.form.sortOrder')}
+              </label>
+              <Input
+                id="product-sort-order"
+                type="number"
+                value={formValues.sort_order}
+                onChange={handleChange('sort_order')}
+              />
             </div>
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="product-image">{t('admin.products.form.imageUrl')}</label>
-            <Input id="product-image" {...register('image_url')} placeholder="https://" />
+            <label htmlFor="product-description" className="block text-sm font-medium text-gray-700">
+              {t('admin.products.form.description')}
+            </label>
+            <Textarea
+              id="product-description"
+              value={formValues.description}
+              onChange={handleChange('description')}
+              className="min-h-[120px]"
+            />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="product-status">{t('admin.products.form.status')}</label>
-            <select id="product-status" {...register('status')} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-              <option value="active">{t('admin.products.statusActive')}</option>
-              <option value="inactive">{t('admin.products.statusInactive')}</option>
-            </select>
+            <ProductTagSelector value={formValues.tags} onChange={handleTagChange} t={t} />
           </div>
-          <DialogFooter className="pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>{t('common.cancel')}</Button>
-            <Button type="submit" disabled={isSubmitting}>
+
+          <div>
+            <span className="block text-sm font-medium text-gray-700">{t('admin.products.form.image')}</span>
+            <div className="mt-2 flex items-center gap-4">
+              {imagePath || externalImage ? (
+                <R2Image
+                  filePath={imagePath || undefined}
+                  src={externalImage || undefined}
+                  alt={formValues.name || 'product'}
+                  className="h-20 w-20 rounded-lg object-cover"
+                  fallback={<div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">IMG</div>}
+                />
+              ) : (
+                <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-gray-400">
+                  <ImageIcon className="h-6 w-6" />
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                    disabled={uploading || isSubmitting}
+                  >
+                    {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                    {uploading ? t('admin.products.form.uploading') : t('admin.products.form.chooseImage')}
+                  </Button>
+                  {(imagePath || externalImage) && (
+                    <Button type="button" variant="ghost" onClick={handleRemoveImage} disabled={isSubmitting}>
+                      <X className="mr-2 h-4 w-4" />
+                      {t('admin.products.form.removeImage')}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">{t('admin.products.form.imageHint')}</p>
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting || uploading}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" disabled={isSubmitting || uploading}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isSubmitting ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
@@ -452,4 +757,142 @@ function ProductFormModal({ isOpen, onClose, product, categories, onSubmit, isSu
     </Dialog>
   );
 }
+function ProductTagSelector({ value, onChange, t }) {
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef(null);
 
+  const loadSuggestions = useCallback(async (term) => {
+    setLoading(true);
+    try {
+      const response = await adminAPI.searchProductTags({ search: term || '', limit: 12 });
+      setSuggestions(response.data?.data?.tags || []);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Tag search failed', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSuggestions('');
+  }, [loadSuggestions]);
+
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      loadSuggestions(query.trim());
+    }, 250);
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [query, loadSuggestions]);
+
+  const addTag = (tag) => {
+    const normalized = normalizeTag(tag);
+    if (!normalized) return;
+    const exists = (value || []).some((item) => {
+      if (item.id && normalized.id) {
+        return item.id === normalized.id;
+      }
+      return item.slug === normalized.slug;
+    });
+    if (!exists) {
+      onChange([].concat(value || [], [normalized]));
+    }
+  };
+
+  const handleInputAdd = () => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    const match = suggestions.find((item) => (item.name || '').toLowerCase() === trimmed.toLowerCase());
+    addTag(match || trimmed);
+    setQuery('');
+  };
+
+  const handleRemove = (index) => {
+    const next = (value || []).slice();
+    next.splice(index, 1);
+    onChange(next);
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700">{t('admin.products.form.tags')}</label>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {(value || []).map((tag, index) => {
+          const keyValue = 'selected-tag-' + index + '-' + (tag.id !== undefined && tag.id !== null ? tag.id : tag.slug || tag.name || 'tag');
+          return (
+            <Badge key={keyValue} variant="secondary" className="flex items-center gap-1 uppercase">
+              <span>{tag.name}</span>
+              <button
+                type="button"
+                className="rounded-full p-0.5 hover:bg-gray-200"
+                onClick={() => handleRemove(index)}
+                aria-label={t('admin.products.form.removeTag', '移除标签')}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          );
+        })}
+      </div>
+      <div className="mt-3">
+        <div className="flex gap-2">
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                handleInputAdd();
+              }
+            }}
+            placeholder={t('admin.products.form.tagPlaceholder')}
+          />
+          <Button type="button" variant="outline" onClick={handleInputAdd} disabled={!query.trim()}>
+            {t('admin.products.form.addTag')}
+          </Button>
+        </div>
+        <p className="mt-1 text-xs text-gray-500">{t('admin.products.form.tagHint')}</p>
+      </div>
+      <div className="mt-3 rounded-md border bg-gray-50">
+        <div className="flex items-center justify-between border-b px-3 py-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+          <span>{t('admin.products.form.suggestions')}</span>
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-500" /> : null}
+        </div>
+        <div className="max-h-44 overflow-y-auto">
+          {suggestions.length === 0 && !loading ? (
+            <div className="px-3 py-2 text-sm text-gray-500">{t('admin.products.form.noSuggestions')}</div>
+          ) : (
+            suggestions.map((suggestion, index) => {
+              const suggestionKey = 'suggestion-' + (suggestion.id !== undefined && suggestion.id !== null ? suggestion.id : suggestion.slug || suggestion.name || 'tag') + '-' + index;
+              return (
+                <button
+                  type="button"
+                  key={suggestionKey}
+                  onClick={() => {
+                    addTag(suggestion);
+                    setQuery('');
+                  }}
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-white"
+                >
+                  <span>{suggestion.name}</span>
+                  {suggestion.slug ? <span className="text-xs uppercase text-gray-400">{suggestion.slug}</span> : null}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ProductManagement;

@@ -441,7 +441,14 @@
       "maxPoints": "Max Points",
       "activeFilters": "Active Filters",
       "priceRange": "Price Range",
-      "stockOnly": "In Stock Only"
+      "stockOnly": "In Stock Only",
+      "tags": "Tags",
+      "tagPlaceholder": "Search or type to add tags",
+      "addTag": "Add tag",
+      "tagHint": "Press Enter to quickly create a new tag when no match appears.",
+      "suggestions": "Suggestions",
+      "noTagSuggestions": "No matching tags",
+      "removeTag": "Remove tag"
     },
     "exchange": {
       "button": "Exchange Now",
@@ -635,14 +642,71 @@
         "all": "All Users",
         "custom": "Selected Users"
       },
+      "previewTargets": {
+        "all": "Target: all users",
+        "custom": "Target: {{count}} user(s)"
+      },
+      "helper": {
+        "customCount": "{{count}} valid user IDs will receive this broadcast.",
+        "customEmpty": "Enter one or more positive user IDs separated by commas."
+      },
+      "validation": {
+        "general": "Please fix the highlighted errors before continuing.",
+        "titleRequired": "Title is required.",
+        "contentRequired": "Content is required.",
+        "priorityInvalid": "Select a valid priority.",
+        "targetsRequired": "Provide at least one valid user ID.",
+        "targetsInvalid": "Only positive integers are allowed for user IDs."
+      },
       "preview": "Preview",
       "previewPanel": "Preview",
       "send": "Send",
       "sendSuccess": "Sent successfully ({{count}} messages)",
       "sendFailed": "Failed to send",
       "noticeTitle": "Notice",
-      "noticeDesc": "Broadcast messages will be delivered to users' message center as system notifications."
+      "noticeDesc": "Broadcast messages will be delivered to users' message center as system notifications.",
+      "sentBy": "Sent by {{actor}} (ID: {{id}})",
+      "summary": {
+        "broadcasts": "Broadcasts",
+        "targets": "Target recipients",
+        "delivered": "Delivered",
+        "read": "Read recipients",
+        "unread": "Unread recipients"
+      },
+      "filters": {
+        "search": "Search",
+        "searchPlaceholder": "Search title, content or sender",
+        "priority": "Priority",
+        "scope": "Scope",
+        "onlyUnread": "Only show broadcasts with unread recipients"
+      },
+      "export": {
+        "label": "Export CSV",
+        "success": "Export started",
+        "error": "Export failed",
+        "empty": "Nothing to export. Adjust filters and try again."
+      },
+      "result": {
+        "title": "Delivery report",
+        "sent": "Delivered",
+        "unread": "Unread",
+        "targets": "Total targets",
+        "failed": "Failed deliveries",
+        "invalid": "Invalid user IDs",
+        "none": "None",
+        "failedHint": "These users could not be notified. Try again later.",
+        "invalidHint": "These IDs were removed because matching users were not found."
+      },
+      "history": {
+        "title": "Broadcast history",
+        "description": "Recent broadcasts and delivery status.",
+        "empty": "No broadcasts have been sent yet.",
+        "showDetails": "Show recipients",
+        "hideDetails": "Hide recipients",
+        "more": "+{{count}} more"
+      }
     },
+
     "dashboard": {
       "title": "Admin Dashboard",
       "description": "Overview of platform metrics and recent trends.",
@@ -776,14 +840,31 @@
       "createSuccess": "Product created.",
       "editProduct": "Edit product",
       "form": {
-        "category": "Category",
-        "description": "Description",
-        "imageUrl": "Image URL",
         "name": "Product name",
-        "price": "Required points",
+        "description": "Description",
+        "category": "Category",
+        "categoryPlaceholder": "Select or enter a category",
+        "uncategorized": "Uncategorized",
+        "pointsRequired": "Points required",
         "status": "Status",
         "stock": "Stock",
-        "stockHint": "Use -1 for unlimited stock."
+        "stockHint": "Use -1 for unlimited stock.",
+        "sortOrder": "Sort order",
+        "tags": "Tags",
+        "tagPlaceholder": "Search or type to create a tag",
+        "addTag": "Add tag",
+        "tagHint": "Press Enter to create a new tag when no match is found.",
+        "suggestions": "Suggestions",
+        "noSuggestions": "No matching tags",
+        "removeTag": "Remove tag",
+        "image": "Product image",
+        "chooseImage": "Upload image",
+        "removeImage": "Remove image",
+        "imageHint": "Supports PNG or JPG up to 5MB. Files are stored securely in Cloudflare R2.",
+        "uploading": "Uploading...",
+        "uploadSuccess": "Image uploaded successfully",
+        "uploadFailed": "Image upload failed. Please try again.",
+        "fileTooLarge": "Image must be smaller than 5MB."
       },
       "formModal": {
         "description": "Update the storefront details for this reward."
@@ -801,7 +882,8 @@
         "name": "Name",
         "price": "Points required",
         "status": "Status",
-        "stock": "Stock"
+        "stock": "Stock",
+        "tags": "Tags"
       },
       "tryDifferentFilters": "Try adjusting filters or search terms.",
       "unlimited": "Unlimited",
@@ -1323,11 +1405,19 @@
         "table": {
           "username": "Username",
           "email": "Email",
-          "status": "Status",
-          "awardedAt": "Awarded at"
-        }
-      }
-    },
+        "status": "Status",
+        "awardedAt": "Awarded at",
+        "actions": "Actions"
+      },
+      "remove": "Revoke",
+      "removeConfirmTitle": "Revoke badge?",
+      "removeConfirmDescription": "This action will revoke the badge from {{username}} and record it in the audit log.",
+      "removeConfirmDescriptionPlain": "This action will revoke the badge and record it in the audit log.",
+      "removeAction": "Confirm revoke",
+      "removeSuccess": "Badge revoked for the user.",
+      "removeFailed": "Failed to revoke the badge. Please try again later."
+    }
+  },
     "avatars": {
       "listTitle": "Avatar Library",
       "loadFailed": "Unable to load avatars",
@@ -1508,6 +1598,7 @@
     "less": "Less",
     "all": "All",
     "none": "None",
+    "unknown": "Unknown",
     "optional": "Optional",
     "required": "Required",
     "select": "Select",

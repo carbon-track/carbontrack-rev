@@ -176,6 +176,8 @@ export const productAPI = {
   getProducts: (params = {}) => api.get('/products', { params }),
   // 获取产品分类（用于后台过滤）
   getCategories: (params = {}) => api.get('/products/categories', { params }),
+  // 搜索产品标签
+  searchTags: (params = {}) => api.get('/products/tags', { params }),
   
   // 获取单个产品详情
   getProduct: (id) => api.get(`/products/${id}`),
@@ -307,6 +309,7 @@ export const adminAPI = {
   
   // 产品管理（供后台 ProductManagement 使用）
   getProducts: (params = {}) => api.get('/admin/products', { params }),
+  searchProductTags: (params = {}) => api.get('/admin/products/tags', { params }),
   createProduct: (data) => api.post('/admin/products', data),
   updateProduct: (id, data) => api.put(`/admin/products/${id}`, data),
   deleteProduct: (id) => api.delete(`/admin/products/${id}`),
@@ -343,6 +346,7 @@ export const adminAPI = {
   getBadgeRecipients: (id, params = {}) => api.get(`/admin/badges/${id}/recipients`, { params }),
 
   broadcastMessage: (data) => api.post('/admin/messages/broadcast', data),
+  getBroadcasts: (params = {}) => api.get('/admin/messages/broadcasts', { params }),
 
 };
 
@@ -364,4 +368,3 @@ export const isAuthenticated = () => {
 };
 
 export default api;
-

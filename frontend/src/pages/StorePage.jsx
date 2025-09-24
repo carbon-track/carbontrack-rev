@@ -29,7 +29,8 @@ export default function StorePage() {
     max_points: '',
     sort: 'created_at',
     page: 1,
-    limit: 12
+    limit: 12,
+    tags: []
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -71,16 +72,36 @@ export default function StorePage() {
       setLoading(true);
       setError(null);
       
-      const params = new URLSearchParams();
+      const query = {};
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value);
+        if (key === 'tags') {
+          if (Array.isArray(value) && value.length) {
+            query.tags = value.map((tag) => tag.slug || tag).join(',');
+          }
+          return;
+        }
+        if (value !== '' && value !== null && value !== undefined) {
+          query[key] = value;
+        }
       });
 
-      const res = await productAPI.getProducts(Object.fromEntries(params));
-      const { success, data: items, pagination } = res.data || {};
-      if (success) {
-        setProducts(Array.isArray(items) ? items : []);
-        setPagination(pagination || { page: 1, pages: 1, total: Array.isArray(items) ? items.length : 0 });
+      const res = await productAPI.getProducts(query);
+      const payload = res.data?.data ?? res.data;
+      const items = Array.isArray(payload) ? payload : (payload?.products ?? []);
+      const paginationData = (Array.isArray(payload) ? null : payload?.pagination) || {};
+      const pageInfo = {
+        page: paginationData.page ?? paginationData.current_page ?? query.page ?? filters.page ?? 1,
+        pages: paginationData.pages ?? paginationData.total_pages ?? 1,
+        total: paginationData.total ?? paginationData.total_items ?? items.length,
+      };
+
+      if (res.data?.success !== false) {
+        setProducts(items);
+        setPagination({
+          page: pageInfo.page ?? 1,
+          pages: pageInfo.pages ?? 1,
+          total: pageInfo.total ?? items.length,
+        });
       } else {
         setProducts([]);
         setPagination({ page: 1, pages: 1, total: 0 });
@@ -96,17 +117,9 @@ export default function StorePage() {
 
   const fetchCategories = async () => {
     try {
-      // 聚合分类：根据产品数据统计分类及数量
-      const res = await productAPI.getProducts({ limit: 1000, page: 1 });
-      const products = res.data?.data || [];
-      const counts = new Map();
-      products.forEach((p) => {
-        if (p?.category) {
-          counts.set(p.category, (counts.get(p.category) || 0) + 1);
-        }
-      });
-      const aggregated = Array.from(counts.entries()).map(([category, product_count]) => ({ category, product_count }));
-      setCategories(aggregated);
+      const res = await productAPI.getCategories();
+      const data = res.data?.data;
+      setCategories(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch categories:', error);
     }
@@ -280,7 +293,8 @@ export default function StorePage() {
                     max_points: '',
                     sort: 'created_at',
                     page: 1,
-                    limit: 12
+                    limit: 12,
+                    tags: []
                   })}
                   className="mt-4"
                 >
@@ -387,4 +401,3 @@ export default function StorePage() {
     </div>
   );
 }
-
