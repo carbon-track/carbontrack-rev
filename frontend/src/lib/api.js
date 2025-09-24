@@ -168,7 +168,7 @@ export const carbonAPI = {
   getChartData: () => api.get('/users/me/chart-data'),
   
   // 获取最近活动
-  getRecentActivities: () => api.get('/users/me/activities'),
+  getRecentActivities: (params = {}) => api.get('/users/me/activities', { params }),
 };
 
 export const productAPI = {

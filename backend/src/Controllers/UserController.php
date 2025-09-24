@@ -399,6 +399,108 @@ class UserController
     }
 
     /**
+     * Normalize stored image metadata into a consistent shape and attach presigned URLs when possible.
+     *
+     * @param mixed $raw
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeImages($raw): array
+    {
+        if (empty($raw)) {
+            return [];
+        }
+
+        if (is_string($raw)) {
+            $raw = [$raw];
+        }
+
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($raw as $item) {
+            $normalizedItem = $this->normalizeImageItem($item);
+            if ($normalizedItem !== null) {
+                $normalized[] = $normalizedItem;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Normalize a single image entry and populate URLs.
+     *
+     * @param mixed $item
+     */
+    private function normalizeImageItem($item): ?array
+    {
+        if (is_string($item)) {
+            $item = ['url' => $item];
+        } elseif (!is_array($item)) {
+            return null;
+        }
+
+        $url = $item['url'] ?? $item['public_url'] ?? null;
+        $filePath = $item['file_path'] ?? null;
+
+        if (!$filePath && isset($item['public_url']) && $this->r2Service) {
+            try {
+                $filePath = $this->r2Service->resolveKeyFromUrl((string) $item['public_url']);
+            } catch (\Throwable $ignore) {
+                $filePath = null;
+            }
+        }
+
+        if (!$filePath && $url && $this->r2Service) {
+            try {
+                $filePath = $this->r2Service->resolveKeyFromUrl((string) $url);
+            } catch (\Throwable $ignore) {
+                $filePath = null;
+            }
+        }
+
+        if (is_string($filePath) && $filePath !== '') {
+            $filePath = ltrim($filePath, '/');
+        } else {
+            $filePath = null;
+        }
+
+        if (!$url && $filePath && $this->r2Service) {
+            try {
+                $url = $this->r2Service->getPublicUrl($filePath);
+            } catch (\Throwable $ignore) {
+                $url = null;
+            }
+        }
+
+        $meta = [
+            'url' => $url,
+            'file_path' => $filePath,
+            'original_name' => $item['original_name'] ?? null,
+            'mime_type' => $item['mime_type'] ?? null,
+            'size' => $item['file_size'] ?? ($item['size'] ?? null),
+            'presigned_url' => $item['presigned_url'] ?? null,
+        ];
+
+        if (isset($item['thumbnail_path'])) {
+            $meta['thumbnail_path'] = $item['thumbnail_path'];
+        }
+
+        if ($filePath && $this->r2Service) {
+            try {
+                $meta['presigned_url'] = $this->r2Service->generatePresignedUrl($filePath, 600);
+            } catch (\Throwable $ignore) {
+                // ignore failure
+            }
+        }
+
+        return $meta;
+    }
+
+    /**
      * 获取用户积分历史
      */
     public function getPointsHistory(Request $request, Response $response): Response
@@ -715,14 +817,17 @@ class UserController
             $stmt = $this->db->prepare("
                 SELECT 
                     r.id,
+                    r.activity_id,
                     a.name_zh as activity_name_zh,
                     a.name_en as activity_name_en,
+                    a.category,
                     r.unit,
                     r.amount as data,
                     r.carbon_saved,
                     r.points_earned,
                     r.status,
-                    r.created_at
+                    r.created_at,
+                    r.images
                 FROM carbon_records r
                 LEFT JOIN carbon_activities a ON r.activity_id = a.id
                 WHERE r.user_id = :user_id AND r.deleted_at IS NULL
@@ -733,6 +838,16 @@ class UserController
             $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
             $stmt->execute();
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($rows as &$row) {
+                $rawImages = [];
+                if (!empty($row['images'])) {
+                    $decoded = json_decode((string) $row['images'], true);
+                    $rawImages = is_array($decoded) ? $decoded : [];
+                }
+                $row['images'] = $this->normalizeImages($rawImages);
+            }
+            unset($row);
 
             return $this->jsonResponse($response, [
                 'success' => true,

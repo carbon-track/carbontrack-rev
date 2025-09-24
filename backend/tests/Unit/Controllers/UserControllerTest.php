@@ -202,6 +202,71 @@ class UserControllerTest extends TestCase
         $this->assertEquals('2024-01-01', $json['data']['member_since']);
     }
 
+    public function testGetRecentActivitiesReturnsPresignedImages(): void
+    {
+        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+
+        $auth->method('getCurrentUser')->willReturn(['id' => 7]);
+
+        $statement = $this->getMockBuilder(\PDOStatement::class)
+            ->onlyMethods(['bindValue', 'execute', 'fetchAll'])
+            ->getMock();
+        $statement->method('bindValue')->willReturn(true);
+        $statement->expects($this->once())->method('execute')->willReturn(true);
+        $statement->expects($this->once())->method('fetchAll')->willReturn([
+            [
+                'id' => 42,
+                'activity_id' => 5,
+                'activity_name_zh' => '节能',
+                'activity_name_en' => 'Energy Saving',
+                'category' => 'energy',
+                'unit' => 'times',
+                'data' => 3.0,
+                'carbon_saved' => 1.23,
+                'points_earned' => 15,
+                'status' => 'approved',
+                'created_at' => '2025-09-24 12:00:00',
+                'images' => json_encode([[
+                    'file_path' => 'proofs/a.jpg',
+                    'original_name' => 'evidence.jpg',
+                ]]),
+            ],
+        ]);
+
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->method('prepare')->willReturn($statement);
+
+        $r2->method('resolveKeyFromUrl')->willReturnCallback(static function ($value) {
+            return trim((string)$value, '/');
+        });
+        $r2->method('generatePresignedUrl')->willReturn('https://cdn.example.com/proofs/a.jpg?token=abc');
+        $r2->method('getPublicUrl')->willReturn('https://cdn.example.com/proofs/a.jpg');
+
+        $controller = new UserController($auth, $audit, $msg, $avatar, $logger, $pdo, $errorLog, $r2);
+
+        $request = makeRequest('GET', '/users/me/activities');
+        $response = new \Slim\Psr7\Response();
+        $result = $controller->getRecentActivities($request, $response);
+
+        $this->assertEquals(200, $result->getStatusCode());
+        $payload = json_decode((string) $result->getBody(), true);
+
+        $this->assertTrue($payload['success']);
+        $this->assertCount(1, $payload['data']);
+        $activity = $payload['data'][0];
+        $this->assertSame('approved', $activity['status']);
+        $this->assertArrayHasKey('images', $activity);
+        $this->assertCount(1, $activity['images']);
+        $this->assertSame('proofs/a.jpg', $activity['images'][0]['file_path']);
+        $this->assertNotEmpty($activity['images'][0]['presigned_url']);
+    }
+
     public function testGetCurrentUserSuccess(): void
     {
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);

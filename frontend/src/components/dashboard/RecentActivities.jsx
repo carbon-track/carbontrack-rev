@@ -7,7 +7,7 @@ import { formatNumber } from '../../lib/utils';
 import { ActivityDetailModal } from '../activities/ActivityDetailModal';
 
 export function RecentActivities({ activities = [], loading = false, onViewAll }) {
-  const { t } = useTranslation();
+  const { t, tUnit } = useTranslation();
   const [selected, setSelected] = useState(null);
   const [open, setOpen] = useState(false);
 
@@ -143,7 +143,10 @@ export function RecentActivities({ activities = [], loading = false, onViewAll }
                   
                   <div className="flex items-center gap-4 text-xs text-gray-500">
                     <span>{formatDate(activity.created_at)}</span>
-                    <span>{activity.data} {activity.unit}</span>
+                    <span>
+                      {activity.data}
+                      {activity.unit ? ` ${tUnit(activity.unit)}` : ''}
+                    </span>
                     {(() => {
                       const formatted = formatNumber(activity.carbon_saved, 2);
                       return formatted !== null ? (
