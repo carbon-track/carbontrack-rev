@@ -657,12 +657,62 @@ class UserController
                 'approved_activities' => 0,
                 'pending_activities' => 0,
                 'rejected_activities' => 0,
-                'total_carbon_saved' => 0,
-                'total_points_earned' => $pointsRow['total_earned'] ?? 0,
+                'total_carbon_saved' => 0.0,
+                'total_points_earned' => (float)($pointsRow['total_earned'] ?? 0),
             ];
+            try {
+                $recordStmt = $this->db->prepare("SELECT 
+                        COUNT(*) AS total_activities,
+                        SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved_activities,
+                        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_activities,
+                        SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected_activities,
+                        COALESCE(SUM(CASE WHEN status = 'approved' THEN carbon_saved ELSE 0 END), 0) AS total_carbon_saved,
+                        COALESCE(SUM(CASE WHEN status = 'approved' THEN points_earned ELSE 0 END), 0) AS total_points_earned
+                    FROM carbon_records WHERE user_id = :uid AND deleted_at IS NULL");
+                $recordStmt->execute(['uid' => $user['id']]);
+                $recordRow = $recordStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                $recStats = [
+                    'total_activities' => (int)($recordRow['total_activities'] ?? 0),
+                    'approved_activities' => (int)($recordRow['approved_activities'] ?? 0),
+                    'pending_activities' => (int)($recordRow['pending_activities'] ?? 0),
+                    'rejected_activities' => (int)($recordRow['rejected_activities'] ?? 0),
+                    'total_carbon_saved' => (float)($recordRow['total_carbon_saved'] ?? 0),
+                    'total_points_earned' => (float)($recordRow['total_points_earned'] ?? ($pointsRow['total_earned'] ?? 0)),
+                ];
+            } catch (\Throwable $e) {
+                // 部分测试或迁移环境可能缺少 carbon_saved / points_earned 列，此时仅统计数量以保证接口可用
+                try {
+                    $basicStmt = $this->db->prepare("SELECT 
+                            COUNT(*) AS total_activities,
+                            SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved_activities,
+                            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_activities,
+                            SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected_activities
+                        FROM carbon_records WHERE user_id = :uid AND deleted_at IS NULL");
+                    $basicStmt->execute(['uid' => $user['id']]);
+                    $basicRow = $basicStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                    $recStats['total_activities'] = (int)($basicRow['total_activities'] ?? 0);
+                    $recStats['approved_activities'] = (int)($basicRow['approved_activities'] ?? 0);
+                    $recStats['pending_activities'] = (int)($basicRow['pending_activities'] ?? 0);
+                    $recStats['rejected_activities'] = (int)($basicRow['rejected_activities'] ?? 0);
+                    $recStats['total_carbon_saved'] = 0.0;
+                    $recStats['total_points_earned'] = (float)($pointsRow['total_earned'] ?? 0);
+                } catch (\Throwable $ignore) {
+                    $recStats['total_points_earned'] = (float)($pointsRow['total_earned'] ?? 0);
+                }
+            }
 
             // 排名（按用户积分 points 降序）；这里避免额外 prepare 调用，直接置为 null 以兼容单元测试
             $rankRow = ['rank' => null];
+            try {
+                $rankStmt = $this->db->prepare("SELECT COUNT(*) + 1 AS rank FROM users WHERE deleted_at IS NULL AND points > :points");
+                $rankStmt->execute(['points' => (float)($userRow['points'] ?? 0)]);
+                $fetchedRank = $rankStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+                if (is_array($fetchedRank) && array_key_exists('rank', $fetchedRank)) {
+                    $rankRow['rank'] = (int)$fetchedRank['rank'];
+                }
+            } catch (\Throwable $ignore) {
+                // ignore rank calculation failures to avoid breaking dashboard
+            }
 
             $totalUsers = 0;
             $totalUsersStmt = $this->db->query("SELECT COUNT(*) AS total FROM users WHERE deleted_at IS NULL");
@@ -709,7 +759,7 @@ class UserController
                 'approved_activities' => (int)($recStats['approved_activities'] ?? 0),
                 'pending_activities' => (int)($recStats['pending_activities'] ?? 0),
                 'rejected_activities' => (int)($recStats['rejected_activities'] ?? 0),
-                'total_earned' => (float)($recStats['total_points_earned'] ?? 0),
+                'total_earned' => (float)($pointsRow['total_earned'] ?? ($recStats['total_points_earned'] ?? 0)),
                 'rank' => isset($rankRow['rank']) ? (int)$rankRow['rank'] : null,
                 'total_users' => (int)$totalUsers,
                 // 趋势（占位，后续可计算）

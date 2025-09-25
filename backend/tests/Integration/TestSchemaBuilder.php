@@ -28,7 +28,10 @@ class TestSchemaBuilder
             "CREATE TABLE IF NOT EXISTS users (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                username TEXT UNIQUE,\n                email TEXT UNIQUE,\n                password TEXT,\n                uuid TEXT,\n                school_id INTEGER,\n                status TEXT,\n                points INTEGER DEFAULT 0,\n                is_admin INTEGER DEFAULT 0,\n                avatar_id INTEGER,\n                image_path TEXT,\n                last_login_at TEXT,\n                deleted_at TEXT,\n                created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                updated_at TEXT DEFAULT CURRENT_TIMESTAMP\n            )",
             // Products
             "CREATE TABLE IF NOT EXISTS products (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                name TEXT,\n                description TEXT,\n                category TEXT,\n                category_slug TEXT,\n                images TEXT,\n                image_path TEXT,\n                stock INTEGER DEFAULT 0,\n                points_required INTEGER DEFAULT 0,\n                status TEXT DEFAULT 'active',\n                sort_order INTEGER DEFAULT 0,\n                deleted_at TEXT,\n                created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                updated_at TEXT DEFAULT CURRENT_TIMESTAMP\n            )",
-            // Product categories\n            "CREATE TABLE IF NOT EXISTS product_categories (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                name TEXT NOT NULL,\n                slug TEXT NOT NULL,\n                description TEXT,\n                created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                UNIQUE(slug)\n            )",\n            // Product tags\n            "CREATE TABLE IF NOT EXISTS product_tags (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                name TEXT NOT NULL,\n                slug TEXT NOT NULL,\n                description TEXT,\n                created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                UNIQUE(slug)\n            )",\n            // Product to tag mapping\n            "CREATE TABLE IF NOT EXISTS product_tag_map (\n                product_id INTEGER NOT NULL,\n                tag_id INTEGER NOT NULL,\n                created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                UNIQUE(product_id, tag_id)\n            )",\n            // Carbon activities (align with production columns subset used by model & controllers)
+            "CREATE TABLE IF NOT EXISTS product_categories (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                name TEXT NOT NULL,\n                slug TEXT NOT NULL,\n                description TEXT,\n                created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                UNIQUE(slug)\n            )",
+            "CREATE TABLE IF NOT EXISTS product_tags (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                name TEXT NOT NULL,\n                slug TEXT NOT NULL,\n                description TEXT,\n                created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                UNIQUE(slug)\n            )",
+            "CREATE TABLE IF NOT EXISTS product_tag_map (\n                product_id INTEGER NOT NULL,\n                tag_id INTEGER NOT NULL,\n                created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                UNIQUE(product_id, tag_id)\n            )",
+            // Carbon activities (align with production columns subset used by model & controllers)
             "CREATE TABLE IF NOT EXISTS carbon_activities (\n                id TEXT PRIMARY KEY,\n                name_zh TEXT,\n                name_en TEXT,\n                category TEXT,\n                carbon_factor REAL,\n                unit TEXT,\n                description_zh TEXT,\n                description_en TEXT,\n                icon TEXT,\n                is_active INTEGER DEFAULT 1,\n                sort_order INTEGER DEFAULT 0,\n                created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                deleted_at TEXT\n            )",
             // Carbon records
             "CREATE TABLE IF NOT EXISTS carbon_records (\n                id TEXT PRIMARY KEY,\n                user_id INTEGER,\n                activity_id TEXT,\n                amount REAL,\n                unit TEXT,\n                carbon_saved REAL,\n                points_earned INTEGER,\n                date TEXT,\n                description TEXT,\n                images TEXT,\n                proof_images TEXT,\n                status TEXT,\n                created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n                approved_at TEXT,\n                deleted_at TEXT\n            )",
@@ -132,9 +135,7 @@ class TestSchemaBuilder
         // Product categories
         $cat = (int)$pdo->query("SELECT COUNT(*) FROM product_categories")->fetchColumn();
         if ($cat === 0) {
-            $pdo->exec("INSERT INTO product_categories (name, slug) VALUES \
-                ('每日用品','daily'),\
-                ('绿色出行','transport')");
+            $pdo->exec("INSERT INTO product_categories (name, slug) VALUES \n                ('每日用品','daily'),\n                ('绿色出行','transport')");
         }
 
         // Products
@@ -150,3 +151,6 @@ class TestSchemaBuilder
         }
     }
 }
+
+
+

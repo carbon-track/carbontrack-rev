@@ -900,56 +900,95 @@ class MessageController
             }
 
             $data = [];
-            $collectedIds = [];
-
             foreach ($rows as $row) {
-
-                if (is_array($row)) {
-
-                    $id = isset($row['id']) ? (int)$row['id'] : 0;
-
-                    if ($id <= 0) {
-
-                        continue;
-
-                    }
-
-                    $collectedIds[$id] = $id;
-
-                    $result['records'][$id] = $this->normalizeUserRow($row);
-
+                $normalized = $this->normalizeUserRow($row);
+                if ($normalized['id'] === null) {
                     continue;
-
                 }
-
-
-
-                if (is_scalar($row)) {
-
-                    $id = (int)$row;
-
-                    if ($id <= 0) {
-
-                        continue;
-
-                    }
-
-                    $collectedIds[$id] = $id;
-
-                    if (!isset($result['records'][$id])) {
-
-                        $result['records'][$id] = $this->normalizeUserRow(['id' => $id]);
-
-                    }
-
-                }
-
+                $data[] = $normalized;
             }
 
+            return $this->json($response, [
+                'success' => true,
+                'data' => $data,
+                'pagination' => [
+                    'page' => $page,
+                    'limit' => $limit,
+                    'has_more' => $hasMore,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            try {
+                if ($this->errorLogService) {
+                    $this->errorLogService->logException($e, $request);
+                }
+            } catch (\Throwable $ignore) {}
+            return $this->json($response, ['error' => 'Internal server error'], 500);
+        }
+    }
 
+    private function resolveExplicitRecipients(array $ids): array
+    {
+        $result = [
+            'error' => null,
+            'status' => 200,
+            'user_ids' => [],
+            'records' => [],
+            'invalid_ids' => [],
+        ];
+
+        $sanitized = [];
+        foreach ($ids as $value) {
+            if (is_int($value) || (is_numeric($value) && (string)(int)$value === (string)$value)) {
+                $intVal = (int)$value;
+                if ($intVal > 0) {
+                    $sanitized[$intVal] = $intVal;
+                }
+            }
+        }
+
+        if (empty($sanitized)) {
+            $result['error'] = 'target_users must contain at least one valid id';
+            $result['status'] = 400;
+            return $result;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($sanitized), '?'));
+        $sql = 'SELECT id, username, email, school, school_id, location, is_admin, status FROM users WHERE deleted_at IS NULL AND id IN (' . $placeholders . ')';
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            if (!$stmt) {
+                $result['error'] = 'Failed to resolve target users';
+                $result['status'] = 500;
+                return $result;
+            }
+
+            $stmt->execute(array_values($sanitized));
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $collectedIds = [];
+            foreach ($rows as $row) {
+                if (is_array($row)) {
+                    $id = isset($row['id']) ? (int)$row['id'] : 0;
+                    if ($id <= 0) {
+                        continue;
+                    }
+                    $collectedIds[$id] = $id;
+                    $result['records'][$id] = $this->normalizeUserRow($row);
+                } elseif (is_scalar($row)) {
+                    $id = (int)$row;
+                    if ($id <= 0) {
+                        continue;
+                    }
+                    $collectedIds[$id] = $id;
+                    if (!isset($result['records'][$id])) {
+                        $result['records'][$id] = $this->normalizeUserRow(['id' => $id]);
+                    }
+                }
+            }
 
             $result['user_ids'] = array_values($collectedIds);
-
             $result['invalid_ids'] = array_values(array_diff($sanitized, $result['user_ids']));
         } catch (\Throwable $e) {
             $result['error'] = 'Failed to resolve target users';

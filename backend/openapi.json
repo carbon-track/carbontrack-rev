@@ -9655,22 +9655,181 @@
       },
       "UserStatsResponse": {
         "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
         "properties": {
-          "total_carbon_saved": {
-            "type": "number",
-            "description": "总碳减排量"
+          "success": {
+            "type": "boolean",
+            "description": "请求是否成功"
           },
-          "total_points_awarded": {
-            "type": "integer",
-            "description": "总奖励积分"
-          },
-          "activity_count": {
-            "type": "integer",
-            "description": "参与活动总数"
-          },
-          "transaction_count": {
-            "type": "integer",
-            "description": "碳记录总数"
+          "data": {
+            "type": "object",
+            "required": [
+              "current_points",
+              "total_points",
+              "total_carbon_saved",
+              "total_activities",
+              "total_earned"
+            ],
+            "properties": {
+              "current_points": {
+                "type": "integer",
+                "description": "当前账户积分"
+              },
+              "total_points": {
+                "type": "number",
+                "description": "当前账户积分（浮点表示）"
+              },
+              "total_carbon_saved": {
+                "type": "number",
+                "description": "累计减排量（kg CO2e）"
+              },
+              "total_activities": {
+                "type": "integer",
+                "description": "累计提交的活动次数"
+              },
+              "approved_activities": {
+                "type": "integer",
+                "description": "已审批通过的活动次数",
+                "nullable": true
+              },
+              "pending_activities": {
+                "type": "integer",
+                "description": "待审核的活动次数",
+                "nullable": true
+              },
+              "rejected_activities": {
+                "type": "integer",
+                "description": "已驳回的活动次数",
+                "nullable": true
+              },
+              "total_earned": {
+                "type": "number",
+                "description": "累计获得的积分总和"
+              },
+              "rank": {
+                "type": "integer",
+                "description": "积分排行榜中的当前名次，若无法计算则为 null",
+                "nullable": true
+              },
+              "total_users": {
+                "type": "integer",
+                "description": "系统中参与排行的总用户数",
+                "nullable": true
+              },
+              "points_change": {
+                "type": "number",
+                "description": "积分环比变化（百分比）",
+                "nullable": true
+              },
+              "carbon_change": {
+                "type": "number",
+                "description": "减排量环比变化（百分比）",
+                "nullable": true
+              },
+              "activities_change": {
+                "type": "number",
+                "description": "活动次数环比变化（百分比）",
+                "nullable": true
+              },
+              "rank_change": {
+                "type": "number",
+                "description": "排名变化（正数表示下降）",
+                "nullable": true
+              },
+              "unread_messages": {
+                "type": "integer",
+                "description": "未读消息数量",
+                "nullable": true
+              },
+              "pending_reviews": {
+                "type": "integer",
+                "description": "待审核记录数量（占位字段）",
+                "nullable": true
+              },
+              "available_products": {
+                "type": "integer",
+                "description": "可兑换商品数量（占位字段）",
+                "nullable": true
+              },
+              "new_achievements": {
+                "type": "integer",
+                "description": "新增成就数量（占位字段）",
+                "nullable": true
+              },
+              "monthly_achievements": {
+                "type": "array",
+                "description": "按月份统计的积分与减排成就",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "month": {
+                      "type": "string",
+                      "description": "月份标识，格式 YYYY-MM"
+                    },
+                    "label": {
+                      "type": "string",
+                      "description": "根据语言环境格式化后的月份名称",
+                      "nullable": true
+                    },
+                    "points": {
+                      "type": "number",
+                      "description": "当月获取的积分"
+                    },
+                    "carbon": {
+                      "type": "number",
+                      "description": "当月减排量"
+                    },
+                    "records": {
+                      "type": "integer",
+                      "description": "当月记录数量"
+                    }
+                  }
+                }
+              },
+              "leaderboard": {
+                "type": "array",
+                "description": "积分排行榜前几名",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "username": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "total_points": {
+                      "type": "number",
+                      "description": "排行榜用户的累计积分"
+                    },
+                    "avatar_id": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "avatar_path": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "avatar_url": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "头像访问 URL（若可用）"
+                    }
+                  }
+                }
+              },
+              "member_since": {
+                "type": "string",
+                "format": "date-time",
+                "description": "用户注册时间",
+                "nullable": true
+              }
+            }
           }
         }
       },
