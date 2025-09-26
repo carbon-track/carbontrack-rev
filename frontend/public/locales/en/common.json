@@ -704,9 +704,71 @@
         "showDetails": "Show recipients",
         "hideDetails": "Hide recipients",
         "more": "+{{count}} more"
+      },
+      "recipients": {
+        "selected": "Selected recipients",
+        "none": "No individual recipients selected yet.",
+        "selectedCount": "Total selected: {{count}}",
+        "emptySelection": "No recipients in current result set.",
+        "addedAll": "Recipients added to selection."
+      },
+      "recipientFilters": {
+        "title": "Applied filter groups",
+        "none": "No filter groups added yet.",
+        "add": "Add filter to broadcast",
+        "added": "Filter added to broadcast payload.",
+        "requireCondition": "Please configure at least one filter condition.",
+        "hint": "Set a condition above to enable this button.",
+        "summary": {
+          "search": "Text includes \"{{value}}\"",
+          "fields": "Fields: {{fields}}",
+          "school": "School contains \"{{value}}\"",
+          "emailSuffix": "Email domain ends with \"{{value}}\"",
+          "status": {
+            "active": "Status: Active",
+            "inactive": "Status: Inactive"
+          },
+          "role": {
+            "admin": "Role: Admins",
+            "user": "Role: Regular users"
+          },
+          "limit": "Limit {{count}} recipients",
+          "joiner": " | ",
+          "fallback": "Custom filter"
+        }
+      },
+      "recipientSearch": {
+        "title": "Advanced recipient search",
+        "description": "Filter users by school, email domain or other attributes, then select individuals or add the filter group to this broadcast.",
+        "searchPlaceholder": "Search text (name, email, school...)",
+        "fields": {
+          "all": "All key fields",
+          "email": "Email",
+          "school": "School",
+          "location": "Location",
+          "username": "Username"
+        },
+        "schoolPlaceholder": "School contains...",
+        "emailPlaceholder": "Email domain e.g. example.com",
+        "status": {
+          "any": "Any status",
+          "active": "Active",
+          "inactive": "Inactive"
+        },
+        "role": {
+          "any": "All roles",
+          "admin": "Admins",
+          "user": "Regular users"
+        },
+        "limit": "Up to {{count}} users",
+        "addAll": "Add visible recipients",
+        "error": "Search failed",
+        "noResults": "No users match the current search conditions.",
+        "noEmail": "No email on file",
+        "pageInfo": "Page {{page}}",
+        "resultCount": "Showing {{count}} recipients on this page."
       }
     },
-
     "dashboard": {
       "title": "Admin Dashboard",
       "description": "Overview of platform metrics and recent trends.",
@@ -1405,19 +1467,19 @@
         "table": {
           "username": "Username",
           "email": "Email",
-        "status": "Status",
-        "awardedAt": "Awarded at",
-        "actions": "Actions"
-      },
-      "remove": "Revoke",
-      "removeConfirmTitle": "Revoke badge?",
-      "removeConfirmDescription": "This action will revoke the badge from {{username}} and record it in the audit log.",
-      "removeConfirmDescriptionPlain": "This action will revoke the badge and record it in the audit log.",
-      "removeAction": "Confirm revoke",
-      "removeSuccess": "Badge revoked for the user.",
-      "removeFailed": "Failed to revoke the badge. Please try again later."
-    }
-  },
+          "status": "Status",
+          "awardedAt": "Awarded at",
+          "actions": "Actions"
+        },
+        "remove": "Revoke",
+        "removeConfirmTitle": "Revoke badge?",
+        "removeConfirmDescription": "This action will revoke the badge from {{username}} and record it in the audit log.",
+        "removeConfirmDescriptionPlain": "This action will revoke the badge and record it in the audit log.",
+        "removeAction": "Confirm revoke",
+        "removeSuccess": "Badge revoked for the user.",
+        "removeFailed": "Failed to revoke the badge. Please try again later."
+      }
+    },
     "avatars": {
       "listTitle": "Avatar Library",
       "loadFailed": "Unable to load avatars",
@@ -1812,4 +1874,3 @@
     "unit": "unit"
   }
 }
-

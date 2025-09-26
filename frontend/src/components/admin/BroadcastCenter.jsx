@@ -128,6 +128,16 @@ export function BroadcastCenter() {
   const [selectedRecipients, setSelectedRecipients] = useState(() => new Map());
   const [appliedFilters, setAppliedFilters] = useState([]);
 
+  const hasRecipientCriteria = useMemo(() => {
+    return Boolean(
+      recipientForm.search.trim() ||
+        recipientForm.school.trim() ||
+        recipientForm.emailSuffix.trim() ||
+        (recipientForm.status && recipientForm.status !== 'any') ||
+        (recipientForm.isAdmin && recipientForm.isAdmin !== 'any')
+    );
+  }, [recipientForm]);
+
   const customTargetIds = useMemo(() => {
     if (form.scope !== 'custom') {
       return [];
@@ -257,12 +267,105 @@ export function BroadcastCenter() {
       if (recipientForm.isAdmin && recipientForm.isAdmin !== 'any') {
         params.is_admin = recipientForm.isAdmin;
       }
-      const limit = overrides.limit ?? recipientForm.limit ?? 25;
+      const limitRaw = overrides.limit ?? recipientForm.limit ?? 25;
+      const limit = Math.max(10, Math.min(500, Number(limitRaw) || 25));
       params.limit = limit;
-      params.page = overrides.page ?? 1;
+      const pageRaw = overrides.page ?? 1;
+      params.page = Math.max(1, Number(pageRaw) || 1);
       return params;
     },
     [recipientForm]
+  );
+
+  const buildFilterPayload = useCallback(() => {
+    const payload = {};
+    const search = recipientForm.search.trim();
+    const school = recipientForm.school.trim();
+    const emailSuffix = recipientForm.emailSuffix.trim();
+    const limit = Math.max(10, Math.min(500, Number(recipientForm.limit) || 25));
+
+    payload.limit = limit;
+
+    if (search) {
+      payload.search = search;
+      if (recipientForm.fields && recipientForm.fields !== RECIPIENT_SEARCH_DEFAULT.fields) {
+        payload.fields = recipientForm.fields;
+      }
+    }
+    if (school) {
+      payload.school = school;
+    }
+    if (emailSuffix) {
+      payload.email_suffix = emailSuffix;
+    }
+    if (recipientForm.status && recipientForm.status !== 'any') {
+      payload.status = recipientForm.status;
+    }
+    if (recipientForm.isAdmin && recipientForm.isAdmin !== 'any') {
+      payload.is_admin = recipientForm.isAdmin;
+    }
+    return payload;
+  }, [recipientForm]);
+
+  const describeFilter = useCallback(
+    (filter) => {
+      if (!filter || typeof filter !== 'object') {
+        return t('admin.broadcast.recipientFilters.summary.fallback', 'Custom filter');
+      }
+
+      const parts = [];
+      if (filter.search) {
+        parts.push(t('admin.broadcast.recipientFilters.summary.search', { value: filter.search }));
+        if (filter.fields) {
+          const labels = filter.fields
+            .split(',')
+            .map((field) => field.trim())
+            .filter(Boolean)
+            .map((field) => {
+              const normalized = field === 'school_name' ? 'school' : field;
+              return t('admin.broadcast.recipientSearch.fields.' + normalized, normalized.replace(/_/g, ' '));
+            });
+          if (labels.length > 0) {
+            parts.push(t('admin.broadcast.recipientFilters.summary.fields', { fields: labels.join(', ') }));
+          }
+        }
+      }
+      if (filter.school) {
+        parts.push(t('admin.broadcast.recipientFilters.summary.school', { value: filter.school }));
+      }
+      if (filter.email_suffix) {
+        parts.push(t('admin.broadcast.recipientFilters.summary.emailSuffix', { value: filter.email_suffix }));
+      }
+      if (filter.status === 'active' || filter.status === 'inactive') {
+        parts.push(t('admin.broadcast.recipientFilters.summary.status.' + filter.status, filter.status));
+      }
+      if (
+        filter.is_admin === '1' ||
+        filter.is_admin === 1 ||
+        filter.is_admin === true ||
+        filter.is_admin === 'true'
+      ) {
+        parts.push(t('admin.broadcast.recipientFilters.summary.role.admin'));
+      } else if (
+        filter.is_admin === '0' ||
+        filter.is_admin === 0 ||
+        filter.is_admin === false ||
+        filter.is_admin === 'false'
+      ) {
+        parts.push(t('admin.broadcast.recipientFilters.summary.role.user'));
+      }
+      if (filter.limit) {
+        parts.push(t('admin.broadcast.recipientFilters.summary.limit', { count: filter.limit }));
+      }
+
+      if (parts.length === 0) {
+        return t('admin.broadcast.recipientFilters.summary.fallback', 'Custom filter');
+      }
+
+      const joiner = t('admin.broadcast.recipientFilters.summary.joiner', ' • ');
+      return parts.join(joiner);
+    },
+    [t]
   );
 
   const loadRecipients = useCallback(
@@ -379,14 +482,13 @@ export function BroadcastCenter() {
   };
 
   const addFilterGroup = () => {
-    const params = buildRecipientParams();
-    const { page, limit, ...filterPayload } = params;
-    if (Object.keys(filterPayload).length === 0) {
-      toast.error(t('admin.broadcast.recipientFilters.empty', 'Please configure at least one filter condition.'));
+    if (!hasRecipientCriteria) {
+      toast.error(t('admin.broadcast.recipientFilters.requireCondition', 'Please configure at least one filter condition.'));
       return;
     }
     ensureCustomScope();
-    setAppliedFilters((prev) => [...prev, filterPayload]);
+    const payload = buildFilterPayload();
+    setAppliedFilters((prev) => [...prev, payload]);
     toast.success(t('admin.broadcast.recipientFilters.added', 'Filter added to broadcast payload.'));
   };
 
@@ -740,7 +842,7 @@ export function BroadcastCenter() {
                 )}
               </div>
               {appliedFilters.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t('admin.broadcast.recipientFilters.empty', 'No filter groups added yet.')}</p>
+                <p className="text-sm text-muted-foreground">{t('admin.broadcast.recipientFilters.none', 'No filter groups added yet.')}</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {appliedFilters.map((filter, index) => (
@@ -766,10 +868,20 @@ export function BroadcastCenter() {
                   <h4 className="text-sm font-medium text-gray-700">{t('admin.broadcast.recipientSearch.title', 'Advanced recipient search')}</h4>
                   <p className="text-xs text-muted-foreground">{t('admin.broadcast.recipientSearch.description', 'Filter users by school, email domain or other attributes, then select individuals or add the filter group to this broadcast.')}</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={addFilterGroup}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addFilterGroup}
+                  disabled={!hasRecipientCriteria}
+                  title={!hasRecipientCriteria ? t('admin.broadcast.recipientFilters.hint', 'Set a condition above to enable this button.') : undefined}
+                >
                   {t('admin.broadcast.recipientFilters.add', 'Add filter to broadcast')}
                 </Button>
               </div>
+
+              {!hasRecipientCriteria && (
+                <p className="text-xs text-muted-foreground">{t('admin.broadcast.recipientFilters.hint', 'Set a condition above to enable this button.')}</p>
+              )}
 
               <div className="grid gap-3 md:grid-cols-4">
                 <Input
@@ -854,6 +966,11 @@ export function BroadcastCenter() {
                   <p className="text-sm text-muted-foreground">{t('admin.broadcast.recipientSearch.noResults', 'No users match the current search conditions.')}</p>
                 ) : (
                   <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      {t('admin.broadcast.recipientSearch.resultCount', {
+                        count: recipientResults.items.length,
+                      })}
+                    </p>
                     {recipientResults.items.map((item) => {
                       const id = Number(item?.id ?? 0);
                       const checked = selectedRecipients.has(id);
@@ -1184,3 +1301,4 @@ export function BroadcastCenter() {
 }
 
 export default BroadcastCenter;
+

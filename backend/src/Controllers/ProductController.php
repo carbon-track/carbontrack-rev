@@ -988,7 +988,8 @@ class ProductController
             $categoryRecord = $this->resolveCategoryFromPayload($rawCategory);
             $imagePath = $this->extractPrimaryImagePath($data);
             $imagesPayload = isset($data['images']) ? (is_string($data['images']) ? $data['images'] : json_encode($data['images'])) : null;
-            $status = in_array(($data['status'] ?? 'active'), ['active', 'inactive'], true) ? $data['status'] : 'active';
+            $statusInput = $data['status'] ?? 'active';
+            $status = in_array($statusInput, ['active', 'inactive'], true) ? $statusInput : 'active';
 
             $categoryName = $categoryRecord['name'] ?? (is_string($rawCategory) ? trim($rawCategory) : null);
             if ($categoryName === '') {
@@ -1040,7 +1041,7 @@ class ProductController
                     'tags' => array_map(static fn($tag) => $tag['name'], $normalizedTags),
                 ]);
 
-                return $this->json($response, ['success' => true, 'id' => $newId, 'message' => 'Product created successfully']);
+                return $this->json($response, ['success' => true, 'id' => $newId, 'message' => 'Product created successfully'], 201);
             } catch (\Throwable $txError) {
                 try { $this->db->rollBack(); } catch (\Throwable $ignore) {}
                 throw $txError;

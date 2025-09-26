@@ -799,9 +799,71 @@
         "showDetails": "显示接收详情",
         "hideDetails": "收起接收详情",
         "more": "等 {{count}} 位用户"
+      },
+      "recipients": {
+        "selected": "已选收件人",
+        "none": "尚未选择单独收件人。",
+        "selectedCount": "已选择：{{count}}",
+        "emptySelection": "当前结果集中没有可添加的用户。",
+        "addedAll": "已将可见用户加入收件人列表。"
+      },
+      "recipientFilters": {
+        "title": "已应用的筛选条件",
+        "none": "尚未添加筛选条件。",
+        "add": "添加筛选条件",
+        "added": "筛选条件已加入本次广播。",
+        "requireCondition": "请先设置至少一个筛选条件。",
+        "hint": "设置好上方的筛选条件后即可启用此按钮。",
+        "summary": {
+          "search": "文本包含“{{value}}”",
+          "fields": "字段：{{fields}}",
+          "school": "学校包含“{{value}}”",
+          "emailSuffix": "邮箱域名以“{{value}}”结尾",
+          "status": {
+            "active": "状态：启用",
+            "inactive": "状态：停用"
+          },
+          "role": {
+            "admin": "角色：管理员",
+            "user": "角色：普通用户"
+          },
+          "limit": "最多 {{count}} 名收件人",
+          "joiner": " | ",
+          "fallback": "自定义筛选"
+        }
+      },
+      "recipientSearch": {
+        "title": "高级收件人搜索",
+        "description": "按照学校、邮箱域名等属性筛选用户，然后选择个人或将筛选条件加入本次广播。",
+        "searchPlaceholder": "搜索姓名 / 邮箱 / 学校……",
+        "fields": {
+          "all": "主要字段",
+          "email": "邮箱",
+          "school": "学校",
+          "location": "地区",
+          "username": "用户名"
+        },
+        "schoolPlaceholder": "学校名称包含……",
+        "emailPlaceholder": "邮箱域名，例如 example.com",
+        "status": {
+          "any": "全部状态",
+          "active": "启用",
+          "inactive": "停用"
+        },
+        "role": {
+          "any": "全部角色",
+          "admin": "管理员",
+          "user": "普通用户"
+        },
+        "limit": "最多 {{count}} 位用户",
+        "addAll": "添加当前可见用户",
+        "error": "搜索失败",
+        "noResults": "未找到符合当前条件的用户。",
+        "noEmail": "暂无邮箱信息",
+        "pageInfo": "第 {{page}} 页",
+        "resultCount": "本页显示 {{count}} 位用户。"
       }
     },
-
     "dashboard": {
       "title": "管理仪表盘",
       "description": "平台关键指标概览与近期趋势",
@@ -1500,19 +1562,19 @@
         "table": {
           "username": "用户名",
           "email": "邮箱",
-        "status": "状态",
-        "awardedAt": "授予时间",
-        "actions": "操作"
-      },
-      "remove": "收回",
-      "removeConfirmTitle": "确认收回徽章",
-      "removeConfirmDescription": "将收回 {{username}} 当前的徽章，并记录在审计日志中。",
-      "removeConfirmDescriptionPlain": "将收回该用户当前的徽章，并记录在审计日志中。",
-      "removeAction": "确认收回",
-      "removeSuccess": "已收回该用户的徽章。",
-      "removeFailed": "收回徽章失败，请稍后再试。"
-    }
-  },
+          "status": "状态",
+          "awardedAt": "授予时间",
+          "actions": "操作"
+        },
+        "remove": "收回",
+        "removeConfirmTitle": "确认收回徽章",
+        "removeConfirmDescription": "将收回 {{username}} 当前的徽章，并记录在审计日志中。",
+        "removeConfirmDescriptionPlain": "将收回该用户当前的徽章，并记录在审计日志中。",
+        "removeAction": "确认收回",
+        "removeSuccess": "已收回该用户的徽章。",
+        "removeFailed": "收回徽章失败，请稍后再试。"
+      }
+    },
     "avatars": {
       "listTitle": "头像库",
       "loadFailed": "加载头像列表失败",
@@ -1812,4 +1874,3 @@
     "unit": "单位"
   }
 }
-
