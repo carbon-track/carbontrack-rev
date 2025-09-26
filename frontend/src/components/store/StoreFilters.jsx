@@ -12,7 +12,7 @@ export function StoreFilters({
   categories = [], 
   isLoading = false 
 }) {
-const { t } = useTranslation();
+  const { t } = useTranslation();
   const normalizeSlugValue = useCallback((value) => {
     if (typeof value !== 'string') {
       value = value !== undefined && value !== null ? String(value) : '';
@@ -169,12 +169,16 @@ const { t } = useTranslation();
             disabled={isLoading}
           >
             <option value="">{t('store.filters.allCategories')}</option>
-            {categories.map((category) => (
-              <option key={category.category} value={category.category}>
-                {t(`store.categories.${category.category}`, category.category)} 
-                ({category.product_count})
-              </option>
-            ))}
+            {categories.map((category, index) => {
+              const key = (category.slug || category.category || category.name || `category-${index}`).toString();
+              const label = category.name || category.category || key;
+              const count = category.product_count ?? category.count ?? category.total ?? 0;
+              return (
+                <option key={key} value={key}>
+                  {t(`store.categories.${key}`, label)} ({count})
+                </option>
+              );
+            })}
           </select>
         </div>
 
@@ -319,18 +323,23 @@ const { t } = useTranslation();
             {t('store.filters.allProducts')}
           </Button>
           
-          {categories.slice(0, 5).map((category) => (
-            <Button
-              key={category.category}
-              variant={filters.category === category.category ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleFilterChange('category', category.category)}
-              className="text-xs"
-            >
-              {t(`store.categories.${category.category}`, category.category)}
-              <span className="ml-1 text-xs opacity-75">({category.product_count})</span>
-            </Button>
-          ))}
+          {categories.slice(0, 5).map((category, index) => {
+            const key = (category.slug || category.category || category.name || `category-${index}`).toString();
+            const label = category.name || category.category || key;
+            const count = category.product_count ?? category.count ?? category.total ?? 0;
+            return (
+              <Button
+                key={key}
+                variant={filters.category === key ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleFilterChange('category', key)}
+                className="text-xs"
+              >
+                {t(`store.categories.${key}`, label)}
+                <span className="ml-1 text-xs opacity-75">({count})</span>
+              </Button>
+            );
+          })}
 
           <Button
             variant={filters.sort === 'popular' ? "default" : "outline"}

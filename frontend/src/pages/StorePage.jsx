@@ -9,6 +9,40 @@ import { ExchangeModal } from '../components/store/ExchangeModal';
 import { StoreFilters } from '../components/store/StoreFilters';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
+
+const normalizeStoreCategory = (item) => {
+  if (!item) {
+    return null;
+  }
+  if (typeof item === 'string') {
+    const name = item.trim();
+    if (!name) {
+      return null;
+    }
+    const slug = name.trim();
+    return {
+      name,
+      category: name,
+      slug,
+      product_count: 0,
+    };
+  }
+  const nameRaw = item.name ?? item.category ?? '';
+  const name = typeof nameRaw === 'string' ? nameRaw.trim() : String(nameRaw || '').trim();
+  const slugRaw = item.slug ?? item.category_slug ?? item.category ?? name;
+  const slugBase = typeof slugRaw === 'string' ? slugRaw.trim() : String(slugRaw || '').trim();
+  const slugValue = (slugBase || name || '').toString().trim();
+  const slug = slugValue ? slugValue.toLowerCase() : slugValue;
+  const productCount = item.product_count ?? item.count ?? item.total ?? 0;
+  return {
+    ...item,
+    name: name || slugValue,
+    category: item.category ?? name ?? slugValue,
+    slug: slug || slugValue,
+    product_count: productCount,
+  };
+};
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 
 export default function StorePage() {
@@ -118,8 +152,16 @@ export default function StorePage() {
   const fetchCategories = async () => {
     try {
       const res = await productAPI.getCategories();
-      const data = res.data?.data;
-      setCategories(Array.isArray(data) ? data : []);
+      const payload = res.data?.data;
+      const source = Array.isArray(payload?.categories)
+        ? payload.categories
+        : Array.isArray(payload)
+          ? payload
+          : res.data?.categories || [];
+      const normalized = Array.isArray(source)
+        ? source.map((item) => normalizeStoreCategory(item)).filter(Boolean)
+        : [];
+      setCategories(normalized);
     } catch (error) {
       console.error('Failed to fetch categories:', error);
     }

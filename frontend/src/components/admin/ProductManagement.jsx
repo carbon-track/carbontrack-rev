@@ -38,7 +38,7 @@ import { Pagination } from '@/components/ui/Pagination';
 const DEFAULT_FORM = {
   name: '',
   description: '',
-  category: '',
+  category: null,
   points_required: 0,
   stock: -1,
   status: 'active',
@@ -73,6 +73,97 @@ const slugify = (input) => {
 
 const randomSlug = () => 'tag-' + Math.random().toString(36).slice(2, 8);
 
+const normalizeCategory = (category) => {
+  if (!category) {
+    return null;
+  }
+
+  if (typeof category === 'string') {
+    const name = category.trim();
+    if (!name) {
+      return null;
+    }
+    const slug = name.trim().toLowerCase();
+    return {
+      id: null,
+      name,
+      slug: slug || name,
+    };
+  }
+
+  if (typeof category === 'object') {
+    const idRaw =
+      category.id ??
+      category.category_id ??
+      category.value ??
+      category.key ??
+      null;
+    const id =
+      idRaw !== null &&
+      idRaw !== undefined &&
+      idRaw !== '' &&
+      !Number.isNaN(Number(idRaw))
+        ? Number(idRaw)
+        : null;
+
+    const nameRaw =
+      category.name ??
+      category.category ??
+      category.label ??
+      category.value ??
+      '';
+    const name =
+      typeof nameRaw === 'string' ? nameRaw.trim() : String(nameRaw || '').trim();
+
+    const slugRaw =
+      category.slug ??
+      category.category_slug ??
+      category.value ??
+      '';
+    let slug =
+      typeof slugRaw === 'string' ? slugRaw.trim() : String(slugRaw || '').trim();
+    if (!slug && name) {
+      slug = name.trim();
+    }
+    if (slug) {
+      slug = slug.toLowerCase();
+    }
+    if (!slug) {
+      slug = randomSlug();
+    }
+
+    const fallbackSlug =
+      typeof slugRaw === 'string' ? slugRaw.trim() : String(slugRaw || '').trim();
+    const finalName = name || fallbackSlug || slug;
+
+    if (!finalName) {
+      return null;
+    }
+
+    return {
+      id,
+      name: finalName,
+      slug,
+    };
+  }
+
+  return null;
+};
+
+const mapCategorySuggestions = (items) => {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => {
+      const normalized = normalizeCategory(item);
+      if (!normalized) return null;
+      return {
+        ...normalized,
+        product_count: item?.product_count ?? item?.count ?? item?.total ?? 0,
+      };
+    })
+    .filter(Boolean);
+};
+
 const normalizeTag = (tag) => {
   if (!tag) {
     return null;
@@ -97,6 +188,7 @@ const normalizeTag = (tag) => {
 
 const buildProductPayload = (form) => {
   const cleanName = (form.name || '').trim();
+  const normalizedCategory = normalizeCategory(form.category);
   const normalizedTags = (form.tags || [])
     .map((item) => normalizeTag(item))
     .filter(Boolean)
@@ -118,7 +210,9 @@ const buildProductPayload = (form) => {
   return {
     name: cleanName,
     description: form.description || '',
-    category: form.category || null,
+    category: normalizedCategory
+      ? { id: normalizedCategory.id, name: normalizedCategory.name, slug: normalizedCategory.slug }
+      : null,
     points_required: sanitizeNumber(form.points_required),
     stock: sanitizeNumber(form.stock, -1),
     status: form.status || 'active',
@@ -173,9 +267,14 @@ export function ProductManagement() {
   };
 
   const categories = useMemo(() => {
-    const source = categoriesQuery.data?.data || categoriesQuery.data?.categories || [];
+    const dataPayload = categoriesQuery.data?.data;
+    const source = Array.isArray(dataPayload?.categories)
+      ? dataPayload.categories
+      : Array.isArray(dataPayload)
+        ? dataPayload
+        : categoriesQuery.data?.categories || [];
     if (!Array.isArray(source)) return [];
-    return source.map((item) => ({ id: item.category || item.id || item.name, name: item.category || item.name || item.id }));
+    return mapCategorySuggestions(source);
   }, [categoriesQuery.data]);
 
   useEffect(() => {
@@ -289,7 +388,10 @@ export function ProductManagement() {
               >
                 <option value="">{t('common.all')}</option>
                 {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
+                  <option
+                    key={category.slug || category.id || category.name}
+                    value={category.slug || category.id || category.name}
+                  >
                     {category.name}
                   </option>
                 ))}
@@ -508,7 +610,11 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
       setFormValues({
         name: product.name || '',
         description: product.description || '',
-        category: product.category || '',
+        category: normalizeCategory({
+          id: product.category_id ?? product.categoryId ?? null,
+          name: product.category ?? '',
+          slug: product.category_slug ?? product.categorySlug ?? '',
+        }),
         points_required: product.points_required !== undefined && product.points_required !== null ? product.points_required : product.price || 0,
         stock: product.stock !== undefined && product.stock !== null ? product.stock : -1,
         status: product.status || 'active',
@@ -531,6 +637,10 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
 
   const handleTagChange = (nextTags) => {
     setFormValues((prev) => ({ ...prev, tags: nextTags }));
+  };
+
+  const handleCategoryChange = (nextCategory) => {
+    setFormValues((prev) => ({ ...prev, category: normalizeCategory(nextCategory) }));
   };
 
   const handleImageUpload = async (event) => {
@@ -591,7 +701,7 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => (!open ? onClose() : null)}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{product ? t('admin.products.editProduct') : t('admin.products.addProduct')}</DialogTitle>
           <DialogDescription>{t('admin.products.formModal.description')}</DialogDescription>
@@ -610,22 +720,12 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
               />
             </div>
             <div>
-              <label htmlFor="product-category" className="block text-sm font-medium text-gray-700">
-                {t('admin.products.form.category')}
-              </label>
-              <select
-                id="product-category"
+              <ProductCategorySelector
                 value={formValues.category}
-                onChange={handleChange('category')}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
-              >
-                <option value="">{t('admin.products.form.categoryPlaceholder')}</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+                onChange={handleCategoryChange}
+                initialCategories={categories}
+                t={t}
+              />
             </div>
             <div>
               <label htmlFor="product-status" className="block text-sm font-medium text-gray-700">
@@ -758,6 +858,174 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
     </Dialog>
   );
 }
+function ProductCategorySelector({ value, onChange, initialCategories = [], t }) {
+  const [query, setQuery] = useState('');
+  const inputId = useMemo(() => 'product-category-input-' + Math.random().toString(36).slice(2, 8), []);
+  const [suggestions, setSuggestions] = useState(() => mapCategorySuggestions(initialCategories));
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef(null);
+
+  const normalizedValue = normalizeCategory(value);
+
+  useEffect(() => {
+    const incoming = mapCategorySuggestions(initialCategories);
+    if (!incoming.length) {
+      return;
+    }
+    setSuggestions((prev) => {
+      const map = new Map();
+      incoming.forEach((item) => {
+        const key = (item.slug || item.name || '').toLowerCase();
+        if (key) {
+          map.set(key, item);
+        }
+      });
+      prev.forEach((item) => {
+        if (!item) return;
+        const key = (item.slug || item.name || '').toLowerCase();
+        if (key && !map.has(key)) {
+          map.set(key, item);
+        }
+      });
+      return Array.from(map.values());
+    });
+  }, [initialCategories]);
+
+  const loadSuggestions = useCallback(async (term) => {
+    setLoading(true);
+    try {
+      const response = await productAPI.getCategories({ search: term || '', limit: 12 });
+      const payload = response.data?.data;
+      const items = Array.isArray(payload?.categories)
+        ? payload.categories
+        : Array.isArray(payload)
+          ? payload
+          : response.data?.categories || [];
+      setSuggestions(mapCategorySuggestions(items));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Category search failed', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSuggestions('');
+  }, [loadSuggestions]);
+
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      loadSuggestions(query.trim());
+    }, 250);
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [query, loadSuggestions]);
+
+  const handleSelect = useCallback((category) => {
+    const normalized = normalizeCategory(category);
+    if (!normalized) return;
+    if (typeof onChange === 'function') {
+      onChange(normalized);
+    }
+    setQuery('');
+  }, [onChange]);
+
+  const handleCreate = useCallback(() => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    handleSelect({ name: trimmed });
+  }, [query, handleSelect]);
+
+  const handleClear = useCallback(() => {
+    if (typeof onChange === 'function') {
+      onChange(null);
+    }
+  }, [onChange]);
+
+  return (
+    <div>
+      <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">{t('admin.products.form.category')}</label>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {normalizedValue ? (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            <span>{normalizedValue.name}</span>
+            <button
+              type="button"
+              className="rounded-full p-0.5 hover:bg-gray-200"
+              onClick={handleClear}
+              aria-label={t('admin.products.form.removeCategory', '移除分类')}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ) : (
+          <span className="text-xs text-gray-500">{t('admin.products.form.categoryPlaceholder')}</span>
+        )}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <Input
+          id={inputId}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              handleCreate();
+            }
+          }}
+          placeholder={t('admin.products.form.categorySearchPlaceholder', '输入或搜索分类名称')}
+        />
+        <Button type="button" variant="outline" onClick={handleCreate} disabled={!query.trim()}>
+          {t('admin.products.form.useCategory', '使用分类')}
+        </Button>
+      </div>
+      <p className="mt-1 text-xs text-gray-500">
+        {t('admin.products.form.categoryHint', '可选择已有分类或输入新分类，新分类会自动保存。')}
+      </p>
+      <div className="mt-3 rounded-md border bg-gray-50">
+        <div className="flex items-center justify-between border-b px-3 py-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+          <span>{t('admin.products.form.suggestions')}</span>
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-500" /> : null}
+        </div>
+        <div className="max-h-44 overflow-y-auto">
+          {suggestions.length === 0 && !loading ? (
+            <div className="px-3 py-2 text-sm text-gray-500">
+              {t('admin.products.form.noCategorySuggestions', '暂无匹配的分类，按回车创建新的分类。')}
+            </div>
+          ) : (
+            suggestions.map((item) => {
+              const key = `category-suggestion-${item.slug || item.id || item.name}`;
+              const isActive =
+                normalizedValue &&
+                (normalizedValue.slug === item.slug || normalizedValue.name === item.name);
+              return (
+                <button
+                  type="button"
+                  key={key}
+                  onClick={() => handleSelect(item)}
+                  className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-white ${isActive ? 'bg-white' : ''}`}
+                >
+                  <span>{item.name}</span>
+                  <span className="text-xs uppercase text-gray-400">
+                    {item.product_count !== undefined && item.product_count !== null ? item.product_count : item.slug}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProductTagSelector({ value, onChange, t }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
