@@ -432,6 +432,7 @@ export default function StorePage() {
       <ExchangeModal
         product={selectedProduct}
         userPoints={user?.points || 0}
+        userEmail={user?.email || ''}
         isOpen={showExchangeModal}
         onClose={() => {
           setShowExchangeModal(false);

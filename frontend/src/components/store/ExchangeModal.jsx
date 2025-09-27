@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ShoppingCart, Package, MapPin, Phone, MessageSquare } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { formatNumber } from '../../lib/utils';
@@ -7,7 +7,7 @@ import { Input } from '../ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
 import R2Image from '../common/R2Image';
 
-export function ExchangeModal({ product, userPoints, isOpen, onClose, onConfirm, isLoading }) {
+export function ExchangeModal({ product, userPoints, userEmail, isOpen, onClose, onConfirm, isLoading }) {
   const { t } = useTranslation();
   const isHttpUrl = (value) => typeof value === 'string' && /^https?:\/\//.test(value);
 
@@ -41,9 +41,23 @@ export function ExchangeModal({ product, userPoints, isOpen, onClose, onConfirm,
 
   const [quantity, setQuantity] = useState(1);
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [contactAreaCode, setContactAreaCode] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    setQuantity(1);
+    setDeliveryAddress(userEmail || '');
+    setContactAreaCode('');
+    setContactPhone('');
+    setNotes('');
+    setErrors({});
+  }, [isOpen, product?.id, userEmail]);
 
   if (!isOpen || !product) return null;
 
@@ -65,14 +79,26 @@ export function ExchangeModal({ product, userPoints, isOpen, onClose, onConfirm,
       newErrors.quantity = t('store.exchange.invalidQuantity');
     }
 
-    if (!deliveryAddress.trim()) {
+    const trimmedAddress = deliveryAddress.trim();
+    const trimmedAreaCode = contactAreaCode.trim();
+    const trimmedPhone = contactPhone.trim();
+
+    if (!trimmedAddress) {
       newErrors.deliveryAddress = t('store.exchange.addressRequired');
     }
 
-    if (!contactPhone.trim()) {
-      newErrors.contactPhone = t('store.exchange.phoneRequired');
-    } else if (!/^1[3-9]\d{9}$/.test(contactPhone.trim())) {
-      newErrors.contactPhone = t('store.exchange.invalidPhone');
+    if (trimmedPhone) {
+      if (!trimmedAreaCode) {
+        newErrors.contactAreaCode = t('store.exchange.areaCodeRequired');
+      } else if (!/^\+?\d{1,5}$/.test(trimmedAreaCode)) {
+        newErrors.contactAreaCode = t('store.exchange.invalidAreaCode');
+      }
+
+      if (!/^[0-9\-\s]{5,20}$/.test(trimmedPhone)) {
+        newErrors.contactPhone = t('store.exchange.invalidPhone');
+      }
+    } else if (trimmedAreaCode) {
+      newErrors.contactPhone = t('store.exchange.phoneRequiredWhenAreaCode');
     }
 
     setErrors(newErrors);
@@ -82,12 +108,19 @@ export function ExchangeModal({ product, userPoints, isOpen, onClose, onConfirm,
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+
+    const trimmedAddress = deliveryAddress.trim();
+    const trimmedAreaCode = contactAreaCode.trim();
+    const trimmedPhone = contactPhone.trim();
+    const trimmedNotes = notes.trim();
+
     onConfirm({
       product_id: product.id,
       quantity,
-      delivery_address: deliveryAddress.trim(),
-      contact_phone: contactPhone.trim(),
-      notes: notes.trim()
+      delivery_address: trimmedAddress,
+      contact_area_code: trimmedAreaCode || undefined,
+      contact_phone: trimmedPhone || undefined,
+      notes: trimmedNotes || undefined
     });
   };
 
@@ -214,32 +247,60 @@ export function ExchangeModal({ product, userPoints, isOpen, onClose, onConfirm,
                   placeholder={t('store.exchange.addressPlaceholder')}
                   className={errors.deliveryAddress ? 'border-red-500' : ''}
                 />
+                <p className="text-gray-500 text-sm mt-1">
+                  {t('store.exchange.addressHint')}
+                </p>
                 {errors.deliveryAddress && (
                   <p className="text-red-500 text-sm mt-1">{errors.deliveryAddress}</p>
                 )}
               </div>
 
-              {/* 联系电话 */}
+              {/* 联系方式 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Phone className="h-4 w-4 inline mr-1" />
-                  {t('store.exchange.contactPhone')}
+                  {t('store.exchange.contactPhone')} ({t('common.optional')})
                 </label>
-                <Input
-                  type="tel"
-                  value={contactPhone}
-                  onChange={(e) => {
-                    setContactPhone(e.target.value);
-                    if (errors.contactPhone) {
-                      setErrors(prev => ({ ...prev, contactPhone: null }));
-                    }
-                  }}
-                  placeholder={t('store.exchange.phonePlaceholder')}
-                  className={errors.contactPhone ? 'border-red-500' : ''}
-                />
-                {errors.contactPhone && (
-                  <p className="text-red-500 text-sm mt-1">{errors.contactPhone}</p>
-                )}
+                <div className="flex flex-col md:flex-row gap-3">
+                  <div className="md:w-32">
+                    <Input
+                      type="text"
+                      value={contactAreaCode}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setContactAreaCode(value);
+                        if (errors.contactAreaCode) {
+                          setErrors(prev => ({ ...prev, contactAreaCode: null }));
+                        }
+                      }}
+                      placeholder={t('store.exchange.areaCodePlaceholder')}
+                      className={errors.contactAreaCode ? 'border-red-500' : ''}
+                    />
+                    {errors.contactAreaCode && (
+                      <p className="text-red-500 text-sm mt-1">{errors.contactAreaCode}</p>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      type="tel"
+                      value={contactPhone}
+                      onChange={(e) => {
+                        setContactPhone(e.target.value);
+                        setErrors(prev => ({
+                          ...prev,
+                          contactPhone: null,
+                          contactAreaCode: null
+                        }));
+                      }}
+                      placeholder={t('store.exchange.phonePlaceholder')}
+                      className={errors.contactPhone ? 'border-red-500' : ''}
+                    />
+                    {errors.contactPhone && (
+                      <p className="text-red-500 text-sm mt-1">{errors.contactPhone}</p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-gray-500 text-sm mt-1">{t('store.exchange.phoneOptionalHint')}</p>
               </div>
 
               {/* 备注 */}
