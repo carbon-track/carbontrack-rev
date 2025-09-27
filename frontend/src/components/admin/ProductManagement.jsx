@@ -280,8 +280,42 @@ export function ProductManagement() {
 
   useEffect(() => {
     const paths = products
-      .map((p) => p.image_path || (typeof p.image_url === 'string' && p.image_url.indexOf('http') !== 0 ? p.image_url : null))
+      .map((product) => {
+        const images = Array.isArray(product.images) ? product.images : [];
+        const firstImage = images.length > 0 ? images[0] : null;
+
+        const firstImagePath = (() => {
+          if (!firstImage) return null;
+          if (typeof firstImage === 'string') {
+            return firstImage.indexOf('http') === 0 ? null : firstImage;
+          }
+          if (typeof firstImage === 'object' && firstImage !== null) {
+            if (firstImage.file_path) {
+              return firstImage.file_path;
+            }
+            if (typeof firstImage.url === 'string' && firstImage.url.indexOf('http') !== 0) {
+              return firstImage.url;
+            }
+          }
+          return null;
+        })();
+
+        const candidateFilePath = product.image_path
+          || firstImagePath
+          || (typeof product.image_url === 'string' && product.image_url.indexOf('http') !== 0 ? product.image_url : null);
+
+        const hasInlinePresigned =
+          (typeof product.image_presigned_url === 'string' && product.image_presigned_url) ||
+          (firstImage && typeof firstImage === 'object' && firstImage !== null && typeof firstImage.presigned_url === 'string' && firstImage.presigned_url);
+
+        if (!candidateFilePath || hasInlinePresigned) {
+          return null;
+        }
+
+        return candidateFilePath;
+      })
       .filter(Boolean);
+
     if (paths.length) {
       prefetchPresignedUrls(paths).catch(() => {});
     }
@@ -471,15 +505,51 @@ export function ProductManagement() {
                   const price = product.points_required !== undefined && product.points_required !== null ? product.points_required : product.price || 0;
                   const isOutOfStock = product.stock === 0;
                   const unlimited = product.stock === -1;
-                  const resolvedImageSrc = typeof product.image_presigned_url === 'string' && product.image_presigned_url ? product.image_presigned_url : (typeof product.image_url === 'string' && product.image_url.indexOf('http') === 0 ? product.image_url : null);
-                  const imagePath = product.image_path || (typeof product.image_url === 'string' && product.image_url.indexOf('http') !== 0 ? product.image_url : null);
+                  const images = Array.isArray(product.images) ? product.images : [];
+                  const firstImage = images.length > 0 ? images[0] : null;
+
+                  const firstImagePath = (() => {
+                    if (!firstImage) return null;
+                    if (typeof firstImage === 'string') {
+                      return firstImage.indexOf('http') === 0 ? null : firstImage;
+                    }
+                    if (typeof firstImage === 'object' && firstImage !== null) {
+                      if (firstImage.file_path) {
+                        return firstImage.file_path;
+                      }
+                      if (typeof firstImage.url === 'string' && firstImage.url.indexOf('http') !== 0) {
+                        return firstImage.url;
+                      }
+                    }
+                    return null;
+                  })();
+
+                  const candidateFilePath = product.image_path
+                    || firstImagePath
+                    || (typeof product.image_url === 'string' && product.image_url.indexOf('http') !== 0 ? product.image_url : null);
+
+                  const presignedFromProduct = typeof product.image_presigned_url === 'string' && product.image_presigned_url ? product.image_presigned_url : null;
+                  const presignedFromImage = firstImage && typeof firstImage === 'object' && firstImage !== null && typeof firstImage.presigned_url === 'string' && firstImage.presigned_url
+                    ? firstImage.presigned_url
+                    : null;
+
+                  const httpImageCandidates = [
+                    presignedFromProduct,
+                    presignedFromImage,
+                    typeof product.image_url === 'string' && product.image_url.indexOf('http') === 0 ? product.image_url : null,
+                    firstImage && typeof firstImage === 'string' && firstImage.indexOf('http') === 0 ? firstImage : null,
+                    firstImage && typeof firstImage === 'object' && firstImage !== null && typeof firstImage.url === 'string' && firstImage.url.indexOf('http') === 0 ? firstImage.url : null,
+                  ];
+
+                  const resolvedImageSrc = httpImageCandidates.find((value) => typeof value === 'string' && value) || null;
+                  const imageFilePath = candidateFilePath || null;
 
                   return (
                     <tr key={product.id}>
                       <td className="px-6 py-4">
-                        {imagePath || resolvedImageSrc ? (
+                        {imageFilePath || resolvedImageSrc ? (
                           <R2Image
-                            filePath={imagePath || undefined}
+                            filePath={imageFilePath || undefined}
                             src={resolvedImageSrc || undefined}
                             alt={product.name}
                             className="h-12 w-12 rounded-lg object-cover"
@@ -715,7 +785,7 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
 
   const previewSource = formValues.image_presigned_url || formValues.image_url || '';
   const imagePath = formValues.image_path || (previewSource && previewSource.indexOf('http') !== 0 ? previewSource : '');
-  const externalImage = previewSource && previewSource.indexOf('http') === 0 ? previewSource : '';
+  const externalImage = !imagePath && previewSource && previewSource.indexOf('http') === 0 ? previewSource : '';
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => (!open ? onClose() : null)}>
