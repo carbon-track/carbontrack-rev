@@ -329,7 +329,7 @@ export function DataInputForm({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Upload className="inline h-4 w-4 mr-1" />
-                {t('activities.form.uploadImage')} (提交时上传)
+                {t('activities.form.uploadImage')}
               </label>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col gap-3">
                 <input

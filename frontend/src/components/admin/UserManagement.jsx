@@ -763,11 +763,11 @@ export function UserManagement() {
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.registrationDays', '注册天数')}</p>
                   <p className="mt-1 text-sm font-medium text-gray-900">{selectedUser?.days_since_registration ?? 0}</p>
                 </div>
-                {selectedUser?.last_login_at && (
+                {selectedUser?.lastlgn && (
                   <div className="rounded-lg border bg-white p-4 shadow-sm sm:col-span-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.lastLogin', '最近登录')}</p>
                     <p className="mt-1 text-sm font-medium text-gray-900">
-                      {format(new Date(selectedUser.last_login_at), 'yyyy-MM-dd HH:mm')}
+                      {format(new Date(selectedUser.lastlgn), 'yyyy-MM-dd HH:mm')}
                     </p>
                   </div>
                 )}

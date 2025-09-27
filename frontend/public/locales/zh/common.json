@@ -720,7 +720,8 @@
       "broadcast": "广播中心",
       "badges": "徽章管理",
       "avatars": "头像管理",
-      "audit": "审计日志"
+      "audit": "审计日志",
+      "systemLogs": "系统日志"
     },
     "broadcast": {
       "title": "广播中心",
@@ -1099,6 +1100,11 @@
         "description": "商品描述",
         "category": "商品分类",
         "categoryPlaceholder": "选择或输入分类",
+        "categorySearchPlaceholder": "输入或搜索分类名称",
+        "categoryHint": "可选择已有分类或输入新分类，新分类会自动保存。",
+        "useCategory": "使用分类",
+        "removeCategory": "移除分类",
+        "noCategorySuggestions": "暂无匹配的分类，按回车创建新的分类。",
         "uncategorized": "未分类",
         "pointsRequired": "所需积分",
         "status": "上架状态",
@@ -1740,6 +1746,8 @@
   "errors": {
     "loadFailed": "加载失败",
     "network": "网络连接错误",
+    "unexpected": "发生未知错误",
+    "tryAgain": "请稍后重试或刷新页面",
     "server": "服务器错误",
     "unauthorized": "未授权访问",
     "forbidden": "访问被禁止",

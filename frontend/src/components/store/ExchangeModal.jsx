@@ -9,6 +9,36 @@ import R2Image from '../common/R2Image';
 
 export function ExchangeModal({ product, userPoints, isOpen, onClose, onConfirm, isLoading }) {
   const { t } = useTranslation();
+  const isHttpUrl = (value) => typeof value === 'string' && /^https?:\/\//.test(value);
+
+  const resolveImageCandidate = (candidate) => {
+    if (!candidate) {
+      return { src: null, path: null };
+    }
+    if (typeof candidate === 'string') {
+      return isHttpUrl(candidate)
+        ? { src: candidate, path: null }
+        : { src: null, path: candidate };
+    }
+    if (Array.isArray(candidate) && candidate.length) {
+      return resolveImageCandidate(candidate[0]);
+    }
+    if (typeof candidate === 'object') {
+      const presigned = typeof candidate.presigned_url === 'string' && candidate.presigned_url ? candidate.presigned_url : null;
+      const rawUrl = typeof candidate.url === 'string' && candidate.url ? candidate.url : (typeof candidate.public_url === 'string' ? candidate.public_url : null);
+      let src = presigned || (rawUrl && isHttpUrl(rawUrl) ? rawUrl : null);
+      let path = typeof candidate.file_path === 'string' && candidate.file_path !== '' ? candidate.file_path : null;
+      if (!path && rawUrl && !isHttpUrl(rawUrl)) {
+        path = rawUrl;
+      }
+      if (!path && typeof candidate.path === 'string' && candidate.path !== '') {
+        path = candidate.path;
+      }
+      return { src, path };
+    }
+    return { src: null, path: null };
+  };
+
   const [quantity, setQuantity] = useState(1);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -16,6 +46,13 @@ export function ExchangeModal({ product, userPoints, isOpen, onClose, onConfirm,
   const [errors, setErrors] = useState({});
 
   if (!isOpen || !product) return null;
+
+  const primaryImageCandidate = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : product.images;
+  const candidateMeta = resolveImageCandidate(primaryImageCandidate);
+  const fallbackMeta = resolveImageCandidate(product.image_presigned_url || product.image_url || product.image_path);
+  const imageSrc = candidateMeta.src || fallbackMeta.src;
+  const imagePath = candidateMeta.path || fallbackMeta.path;
+  const hasImage = Boolean(imageSrc || imagePath);
 
   const totalPoints = product.points_required * quantity;
   const canAfford = userPoints >= totalPoints;
@@ -85,10 +122,10 @@ export function ExchangeModal({ product, userPoints, isOpen, onClose, onConfirm,
             {/* 商品信息 */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="flex items-start space-x-4">
-                {product.images && product.images.length > 0 && (
+                {hasImage && (
                   <R2Image
-                    src={/^https?:\/\//.test(product.images[0]) ? product.images[0] : undefined}
-                    filePath={!/^https?:\/\//.test(product.images[0]) ? product.images[0] : undefined}
+                    src={imageSrc || undefined}
+                    filePath={imagePath || undefined}
                     alt={product.name}
                     className="w-20 h-20 object-cover rounded-lg"
                   />

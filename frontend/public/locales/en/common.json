@@ -625,7 +625,8 @@
       "broadcast": "Broadcast",
       "badges": "Badges",
       "avatars": "Avatars",
-      "audit": "Audit logs"
+      "audit": "Audit logs",
+      "systemLogs": "System logs"
     },
     "broadcast": {
       "title": "Broadcast Center",
@@ -906,6 +907,11 @@
         "description": "Description",
         "category": "Category",
         "categoryPlaceholder": "Select or enter a category",
+        "categorySearchPlaceholder": "Type or search for category name",
+        "categoryHint": "Select an existing category or enter a new one. New categories are saved automatically.",
+        "useCategory": "Use category",
+        "removeCategory": "Remove category",
+        "noCategorySuggestions": "No matching categories. Press Enter to create a new category.",
         "uncategorized": "Uncategorized",
         "pointsRequired": "Points required",
         "status": "Status",
@@ -1740,6 +1746,8 @@
   "errors": {
     "loadFailed": "Failed to load",
     "network": "Network connection error",
+    "unexpected": "Something went wrong",
+    "tryAgain": "Please try again",
     "server": "Server error",
     "unauthorized": "Unauthorized access",
     "forbidden": "Access forbidden",

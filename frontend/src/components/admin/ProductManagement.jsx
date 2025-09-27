@@ -7,7 +7,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { adminAPI, productAPI } from '@/lib/api';
 import { formatNumber } from '@/lib/utils';
 import { uploadViaPresign } from '@/lib/r2Upload';
-import { prefetchPresignedUrls } from '@/lib/fileAccess';
+import { prefetchPresignedUrls, getPresignedReadUrl } from '@/lib/fileAccess';
 
 import R2Image from '@/components/common/R2Image';
 import { Button } from '@/components/ui/Button';
@@ -45,6 +45,7 @@ const DEFAULT_FORM = {
   sort_order: 0,
   image_path: '',
   image_url: '',
+  image_presigned_url: '',
   images: [],
   tags: [],
 };
@@ -470,16 +471,16 @@ export function ProductManagement() {
                   const price = product.points_required !== undefined && product.points_required !== null ? product.points_required : product.price || 0;
                   const isOutOfStock = product.stock === 0;
                   const unlimited = product.stock === -1;
+                  const resolvedImageSrc = typeof product.image_presigned_url === 'string' && product.image_presigned_url ? product.image_presigned_url : (typeof product.image_url === 'string' && product.image_url.indexOf('http') === 0 ? product.image_url : null);
                   const imagePath = product.image_path || (typeof product.image_url === 'string' && product.image_url.indexOf('http') !== 0 ? product.image_url : null);
-                  const httpImage = typeof product.image_url === 'string' && product.image_url.indexOf('http') === 0 ? product.image_url : null;
 
                   return (
                     <tr key={product.id}>
                       <td className="px-6 py-4">
-                        {imagePath || httpImage ? (
+                        {imagePath || resolvedImageSrc ? (
                           <R2Image
                             filePath={imagePath || undefined}
-                            src={httpImage || undefined}
+                            src={resolvedImageSrc || undefined}
                             alt={product.name}
                             className="h-12 w-12 rounded-lg object-cover"
                             fallback={<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">IMG</div>}
@@ -607,6 +608,7 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
     }
 
     if (product) {
+      const firstImage = Array.isArray(product.images) && product.images.length ? product.images[0] : null;
       setFormValues({
         name: product.name || '',
         description: product.description || '',
@@ -619,8 +621,9 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
         stock: product.stock !== undefined && product.stock !== null ? product.stock : -1,
         status: product.status || 'active',
         sort_order: product.sort_order !== undefined && product.sort_order !== null ? product.sort_order : 0,
-        image_path: product.image_path || (typeof product.image_url === 'string' && product.image_url.indexOf('http') !== 0 ? product.image_url : ''),
-        image_url: typeof product.image_url === 'string' ? product.image_url : '',
+        image_path: product.image_path || (typeof product.image_url === 'string' && product.image_url.indexOf('http') !== 0 ? product.image_url : '') || firstImage?.file_path || '',
+        image_url: typeof product.image_url === 'string' ? product.image_url : (firstImage?.url || ''),
+        image_presigned_url: product.image_presigned_url || firstImage?.presigned_url || '',
         images: Array.isArray(product.images) ? product.images : [],
         tags: Array.isArray(product.tags)
           ? product.tags.map((tag) => ({ id: tag.id !== undefined ? tag.id : null, name: tag.name, slug: tag.slug || slugify(tag.name) }))
@@ -659,15 +662,29 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
         entityType: 'product',
         entityId: product ? product.id : undefined,
       });
+
+      let previewUrl = result.presigned_url || result.url || result.public_url || '';
+      if (!previewUrl && result.file_path) {
+        try {
+          previewUrl = await getPresignedReadUrl(result.file_path, 600);
+        } catch (error) {
+          console.warn('Preview presign failed', error);
+        }
+      }
+
+      const storedUrl = result.public_url || result.url || '';
       const imageData = {
         file_path: result.file_path,
-        url: result.url || result.public_url || '',
+        url: storedUrl,
+        presigned_url: result.presigned_url || (previewUrl || null),
         thumbnail_path: result.thumbnail_path || null,
       };
+
       setFormValues((prev) => ({
         ...prev,
         image_path: result.file_path || prev.image_path,
-        image_url: result.url || result.public_url || prev.image_url,
+        image_url: storedUrl,
+        image_presigned_url: imageData.presigned_url || '',
         images: [imageData],
       }));
       toast.success(t('admin.products.form.uploadSuccess', '图片上传成功'));
@@ -682,7 +699,7 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
   };
 
   const handleRemoveImage = () => {
-    setFormValues((prev) => ({ ...prev, image_path: '', image_url: '', images: [] }));
+    setFormValues((prev) => ({ ...prev, image_path: '', image_url: '', image_presigned_url: '', images: [] }));
   };
 
   const handleSubmit = (event) => {
@@ -696,8 +713,9 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
     onSubmit(nextValues);
   };
 
-  const imagePath = formValues.image_path || (typeof formValues.image_url === 'string' && formValues.image_url.indexOf('http') !== 0 ? formValues.image_url : '');
-  const externalImage = formValues.image_url && formValues.image_url.indexOf('http') === 0 ? formValues.image_url : '';
+  const previewSource = formValues.image_presigned_url || formValues.image_url || '';
+  const imagePath = formValues.image_path || (previewSource && previewSource.indexOf('http') !== 0 ? previewSource : '');
+  const externalImage = previewSource && previewSource.indexOf('http') === 0 ? previewSource : '';
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => (!open ? onClose() : null)}>

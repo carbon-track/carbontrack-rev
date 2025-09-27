@@ -42,6 +42,43 @@ export function ProductCard({ product, onExchange, userPoints = 0 }) {
     return iconMap[product.category] || iconMap.default;
   };
 
+  const isHttpUrl = (value) => typeof value === 'string' && /^https?:\/\//.test(value);
+
+  const resolveImageCandidate = (candidate) => {
+    if (!candidate) {
+      return { src: null, path: null };
+    }
+    if (typeof candidate === 'string') {
+      return isHttpUrl(candidate)
+        ? { src: candidate, path: null }
+        : { src: null, path: candidate };
+    }
+    if (Array.isArray(candidate) && candidate.length) {
+      return resolveImageCandidate(candidate[0]);
+    }
+    if (typeof candidate === 'object') {
+      const presigned = typeof candidate.presigned_url === 'string' && candidate.presigned_url ? candidate.presigned_url : null;
+      const rawUrl = typeof candidate.url === 'string' && candidate.url ? candidate.url : (typeof candidate.public_url === 'string' ? candidate.public_url : null);
+      let src = presigned || (rawUrl && isHttpUrl(rawUrl) ? rawUrl : null);
+      let path = typeof candidate.file_path === 'string' && candidate.file_path !== '' ? candidate.file_path : null;
+      if (!path && rawUrl && !isHttpUrl(rawUrl)) {
+        path = rawUrl;
+      }
+      if (!path && typeof candidate.path === 'string' && candidate.path !== '') {
+        path = candidate.path;
+      }
+      return { src, path };
+    }
+    return { src: null, path: null };
+  };
+
+  const primaryImageCandidate = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : product.images;
+  const candidateMeta = resolveImageCandidate(primaryImageCandidate);
+  const fallbackMeta = resolveImageCandidate(product.image_presigned_url || product.image_url || product.image_path);
+  const imageSrc = candidateMeta.src || fallbackMeta.src;
+  const imagePath = candidateMeta.path || fallbackMeta.path;
+  const hasImage = Boolean(imageSrc || imagePath);
+
   return (
     <Card className={`h-full transition-all duration-200 hover:shadow-lg ${
       !isAvailable || !canAfford ? 'opacity-75' : 'hover:scale-105'
@@ -67,12 +104,12 @@ export function ProductCard({ product, onExchange, userPoints = 0 }) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* 商品图片 */}
-        {product.images && product.images.length > 0 && (
+        {/* Product image */}
+        {hasImage && (
           <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
             <R2Image
-              src={/^https?:\/\//.test(product.images[0]) ? product.images[0] : undefined}
-              filePath={!/^https?:\/\//.test(product.images[0]) ? product.images[0] : undefined}
+              src={imageSrc || undefined}
+              filePath={imagePath || undefined}
               alt={product.name}
               className="w-full h-full object-cover"
             />

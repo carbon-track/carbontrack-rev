@@ -100,36 +100,15 @@ export function QuickActions({ userStats = {}, onActionClick }) {
                   </div>
                 )}
                 
-                <div className="flex items-center gap-3 w-full">
-                  <div className={`p-2 rounded-lg ${
-                    action.primary 
-                      ? 'bg-white/20' 
-                      : 'bg-gray-100'
-                  }`}>
-                    <Icon className={`h-5 w-5 ${
-                      action.primary 
-                        ? 'text-white' 
-                        : 'text-gray-600'
-                    }`} />
-                  </div>
-                  
-                  <div className="flex-1 text-left break-words">
-                    <div className={`font-medium text-sm ${
-                      action.primary 
-                        ? 'text-white' 
-                        : 'text-gray-900'
-                    }`}>
-                      {action.title}
-                    </div>
-                    <div className={`text-xs mt-1 ${
-                      action.primary 
-                        ? 'text-white/80' 
-                        : 'text-gray-500'
-                    }`}>
-                      {action.description}
-                    </div>
-                  </div>
+                <div className="flex items-center gap-3">
+                  <Icon className={`h-6 w-6 ${action.primary ? 'text-white' : 'text-gray-700'}`} />
+                  <span className={`text-lg font-semibold ${action.primary ? 'text-white' : 'text-gray-800'}`}>
+                    {action.title}
+                  </span>
                 </div>
+                <p className={`text-sm ${action.primary ? 'text-gray-200' : 'text-gray-500'} text-wrap`}>
+                  {action.description}
+                </p>
               </Button>
             );
           })}
