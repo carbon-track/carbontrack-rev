@@ -3,6 +3,7 @@ import { Mail, MailOpen, MessageSquare, Info } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { formatDateSafe } from '../../lib/utils';
 import { Button } from '../ui/Button';
+import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import PropTypes from 'prop-types';
 
@@ -26,7 +27,7 @@ export function MessageDetailModal({ message, isOpen, onClose, onMarkRead }) {
       );
     }
   };
-  // 当前数据库无 type/priority 字段，相关展示已移除
+  // 显示 priority 徽章与公告标识
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose?.(); }}>
@@ -35,6 +36,17 @@ export function MessageDetailModal({ message, isOpen, onClose, onMarkRead }) {
           <DialogTitle className="text-xl">{t('messages.detail.title')}</DialogTitle>
           <DialogDescription>{t('messages.detail.subtitle')}</DialogDescription>
         </DialogHeader>
+
+          <div className="flex items-center space-x-2">
+            {message.priority && (
+              <Badge variant={message.priority}>
+                {t(`messages.priority.${message.priority}`)}
+              </Badge>
+            )}
+            {message.sender_id === null && (
+              <Badge variant="outline">{t('messages.labels.announcement')}</Badge>
+            )}
+          </div>
 
         <div className="space-y-6">
           {/* 基本信息 */}
@@ -92,6 +104,8 @@ MessageDetailModal.propTypes = {
     title: PropTypes.string,
     created_at: PropTypes.oneOfType([PropTypes.string, PropTypes.number, PropTypes.instanceOf(Date)]).isRequired,
     content: PropTypes.string,
+    priority: PropTypes.string,
+    sender_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   }),
 };
 

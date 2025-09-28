@@ -1,4 +1,5 @@
 import * as React from "react"
+import PropTypes from 'prop-types';
 import { Slot } from "@radix-ui/react-slot"
 import { cva } from "class-variance-authority";
 
@@ -17,7 +18,16 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-      },
+        // Priority specific variants
+        urgent:
+          "border-transparent bg-red-600 text-white [a&]:hover:bg-red-700",
+        high:
+          "border-transparent bg-orange-500 text-white [a&]:hover:bg-orange-600",
+        normal:
+          "border-transparent bg-gray-100 text-gray-800 [a&]:hover:bg-gray-200",
+        low:
+          "border-transparent bg-blue-100 text-blue-800 [a&]:hover:bg-blue-200",
+      }
     },
     defaultVariants: {
       variant: "default",
@@ -42,3 +52,9 @@ function Badge({
 }
 
 export { Badge, badgeVariants }
+
+Badge.propTypes = {
+  className: PropTypes.string,
+  variant: PropTypes.string,
+  asChild: PropTypes.bool,
+};

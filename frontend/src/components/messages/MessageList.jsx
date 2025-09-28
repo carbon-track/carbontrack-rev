@@ -1,8 +1,10 @@
 import React from 'react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { formatDateSafe } from '../../lib/utils';
-import { Mail, MailOpen, AlertCircle, CheckCircle, Clock, XCircle, Eye, Trash2 } from 'lucide-react';
+import { Mail, MailOpen, Eye, Trash2 } from 'lucide-react';
+import PropTypes from 'prop-types';
 import { Button } from '../ui/Button';
+import { Badge } from '../ui/badge';
 
 export function MessageList({ messages, onRowClick, onMarkRead, onDelete }) {
   const { t } = useTranslation();
@@ -14,7 +16,7 @@ export function MessageList({ messages, onRowClick, onMarkRead, onDelete }) {
       return <Mail className="h-4 w-4 text-blue-500" />;
     }
   };
-  // 当前数据库结构无 priority/type 字段，移除徽章显示
+  // Show priority badge when available. Announcements (system messages) are marked by sender_id === null
 
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow-sm border">
@@ -62,6 +64,19 @@ export function MessageList({ messages, onRowClick, onMarkRead, onDelete }) {
                   <span className="ml-2 text-sm font-medium text-gray-900 line-clamp-1">
                     {message.title}
                   </span>
+                  {message.priority && (
+                    <Badge
+                      variant={message.sender_id === null ? 'secondary' : 'default'}
+                      className="ml-3"
+                    >
+                      {t(`messages.priority.${message.priority}`)}
+                    </Badge>
+                  )}
+                  {message.sender_id === null && (
+                    <Badge variant="outline" className="ml-2">
+                      {t('messages.labels.announcement')}
+                    </Badge>
+                  )}
                 </div>
               </td>
               <td className="px-6 py-4">
@@ -110,4 +125,19 @@ export function MessageList({ messages, onRowClick, onMarkRead, onDelete }) {
     </div>
   );
 }
+
+MessageList.propTypes = {
+  messages: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    is_read: PropTypes.bool,
+    title: PropTypes.string,
+    content: PropTypes.string,
+    created_at: PropTypes.oneOfType([PropTypes.string, PropTypes.number, PropTypes.instanceOf(Date)]),
+    priority: PropTypes.string,
+    sender_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  })).isRequired,
+  onRowClick: PropTypes.func.isRequired,
+  onMarkRead: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+};
 

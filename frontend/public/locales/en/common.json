@@ -544,6 +544,9 @@
       "high": "High",
       "urgent": "Urgent"
     },
+    "labels": {
+      "announcement": "Announcement"
+    },
     "types": {
       "system": "System",
       "notification": "Notification",

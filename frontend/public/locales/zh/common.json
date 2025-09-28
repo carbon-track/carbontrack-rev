@@ -639,6 +639,9 @@
       "high": "高",
       "urgent": "紧急"
     },
+    "labels": {
+      "announcement": "公告"
+    },
     "types": {
       "system": "系统消息",
       "notification": "通知",
