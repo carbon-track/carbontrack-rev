@@ -497,9 +497,21 @@ export function BroadcastCenter() {
   };
 
   const validateForm = () => {
+    const addAnnouncementMarkers = (title) => {
+      if (!title || typeof title !== 'string') return title;
+      const trimmed = title.trim();
+      const lower = trimmed.toLowerCase();
+      // If title already contains announcement markers or keywords, don't add
+      if (/(\[announcement\]|\[公告\]|【公告】|\b(公告|announcement|broadcast|boardcast|system|系统)\b)/i.test(lower)) {
+        return trimmed;
+      }
+      // Prepend English and Chinese markers for clarity
+      return `[Announcement/公告] ${trimmed}`;
+    };
+
     const normalizedPriority = PRIORITIES.includes(form.priority) ? form.priority : 'normal';
     const payload = {
-      title: form.title.trim(),
+      title: addAnnouncementMarkers(form.title.trim()),
       content: form.content.trim(),
       priority: normalizedPriority
     };

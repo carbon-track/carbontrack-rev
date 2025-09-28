@@ -28,6 +28,14 @@ export function MessageDetailModal({ message, isOpen, onClose, onMarkRead }) {
     }
   };
   // 显示 priority 徽章与公告标识
+  const isAnnouncement = (message) => {
+    if (!message) return false;
+    if (message.type === 'system') return true;
+    if (message.sender_id !== null) return false;
+    const title = (message.title || '').toLowerCase();
+    // include English 'broadcast' and common misspelling 'boardcast'
+    return /\b(公告|announcement|system|系统|broadcast|boardcast)\b/i.test(title);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose?.(); }}>
@@ -43,7 +51,7 @@ export function MessageDetailModal({ message, isOpen, onClose, onMarkRead }) {
                 {t(`messages.priority.${message.priority}`)}
               </Badge>
             )}
-            {message.sender_id === null && (
+            {isAnnouncement(message) && (
               <Badge variant="outline">{t('messages.labels.announcement')}</Badge>
             )}
           </div>
@@ -106,6 +114,7 @@ MessageDetailModal.propTypes = {
     content: PropTypes.string,
     priority: PropTypes.string,
     sender_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    type: PropTypes.string,
   }),
 };
 
