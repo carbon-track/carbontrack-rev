@@ -33,7 +33,8 @@ The backend is a lean API service.
 - **Run Tests**: `composer test` (runs `phpunit`). Tests are located in `backend/tests/`.
 - **After Backend Changes (Required)**: Whenever you modify controllers, routes, models, requests, or responses:
     - Update `openapi.json` to reflect the new or changed endpoints, request/response schemas, status codes, and auth requirements.
-    - Add or update PHPUnit tests covering the changed behavior in `backend/tests/` (Unit and/or Integration). Focus on happy paths, validation errors, edge cases, and auth.
+    - Add or update PHPUnit tests covering the changed behavior in `backend/tests/` (Unit and/or Integration). Focus on happy paths, validation errors, edge cases, and auth. Run it in the Powershell terminal to see output.
+    - Ensure all tests pass before committing.
     - Use `database/localhost.sql` as the authoritative schema reference when adjusting models and API contracts.
     - Optionally run the OpenAPI compliance checks in `backend/check_openapi_compliance.php` or `backend/enhanced_openapi_check.php` to verify consistency.
 

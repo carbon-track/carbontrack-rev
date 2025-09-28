@@ -38,7 +38,8 @@ export default function MessagesPage() {
         queryClient.invalidateQueries('messages');
         toast.success(t('messages.markReadSuccess'));
         if (selectedMessage) {
-          setSelectedMessage(prev => ({ ...prev, status: 'read' }));
+          // selectedMessage uses `is_read` boolean in API responses
+          setSelectedMessage(prev => prev ? ({ ...prev, is_read: true }) : prev);
         }
       },
       onError: () => {
@@ -84,7 +85,8 @@ export default function MessagesPage() {
 
   const handleRowClick = (message) => {
     setSelectedMessage(message);
-    if (message.status === 'unread') {
+    // backend message object uses `is_read` boolean
+    if (!message.is_read) {
       markReadMutation.mutate(message.id);
     }
   };
@@ -121,7 +123,7 @@ export default function MessagesPage() {
           <Button
             variant="outline"
             onClick={handleMarkAllRead}
-            disabled={markAllReadMutation.isLoading || messages.filter(m => m.status === 'unread').length === 0}
+            disabled={markAllReadMutation.isLoading || messages.filter(m => !m.is_read).length === 0}
           >
             <MailOpen className="h-4 w-4 mr-2" /> {t('messages.markAllRead')}
           </Button>
