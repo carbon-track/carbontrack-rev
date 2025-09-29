@@ -21,16 +21,6 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // 为敏感操作添加幂等性key
-    const sensitiveRoutes = ['/carbon-track/record', '/exchange', '/auth/register'];
-    const isSensitive = sensitiveRoutes.some(route => config.url?.includes(route));
-    
-    if (isSensitive && ['post', 'put', 'patch'].includes(config.method?.toLowerCase())) {
-      // 生成UUID作为幂等性key
-      const requestId = crypto.randomUUID();
-      config.headers['X-Request-ID'] = requestId;
-    }
-    
     return config;
   },
   (error) => {

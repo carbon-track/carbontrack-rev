@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, 
   X, 
-  Leaf, 
   Home, 
   Calculator, 
   BarChart3, 
@@ -151,7 +150,7 @@ export function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 text-xl font-bold text-green-600">
-            <Leaf className="h-8 w-8" />
+            <img src="/favicon_64x64.ico" alt="CarbonTrack logo" className="h-8 w-8" />
             <span>CarbonTrack</span>
           </Link>
 
@@ -373,4 +372,3 @@ export function Navbar() {
     </nav>
   );
 }
-
