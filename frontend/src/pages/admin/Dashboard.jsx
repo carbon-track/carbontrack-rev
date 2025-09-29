@@ -146,9 +146,13 @@ export default function AdminDashboardPage() {
     };
 
     const activities = {
-      total: safeNumber(base.activities?.total_activities),
-      active: safeNumber(base.activities?.active_activities),
-      inactive: safeNumber(base.activities?.inactive_activities ?? (safeNumber(base.activities?.total_activities) - safeNumber(base.activities?.active_activities))),
+      totalRecords: safeNumber(base.activities?.total_records),
+      approvedRecords: safeNumber(base.activities?.approved_records),
+      pendingRecords: safeNumber(base.activities?.pending_records),
+      rejectedRecords: safeNumber(base.activities?.rejected_records),
+      catalogTotal: safeNumber(base.activities?.total_activities),
+      catalogActive: safeNumber(base.activities?.active_activities),
+      catalogInactive: safeNumber(base.activities?.inactive_activities ?? (safeNumber(base.activities?.total_activities) - safeNumber(base.activities?.active_activities))),
     };
 
     const carbon = {
@@ -425,8 +429,8 @@ export default function AdminDashboardPage() {
         key: 'activities',
         icon: Activity,
         title: t('admin.dashboard.totalActivities'),
-        primary: integerFormatter.format(normalizedStats.activities.total),
-        secondary: `${t('admin.dashboard.activeActivities')}: ${integerFormatter.format(normalizedStats.activities.active)}`,
+        primary: integerFormatter.format(normalizedStats.activities.totalRecords),
+        secondary: `${t('admin.dashboard.approvedActivities')}: ${integerFormatter.format(normalizedStats.activities.approvedRecords)} · ${t('admin.dashboard.pendingActivities')}: ${integerFormatter.format(normalizedStats.activities.pendingRecords)}`,
         onClick: () => navigate('/admin/activities'),
       },
       {

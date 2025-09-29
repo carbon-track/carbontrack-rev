@@ -136,8 +136,8 @@ export default function AdminPage() {
                     </Card>
                     <Card className="p-4 cursor-pointer hover:bg-accent/30 transition" onClick={() => setActiveTab('activities')}>
                       <h3 className="font-semibold">{t('admin.dashboard.pendingActivities')}</h3>
-                      <p className="text-2xl font-bold">{number.format(statsData?.transactions?.pending_transactions ?? 0)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{t('admin.dashboard.approvedTransactions')}: {number.format(statsData?.transactions?.approved_transactions ?? 0)}</p>
+                      <p className="text-2xl font-bold">{number.format(statsData?.activities?.pending_records ?? 0)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t('admin.dashboard.approvedActivities')}: {number.format(statsData?.activities?.approved_records ?? 0)}</p>
                     </Card>
                     <Card className="p-4 cursor-pointer hover:bg-accent/30 transition" onClick={() => setActiveTab('exchanges')}>
                       <h3 className="font-semibold">{t('admin.dashboard.pendingExchanges')}</h3>
@@ -166,8 +166,8 @@ export default function AdminPage() {
                     </Card>
                     <Card className="p-4">
                       <h3 className="font-semibold">{t('admin.dashboard.totalActivities')}</h3>
-                      <p className="text-2xl font-bold">{number.format(statsData?.activities?.total_activities ?? 0)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{t('admin.dashboard.activeActivities')}: {number.format(statsData?.activities?.active_activities ?? 0)}</p>
+                      <p className="text-2xl font-bold">{number.format(statsData?.activities?.total_records ?? 0)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t('admin.dashboard.approvedActivities')}: {number.format(statsData?.activities?.approved_records ?? 0)} · {t('admin.dashboard.pendingActivities')}: {number.format(statsData?.activities?.pending_records ?? 0)}</p>
                     </Card>
                   </div>
 

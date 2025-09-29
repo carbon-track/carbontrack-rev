@@ -874,7 +874,9 @@
       "latestUsersSubtitle": "Most recent registrations.",
       "statusUnknown": "Unknown",
       "noEmail": "No email on file",
-      "noRecentUsers": "No recent sign-ups."
+      "noRecentUsers": "No recent sign-ups.",
+      "approvedActivities": "Approved Activities",
+      "rejectedActivities": "Rejected Activities"
     },
     "users": {
       "confirmToggleAdmin": "Set user {{username}} as admin?\n(OK = Admin; Cancel = Regular User)",

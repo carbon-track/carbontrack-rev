@@ -969,7 +969,9 @@
       "latestUsersSubtitle": "最近注册的用户列表。",
       "statusUnknown": "状态未知",
       "noEmail": "暂无邮箱",
-      "noRecentUsers": "近期没有新的注册用户。"
+      "noRecentUsers": "近期没有新的注册用户。",
+      "approvedActivities": "已通过活动",
+      "rejectedActivities": "已拒绝活动"
     },
     "users": {
       "confirmToggleAdmin": "是否将用户 {{username}} 设置为管理员？\n(点“确定”为管理员；“取消”为普通用户)",
