@@ -339,7 +339,10 @@ export default function SystemLogsPage() {
               <Input
                 id="log-method"
                 value={extraParams.method || ''}
-                onChange={(event) => setQ((prev) => mergeToken(prev, 'method', event.target.value))}
+                onChange={(event) => {
+                  const v = event.target.value;
+                  setQ((prev) => mergeToken(prev, 'method', v));
+                }}
                 placeholder={t('admin.systemLogs.placeholders.method')}
                 className="font-mono"
               />
@@ -348,7 +351,10 @@ export default function SystemLogsPage() {
               <Input
                 id="log-status"
                 value={extraParams.status_code || ''}
-                onChange={(event) => setQ((prev) => mergeToken(prev, 'status', event.target.value))}
+                onChange={(event) => {
+                  const v = event.target.value;
+                  setQ((prev) => mergeToken(prev, 'status', v));
+                }}
                 placeholder={t('admin.systemLogs.placeholders.status')}
                 className="font-mono"
               />
@@ -357,7 +363,10 @@ export default function SystemLogsPage() {
               <Input
                 id="log-user-id"
                 value={extraParams.user_id || ''}
-                onChange={(event) => setQ((prev) => mergeToken(prev, 'user', event.target.value))}
+                onChange={(event) => {
+                  const v = event.target.value;
+                  setQ((prev) => mergeToken(prev, 'user', v));
+                }}
                 placeholder={t('admin.systemLogs.placeholders.userId')}
                 className="font-mono"
               />
@@ -366,7 +375,10 @@ export default function SystemLogsPage() {
               <Input
                 id="log-request-id"
                 value={extraParams.request_id || ''}
-                onChange={(event) => setQ((prev) => mergeToken(prev, 'rid', event.target.value))}
+                onChange={(event) => {
+                  const v = event.target.value;
+                  setQ((prev) => mergeToken(prev, 'rid', v));
+                }}
                 placeholder={t('admin.systemLogs.placeholders.requestId')}
                 className="font-mono"
               />
@@ -375,7 +387,10 @@ export default function SystemLogsPage() {
               <Input
                 id="log-path"
                 value={extraParams.path || ''}
-                onChange={(event) => setQ((prev) => mergeToken(prev, 'path', event.target.value))}
+                onChange={(event) => {
+                  const v = event.target.value;
+                  setQ((prev) => mergeToken(prev, 'path', v));
+                }}
                 placeholder={t('admin.systemLogs.placeholders.path')}
                 className="font-mono"
               />
@@ -402,7 +417,10 @@ export default function SystemLogsPage() {
               <Input
                 id="log-audit-action"
                 value={extraParams.action || ''}
-                onChange={(event) => setQ((prev) => mergeToken(prev, 'action', event.target.value))}
+                onChange={(event) => {
+                  const v = event.target.value;
+                  setQ((prev) => mergeToken(prev, 'action', v));
+                }}
                 placeholder={t('admin.systemLogs.placeholders.auditAction')}
                 className="font-mono"
               />
@@ -411,7 +429,10 @@ export default function SystemLogsPage() {
               <Input
                 id="log-audit-status"
                 value={extraParams.audit_status || ''}
-                onChange={(event) => setQ((prev) => mergeToken(prev, 'astatus', event.target.value))}
+                onChange={(event) => {
+                  const v = event.target.value;
+                  setQ((prev) => mergeToken(prev, 'astatus', v));
+                }}
                 placeholder={t('admin.systemLogs.placeholders.auditStatus')}
                 className="font-mono"
               />
@@ -420,7 +441,10 @@ export default function SystemLogsPage() {
               <Input
                 id="log-error-type"
                 value={extraParams.error_type || ''}
-                onChange={(event) => setQ((prev) => mergeToken(prev, 'etype', event.target.value))}
+                onChange={(event) => {
+                  const v = event.target.value;
+                  setQ((prev) => mergeToken(prev, 'etype', v));
+                }}
                 placeholder={t('admin.systemLogs.placeholders.errorType')}
                 className="font-mono"
               />
@@ -1043,26 +1067,79 @@ function safeParse(value) {
 }
 
 function mergeToken(previous, key, newValue) {
-  const parts = (previous || '')
-    .split(/\s+/)
-    .filter(Boolean)
-    .filter((token) => !token.startsWith());
-  if (newValue) parts.push();
-  return parts.join(' ');
+  // Use parseLogQuery to safely map shorthand keys to their canonical form,
+  // then update the token and rebuild the query string.
+  const parsed = parseLogQuery(previous || '');
+  // Probe to determine the mapped key for the provided shorthand.
+  // Use a sentinel when newValue is empty so parser still maps the shorthand.
+  const probeValue = newValue !== undefined && newValue !== '' ? newValue : '__probe__';
+  const probe = parseLogQuery(`${key}:${probeValue}`);
+  const mappedKey = Object.keys(probe.tokens || {})[0] || key;
+
+  if (newValue) {
+    parsed.tokens = parsed.tokens || {};
+    parsed.tokens[mappedKey] = newValue;
+  } else {
+    // remove the token when newValue is empty
+    if (parsed.tokens) delete parsed.tokens[mappedKey];
+  }
+
+  // Rebuild the query string from tokens, ranges and free text
+  const parts = [];
+  Object.entries(parsed.tokens || {}).forEach(([k, v]) => {
+    if (v && typeof v === 'object') {
+      if (v.negate) parts.push(`${k}!=${v.value}`);
+      else parts.push(`${k}:${v.value}`);
+    } else {
+      parts.push(`${k}:${v}`);
+    }
+  });
+  Object.entries(parsed.ranges || {}).forEach(([k, ops]) => {
+    Object.entries(ops).forEach(([op, val]) => {
+      parts.push(`${k}${op}${val}`);
+    });
+  });
+  if (parsed.free) parts.push(parsed.free);
+  return parts.join(' ').trim();
 }
 
 function mergeRange(previous, key, operator, newValue) {
-  const parts = (previous || '')
-    .split(/\s+/)
-    .filter(Boolean)
-    .filter((token) =>
-      !token.startsWith() &&
-      !token.startsWith() &&
-      !token.startsWith() &&
-      !token.startsWith()
-    );
-  if (newValue) parts.push();
-  return parts.join(' ');
+  // Update a comparison range (eg dur>500) by using parseLogQuery to map keys
+  const parsed = parseLogQuery(previous || '');
+  // When newValue is empty, use sentinel so parsing maps shorthand key to canonical key
+  const probeValue = newValue !== undefined && newValue !== '' ? newValue : '__probe__';
+  const probe = parseLogQuery(`${key}${operator}${probeValue}`);
+  const mappedKey = Object.keys(probe.ranges || {})[0] || Object.keys(probe.tokens || {})[0] || key;
+
+  parsed.ranges = parsed.ranges || {};
+  if (!newValue) {
+    // remove the specific operator if present
+    if (parsed.ranges[mappedKey]) {
+      delete parsed.ranges[mappedKey][operator];
+      if (Object.keys(parsed.ranges[mappedKey]).length === 0) delete parsed.ranges[mappedKey];
+    }
+  } else {
+    parsed.ranges[mappedKey] = parsed.ranges[mappedKey] || {};
+    parsed.ranges[mappedKey][operator] = newValue;
+  }
+
+  // Rebuild string similar to mergeToken
+  const parts = [];
+  Object.entries(parsed.tokens || {}).forEach(([k, v]) => {
+    if (v && typeof v === 'object') {
+      if (v.negate) parts.push(`${k}!=${v.value}`);
+      else parts.push(`${k}:${v.value}`);
+    } else {
+      parts.push(`${k}:${v}`);
+    }
+  });
+  Object.entries(parsed.ranges || {}).forEach(([k, ops]) => {
+    Object.entries(ops).forEach(([op, val]) => {
+      parts.push(`${k}${op}${val}`);
+    });
+  });
+  if (parsed.free) parts.push(parsed.free);
+  return parts.join(' ').trim();
 }
 
 function setDurationUpper(previous, value) {
@@ -1070,9 +1147,26 @@ function setDurationUpper(previous, value) {
 }
 
 function removeToken(previous, tokenKey) {
-  const parts = (previous || '')
-    .split(/\s+/)
-    .filter(Boolean)
-    .filter((token) => !token.startsWith());
-  return parts.join(' ');
+  const parsed = parseLogQuery(previous || '');
+  // Use a probe value to map shorthand token key to canonical key
+  const probe = parseLogQuery(`${tokenKey}:__probe__`);
+  const mappedKey = Object.keys(probe.tokens || {})[0] || tokenKey;
+  if (parsed.tokens) delete parsed.tokens[mappedKey];
+
+  const parts = [];
+  Object.entries(parsed.tokens || {}).forEach(([k, v]) => {
+    if (v && typeof v === 'object') {
+      if (v.negate) parts.push(`${k}!=${v.value}`);
+      else parts.push(`${k}:${v.value}`);
+    } else {
+      parts.push(`${k}:${v}`);
+    }
+  });
+  Object.entries(parsed.ranges || {}).forEach(([k, ops]) => {
+    Object.entries(ops).forEach(([op, val]) => {
+      parts.push(`${k}${op}${val}`);
+    });
+  });
+  if (parsed.free) parts.push(parsed.free);
+  return parts.join(' ').trim();
 }

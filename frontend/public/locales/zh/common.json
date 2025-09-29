@@ -117,8 +117,8 @@
       "string": "字符串",
       "number": "数字",
       "boolean": "布尔",
-      "null": "Null",
-      "undefined": "Undefined",
+      "null": "空",
+      "undefined": "未定义",
       "unknown": "未知"
     }
   },
@@ -801,6 +801,17 @@
         "none": "无",
         "failedHint": "这些用户暂时未能收到通知，请稍后重试。",
         "invalidHint": "以下 ID 在发送前被剔除，因为系统中未找到对应用户。"
+      },
+      "email": {
+        "status": {
+          "sent": "邮件已发送",
+          "partial": "邮件部分送达",
+          "failed": "邮件发送失败",
+          "skipped": "未发送邮件"
+        },
+        "summary": "邮件批次：共尝试 {{attempted}} 次，成功 {{success}} 次，失败 {{failed}} 次。",
+        "missing": "缺少邮箱的用户：{{count}}",
+        "errorsTitle": "邮件发送问题"
       },
       "history": {
         "title": "广播记录",

@@ -707,6 +707,17 @@
         "failedHint": "These users could not be notified. Try again later.",
         "invalidHint": "These IDs were removed because matching users were not found."
       },
+      "email": {
+        "status": {
+          "sent": "Email sent",
+          "partial": "Email partially delivered",
+          "failed": "Email delivery failed",
+          "skipped": "Email not sent"
+        },
+        "summary": "Email batches: attempted {{attempted}}, succeeded {{success}}, failed {{failed}}.",
+        "missing": "Users without email: {{count}}",
+        "errorsTitle": "Email issues"
+      },
       "history": {
         "title": "Broadcast history",
         "description": "Recent broadcasts and delivery status.",

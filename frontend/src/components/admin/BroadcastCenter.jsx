@@ -716,6 +716,38 @@ export function BroadcastCenter() {
   const invalidCount = result?.invalid?.length ?? 0;
   const failedCount = result?.failed?.length ?? 0;
   const exportDisabled = filteredItems.length === 0;
+  const emailResult = useMemo(() => {
+    if (!result?.emailDelivery) {
+      return null;
+    }
+    const delivery = result.emailDelivery;
+    return {
+      status: delivery.status ?? 'skipped',
+      triggered: Boolean(delivery.triggered),
+      attempted: delivery.attempted_recipients ?? 0,
+      successfulChunks: delivery.successful_chunks ?? 0,
+      failedChunks: delivery.failed_chunks ?? 0,
+      missing: Array.isArray(delivery.missing_email_user_ids) ? delivery.missing_email_user_ids : [],
+      failedRecipients: Array.isArray(delivery.failed_recipient_ids) ? delivery.failed_recipient_ids : [],
+      errors: Array.isArray(delivery.errors) ? delivery.errors : [],
+    };
+  }, [result]);
+
+  const emailResultVariant = useMemo(() => {
+    if (!emailResult) {
+      return 'info';
+    }
+    switch (emailResult.status) {
+      case 'sent':
+        return 'success';
+      case 'partial':
+        return 'warning';
+      case 'failed':
+        return 'destructive';
+      default:
+        return 'info';
+    }
+  }, [emailResult]);
 
   return (
     <div className="space-y-6">
@@ -1114,6 +1146,35 @@ export function BroadcastCenter() {
               </AlertDescription>
             </Alert>
           )}
+
+          {emailResult && (
+            <Alert variant={emailResultVariant}>
+              <AlertTitle>{t(`admin.broadcast.email.status.${emailResult.status}`)}</AlertTitle>
+              <AlertDescription>
+                <p>{t('admin.broadcast.email.summary', {
+                  attempted: emailResult.attempted,
+                  success: emailResult.successfulChunks,
+                  failed: emailResult.failedChunks
+                })}</p>
+                {emailResult.missing.length > 0 && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t('admin.broadcast.email.missing', { count: emailResult.missing.length })}
+                    <span className="ml-1 font-mono">{emailResult.missing.join(', ')}</span>
+                  </p>
+                )}
+                {emailResult.errors.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-medium text-muted-foreground">{t('admin.broadcast.email.errorsTitle')}</p>
+                    <ul className="mt-1 space-y-1 text-xs font-mono">
+                      {emailResult.errors.map((error, index) => (
+                        <li key={`${error}-${index}`}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       )}
 
@@ -1213,6 +1274,15 @@ export function BroadcastCenter() {
               const invalidIds = item.invalid_user_ids ?? [];
               const failedIds = item.failed_user_ids ?? [];
               const actorLabel = item.actor_username || (item.actor_user_id ? `#${item.actor_user_id}` : t('common.unknown'));
+              const delivery = item.email_delivery ?? {};
+              const emailStatus = delivery?.status ?? 'skipped';
+              const emailErrors = Array.isArray(delivery?.errors) ? delivery.errors : [];
+              const emailBadgeVariant = {
+                sent: 'secondary',
+                partial: 'high',
+                failed: 'destructive',
+                skipped: 'outline'
+              }[emailStatus] ?? 'outline';
 
               return (
                 <div key={item.id} className="rounded-lg border p-5 space-y-4">
@@ -1231,6 +1301,7 @@ export function BroadcastCenter() {
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="outline">{t(`messages.priority.${item.priority}`)}</Badge>
                       <Badge variant="secondary">{t(`admin.broadcast.scope.${item.scope === 'custom' ? 'custom' : 'all'}`)}</Badge>
+                      <Badge variant={emailBadgeVariant}>{t(`admin.broadcast.email.status.${emailStatus}`)}</Badge>
                     </div>
                   </div>
 
@@ -1263,6 +1334,35 @@ export function BroadcastCenter() {
                       <AlertTitle>{t('admin.broadcast.result.invalid')}</AlertTitle>
                       <AlertDescription>
                         <span className="font-mono text-xs">{invalidIds.join(', ')}</span>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {delivery && (emailStatus !== 'sent' || emailErrors.length > 0 || (delivery.missing_email_user_ids ?? []).length > 0) && (
+                    <Alert variant={emailStatus === 'failed' ? 'destructive' : emailStatus === 'partial' ? 'warning' : 'info'}>
+                      <AlertTitle>{t(`admin.broadcast.email.status.${emailStatus}`)}</AlertTitle>
+                      <AlertDescription>
+                        <p>{t('admin.broadcast.email.summary', {
+                          attempted: delivery.attempted_recipients ?? 0,
+                          success: delivery.successful_chunks ?? 0,
+                          failed: delivery.failed_chunks ?? 0
+                        })}</p>
+                        {Array.isArray(delivery.missing_email_user_ids) && delivery.missing_email_user_ids.length > 0 && (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            {t('admin.broadcast.email.missing', { count: delivery.missing_email_user_ids.length })}
+                            <span className="ml-1 font-mono">{delivery.missing_email_user_ids.join(', ')}</span>
+                          </p>
+                        )}
+                        {emailErrors.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-muted-foreground">{t('admin.broadcast.email.errorsTitle')}</p>
+                            <ul className="mt-1 space-y-1 text-xs font-mono">
+                              {emailErrors.map((error, index) => (
+                                <li key={`${error}-${index}`}>{error}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -1313,4 +1413,3 @@ export function BroadcastCenter() {
 }
 
 export default BroadcastCenter;
-
