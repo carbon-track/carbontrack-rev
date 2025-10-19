@@ -14,11 +14,11 @@ Communication between the frontend and backend is via a RESTful API, which is do
 - `openapi.json`: The OpenAPI specification that defines the contract between the frontend and backend. Keeping this up-to-date is crucial.
 - `backend/src/routes.php`: Defines all API endpoints and maps them to controller actions.
 - `frontend/src/router/`: Defines the client-side routes.
-- `database/localhost.sql`: Contains the primary database schema.
+- `database/localhost.sql`: Contains the primary database schema. All migration scripts in `database/migrations/` have been executed, so this file, along with the migration scripts, represents the definitive schema.
 
 ## Backend (PHP / Slim)
 
-The backend is a lean API service.
+The backend is a lean API service. Avoid adding redundant database structure checking logic that could impact performance.
 
 ### Core Concepts
 - **Dependency Injection**: Services are managed by a PHP-DI container configured in `backend/src/dependencies.php`. When adding new services, register them here.
