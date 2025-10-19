@@ -220,14 +220,80 @@ class EmailService
         return $this->lastError;
     }
 
-    public function sendVerificationCode(string $toEmail, string $toName, string $code)
+    /**
+     * Load an email template from disk, falling back to provided content when unavailable.
+     */
+    private function readTemplate(string $filename, string $fallback): string
     {
-        $subject = $this->config['subjects']['verification_code'] ?? 'Your Verification Code';
-        $htmlTemplate = file_get_contents($this->config['templates_path'] . 'verification_code.html');
-        $textTemplate = file_get_contents($this->config['templates_path'] . 'verification_code.txt');
+        $base = $this->config['templates_path'] ?? '';
+        $base = $base !== '' ? rtrim($base, "/\\") . DIRECTORY_SEPARATOR : '';
+        $path = $base . ltrim($filename, "/\\");
 
-        $bodyHtml = str_replace('{{code}}', $code, $htmlTemplate);
-        $bodyText = str_replace('{{code}}', $code, $textTemplate);
+        try {
+            $contents = @file_get_contents($path);
+        } catch (\Throwable $e) {
+            $contents = false;
+        }
+
+        if ($contents === false || $contents === '') {
+            try {
+                $this->logger->warning('Email template missing or unreadable', [
+                    'template' => $path
+                ]);
+            } catch (\Throwable $logError) {
+                // Ignore logging failures to keep mail flow resilient
+            }
+            return $fallback;
+        }
+
+        return $contents;
+    }
+
+    public function sendVerificationCode(
+        string $toEmail,
+        string $toName,
+        string $code,
+        int $expiryMinutes = 30,
+        ?string $verificationLink = null
+    ): bool {
+        $subject = $this->config['subjects']['verification_code'] ?? 'Your Verification Code';
+
+        $htmlTemplate = $this->readTemplate(
+            'verification_code.html',
+            '<p>Hi {{username}},</p><p>Your verification code is <strong>{{verification_code}}</strong>.</p>'
+            . '<p>This code expires in {{expiry_minutes}} minutes.</p>'
+        );
+        $textTemplate = $this->readTemplate(
+            'verification_code.txt',
+            "Hi {{username}},\nYour verification code is {{verification_code}} (expires in {{expiry_minutes}} minutes).\n"
+        );
+
+        $replacements = [
+            '{{code}}' => $code,
+            '{{verification_code}}' => $code,
+            '{{username}}' => $toName,
+            '{{expiry_minutes}}' => (string) $expiryMinutes,
+            '{{current_year}}' => date('Y'),
+        ];
+
+        if ($verificationLink) {
+            $replacements['{{verification_link}}'] = $verificationLink;
+            $replacements['{{link}}'] = $verificationLink;
+        } else {
+            $replacements['{{verification_link}}'] = '';
+            $replacements['{{link}}'] = '';
+        }
+
+        $bodyHtml = str_replace(
+            array_keys($replacements),
+            array_values($replacements),
+            $htmlTemplate
+        );
+        $bodyText = str_replace(
+            array_keys($replacements),
+            array_values($replacements),
+            $textTemplate
+        );
 
         return $this->sendEmail($toEmail, $toName, $subject, $bodyHtml, $bodyText);
     }

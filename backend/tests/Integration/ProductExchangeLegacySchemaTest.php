@@ -174,6 +174,15 @@ class ProductExchangeLegacySchemaTest extends TestCase
             points INTEGER NOT NULL DEFAULT 0,
             is_admin INTEGER NOT NULL DEFAULT 0,
             status TEXT,
+            reset_token TEXT,
+            reset_token_expires_at TEXT,
+            email_verified_at TEXT,
+            verification_code TEXT,
+            verification_token TEXT,
+            verification_code_expires_at TEXT,
+            verification_attempts INTEGER NOT NULL DEFAULT 0,
+            verification_send_count INTEGER NOT NULL DEFAULT 0,
+            verification_last_sent_at TEXT,
             deleted_at TEXT
         )');
 
