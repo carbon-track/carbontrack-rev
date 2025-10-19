@@ -138,13 +138,25 @@
       "title": "Reset Password",
       "subtitle": "Enter your email address and we'll send you a reset link",
       "email": "Email Address",
-      "submit": "Send Reset Link",
-      "backToLogin": "Back to Login"
+      "submit": "Update password",
+      "backToLogin": "Back to Login",
+      "newTitle": "Set a new password",
+      "newSubtitle": "Enter your new password for {{email}}.",
+      "instructions": "Your new password must be at least 8 characters long.",
+      "newPasswordLabel": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "confirmPasswordRequired": "Please confirm your new password.",
+      "passwordMismatch": "Passwords do not match.",
+      "tokenMissing": "The reset link is invalid or has already been used.",
+      "success": "Password reset successful. Redirecting you to sign in...",
+      "failed": "Unable to reset password. Please request a new link or try again later.",
+      "submitting": "Updating password..."
     },
     "errors": {
       "INVALID_CREDENTIALS": "Incorrect username or password. Please try again.",
       "LOGIN_FAILED": "Unable to sign in right now. Please try again later."
-    }
+    },
+    "passwordMinLength": "Password must be at least 8 characters."
   },
   "onboarding": {
     "title": "Complete School and Class Information",

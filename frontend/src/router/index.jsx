@@ -11,6 +11,7 @@ const RegisterPage = React.lazy(() => import('../pages/RegisterPage'));
 const ForgotPasswordPage = React.lazy(() => import('../pages/ForgotPasswordPage'));
 const DashboardPage = React.lazy(() => import('../pages/DashboardPage'));
 const VerifyEmailPage = React.lazy(() => import('../pages/VerifyEmailPage'));
+const ResetPasswordPage = React.lazy(() => import('../pages/ResetPasswordPage'));
 const CalculatePage = React.lazy(() => import('../pages/CalculatePage'));
 const ActivitiesPage = React.lazy(() => import('../pages/ActivitiesPage'));
 const StorePage = React.lazy(() => import('../pages/StorePage'));
@@ -65,6 +66,7 @@ export const router = createBrowserRouter([
   { path: '/login', element: <Navigate to="/auth/login" replace /> },
   { path: '/register', element: <Navigate to="/auth/register" replace /> },
   { path: '/forgot-password', element: <Navigate to="/auth/forgot-password" replace /> },
+  { path: '/reset-password', element: <React.Suspense fallback={<LoadingSpinner />}><ResetPasswordPage /></React.Suspense> },
   {
     path: '/admin',
     element: <AdminRoute><AdminLayout /></AdminRoute>,

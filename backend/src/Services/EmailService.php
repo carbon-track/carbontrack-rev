@@ -372,7 +372,7 @@ class EmailService
     public function sendPasswordResetEmail(string $toEmail, string $toName, string $token): bool
     {
         $base = $this->config['reset_link_base']
-            ?? ($_ENV['APP_URL'] ?? ($_ENV['FRONTEND_URL'] ?? ''));
+            ?? ($_ENV['FRONTEND_URL'] ?? ($_ENV['APP_URL'] ?? ''));
         $link = $base ? rtrim($base, '/') . '/reset-password?token=' . urlencode($token) : '#';
         $subject = $this->config['subjects']['password_reset'] ?? 'Password Reset Request';
         $bodyHtml = sprintf(
