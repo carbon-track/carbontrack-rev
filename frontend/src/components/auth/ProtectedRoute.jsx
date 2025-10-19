@@ -42,7 +42,23 @@ export function ProtectedRoute({
   }
 
   // 基于资料完整度的引导：如果需要认证且用户资料缺少学校或班级，则跳转到 /onboarding
-  if (requireAuth && isAuthenticated) {
+    if (requireAuth && isAuthenticated) {
+    const isVerificationRoute = location.pathname.startsWith('/auth/verify-email');
+    if (!user?.email_verified_at && !isVerificationRoute) {
+      const targetPath = `${location.pathname}${location.search || ''}`;
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('verification_return_path', targetPath);
+        if (user?.email) {
+          sessionStorage.setItem('pending_verification_email', user.email);
+        }
+      }
+      const params = new URLSearchParams();
+      params.set('return', targetPath);
+      if (user?.email) {
+        params.set('email', user.email);
+      }
+      return <Navigate to={`/auth/verify-email?${params.toString()}`} replace />;
+    }
   const needsOnboarding = !user?.school_id; // class_name 不再作为必填条件
     // 允许本会话临时跳过引导（Onboarding页内点击“暂时跳过”设置的标记）
     const onboardingSkipped = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('onboarding_skipped') === '1';

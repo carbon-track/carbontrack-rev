@@ -33,6 +33,7 @@ final class AuthEmailVerificationTest extends TestCase
                 school_id INTEGER,
                 is_admin INTEGER DEFAULT 0,
                 points INTEGER DEFAULT 0,
+                avatar_id INTEGER,
                 created_at TEXT,
                 updated_at TEXT,
                 deleted_at TEXT,
@@ -47,6 +48,8 @@ final class AuthEmailVerificationTest extends TestCase
                 verification_last_sent_at TEXT
             );
         ");
+        $this->pdo->exec("CREATE TABLE schools (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, deleted_at TEXT);");
+        $this->pdo->exec("CREATE TABLE avatars (id INTEGER PRIMARY KEY AUTOINCREMENT, file_path TEXT);");
     }
 
     /**
@@ -132,7 +135,7 @@ final class AuthEmailVerificationTest extends TestCase
             $now,
             $now,
             $token,
-            (new DateTimeImmutable('+30 minutes'))->format('Y-m-d H:i:s')
+            (new \DateTimeImmutable('+30 minutes'))->format('Y-m-d H:i:s')
         ]);
 
         $setup = $this->makeController();
@@ -145,6 +148,11 @@ final class AuthEmailVerificationTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode((string)$response->getBody(), true);
         $this->assertTrue($payload['success']);
+        $this->assertArrayHasKey('data', $payload);
+        $this->assertArrayHasKey('token', $payload['data']);
+        $this->assertArrayHasKey('user', $payload['data']);
+        $this->assertSame('bob@example.com', $payload['data']['user']['email']);
+        $this->assertNotEmpty($payload['data']['user']['email_verified_at']);
 
         $row = $this->pdo->query("SELECT email_verified_at, verification_token FROM users WHERE email='bob@example.com'")->fetch(PDO::FETCH_ASSOC);
         $this->assertNotEmpty($row['email_verified_at']);

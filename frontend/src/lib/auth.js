@@ -113,6 +113,26 @@ export const authAPI = {
       confirm_password: confirmPassword
     });
     return response.data;
+  },
+
+  async sendVerificationCode(payload) {
+    const body = typeof payload === 'string' ? { email: payload } : payload;
+    const response = await api.post('/auth/send-verification-code', body);
+    return response.data;
+  },
+
+  async verifyEmail(data) {
+    const response = await api.post('/auth/verify-email', data);
+    if (response.data?.success && response.data?.data) {
+      const { token, user } = response.data.data;
+      if (token) {
+        tokenManager.setToken(token);
+      }
+      if (user) {
+        userManager.setUser(user);
+      }
+    }
+    return response.data;
   }
 };
 

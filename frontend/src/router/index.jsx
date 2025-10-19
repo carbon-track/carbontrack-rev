@@ -10,6 +10,7 @@ const LoginPage = React.lazy(() => import('../pages/LoginPage'));
 const RegisterPage = React.lazy(() => import('../pages/RegisterPage'));
 const ForgotPasswordPage = React.lazy(() => import('../pages/ForgotPasswordPage'));
 const DashboardPage = React.lazy(() => import('../pages/DashboardPage'));
+const VerifyEmailPage = React.lazy(() => import('../pages/VerifyEmailPage'));
 const CalculatePage = React.lazy(() => import('../pages/CalculatePage'));
 const ActivitiesPage = React.lazy(() => import('../pages/ActivitiesPage'));
 const StorePage = React.lazy(() => import('../pages/StorePage'));
@@ -57,7 +58,8 @@ export const router = createBrowserRouter([
     children: [
       { path: 'login', element: <PublicRoute><React.Suspense fallback={<LoadingSpinner />}><LoginPage /></React.Suspense></PublicRoute> },
       { path: 'register', element: <PublicRoute><React.Suspense fallback={<LoadingSpinner />}><RegisterPage /></React.Suspense></PublicRoute> },
-      { path: 'forgot-password', element: <PublicRoute><React.Suspense fallback={<LoadingSpinner />}><ForgotPasswordPage /></React.Suspense></PublicRoute> }
+      { path: 'forgot-password', element: <PublicRoute><React.Suspense fallback={<LoadingSpinner />}><ForgotPasswordPage /></React.Suspense></PublicRoute> },
+      { path: 'verify-email', element: <React.Suspense fallback={<LoadingSpinner />}><VerifyEmailPage /></React.Suspense> },
     ]
   },
   { path: '/login', element: <Navigate to="/auth/login" replace /> },

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useTranslation } from '../../hooks/useTranslation';
 import { authAPI, getValidationRules } from '../../lib/auth';
 import { schoolAPI } from '../../lib/api';
@@ -76,10 +77,19 @@ export function RegisterForm() {
       const result = await authAPI.register(payload);
 
       if (result.success) {
-        setSuccess(t('auth.registerSuccess'));
-        setTimeout(() => {
-          navigate('/auth/login'); // 修正路径
-        }, 2000);
+        const verificationEmail = data.email;
+        const verificationData = result.data ?? {};
+        sessionStorage.setItem('pending_verification_email', verificationEmail);
+        if (verificationData.verification_resend_available_at) {
+          sessionStorage.setItem('verification_resend_available_at', verificationData.verification_resend_available_at);
+        } else {
+          sessionStorage.removeItem('verification_resend_available_at');
+        }
+        sessionStorage.setItem('verification_return_path', '/dashboard');
+        const successMessage = t('auth.verification.checkInbox', { email: verificationEmail });
+        setSuccess(successMessage);
+        toast.success(successMessage);
+        navigate(`/auth/verify-email?email=${encodeURIComponent(verificationEmail)}`, { replace: true });
       } else {
         setError(result.message || t('auth.registerFailed'));
       }

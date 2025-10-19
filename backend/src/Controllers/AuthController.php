@@ -270,22 +270,7 @@ class AuthController
                     'user_agent' => $request->getHeaderLine('User-Agent')
                 ]
             ]);
-            $avatar = $this->resolveAvatar($user['avatar_path'] ?? $user['avatar_url'] ?? null);
-
-            $userInfo = [
-                'id' => $user['id'],
-                'uuid' => $user['uuid'] ?? null,
-                'username' => $user['username'],
-                'email' => $user['email'] ?? null,
-                'school_id' => $user['school_id'] ?? null,
-                'school_name' => $user['school_name'] ?? null,
-                'points' => (int)($user['points'] ?? 0),
-                'is_admin' => (bool)($user['is_admin'] ?? 0),
-                'email_verified_at' => $user['email_verified_at'] ?? null,
-                'avatar_path' => $avatar['avatar_path'],
-                'avatar_url' => $avatar['avatar_url'],
-                'lastlgn' => $user['lastlgn'] ?? ($user['last_login_at'] ?? null),
-            ];
+            $userInfo = $this->formatUserPayload($user);
             return $this->jsonResponse($response, [
                 'success' => true,
                 'message' => 'Login successful',
@@ -367,7 +352,10 @@ class AuthController
             if (!empty($user['email_verified_at'])) {
                 return $this->jsonResponse($response, [
                     'success' => true,
-                    'message' => 'Email already verified'
+                    'message' => 'Email already verified',
+                    'data' => [
+                        'already_verified' => true
+                    ]
                 ]);
             }
 
@@ -505,9 +493,25 @@ class AuthController
                 'method' => $mode
             ]);
 
+            $userDetail = $this->findUserDetailed((int)$user['id']);
+            if ($userDetail === null) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'message' => 'User not found after verification',
+                    'code' => 'USER_NOT_FOUND'
+                ], 500);
+            }
+
+            $token = $this->authService->generateToken($userDetail);
+            $formattedUser = $this->formatUserPayload($userDetail);
+
             return $this->jsonResponse($response, [
                 'success' => true,
-                'message' => 'Email verified successfully'
+                'message' => 'Email verified successfully',
+                'data' => [
+                    'token' => $token,
+                    'user' => $formattedUser
+                ]
             ]);
         } catch (\Throwable $e) {
             $this->logger->error('Verify email failed', ['error' => $e->getMessage()]);
@@ -903,6 +907,47 @@ class AuthController
     {
         $stmt = $this->db->prepare('UPDATE users SET verification_attempts = ?, updated_at = ? WHERE id = ?');
         $stmt->execute([$attempts, date('Y-m-d H:i:s'), $userId]);
+    }
+
+    private function findUserDetailed(int $userId): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT u.*, s.name AS school_name, a.file_path AS avatar_path
+            FROM users u
+            LEFT JOIN schools s ON u.school_id = s.id
+            LEFT JOIN avatars a ON u.avatar_id = a.id
+            WHERE u.id = ? AND u.deleted_at IS NULL
+            LIMIT 1
+        ");
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+
+        return $row;
+    }
+
+    private function formatUserPayload(array $row): array
+    {
+        $avatar = $this->resolveAvatar($row['avatar_path'] ?? $row['avatar_url'] ?? null);
+        return [
+            'id' => (int)($row['id'] ?? 0),
+            'uuid' => $row['uuid'] ?? null,
+            'username' => $row['username'] ?? null,
+            'email' => $row['email'] ?? null,
+            'school_id' => $row['school_id'] ?? null,
+            'school_name' => $row['school_name'] ?? null,
+            'points' => (int)($row['points'] ?? 0),
+            'is_admin' => (bool)($row['is_admin'] ?? 0),
+            'email_verified_at' => $row['email_verified_at'] ?? null,
+            'avatar_id' => $row['avatar_id'] ?? null,
+            'avatar_path' => $avatar['avatar_path'],
+            'avatar_url' => $avatar['avatar_url'],
+            'lastlgn' => $row['lastlgn'] ?? ($row['last_login_at'] ?? null),
+            'status' => $row['status'] ?? null,
+            'updated_at' => $row['updated_at'] ?? null,
+        ];
     }
 
     private function resolveAvatar(?string $filePath, int $ttlSeconds = 600): array

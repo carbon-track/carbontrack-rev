@@ -111,11 +111,28 @@
       "privacyLink": "Privacy Policy"
     },
     "verification": {
-      "title": "Email Verification",
-      "subtitle": "We've sent a verification code to your email",
-      "code": "Verification Code",
-      "resend": "Resend",
-      "verify": "Verify"
+      "title": "Verify your email",
+      "description": "We've sent a verification code to {{email}}. Enter the code below or click the link in the email.",
+      "yourEmail": "your email",
+      "checkInbox": "We've sent a verification email to {{email}}. Please check your inbox.",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "name@example.com",
+      "emailRequired": "Please enter an email address.",
+      "codeLabel": "Verification code",
+      "codeRequired": "Please enter the verification code.",
+      "codePattern": "The verification code should be 6 digits.",
+      "codeSuccess": "Email verified successfully. Redirecting...",
+      "codeFailed": "Verification code is invalid or has expired.",
+      "tokenVerifying": "Verifying your email...",
+      "tokenSuccess": "Email verified successfully. Redirecting...",
+      "tokenFailed": "The verification link is invalid or has expired.",
+      "submit": "Complete verification",
+      "submitting": "Submitting...",
+      "resend": "Resend code",
+      "resendCountdown": "You can request a new code in {{seconds}}s",
+      "resendSuccess": "Verification email sent",
+      "backToLogin": "Back to sign in",
+      "helper": "Still no email? Check your spam folder or request a new code."
     },
     "resetPassword": {
       "title": "Reset Password",
