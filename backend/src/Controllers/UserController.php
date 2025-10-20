@@ -365,9 +365,9 @@ class UserController
                 'operation_category' => 'user_management',
                 'user_id' => $user['id'],
                 'actor_type' => 'user',
-                'affected_table' => 'user_notification_preferences',
+                'affected_table' => 'users',
                 'affected_id' => $user['id'],
-                'new_data' => $preferences,
+                'new_data' => ['preferences' => $updated],
                 'status' => 'success',
                 'request_data' => $preferences,
             ]);

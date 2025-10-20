@@ -615,7 +615,7 @@ CREATE TABLE `users` (
   `class_name` varchar(100) DEFAULT NULL,
   `school_id` int(11) DEFAULT NULL,
   `avatar_id` int(11) DEFAULT NULL,
-  `reset_token` varchar(255) DEFAULT NULL,
+  `reset_token` varchar(191) DEFAULT NULL,
   `reset_token_expires_at` datetime DEFAULT NULL,
   `email_verified_at` datetime DEFAULT NULL,
   `verification_code` varchar(32) DEFAULT NULL,
@@ -623,7 +623,8 @@ CREATE TABLE `users` (
   `verification_code_expires_at` datetime DEFAULT NULL,
   `verification_attempts` int(11) NOT NULL DEFAULT '0',
   `verification_send_count` int(11) NOT NULL DEFAULT '0',
-  `verification_last_sent_at` datetime DEFAULT NULL
+  `verification_last_sent_at` datetime DEFAULT NULL,
+  `notification_email_mask` int(11) unsigned NOT NULL DEFAULT '0'
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -945,15 +946,3 @@ ALTER TABLE `transactions`
 ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 COMMIT;
--- Notification preferences
-CREATE TABLE IF NOT EXISTS `user_notification_preferences` (
-  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `user_id` BIGINT UNSIGNED NOT NULL,
-  `category` VARCHAR(64) NOT NULL,
-  `email_enabled` TINYINT(1) NOT NULL DEFAULT 1,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_user_pref_category` (`user_id`, `category`),
-  CONSTRAINT `fk_user_pref_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

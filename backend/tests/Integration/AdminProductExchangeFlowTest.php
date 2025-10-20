@@ -162,7 +162,8 @@ class AdminProductExchangeFlowTest extends TestCase
             is_admin INTEGER,
             status TEXT,
             created_at TEXT,
-            deleted_at TEXT
+            deleted_at TEXT,
+            notification_email_mask INTEGER DEFAULT 0
         )');
 
         $pdo->exec('CREATE TABLE product_categories (

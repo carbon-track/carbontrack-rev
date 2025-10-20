@@ -2,6 +2,7 @@
 
 namespace CarbonTrack\Services;
 
+use CarbonTrack\Models\Message;
 use Monolog\Logger;
 use PHPMailer\PHPMailer\PHPMailer;
 
@@ -262,6 +263,46 @@ HTML;
         }
     }
 
+    public function sendMessageNotification(
+        string $toEmail,
+        string $toName,
+        string $subject,
+        string $messageBody,
+        string $category,
+        string $priority = Message::PRIORITY_NORMAL
+    ): bool {
+        if (!$this->shouldSendEmail($toEmail, $category)) {
+            return false;
+        }
+
+        $buttons = [];
+        $messagesUrl = $this->buildFrontendUrl('messages');
+        if ($messagesUrl) {
+            $buttons[] = [
+                'text' => 'View in CarbonTrack',
+                'url' => $messagesUrl,
+                'color' => self::DEFAULT_BUTTON_COLOR,
+            ];
+        }
+
+        $priorityNotice = $this->buildPriorityNoticeText($priority);
+
+        $contentHtml = '<p style="margin:0 0 16px 0;">' . sprintf('Hello %s,', $this->esc($toName)) . '</p>';
+        if ($priorityNotice !== '') {
+            $contentHtml .= '<p style="margin:0 0 16px 0;color:#dc2626;font-weight:600;">' . $this->esc($priorityNotice) . '</p>';
+        }
+        $contentHtml .= '<p style="margin:0 0 12px 0;">You have a new notification in ' . $this->esc($this->appName) . '.</p>';
+        $contentHtml .= '<div style="margin:16px 0;padding:16px;background:#f8fafc;border-radius:12px;">'
+            . $this->renderMessageContentHtml($messageBody)
+            . '</div>';
+        $contentHtml .= '<p style="margin:12px 0 0 0;">You can review the full details in the app at any time.</p>';
+
+        $bodyHtml = $this->renderLayout($subject, $contentHtml, $buttons);
+        $bodyText = $this->buildTextBody($bodyHtml, $buttons);
+
+        return $this->sendEmail($toEmail, $toName, $subject, $bodyHtml, $bodyText);
+    }
+
     public function getLastError(): ?string
     {
         return $this->lastError;
@@ -336,6 +377,44 @@ HTML;
         ];
 
         return str_replace(array_keys($replacements), array_values($replacements), $layout);
+    }
+
+    private function renderMessageContentHtml(string $messageBody): string
+    {
+        $normalized = preg_replace("/\r\n|\r/", "\n", (string) $messageBody);
+        $normalized = trim($normalized ?? '');
+        if ($normalized === '') {
+            return '<p style="margin:0;color:#475569;">No additional message details were provided.</p>';
+        }
+
+        $blocks = preg_split("/\n{2,}/", $normalized) ?: [$normalized];
+        $htmlSegments = [];
+        foreach ($blocks as $block) {
+            $trimmed = trim($block);
+            if ($trimmed === '') {
+                continue;
+            }
+            $htmlSegments[] = '<p style="margin:0 0 12px 0;">' . nl2br($this->esc($trimmed)) . '</p>';
+        }
+
+        if (empty($htmlSegments)) {
+            $htmlSegments[] = '<p style="margin:0;color:#475569;">' . $this->esc($normalized) . '</p>';
+        }
+
+        return implode('', $htmlSegments);
+    }
+
+    private function buildPriorityNoticeText(string $priority): string
+    {
+        $normalized = strtolower(trim($priority));
+        switch ($normalized) {
+            case 'urgent':
+                return 'This notification is marked as URGENT. Please review it as soon as possible.';
+            case 'high':
+                return 'This notification is marked as high priority.';
+            default:
+                return '';
+        }
     }
 
     /**

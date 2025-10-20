@@ -245,7 +245,8 @@ $__deps_initializer = function (Container $container) {
     $container->set(MessageService::class, function (ContainerInterface $c) {
         return new MessageService(
             $c->get(Logger::class),
-            $c->get(AuditLogService::class)
+            $c->get(AuditLogService::class),
+            $c->get(EmailService::class)
         );
     });
 

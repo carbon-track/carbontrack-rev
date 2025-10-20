@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace CarbonTrack\Services;
 
 use CarbonTrack\Models\User;
-use CarbonTrack\Models\UserNotificationPreference;
 use Monolog\Logger;
 
 class NotificationPreferenceService
@@ -32,9 +31,22 @@ class NotificationPreferenceService
     ];
 
     /**
-     * @var array<int, array<string, bool>>
+     * Bitmask mapping for optional categories (1 bit = category disabled).
+     * Locked categories must not appear here.
+     *
+     * @var array<string,int>
      */
-    private array $emailPreferenceCache = [];
+    private const CATEGORY_BITMASKS = [
+        self::CATEGORY_SYSTEM => 1 << 0,
+        self::CATEGORY_TRANSACTION => 1 << 1,
+        self::CATEGORY_ACTIVITY => 1 << 2,
+        self::CATEGORY_ANNOUNCEMENT => 1 << 3,
+    ];
+
+    /**
+     * @var array<int,int>
+     */
+    private array $maskCache = [];
     /**
      * @var array<string, int>
      */
@@ -60,20 +72,20 @@ class NotificationPreferenceService
      */
     public function getPreferencesForUser(int $userId): array
     {
-        $records = UserNotificationPreference::query()
-            ->where('user_id', $userId)
-            ->get(['category', 'email_enabled'])
-            ->pluck('email_enabled', 'category')
-            ->map(fn($value) => (bool) $value)
-            ->toArray();
+        $mask = $this->getMaskForUser($userId);
 
         $result = [];
         foreach (self::CATEGORY_DEFINITIONS as $category => $meta) {
+            $emailEnabled = true;
+            if (!$meta['locked'] && isset(self::CATEGORY_BITMASKS[$category])) {
+                $emailEnabled = ($mask & self::CATEGORY_BITMASKS[$category]) === 0;
+            }
+
             $result[] = [
                 'category' => $category,
                 'label' => $meta['label'],
                 'locked' => $meta['locked'],
-                'email_enabled' => $meta['locked'] ? true : ($records[$category] ?? true),
+                'email_enabled' => $meta['locked'] ? true : $emailEnabled,
             ];
         }
 
@@ -85,38 +97,50 @@ class NotificationPreferenceService
      */
     public function updatePreferences(int $userId, array $preferences): void
     {
-        $allowed = self::CATEGORY_DEFINITIONS;
-        $toUpsert = [];
+        $currentMask = $this->getMaskForUser($userId);
+        $updatedMask = $currentMask;
 
         foreach ($preferences as $entry) {
             $category = (string) ($entry['category'] ?? '');
-            if (!isset($allowed[$category])) {
+            if (!$this->isValidCategory($category)) {
                 continue;
             }
 
-            if ($allowed[$category]['locked']) {
+            if ($this->isLockedCategory($category)) {
                 continue;
             }
 
             $enabled = (bool) ($entry['email_enabled'] ?? true);
-            $toUpsert[$category] = $enabled;
-        }
+            $bit = self::CATEGORY_BITMASKS[$category] ?? null;
+            if ($bit === null) {
+                continue;
+            }
 
-        if (!empty($toUpsert)) {
-            foreach ($toUpsert as $category => $enabled) {
-                UserNotificationPreference::query()->updateOrCreate(
-                    [
-                        'user_id' => $userId,
-                        'category' => $category,
-                    ],
-                    [
-                        'email_enabled' => $enabled,
-                    ]
-                );
+            if ($enabled) {
+                $updatedMask &= ~$bit;
+            } else {
+                $updatedMask |= $bit;
             }
         }
 
-        $this->emailPreferenceCache[$userId] = [];
+        if ($updatedMask !== $currentMask) {
+            try {
+                User::query()
+                    ->where('id', $userId)
+                    ->update([
+                        'notification_email_mask' => $updatedMask,
+                        'updated_at' => date('Y-m-d H:i:s'),
+                    ]);
+            } catch (\Throwable $e) {
+                $this->logger->error('Failed to update notification mask', [
+                    'user_id' => $userId,
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
+
+            $this->maskCache[$userId] = $updatedMask;
+        }
     }
 
     public function shouldSendEmailByEmail(string $email, string $category): bool
@@ -126,7 +150,7 @@ class NotificationPreferenceService
             return true;
         }
 
-        if (self::CATEGORY_DEFINITIONS[$category]['locked']) {
+        if ($this->isLockedCategory($category)) {
             return true;
         }
 
@@ -134,9 +158,14 @@ class NotificationPreferenceService
             $user = User::query()
                 ->where('email', $email)
                 ->whereNull('deleted_at')
-                ->first(['id']);
+                ->first(['id', 'notification_email_mask']);
 
-            $this->userIdByEmailCache[$email] = $user ? (int) $user->id : 0;
+            if ($user) {
+                $this->userIdByEmailCache[$email] = (int) $user->id;
+                $this->maskCache[$user->id] = (int) ($user->notification_email_mask ?? 0);
+            } else {
+                $this->userIdByEmailCache[$email] = 0;
+            }
         }
 
         $userId = $this->userIdByEmailCache[$email];
@@ -153,19 +182,49 @@ class NotificationPreferenceService
             return true;
         }
 
-        if (self::CATEGORY_DEFINITIONS[$category]['locked']) {
+        if ($this->isLockedCategory($category)) {
             return true;
         }
 
-        if (!isset($this->emailPreferenceCache[$userId])) {
-            $this->emailPreferenceCache[$userId] = UserNotificationPreference::query()
-                ->where('user_id', $userId)
-                ->get(['category', 'email_enabled'])
-                ->pluck('email_enabled', 'category')
-                ->map(fn($value) => (bool) $value)
-                ->toArray();
+        $bit = self::CATEGORY_BITMASKS[$category] ?? null;
+        if ($bit === null) {
+            return true;
         }
 
-        return $this->emailPreferenceCache[$userId][$category] ?? true;
+        $mask = $this->getMaskForUser($userId);
+
+        return ($mask & $bit) === 0;
+    }
+
+    private function getMaskForUser(int $userId): int
+    {
+        if (!array_key_exists($userId, $this->maskCache)) {
+            try {
+                $mask = User::query()
+                    ->where('id', $userId)
+                    ->whereNull('deleted_at')
+                    ->value('notification_email_mask');
+            } catch (\Throwable $e) {
+                $this->logger->warning('Failed to load notification mask; assuming defaults', [
+                    'user_id' => $userId,
+                    'error' => $e->getMessage(),
+                ]);
+                $mask = 0;
+            }
+
+            $this->maskCache[$userId] = (int) ($mask ?? 0);
+        }
+
+        return $this->maskCache[$userId];
+    }
+
+    private function isLockedCategory(string $category): bool
+    {
+        return self::CATEGORY_DEFINITIONS[$category]['locked'] ?? false;
+    }
+
+    private function isValidCategory(string $category): bool
+    {
+        return isset(self::CATEGORY_DEFINITIONS[$category]);
     }
 }
