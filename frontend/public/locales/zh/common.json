@@ -25,7 +25,8 @@
     "admin": "管理后台",
     "login": "登录",
     "register": "注册",
-    "logout": "退出登录"
+    "logout": "退出登录",
+    "notifications": "通知设置"
   },
   "home": {
     "hero": {
@@ -221,6 +222,7 @@
       "tokenVerifying": "正在验证邮箱…",
       "tokenSuccess": "邮箱验证成功，正在跳转…",
       "tokenFailed": "验证链接无效或已过期。",
+      "turnstileRequired": "请先完成人机验证。",
       "submit": "完成验证",
       "submitting": "提交中…",
       "resend": "重新发送",
@@ -1990,5 +1992,49 @@
     "pieces": "件",
     "unit": "单位",
     "points": "积分"
+  },
+  "settings": {
+    "notifications": {
+      "title": "邮件通知偏好",
+      "subtitle": "选择需要接收的邮件通知，修改后立即生效。",
+      "emailHeading": "邮件提醒",
+      "emailDescription": "开启或关闭需要接收的邮件类型。站内信和安全提醒将始终发送。",
+      "locked": "该通知为必选项，无法关闭。",
+      "reset": "重置",
+      "save": "保存设置",
+      "saving": "保存中...",
+      "saveSuccess": "通知偏好已更新。",
+      "saveFailed": "通知偏好更新失败。",
+      "categories": {
+        "verification": {
+          "label": "账号验证",
+          "description": "用于验证邮箱的验证码和链接。"
+        },
+        "security": {
+          "label": "安全提醒",
+          "description": "密码重置等重要安全通知。"
+        },
+        "system": {
+          "label": "系统提示与引导",
+          "description": "欢迎信息以及重要账号提示。"
+        },
+        "transaction": {
+          "label": "兑换相关通知",
+          "description": "积分兑换与领取状态提醒。"
+        },
+        "activity": {
+          "label": "活动审核通知",
+          "description": "碳减排行为审核结果与反馈。"
+        },
+        "announcement": {
+          "label": "平台公告",
+          "description": "平台公告、维护通知与简报。"
+        },
+        "message": {
+          "label": "站内信提醒",
+          "description": "来自其他用户的站内信邮件副本（始终开启）。"
+        }
+      }
+    }
   }
 }

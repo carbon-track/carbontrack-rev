@@ -17,6 +17,7 @@ class EmailService
     private string $appName = 'CarbonTrack';
     private string $supportEmail = 'support@carbontrack.example';
     private ?string $frontendUrl = null;
+    private ?NotificationPreferenceService $preferenceService = null;
 
     private const TAG_ACTIVITY_NAME = '{{activity_name}}';
     private const TAG_POINTS_EARNED = '{{points_earned}}';
@@ -49,10 +50,11 @@ class EmailService
 HTML;
     private const DEFAULT_BUTTON_COLOR = '#0ea5e9';
 
-    public function __construct(array $config, Logger $logger)
+    public function __construct(array $config, Logger $logger, ?NotificationPreferenceService $preferenceService = null)
     {
         $this->config = $config;
         $this->logger = $logger;
+        $this->preferenceService = $preferenceService;
         $this->forceSimulation = $this->normalizeForceSimulation($config['force_simulation'] ?? false);
 
         if (!$this->forceSimulation && class_exists(PHPMailer::class)) {
@@ -201,6 +203,9 @@ HTML;
                 continue;
             }
             $name = $recipient['name'] ?? null;
+            if (!$this->shouldSendEmail($email, NotificationPreferenceService::CATEGORY_ANNOUNCEMENT)) {
+                continue;
+            }
             $cleaned[] = ['email' => $email, 'name' => $name];
         }
 
@@ -418,6 +423,25 @@ HTML;
         return rtrim(rtrim($formatted, '0'), '.');
     }
 
+    private function shouldSendEmail(string $email, string $category): bool
+    {
+        if ($this->preferenceService === null) {
+            return true;
+        }
+
+        try {
+            return $this->preferenceService->shouldSendEmailByEmail($email, $category);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Failed to resolve notification preference, falling back to send', [
+                'email' => $email,
+                'category' => $category,
+                'error' => $e->getMessage(),
+            ]);
+
+            return true;
+        }
+    }
+
     public function sendVerificationCode(
         string $toEmail,
         string $toName,
@@ -425,6 +449,10 @@ HTML;
         int $expiryMinutes = 30,
         ?string $verificationLink = null
     ): bool {
+        if (!$this->shouldSendEmail($toEmail, NotificationPreferenceService::CATEGORY_VERIFICATION)) {
+            return false;
+        }
+
         $subject = $this->config['subjects']['verification_code'] ?? 'Your Verification Code';
 
         $htmlTemplate = $this->readTemplate(
@@ -469,6 +497,10 @@ HTML;
 
     public function sendPasswordResetLink(string $toEmail, string $toName, string $link)
     {
+        if (!$this->shouldSendEmail($toEmail, NotificationPreferenceService::CATEGORY_SECURITY)) {
+            return false;
+        }
+
         $subject = $this->config['subjects']['password_reset'] ?? 'Password Reset Request';
         $htmlTemplate = $this->readTemplate(
             'password_reset.html',
@@ -500,6 +532,10 @@ HTML;
 
     public function sendActivityApprovedNotification(string $toEmail, string $toName, string $activityName, float $pointsEarned)
     {
+        if (!$this->shouldSendEmail($toEmail, NotificationPreferenceService::CATEGORY_ACTIVITY)) {
+            return false;
+        }
+
         $subject = $this->config['subjects']['activity_approved'] ?? 'Your Carbon Activity Approved!';
         $htmlTemplate = $this->readTemplate(
             'activity_approved.html',
@@ -540,6 +576,10 @@ HTML;
 
     public function sendActivityRejectedNotification(string $toEmail, string $toName, string $activityName, string $reason)
     {
+        if (!$this->shouldSendEmail($toEmail, NotificationPreferenceService::CATEGORY_ACTIVITY)) {
+            return false;
+        }
+
         $subject = $this->config['subjects']['activity_rejected'] ?? 'Your Carbon Activity Rejected';
         $htmlTemplate = $this->readTemplate(
             'activity_rejected.html',
@@ -580,6 +620,10 @@ HTML;
 
     public function sendExchangeConfirmation(string $toEmail, string $toName, string $productName, int $quantity, float $totalPoints)
     {
+        if (!$this->shouldSendEmail($toEmail, NotificationPreferenceService::CATEGORY_TRANSACTION)) {
+            return false;
+        }
+
         $subject = $this->config['subjects']['exchange_confirmation'] ?? 'Your Exchange Order Confirmed';
         $htmlTemplate = $this->readTemplate(
             'exchange_confirmation.html',
@@ -622,6 +666,10 @@ HTML;
 
     public function sendExchangeStatusUpdate(string $toEmail, string $toName, string $productName, string $status, string $adminNotes = '')
     {
+        if (!$this->shouldSendEmail($toEmail, NotificationPreferenceService::CATEGORY_TRANSACTION)) {
+            return false;
+        }
+
         $subject = $this->config['subjects']['exchange_status_update'] ?? 'Your Exchange Order Status Updated';
         $htmlTemplate = $this->readTemplate(
             'exchange_status_update.html',
@@ -673,6 +721,10 @@ HTML;
 
     public function sendWelcomeEmail(string $toEmail, string $toName): bool
     {
+        if (!$this->shouldSendEmail($toEmail, NotificationPreferenceService::CATEGORY_SYSTEM)) {
+            return false;
+        }
+
         $subject = $this->config['subjects']['welcome'] ?? 'Welcome to CarbonTrack';
         $contentHtml = sprintf(
             '<p>Hello %s,</p>'
@@ -707,7 +759,13 @@ HTML;
     {
         $base = $this->config['reset_link_base']
             ?? ($_ENV['FRONTEND_URL'] ?? ($_ENV['APP_URL'] ?? ''));
-        $link = $base ? rtrim($base, '/') . '/reset-password?token=' . urlencode($token) : '#';
+        $link = '#';
+        if ($base) {
+            $link = rtrim($base, '/') . '/reset-password?token=' . urlencode($token);
+            if ($toEmail !== '') {
+                $link .= '&email=' . urlencode($toEmail);
+            }
+        }
 
         return $this->sendPasswordResetLink($toEmail, $toName, $link);
     }

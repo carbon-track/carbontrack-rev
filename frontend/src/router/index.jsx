@@ -19,6 +19,7 @@ const MessagesPage = React.lazy(() => import('../pages/MessagesPage'));
 const ProfilePage = React.lazy(() => import('../pages/ProfilePage'));
 const OnboardingPage = React.lazy(() => import('../pages/OnboardingPage'));
 const AchievementsPage = React.lazy(() => import('../pages/AchievementsPage'));
+const NotificationSettingsPage = React.lazy(() => import('../pages/NotificationSettingsPage'));
 // Admin pages
 const AdminDashboardPage = React.lazy(() => import('../pages/admin/Dashboard'));
 const AdminUsersPage = React.lazy(() => import('../pages/admin/Users'));
@@ -50,7 +51,8 @@ export const router = createBrowserRouter([
       { path: 'messages', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><MessagesPage /></React.Suspense></ProtectedRoute> },
       { path: 'profile', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><ProfilePage /></React.Suspense></ProtectedRoute> },
       { path: 'achievements', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><AchievementsPage /></React.Suspense></ProtectedRoute> },
-      { path: 'onboarding', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><OnboardingPage /></React.Suspense></ProtectedRoute> }
+      { path: 'onboarding', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><OnboardingPage /></React.Suspense></ProtectedRoute> },
+      { path: 'settings/notifications', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><NotificationSettingsPage /></React.Suspense></ProtectedRoute> }
     ]
   },
   {

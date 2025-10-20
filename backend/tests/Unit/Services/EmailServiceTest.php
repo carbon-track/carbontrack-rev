@@ -34,7 +34,7 @@ class EmailServiceTest extends TestCase
         $logger = new Logger('email-service-test');
         $logger->pushHandler($handler);
 
-        $service = new EmailService($config, $logger);
+        $service = new EmailService($config, $logger, null);
 
         $result = $service->sendEmail('to@example.com', 'To', 'Subj', '<b>body</b>', 'body');
 
@@ -91,13 +91,15 @@ class EmailServiceTest extends TestCase
             'force_simulation' => true,
             'app_name' => 'CarbonTrack QA',
             'support_email' => 'help@example.com',
+            'frontend_url' => 'https://app.example.com',
+            'reset_link_base' => 'https://app.example.com',
         ];
 
         $handler = new TestHandler();
         $logger = new Logger('email-service-test');
         $logger->pushHandler($handler);
 
-        $svc = new EmailService($config, $logger);
+        $svc = new EmailService($config, $logger, null);
 
         $this->assertTrue($svc->sendVerificationCode('to@example.com', 'User', '123456'));
         $this->assertTrue($svc->sendPasswordResetLink('to@example.com', 'User', 'https://reset'));

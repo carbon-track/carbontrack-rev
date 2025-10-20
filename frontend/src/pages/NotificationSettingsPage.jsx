@@ -1,0 +1,177 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { useTranslation } from '../hooks/useTranslation';
+import { userAPI } from '../lib/api';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
+import { Switch } from '../components/ui/switch';
+import { Button } from '../components/ui/Button';
+import { Alert, AlertDescription } from '../components/ui/Alert';
+
+const NotificationSettingsPage = () => {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [localPrefs, setLocalPrefs] = useState([]);
+  const [status, setStatus] = useState(null);
+
+  const preferencesQuery = useQuery(
+    ['notification-preferences'],
+    async () => {
+      const res = await userAPI.getNotificationPreferences();
+      return res.data?.data?.preferences ?? [];
+    },
+    {
+      onSuccess: (data) => {
+        setLocalPrefs(data);
+      },
+    }
+  );
+
+  const mutation = useMutation(
+    async (prefs) => {
+      const res = await userAPI.updateNotificationPreferences({ preferences: prefs });
+      return res.data?.data?.preferences ?? [];
+    },
+    {
+      onSuccess: (data) => {
+        toast.success(t('settings.notifications.saveSuccess'));
+        setStatus({ variant: 'success', message: t('settings.notifications.saveSuccess') });
+        setLocalPrefs(data);
+        queryClient.setQueryData(['notification-preferences'], data);
+      },
+      onError: (err) => {
+        const message = err?.response?.data?.message || err?.message || t('settings.notifications.saveFailed');
+        toast.error(message);
+        setStatus({ variant: 'destructive', message });
+      },
+    }
+  );
+
+  const loading = preferencesQuery.isLoading;
+  const saving = mutation.isLoading;
+
+  const hasChanges = useMemo(() => {
+    if (!preferencesQuery.data) return false;
+    return JSON.stringify(localPrefs) !== JSON.stringify(preferencesQuery.data);
+  }, [localPrefs, preferencesQuery.data]);
+
+  const handleToggle = (category, locked) => (checked) => {
+    if (locked) {
+      return;
+    }
+    setLocalPrefs((prev) =>
+      prev.map((item) =>
+        item.category === category ? { ...item, email_enabled: Boolean(checked) } : item
+      )
+    );
+    setStatus(null);
+  };
+
+  const handleReset = () => {
+    if (preferencesQuery.data) {
+      setLocalPrefs(preferencesQuery.data);
+    }
+    setStatus(null);
+  };
+
+  const handleSave = () => {
+    mutation.mutate(localPrefs.map(({ category, email_enabled }) => ({ category, email_enabled })));
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-10">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+          {t('settings.notifications.title')}
+        </h1>
+        <p className="mt-2 text-sm text-gray-600">
+          {t('settings.notifications.subtitle')}
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('settings.notifications.emailHeading')}</CardTitle>
+          <CardDescription>{t('settings.notifications.emailDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t('common.loading')}
+            </div>
+          ) : (
+            <>
+              {status?.message && (
+                <Alert variant={status.variant || 'info'}>
+                  <AlertDescription>{status.message}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-4">
+                {localPrefs.map((pref) => (
+                  <div
+                    key={pref.category}
+                    className="flex items-start justify-between rounded-lg border border-gray-100 bg-gray-50 px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {t(`settings.notifications.categories.${pref.category}.label`, {
+                          defaultValue: pref.label,
+                        })}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {t(`settings.notifications.categories.${pref.category}.description`, {
+                          defaultValue: pref.label,
+                        })}
+                      </p>
+                      {pref.locked && (
+                        <p className="text-xs text-amber-600 mt-2">
+                          {t('settings.notifications.locked')}
+                        </p>
+                      )}
+                    </div>
+                    <Switch
+                      checked={pref.email_enabled}
+                      onCheckedChange={handleToggle(pref.category, pref.locked)}
+                      disabled={pref.locked || saving}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleReset}
+                  disabled={!hasChanges || saving}
+                >
+                  {t('settings.notifications.reset')}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={!hasChanges || saving}
+                >
+                  {saving ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t('settings.notifications.saving')}
+                    </span>
+                  ) : (
+                    t('settings.notifications.save')
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default NotificationSettingsPage;
+

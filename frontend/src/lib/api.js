@@ -91,6 +91,9 @@ export const userAPI = {
   // 更新当前用户信息
   updateCurrentUser: (data) => api.put('/users/me', data),
   
+  getNotificationPreferences: () => api.get('/users/me/notification-preferences'),
+  updateNotificationPreferences: (data) => api.put('/users/me/notification-preferences', data),
+  
   // 获取用户信息
   getUser: (id) => api.get(`/users/${id}`),
   

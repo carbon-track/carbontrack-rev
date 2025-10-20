@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Alert, AlertDescription } from '../components/ui/Alert';
+import Turnstile from '../components/common/Turnstile';
 
 const toTimestamp = (value) => {
   if (!value) return null;
@@ -62,6 +63,9 @@ const VerifyEmailPage = () => {
   const [status, setStatus] = useState(null);
   const [resendAvailableAt, setResendAvailableAt] = useState(() => toTimestamp(getSessionValue('verification_resend_available_at')));
   const [resendCountdown, setResendCountdown] = useState(0);
+  const turnstileRef = useRef(null);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const requiresTurnstile = Boolean(import.meta.env?.VITE_TURNSTILE_SITE_KEY);
 
   const emailValue = watch('email');
 
@@ -144,6 +148,21 @@ const VerifyEmailPage = () => {
     }
   }, [tokenParam, tokenHandled, t]);
 
+  const ensureTurnstile = () => {
+    if (requiresTurnstile && !turnstileToken) {
+      const message = t('auth.verification.turnstileRequired');
+      setStatus({ variant: 'warning', message });
+      toast.error(message);
+      return false;
+    }
+    return true;
+  };
+
+  const resetTurnstile = () => {
+    setTurnstileToken('');
+    turnstileRef.current?.reset?.();
+  };
+
   const handleManualVerify = async (values) => {
     const email = values.email.trim();
     const code = values.code.trim();
@@ -157,11 +176,15 @@ const VerifyEmailPage = () => {
       return;
     }
 
+    if (!ensureTurnstile()) {
+      return;
+    }
+
     setIsSubmitting(true);
     setStatus(null);
 
     try {
-      const response = await authAPI.verifyEmail({ email, code });
+      const response = await authAPI.verifyEmail({ email, code, cf_turnstile_response: turnstileToken });
       if (response.success) {
         toast.success(t('auth.verification.codeSuccess'));
         processVerifiedSession(response.data);
@@ -175,6 +198,7 @@ const VerifyEmailPage = () => {
       setStatus({ variant: 'destructive', message });
       toast.error(message);
     } finally {
+      resetTurnstile();
       setIsSubmitting(false);
     }
   };
@@ -186,9 +210,13 @@ const VerifyEmailPage = () => {
       return;
     }
 
+    if (!ensureTurnstile()) {
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const response = await authAPI.sendVerificationCode({ email });
+      const response = await authAPI.sendVerificationCode({ email, cf_turnstile_response: turnstileToken });
       if (response.success) {
         const meta = response.data || {};
         const nextAt = toTimestamp(meta.verification_resend_available_at);
@@ -210,15 +238,18 @@ const VerifyEmailPage = () => {
         toast.error(message);
       }
     } catch (error) {
-      const message = error?.response?.data?.message || error.message || t('auth.verification.tokenFailed');
-      setStatus({ variant: 'destructive', message });
-      toast.error(message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        const message = error?.response?.data?.message || error.message || t('auth.verification.tokenFailed');
+        setStatus({ variant: 'destructive', message });
+        toast.error(message);
+      } finally {
+      resetTurnstile();
+        setIsSubmitting(false);
+      }
+    };
 
-  const resendDisabled = isSubmitting || (resendAvailableAt !== null && resendAvailableAt > Date.now());
+  const resendDisabled = isSubmitting
+    || (resendAvailableAt !== null && resendAvailableAt > Date.now())
+    || (requiresTurnstile && !turnstileToken);
   const secondsRemaining = Math.max(0, Math.ceil(resendCountdown / 1000));
 
   return (
@@ -289,7 +320,22 @@ const VerifyEmailPage = () => {
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <div className="space-y-2">
+                <Turnstile
+                  ref={turnstileRef}
+                  className="flex justify-center"
+                  require={requiresTurnstile}
+                  onVerify={(token) => setTurnstileToken(token)}
+                  onExpire={() => setTurnstileToken('')}
+                  onError={() => setTurnstileToken('')}
+                />
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isSubmitting || (requiresTurnstile && !turnstileToken)}
+              >
                 {isSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />

@@ -218,6 +218,14 @@ export function Navbar() {
                         <Settings className="h-4 w-4" />
                         {t('nav.profile')}
                       </Link>
+
+                      <Link
+                        to="/settings/notifications"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <Bell className="h-4 w-4" />
+                        {t('nav.notifications')}
+                      </Link>
                       
                       {user?.is_admin && (
                         <Link
@@ -327,6 +335,15 @@ export function Navbar() {
                   >
                     <Settings className="h-5 w-5" />
                     {t('nav.profile')}
+                  </Link>
+
+                  <Link
+                    to="/settings/notifications"
+                    onClick={closeMobile}
+                    className="flex items-center gap-3 px-3 py-2 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {t('nav.notifications')}
                   </Link>
                   
                   {user?.is_admin && (
