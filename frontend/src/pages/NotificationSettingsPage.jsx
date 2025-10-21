@@ -14,6 +14,7 @@ const NotificationSettingsPage = () => {
   const queryClient = useQueryClient();
   const [localPrefs, setLocalPrefs] = useState([]);
   const [status, setStatus] = useState(null);
+  const [testStatus, setTestStatus] = useState(null);
 
   const preferencesQuery = useQuery(
     ['notification-preferences'],
@@ -48,8 +49,28 @@ const NotificationSettingsPage = () => {
     }
   );
 
+  const testEmailMutation = useMutation(
+    async () => {
+      const res = await userAPI.sendNotificationTestEmail();
+      return res.data;
+    },
+    {
+      onSuccess: (data) => {
+        const message = data?.message || t('settings.notifications.testEmail.success');
+        toast.success(message);
+        setTestStatus({ variant: 'success', message });
+      },
+      onError: (err) => {
+        const message = err?.response?.data?.message || err?.message || t('settings.notifications.testEmail.error');
+        toast.error(message);
+        setTestStatus({ variant: 'destructive', message });
+      },
+    }
+  );
+
   const loading = preferencesQuery.isLoading;
   const saving = mutation.isLoading;
+  const sendingTest = testEmailMutation.isLoading;
 
   const hasChanges = useMemo(() => {
     if (!preferencesQuery.data) return false;
@@ -66,6 +87,7 @@ const NotificationSettingsPage = () => {
       )
     );
     setStatus(null);
+    setTestStatus(null);
   };
 
   const handleReset = () => {
@@ -73,10 +95,17 @@ const NotificationSettingsPage = () => {
       setLocalPrefs(preferencesQuery.data);
     }
     setStatus(null);
+    setTestStatus(null);
   };
 
   const handleSave = () => {
+    setTestStatus(null);
     mutation.mutate(localPrefs.map(({ category, email_enabled }) => ({ category, email_enabled })));
+  };
+
+  const handleSendTestEmail = () => {
+    setTestStatus(null);
+    testEmailMutation.mutate();
   };
 
   return (
@@ -165,6 +194,37 @@ const NotificationSettingsPage = () => {
                   )}
                 </Button>
               </div>
+
+              <div className="border-t border-gray-100 pt-4 mt-6">
+                <h3 className="text-sm font-medium text-gray-900">
+                  {t('settings.notifications.testEmail.title')}
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  {t('settings.notifications.testEmail.description')}
+                </p>
+                {testStatus?.message && (
+                  <Alert variant={testStatus.variant || 'info'} className="mt-3">
+                    <AlertDescription>{testStatus.message}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="mt-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSendTestEmail}
+                    disabled={sendingTest || saving}
+                  >
+                    {sendingTest ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {t('settings.notifications.testEmail.sending')}
+                      </span>
+                    ) : (
+                      t('settings.notifications.testEmail.button')
+                    )}
+                  </Button>
+                </div>
+              </div>
             </>
           )}
         </CardContent>
@@ -174,4 +234,3 @@ const NotificationSettingsPage = () => {
 };
 
 export default NotificationSettingsPage;
-

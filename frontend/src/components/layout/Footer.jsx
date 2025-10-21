@@ -12,16 +12,7 @@ export function Footer() {
   }, []);
 
   const buildId = useMemo(() => {
-    const candidates = [
-      import.meta.env?.VITE_GIT_COMMIT,
-      import.meta.env?.VITE_GIT_COMMIT_ID,
-      import.meta.env?.VITE_COMMIT_ID,
-    ];
-    const found = candidates.find((value) => typeof value === 'string' && value.trim());
-    if (!found) {
-      return 'local';
-    }
-    const normalized = found.trim();
+    const normalized = (process.env?.CF_PAGES_COMMIT_SHA ?? 'dev').toString().trim();
     return normalized.length > 12 ? normalized.slice(0, 12) : normalized;
   }, []);
 

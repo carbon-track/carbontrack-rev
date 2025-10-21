@@ -2292,6 +2292,14 @@
           "label": "Direct messages",
           "description": "Email copies of messages from other users. Always enabled."
         }
+      },
+      "testEmail": {
+        "title": "Send a test email",
+        "description": "We will email a sample notification so you can confirm delivery and spam filter rules.",
+        "button": "Send test email",
+        "sending": "Sending test email...",
+        "success": "A test notification email is on its way to your inbox.",
+        "error": "Unable to send the test email. Please try again later."
       }
     }
   },

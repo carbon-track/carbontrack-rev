@@ -93,6 +93,7 @@ export const userAPI = {
   
   getNotificationPreferences: () => api.get('/users/me/notification-preferences'),
   updateNotificationPreferences: (data) => api.put('/users/me/notification-preferences', data),
+  sendNotificationTestEmail: () => api.post('/users/me/notification-preferences/test-email'),
   
   // 获取用户信息
   getUser: (id) => api.get(`/users/${id}`),
