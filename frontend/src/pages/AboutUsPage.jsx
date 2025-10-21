@@ -1,10 +1,12 @@
 import React, { useMemo, useRef } from 'react';
 import { Mail, Instagram, MessagesSquare, Handshake, ArrowUpRight } from 'lucide-react';
 import { motion, useInView, useScroll, useTransform } from 'framer-motion';
+import { useQuery } from 'react-query';
 import { useTranslation } from '../hooks/useTranslation';
 import { buttonVariants } from '../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { cn } from '../lib/utils';
+import { statsAPI } from '../lib/api';
 
 const CONTACT_ICON_MAP = {
   email: Mail,
@@ -14,6 +16,17 @@ const CONTACT_ICON_MAP = {
 };
 
 const DEFAULT_ICON = ArrowUpRight;
+const numberFormatter = new Intl.NumberFormat();
+const carbonFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
+
+const formatNumber = (value) => numberFormatter.format(Math.max(0, Math.round(value || 0)));
+const formatCarbon = (value, t) => {
+  const numericValue = Number(value || 0);
+  if (numericValue >= 1000) {
+    return `${carbonFormatter.format(numericValue / 1000)} ${t('units.t')}`;
+  }
+  return `${carbonFormatter.format(numericValue)} ${t('units.kg')}`;
+};
 
 // Timeline Card Component with Apple-style animations
 const TimelineCard = ({ member, index, isLeft, t }) => {
@@ -220,6 +233,18 @@ const TimelineCard = ({ member, index, isLeft, t }) => {
 
 const AboutUsPage = () => {
   const { t } = useTranslation();
+
+  const { data: summaryData } = useQuery(
+    ['public-stats-summary'],
+    async () => {
+      const response = await statsAPI.getPublicSummary();
+      return response.data?.data ?? null;
+    },
+    {
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    }
+  );
   const hero = t('about.hero', { returnObjects: true }) || {};
   const contactLinks = t('about.contactLinks', { returnObjects: true }) || [];
   const team = t('about.team', { returnObjects: true }) || {};
@@ -238,8 +263,23 @@ const AboutUsPage = () => {
     if (!Array.isArray(achievements?.stats)) {
       return [];
     }
-    return achievements.stats;
-  }, [achievements?.stats]);
+
+    if (!summaryData) {
+      return achievements.stats;
+    }
+
+    return achievements.stats.map((stat, index) => {
+      const enriched = { ...stat };
+      if (index === 0) {
+        enriched.value = formatCarbon(summaryData.total_carbon_saved ?? 0, t);
+      } else if (index === 1) {
+        enriched.value = formatNumber(summaryData.total_users ?? 0);
+      } else if (index === 2) {
+        enriched.value = formatNumber(summaryData.total_records ?? 0);
+      }
+      return enriched;
+    });
+  }, [achievements?.stats, summaryData, t]);
 
   return (
     <div className="relative">
