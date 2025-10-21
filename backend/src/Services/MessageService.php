@@ -592,32 +592,18 @@ class MessageService
             return;
         }
 
-        try {
-            if ($this->userResolver !== null) {
-                $user = call_user_func($this->userResolver, $receiverId);
-            } else {
-                $user = User::query()->find($receiverId);
-            }
-        } catch (\Throwable $e) {
-            $this->logger->warning('Failed to resolve receiver for email notification', [
-                'receiver_id' => $receiverId,
-                'error' => $e->getMessage(),
-            ]);
-            return;
-        }
-
-        if (!$user || empty($user->email)) {
+        $recipient = $this->resolveEmailRecipient($receiverId);
+        if ($recipient === null) {
             return;
         }
 
         $subject = $this->buildEmailSubject($title, $priority);
         $category = $this->resolveNotificationCategory($type);
-        $recipientName = $user->getDisplayName() ?: (string) $user->email;
 
         try {
             $sent = $this->emailService->sendMessageNotification(
-                (string) $user->email,
-                $recipientName,
+                $recipient['email'],
+                $recipient['name'],
                 $subject,
                 $content,
                 $category,
@@ -634,6 +620,135 @@ class MessageService
             $this->logger->error('Failed to send linked email notification', [
                 'receiver_id' => $receiverId,
                 'subject' => $subject,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Resolve email recipient details for notifications.
+     *
+     * @return array{email:string,name:string}|null
+     */
+    private function resolveEmailRecipient(int $userId, ?string $fallbackEmail = null, ?string $fallbackName = null): ?array
+    {
+        if ($userId > 0 && $this->userResolver !== null) {
+            try {
+                $resolved = call_user_func($this->userResolver, $userId);
+                if ($resolved instanceof User && !empty($resolved->email)) {
+                    $name = $resolved->getDisplayName() ?: (string) $resolved->email;
+                    return [
+                        'email' => (string) $resolved->email,
+                        'name' => $name,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning('Failed to resolve receiver for email notification', [
+                    'receiver_id' => $userId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($userId > 0) {
+            try {
+                $user = User::query()->find($userId);
+                if ($user instanceof User && !empty($user->email)) {
+                    $name = $user->getDisplayName() ?: (string) $user->email;
+                    return [
+                        'email' => (string) $user->email,
+                        'name' => $name,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning('Failed to load user for email notification', [
+                    'receiver_id' => $userId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($fallbackEmail !== null && $fallbackEmail !== '') {
+            return [
+                'email' => $fallbackEmail,
+                'name' => $fallbackName && $fallbackName !== '' ? $fallbackName : $fallbackEmail,
+            ];
+        }
+
+        return null;
+    }
+
+    public function sendExchangeConfirmationEmailToUser(
+        int $userId,
+        string $productName,
+        int $quantity,
+        float $pointsSpent,
+        ?string $fallbackEmail = null,
+        ?string $fallbackName = null
+    ): void {
+        if ($this->emailService === null) {
+            return;
+        }
+
+        $recipient = $this->resolveEmailRecipient($userId, $fallbackEmail, $fallbackName);
+        if ($recipient === null) {
+            return;
+        }
+
+        try {
+            $this->emailService->sendExchangeConfirmation(
+                $recipient['email'],
+                $recipient['name'],
+                $productName,
+                $quantity,
+                $pointsSpent
+            );
+        } catch (\Throwable $e) {
+            $this->logger->warning('Failed to send exchange confirmation email', [
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function sendExchangeStatusUpdateEmailToUser(
+        int $userId,
+        string $productName,
+        string $status,
+        ?string $trackingNumber = null,
+        ?string $adminNotes = null,
+        ?string $fallbackEmail = null,
+        ?string $fallbackName = null
+    ): void {
+        if ($this->emailService === null) {
+            return;
+        }
+
+        $recipient = $this->resolveEmailRecipient($userId, $fallbackEmail, $fallbackName);
+        if ($recipient === null) {
+            return;
+        }
+
+        $noteParts = [];
+        if ($trackingNumber !== null && $trackingNumber !== '') {
+            $noteParts[] = 'Tracking number: ' . $trackingNumber;
+        }
+        if ($adminNotes !== null && $adminNotes !== '') {
+            $noteParts[] = $adminNotes;
+        }
+        $combinedNotes = implode("\n", $noteParts);
+
+        try {
+            $this->emailService->sendExchangeStatusUpdate(
+                $recipient['email'],
+                $recipient['name'],
+                $productName,
+                $status,
+                $combinedNotes
+            );
+        } catch (\Throwable $e) {
+            $this->logger->warning('Failed to send exchange status update email', [
+                'user_id' => $userId,
                 'error' => $e->getMessage(),
             ]);
         }

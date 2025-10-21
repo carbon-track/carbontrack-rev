@@ -16,6 +16,10 @@ class MessageServiceEmailStub extends \CarbonTrack\Services\EmailService
 {
     /** @var array<int,array<string,mixed>> */
     public array $messageNotifications = [];
+    /** @var array<int,array<string,mixed>> */
+    public array $exchangeConfirmations = [];
+    /** @var array<int,array<string,mixed>> */
+    public array $exchangeStatusUpdates = [];
     public bool $allowSend = true;
 
     public function __construct()
@@ -46,6 +50,42 @@ class MessageServiceEmailStub extends \CarbonTrack\Services\EmailService
             'body' => $messageBody,
             'category' => $category,
             'priority' => $priority,
+        ];
+
+        return $this->allowSend;
+    }
+
+    public function sendExchangeConfirmation(
+        string $toEmail,
+        string $toName,
+        string $productName,
+        int $quantity,
+        float $totalPoints
+    ): bool {
+        $this->exchangeConfirmations[] = [
+            'toEmail' => $toEmail,
+            'toName' => $toName,
+            'productName' => $productName,
+            'quantity' => $quantity,
+            'totalPoints' => $totalPoints,
+        ];
+
+        return $this->allowSend;
+    }
+
+    public function sendExchangeStatusUpdate(
+        string $toEmail,
+        string $toName,
+        string $productName,
+        string $status,
+        string $adminNotes = ''
+    ): bool {
+        $this->exchangeStatusUpdates[] = [
+            'toEmail' => $toEmail,
+            'toName' => $toName,
+            'productName' => $productName,
+            'status' => $status,
+            'adminNotes' => $adminNotes,
         ];
 
         return $this->allowSend;
@@ -119,6 +159,57 @@ class MessageServiceTest extends TestCase
         $method->invoke($service, 99, 'Notice', 'Body', Message::TYPE_SYSTEM, Message::PRIORITY_NORMAL);
 
         $this->assertCount(0, $emailStub->messageNotifications);
+    }
+
+    public function testSendExchangeConfirmationEmailToUserUsesEmailService(): void
+    {
+        $logger = $this->createMock(Logger::class);
+        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $emailStub = new MessageServiceEmailStub();
+        $service = new MessageService($logger, $audit, $emailStub);
+
+        $service->sendExchangeConfirmationEmailToUser(
+            5,
+            'Eco Bottle',
+            2,
+            120.0,
+            'jeffery@example.com',
+            'Jeffery'
+        );
+
+        $this->assertCount(1, $emailStub->exchangeConfirmations);
+        $record = $emailStub->exchangeConfirmations[0];
+        $this->assertSame('jeffery@example.com', $record['toEmail']);
+        $this->assertSame('Jeffery', $record['toName']);
+        $this->assertSame('Eco Bottle', $record['productName']);
+        $this->assertSame(2, $record['quantity']);
+        $this->assertSame(120.0, $record['totalPoints']);
+    }
+
+    public function testSendExchangeStatusUpdateEmailToUserUsesEmailService(): void
+    {
+        $logger = $this->createMock(Logger::class);
+        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $emailStub = new MessageServiceEmailStub();
+        $service = new MessageService($logger, $audit, $emailStub);
+
+        $service->sendExchangeStatusUpdateEmailToUser(
+            7,
+            'Eco Bottle',
+            'shipped',
+            'TRACK-999',
+            '发货完成',
+            'notify@example.com',
+            'Notify User'
+        );
+
+        $this->assertCount(1, $emailStub->exchangeStatusUpdates);
+        $record = $emailStub->exchangeStatusUpdates[0];
+        $this->assertSame('notify@example.com', $record['toEmail']);
+        $this->assertSame('Notify User', $record['toName']);
+        $this->assertSame('Eco Bottle', $record['productName']);
+        $this->assertSame('shipped', $record['status']);
+        $this->assertSame("Tracking number: TRACK-999\n发货完成", $record['adminNotes']);
     }
 }
 

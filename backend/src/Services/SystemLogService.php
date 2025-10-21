@@ -36,7 +36,7 @@ class SystemLogService
             $responseBody = $this->sanitizeBody($data['response_body'] ?? null);
             $serverMeta = $this->buildServerMeta($data['server_params'] ?? []);
 
-            // Ϊ���� MySQL �� SQLite������ʽд created_at��ʹ�ñ�Ĭ�� CURRENT_TIMESTAMP �򴥷���
+            // 为了兼容 MySQL 和 SQLite，采用字符串形式写 created_at，使用默认的 CURRENT_TIMESTAMP 进行处理
             $stmt = $this->db->prepare("INSERT INTO system_logs (
                 request_id, method, path, status_code, user_id, ip_address, user_agent, duration_ms, request_body, response_body, server_meta
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
