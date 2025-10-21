@@ -16,7 +16,7 @@
   },
   "nav": {
     "home": "Home",
-    "about": "About",
+    "about": "About Us",
     "dashboard": "Dashboard",
     "calculate": "Record Activity",
     "activities": "Activities",
@@ -2138,7 +2138,9 @@
     "carbonSaved": "CO₂ Saved",
     "allRightsReserved": "All rights reserved.",
     "poweredBy": "Powered by",
-    "version": "Version"
+    "version": "Version",
+    "versionLabel": "Version {{version}}",
+    "buildLabel": "Build {{id}}"
   },
   "upload": {
     "dropFiles": "Drop files here",

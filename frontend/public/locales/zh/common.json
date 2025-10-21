@@ -1941,7 +1941,9 @@
     "carbonSaved": "减排量",
     "allRightsReserved": "版权所有",
     "poweredBy": "技术支持",
-    "version": "版本"
+    "version": "版本",
+    "versionLabel": "版本 {{version}}",
+    "buildLabel": "构建 {{id}}"
   },
   "upload": {
     "dropFiles": "将文件拖拽到此处",

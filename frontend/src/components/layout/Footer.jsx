@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Github, Twitter, Facebook } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -6,10 +6,28 @@ import { useTranslation } from '../../hooks/useTranslation';
 export function Footer() {
   const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
+  const appVersion = useMemo(() => {
+    const version = import.meta.env?.VITE_APP_VERSION;
+    return typeof version === 'string' && version.trim() ? version.trim() : 'dev';
+  }, []);
+
+  const buildId = useMemo(() => {
+    const candidates = [
+      import.meta.env?.VITE_GIT_COMMIT,
+      import.meta.env?.VITE_GIT_COMMIT_ID,
+      import.meta.env?.VITE_COMMIT_ID,
+    ];
+    const found = candidates.find((value) => typeof value === 'string' && value.trim());
+    if (!found) {
+      return 'local';
+    }
+    const normalized = found.trim();
+    return normalized.length > 12 ? normalized.slice(0, 12) : normalized;
+  }, []);
 
   const footerLinks = {
     platform: [
-      { label: t('footer.about'), href: '/about' },
+      { label: t('footer.about'), href: '/about-us' },
       { label: t('footer.howItWorks'), href: '/how-it-works' },
       { label: t('footer.features'), href: '/features' },
       { label: t('footer.pricing'), href: '/pricing' }
@@ -170,9 +188,9 @@ export function Footer() {
               © {currentYear} CarbonTrack. {t('footer.allRightsReserved')}
             </div>
             <div className="flex items-center gap-4">
-              <span>{t('footer.poweredBy')} React & PHP</span>
+              <span>{t('footer.versionLabel', { version: appVersion })}</span>
               <span>•</span>
-              <span>{t('footer.version')} 2.0</span>
+              <span>{t('footer.buildLabel', { id: buildId })}</span>
             </div>
           </div>
         </div>
