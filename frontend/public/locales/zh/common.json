@@ -43,11 +43,11 @@
       "activities": "碳记录总数",
       "carbonSaved": "累计减排",
       "rewards": "累计积分",
-      "newUsers30d": "30 天新增 {value}",
-      "approvedRecords": "已审核 {value} 条记录",
-      "carbonLast7Days": "近 7 天：{value}",
-      "transactionsLast7": "近 7 天提交 {value} 次",
-      "updatedAt": "更新时间 {time}",
+      "newUsers30d": "30 天新增 {{value}}",
+      "approvedRecords": "已审核 {{value}} 条记录",
+      "carbonLast7Days": "近 7 天：{{value}}",
+      "transactionsLast7": "近 7 天提交 {{value}} 次",
+      "updatedAt": "更新时间 {{time}}",
       "loadError": "无法加载最新的社区统计信息，请稍后重试。"
     },
     "features": {

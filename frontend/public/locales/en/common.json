@@ -1901,11 +1901,11 @@
       "activities": "Carbon Records Logged",
       "carbonSaved": "Carbon Saved",
       "rewards": "Points Awarded",
-      "newUsers30d": "{value} new in 30 days",
-      "approvedRecords": "{value} approved records",
-      "carbonLast7Days": "Last 7 days: {value}",
-      "transactionsLast7": "{value} transactions in 7 days",
-      "updatedAt": "Updated {time}",
+      "newUsers30d": "{{value}} new in 30 days",
+      "approvedRecords": "{{value}} approved records",
+      "carbonLast7Days": "Last 7 days: {{value}}",
+      "transactionsLast7": "{{value}} transactions in 7 days",
+      "updatedAt": "Updated {{time}}",
       "loadError": "We couldn't load the latest community statistics. Please try again."
     },
     "features": {
