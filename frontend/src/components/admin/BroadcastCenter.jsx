@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '../ui/Alert';
-import { Badge } from '../ui/Badge';
+import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
 import { Checkbox } from '../ui/checkbox';
 import { Pagination } from '../ui/Pagination';
