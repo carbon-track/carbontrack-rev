@@ -15,6 +15,7 @@ const NotificationSettingsPage = () => {
   const [localPrefs, setLocalPrefs] = useState([]);
   const [status, setStatus] = useState(null);
   const [testStatus, setTestStatus] = useState(null);
+  const [sendingCategory, setSendingCategory] = useState(null);
 
   const preferencesQuery = useQuery(
     ['notification-preferences'],
@@ -50,27 +51,30 @@ const NotificationSettingsPage = () => {
   );
 
   const testEmailMutation = useMutation(
-    async () => {
-      const res = await userAPI.sendNotificationTestEmail();
-      return res.data;
+    async (category) => {
+      setSendingCategory(category);
+      const res = await userAPI.sendNotificationTestEmail(category);
+      return { category, payload: res.data };
     },
     {
-      onSuccess: (data) => {
-        const message = data?.message || t('settings.notifications.testEmail.success');
+      onSuccess: ({ category, payload }) => {
+        const message = payload?.message || t('settings.notifications.testEmail.success');
         toast.success(message);
-        setTestStatus({ variant: 'success', message });
+        setTestStatus({ category, variant: 'success', message });
       },
-      onError: (err) => {
+      onError: (err, category) => {
         const message = err?.response?.data?.message || err?.message || t('settings.notifications.testEmail.error');
         toast.error(message);
-        setTestStatus({ variant: 'destructive', message });
+        setTestStatus({ category, variant: 'destructive', message });
+      },
+      onSettled: () => {
+        setSendingCategory(null);
       },
     }
   );
 
   const loading = preferencesQuery.isLoading;
   const saving = mutation.isLoading;
-  const sendingTest = testEmailMutation.isLoading;
 
   const hasChanges = useMemo(() => {
     if (!preferencesQuery.data) return false;
@@ -100,12 +104,13 @@ const NotificationSettingsPage = () => {
 
   const handleSave = () => {
     setTestStatus(null);
+    setTestStatus(null);
     mutation.mutate(localPrefs.map(({ category, email_enabled }) => ({ category, email_enabled })));
   };
 
-  const handleSendTestEmail = () => {
+  const handleSendTestEmail = (category) => {
     setTestStatus(null);
-    testEmailMutation.mutate();
+    testEmailMutation.mutate(category);
   };
 
   return (
@@ -139,35 +144,65 @@ const NotificationSettingsPage = () => {
               )}
 
               <div className="space-y-4">
-                {localPrefs.map((pref) => (
-                  <div
-                    key={pref.category}
-                    className="flex items-start justify-between rounded-lg border border-gray-100 bg-gray-50 px-4 py-3"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {t(`settings.notifications.categories.${pref.category}.label`, {
-                          defaultValue: pref.label,
-                        })}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {t(`settings.notifications.categories.${pref.category}.description`, {
-                          defaultValue: pref.label,
-                        })}
-                      </p>
-                      {pref.locked && (
-                        <p className="text-xs text-amber-600 mt-2">
-                          {t('settings.notifications.locked')}
-                        </p>
+                {localPrefs.map((pref) => {
+                  const isSending = sendingCategory === pref.category;
+                  const prefTestStatus = testStatus && testStatus.category === pref.category ? testStatus : null;
+
+                  return (
+                    <div
+                      key={pref.category}
+                      className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {t(`settings.notifications.categories.${pref.category}.label`, {
+                              defaultValue: pref.label,
+                            })}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {t(`settings.notifications.categories.${pref.category}.description`, {
+                              defaultValue: pref.label,
+                            })}
+                          </p>
+                          {pref.locked && (
+                            <p className="text-xs text-amber-600 mt-2">
+                              {t('settings.notifications.locked')}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+                          <Switch
+                            checked={pref.email_enabled}
+                            onCheckedChange={handleToggle(pref.category, pref.locked)}
+                            disabled={pref.locked || saving}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSendTestEmail(pref.category)}
+                            disabled={saving || isSending}
+                          >
+                            {isSending ? (
+                              <span className="flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                {t('settings.notifications.testEmail.sending')}
+                              </span>
+                            ) : (
+                              t('settings.notifications.testEmail.button')
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      {prefTestStatus && (
+                        <Alert variant={prefTestStatus.variant || 'info'} className="mt-3">
+                          <AlertDescription>{prefTestStatus.message}</AlertDescription>
+                        </Alert>
                       )}
                     </div>
-                    <Switch
-                      checked={pref.email_enabled}
-                      onCheckedChange={handleToggle(pref.category, pref.locked)}
-                      disabled={pref.locked || saving}
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-2">
