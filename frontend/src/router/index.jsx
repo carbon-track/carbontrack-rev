@@ -20,6 +20,7 @@ const ProfilePage = React.lazy(() => import('../pages/ProfilePage'));
 const OnboardingPage = React.lazy(() => import('../pages/OnboardingPage'));
 const AchievementsPage = React.lazy(() => import('../pages/AchievementsPage'));
 const NotificationSettingsPage = React.lazy(() => import('../pages/NotificationSettingsPage'));
+const AboutUsPage = React.lazy(() => import('../pages/AboutUsPage'));
 // Admin pages
 const AdminDashboardPage = React.lazy(() => import('../pages/admin/Dashboard'));
 const AdminUsersPage = React.lazy(() => import('../pages/admin/Users'));
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <React.Suspense fallback={<LoadingSpinner />}><HomePage /></React.Suspense> },
+      { path: 'about-us', element: <React.Suspense fallback={<LoadingSpinner />}><AboutUsPage /></React.Suspense> },
       { path: 'dashboard', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><DashboardPage /></React.Suspense></ProtectedRoute> },
       { path: 'calculate', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><CalculatePage /></React.Suspense></ProtectedRoute> },
       { path: 'activities', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><ActivitiesPage /></React.Suspense></ProtectedRoute> },

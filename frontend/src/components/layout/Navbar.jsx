@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Menu, 
-  X, 
-  Home, 
-  Calculator, 
-  BarChart3, 
-  ShoppingBag, 
-  Settings, 
+import {
+  Menu,
+  X,
+  Home,
+  Calculator,
+  BarChart3,
+  ShoppingBag,
+  Settings,
   LogOut,
-  Bell
+  Bell,
+  Info
 } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { checkAuthStatus, authAPI } from '../../lib/auth';
@@ -82,6 +83,12 @@ export function Navbar() {
       path: '/',
       label: t('nav.home'),
       icon: Home,
+      public: true
+    },
+    {
+      path: '/about-us',
+      label: t('nav.about'),
+      icon: Info,
       public: true
     },
     {

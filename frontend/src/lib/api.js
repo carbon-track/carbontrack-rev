@@ -361,4 +361,8 @@ export const isAuthenticated = () => {
   return !!getAuthToken();
 };
 
+export const statsAPI = {
+  getPublicSummary: (params = {}) => api.get('/stats/summary', { params }),
+};
+
 export default api;

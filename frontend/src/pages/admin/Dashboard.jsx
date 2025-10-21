@@ -65,16 +65,36 @@ export default function AdminDashboardPage() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const refreshIntervalMs = 30000;
 
-  const { data: statsData, isLoading, isError, error, refetch, isFetching } = useQuery(
+  const statsQuery = useQuery(
     ['adminStats'],
-    () => adminAPI.getStats().then(res => res.data?.data || {}),
+    async () => {
+      const res = await adminAPI.getStats();
+      return res.data?.data || {};
+    },
     {
       staleTime: 15000,
       refetchOnWindowFocus: false,
       refetchInterval: autoRefresh ? refreshIntervalMs : false,
-      onSuccess: () => setLastUpdated(new Date()),
+      keepPreviousData: true,
+      onSuccess: (data) => {
+        if (data?.generated_at) {
+          const generated = new Date(data.generated_at);
+          if (!Number.isNaN(generated.getTime())) {
+            setLastUpdated(generated);
+            return;
+          }
+        }
+        setLastUpdated(new Date());
+      },
     }
   );
+
+  const statsData = statsQuery.data ?? {};
+  const isLoading = statsQuery.isLoading;
+  const isError = statsQuery.isError;
+  const error = statsQuery.error;
+  const refetch = statsQuery.refetch;
+  const isFetching = statsQuery.isFetching;
 
   const integerFormatter = useMemo(() => new Intl.NumberFormat(), []);
   const decimalFormatter = useMemo(() => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }), []);
@@ -126,7 +146,7 @@ export default function AdminDashboardPage() {
       pendingRatio: Number(base.transactions?.pending_ratio ?? safeDivide(safeNumber(base.transactions?.pending_transactions), safeNumber(base.transactions?.total_transactions))),
       avgPointsPerTransaction: Number(base.transactions?.avg_points_per_transaction ?? 0),
       last7Transactions: safeNumber(base.transactions?.last7_transactions),
-      last7Points: Number(base.transactions?.last7_points_awarded ?? 0),
+      last7PointsAwarded: Number(base.transactions?.last7_points_awarded ?? 0),
     };
 
     const exchanges = {
@@ -266,6 +286,62 @@ export default function AdminDashboardPage() {
     { label: t('admin.dashboard.unreadMessages'), value: normalizedStats.messages.unread },
     { label: t('admin.dashboard.readMessages'), value: normalizedStats.messages.read },
   ]), [normalizedStats.messages, t]);
+
+  const miniStats = useMemo(() => {
+    const { users, transactions, carbon, trendSummary } = normalizedStats;
+    const activeRatioValue = users.activeRatio ?? safeDivide(users.active, users.total);
+    const avgPointsValue = transactions.avgPointsPerTransaction;
+    const pointsLast7Value = transactions.last7PointsAwarded ?? 0;
+    const pendingCarbonValue = carbon.pendingRecords ?? 0;
+    const avgDailyCarbonValue = trendSummary.averageDailyCarbon30d ?? 0;
+
+    const formatPercentValue = (value) => {
+      if (value === null || value === undefined) {
+        return '--';
+      }
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? percentFormatter.format(numeric) : '--';
+    };
+
+    const formatDecimalValue = (value, unit = '') => {
+      if (value === null || value === undefined) {
+        return '--';
+      }
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) {
+        return '--';
+      }
+      return `${decimalFormatter.format(numeric)}${unit}`.trim();
+    };
+
+    return [
+      {
+        key: 'activeRatio',
+        label: t('admin.dashboard.mini.activeRatio'),
+        value: formatPercentValue(activeRatioValue),
+      },
+      {
+        key: 'avgPoints',
+        label: t('admin.dashboard.mini.avgPointsPerTransaction'),
+        value: formatDecimalValue(avgPointsValue, ` ${t('units.points')}`),
+      },
+      {
+        key: 'pointsLast7',
+        label: t('admin.dashboard.mini.pointsLast7'),
+        value: formatDecimalValue(pointsLast7Value, ` ${t('units.points')}`),
+      },
+      {
+        key: 'pendingCarbon',
+        label: t('admin.dashboard.mini.pendingCarbonRecords'),
+        value: integerFormatter.format(Math.max(0, pendingCarbonValue)),
+      },
+      {
+        key: 'avgDailyCarbon',
+        label: t('admin.dashboard.mini.averageDailyCarbon30d'),
+        value: formatDecimalValue(avgDailyCarbonValue, ` ${t('units.kg')}`),
+      },
+    ];
+  }, [normalizedStats, t, percentFormatter, decimalFormatter, integerFormatter]);
 
   const insights = useMemo(() => {
     const { users, transactions, exchanges, messages, carbon, trendSummary } = normalizedStats;
@@ -504,7 +580,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>
-                  {t('admin.dashboard.lastUpdated')}: {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : '--'}
+                  {t('admin.dashboard.lastUpdated')}: {lastUpdated ? lastUpdated.toLocaleString() : '--'}
                 </span>
               </div>
             </div>
@@ -525,31 +601,41 @@ export default function AdminDashboardPage() {
             </Alert>
           )}
           {!isLoading && !isError && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {summaryCards.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Card
-                    key={item.key}
-                    className={'p-4' + (item.onClick ? ' cursor-pointer hover:bg-accent/40 transition' : '')}
-                    onClick={item.onClick}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.title}</p>
-                          <p className="mt-1 text-2xl font-semibold leading-tight">{item.primary}</p>
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {summaryCards.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Card
+                      key={item.key}
+                      className={'p-4' + (item.onClick ? ' cursor-pointer hover:bg-accent/40 transition' : '')}
+                      onClick={item.onClick}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.title}</p>
+                            <p className="mt-1 text-2xl font-semibold leading-tight">{item.primary}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <p className="mt-3 text-xs text-muted-foreground">{item.secondary}</p>
-                  </Card>
-                );
-              })}
-            </div>
+                      <p className="mt-3 text-xs text-muted-foreground">{item.secondary}</p>
+                    </Card>
+                  );
+                })}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {miniStats.map((item) => (
+                  <div key={item.key} className="rounded-md border border-border/60 p-4 text-sm">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                    <p className="mt-2 text-lg font-semibold">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -572,9 +658,9 @@ export default function AdminDashboardPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={trendChartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" tickFormatter={(value) => formatDateLabel(value, shortDateFormatter)} />
+                      <XAxis dataKey="date" minTickGap={20} tickFormatter={(value) => formatDateLabel(value, shortDateFormatter)} />
                       <YAxis yAxisId="left" allowDecimals={false} />
-                      <YAxis yAxisId="right" orientation="right" />
+                      <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => decimalFormatter.format(value)} />
                       <Tooltip
                         labelFormatter={(value) => formatDateLabel(value, longDateFormatter)}
                         formatter={(value, name) => {
