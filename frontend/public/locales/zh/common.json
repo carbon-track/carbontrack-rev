@@ -940,11 +940,13 @@
           "sent": "邮件已发送",
           "partial": "邮件部分送达",
           "failed": "邮件发送失败",
-          "skipped": "未发送邮件"
+          "skipped": "未发送邮件",
+          "queued": "邮件已排队等待发送"
         },
         "summary": "邮件批次：共尝试 {{attempted}} 次，成功 {{success}} 次，失败 {{failed}} 次。",
         "missing": "缺少邮箱的用户：{{count}}",
-        "errorsTitle": "邮件发送问题"
+        "errorsTitle": "邮件发送问题",
+        "queuedSummary": "邮件将异步发送给 {{count}} 位收件人。"
       },
       "history": {
         "title": "广播记录",
@@ -2354,3 +2356,4 @@
     }
   }
 }
+

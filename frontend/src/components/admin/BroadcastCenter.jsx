@@ -744,6 +744,8 @@ export function BroadcastCenter() {
         return 'warning';
       case 'failed':
         return 'destructive';
+      case 'queued':
+        return 'info';
       default:
         return 'info';
     }
@@ -1151,11 +1153,15 @@ export function BroadcastCenter() {
             <Alert variant={emailResultVariant}>
               <AlertTitle>{t(`admin.broadcast.email.status.${emailResult.status}`)}</AlertTitle>
               <AlertDescription>
-                <p>{t('admin.broadcast.email.summary', {
-                  attempted: emailResult.attempted,
-                  success: emailResult.successfulChunks,
-                  failed: emailResult.failedChunks
-                })}</p>
+                <p>
+                  {emailResult.status === 'queued'
+                    ? t('admin.broadcast.email.queuedSummary', { count: emailResult.attempted })
+                    : t('admin.broadcast.email.summary', {
+                        attempted: emailResult.attempted,
+                        success: emailResult.successfulChunks,
+                        failed: emailResult.failedChunks,
+                      })}
+                </p>
                 {emailResult.missing.length > 0 && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     {t('admin.broadcast.email.missing', { count: emailResult.missing.length })}
@@ -1281,6 +1287,7 @@ export function BroadcastCenter() {
                 sent: 'secondary',
                 partial: 'high',
                 failed: 'destructive',
+                queued: 'secondary',
                 skipped: 'outline'
               }[emailStatus] ?? 'outline';
 
@@ -1339,14 +1346,28 @@ export function BroadcastCenter() {
                   )}
 
                   {delivery && (emailStatus !== 'sent' || emailErrors.length > 0 || (delivery.missing_email_user_ids ?? []).length > 0) && (
-                    <Alert variant={emailStatus === 'failed' ? 'destructive' : emailStatus === 'partial' ? 'warning' : 'info'}>
+                    <Alert
+                      variant={
+                        emailStatus === 'failed'
+                          ? 'destructive'
+                          : emailStatus === 'partial'
+                          ? 'warning'
+                          : 'info'
+                      }
+                    >
                       <AlertTitle>{t(`admin.broadcast.email.status.${emailStatus}`)}</AlertTitle>
                       <AlertDescription>
-                        <p>{t('admin.broadcast.email.summary', {
-                          attempted: delivery.attempted_recipients ?? 0,
-                          success: delivery.successful_chunks ?? 0,
-                          failed: delivery.failed_chunks ?? 0
-                        })}</p>
+                        <p>
+                          {emailStatus === 'queued'
+                            ? t('admin.broadcast.email.queuedSummary', {
+                                count: delivery.attempted_recipients ?? 0,
+                              })
+                            : t('admin.broadcast.email.summary', {
+                                attempted: delivery.attempted_recipients ?? 0,
+                                success: delivery.successful_chunks ?? 0,
+                                failed: delivery.failed_chunks ?? 0,
+                              })}
+                        </p>
                         {Array.isArray(delivery.missing_email_user_ids) && delivery.missing_email_user_ids.length > 0 && (
                           <p className="mt-2 text-xs text-muted-foreground">
                             {t('admin.broadcast.email.missing', { count: delivery.missing_email_user_ids.length })}

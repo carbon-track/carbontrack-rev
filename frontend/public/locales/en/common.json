@@ -941,9 +941,11 @@
           "sent": "Email sent",
           "partial": "Email partially delivered",
           "failed": "Email delivery failed",
+          "queued": "Email queued for delivery",
           "skipped": "Email not sent"
         },
         "summary": "Email batches: attempted {{attempted}}, succeeded {{success}}, failed {{failed}}.",
+        "queuedSummary": "Email delivery queued for {{count}} recipients.",
         "missing": "Users without email: {{count}}",
         "errorsTitle": "Email issues"
       },
