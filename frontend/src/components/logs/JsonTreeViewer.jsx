@@ -265,31 +265,33 @@ export function JsonTreeViewer({ value, collapsed = false, maxHeight = '20rem', 
 
   const typeLabels = useMemo(
     () => ({
-      object: t('common.jsonViewer.typeLabels.object'),
-      array: t('common.jsonViewer.typeLabels.array'),
-      string: t('common.jsonViewer.typeLabels.string'),
-      number: t('common.jsonViewer.typeLabels.number'),
-      boolean: t('common.jsonViewer.typeLabels.boolean'),
-      null: t('common.jsonViewer.typeLabels.null'),
-      undefined: t('common.jsonViewer.typeLabels.undefined'),
-      unknown: t('common.jsonViewer.typeLabels.unknown')
+      // NOTE: useTranslation 默认命名空间是 'common'，
+      // 这里不应再在 key 前加 'common.' 前缀，否则会导致找不到翻译而显示原 key。
+      object: t('jsonViewer.typeLabels.object'),
+      array: t('jsonViewer.typeLabels.array'),
+      string: t('jsonViewer.typeLabels.string'),
+      number: t('jsonViewer.typeLabels.number'),
+      boolean: t('jsonViewer.typeLabels.boolean'),
+      null: t('jsonViewer.typeLabels.null'),
+      undefined: t('jsonViewer.typeLabels.undefined'),
+      unknown: t('jsonViewer.typeLabels.unknown')
     }),
     [t]
   );
 
   const labels = useMemo(
     () => ({
-      root: t('common.jsonViewer.root'),
-      searchPlaceholder: t('common.jsonViewer.searchPlaceholder'),
-      expandAll: t('common.jsonViewer.expandAll'),
-      collapseAll: t('common.jsonViewer.collapseAll'),
-      copyJson: t('common.jsonViewer.copyJson'),
-      copyPath: t('common.jsonViewer.copyPath'),
-      copyValue: t('common.jsonViewer.copyValue'),
-      expand: t('common.jsonViewer.expandNode'),
-      collapse: t('common.jsonViewer.collapseNode'),
-      copied: t('common.jsonViewer.copied'),
-      noData: t('common.jsonViewer.noData')
+      root: t('jsonViewer.root'),
+      searchPlaceholder: t('jsonViewer.searchPlaceholder'),
+      expandAll: t('jsonViewer.expandAll'),
+      collapseAll: t('jsonViewer.collapseAll'),
+      copyJson: t('jsonViewer.copyJson'),
+      copyPath: t('jsonViewer.copyPath'),
+      copyValue: t('jsonViewer.copyValue'),
+      expand: t('jsonViewer.expandNode'),
+      collapse: t('jsonViewer.collapseNode'),
+      copied: t('jsonViewer.copied'),
+      noData: t('jsonViewer.noData')
     }),
     [t]
   );
