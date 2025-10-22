@@ -18,6 +18,9 @@ import {
   Package,
   MessageSquare,
   TrendingUp,
+  ArrowUpRight,
+  ArrowDownRight,
+  Sparkles,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -36,11 +39,25 @@ import {
 } from 'recharts';
 
 const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
+  '#3b82f6', // 蓝色
+  '#10b981', // 绿色
+  '#8b5cf6', // 紫色
+  '#f59e0b', // 橙色
+  '#ec4899', // 粉色
+  '#14b8a6', // 青色
+  '#f97316', // 深橙
+  '#06b6d4', // 天蓝
+];
+
+const CHART_GRADIENTS = [
+  { start: '#60a5fa', end: '#3b82f6' }, // 蓝色渐变
+  { start: '#34d399', end: '#10b981' }, // 绿色渐变
+  { start: '#a78bfa', end: '#8b5cf6' }, // 紫色渐变
+  { start: '#fbbf24', end: '#f59e0b' }, // 橙色渐变
+  { start: '#f472b6', end: '#ec4899' }, // 粉色渐变
+  { start: '#2dd4bf', end: '#14b8a6' }, // 青色渐变
+  { start: '#fb923c', end: '#f97316' }, // 深橙渐变
+  { start: '#22d3ee', end: '#06b6d4' }, // 天蓝渐变
 ];
 
 const safeNumber = (value) => {
@@ -531,137 +548,306 @@ export default function AdminDashboardPage() {
     const total = data.reduce((sum, item) => sum + safeNumber(item.value), 0);
     if (total <= 0) {
       return (
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          {t('admin.dashboard.noData')}
+        <div className="flex h-full flex-col items-center justify-center space-y-3">
+          <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center">
+            <Activity className="h-8 w-8 text-muted-foreground/50" />
+          </div>
+          <p className="text-sm text-muted-foreground">{t('admin.dashboard.noData')}</p>
         </div>
       );
     }
     return (
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
-          <Pie data={data} dataKey="value" nameKey="label" innerRadius={60} outerRadius={90} paddingAngle={3}>
+          <defs>
+            {CHART_GRADIENTS.map((gradient, index) => (
+              <linearGradient key={index} id={`pieGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={gradient.start} stopOpacity={0.9}/>
+                <stop offset="100%" stopColor={gradient.end} stopOpacity={1}/>
+              </linearGradient>
+            ))}
+            {/* 添加径向渐变效果 */}
+            {CHART_GRADIENTS.map((gradient, index) => (
+              <radialGradient key={`radial-${index}`} id={`pieRadial-${index}`}>
+                <stop offset="0%" stopColor={gradient.start} stopOpacity={1}/>
+                <stop offset="100%" stopColor={gradient.end} stopOpacity={0.85}/>
+              </radialGradient>
+            ))}
+          </defs>
+          <Pie 
+            data={data} 
+            dataKey="value" 
+            nameKey="label" 
+            innerRadius={55} 
+            outerRadius={85} 
+            paddingAngle={4}
+            strokeWidth={3}
+            stroke="hsl(var(--background))"
+            animationBegin={0}
+            animationDuration={800}
+          >
             {data.map((entry, index) => (
-              <Cell key={entry.label} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+              <Cell 
+                key={entry.label} 
+                fill={`url(#pieRadial-${index % CHART_GRADIENTS.length})`}
+                className="hover:opacity-80 transition-opacity duration-200 cursor-pointer"
+                style={{
+                  filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+                }}
+              />
             ))}
           </Pie>
-          <Tooltip formatter={(value, name) => [integerFormatter.format(value), name]} />
-          <Legend />
+          <Tooltip 
+            formatter={(value, name) => [integerFormatter.format(value), name]}
+            contentStyle={{ 
+              backgroundColor: 'hsl(var(--card))',
+              border: '2px solid hsl(var(--border))',
+              borderRadius: '12px',
+              boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)',
+              padding: '10px 14px',
+            }}
+            itemStyle={{ fontWeight: '500' }}
+            labelStyle={{ fontWeight: '600', marginBottom: '6px', color: 'hsl(var(--foreground))' }}
+          />
+          <Legend 
+            verticalAlign="bottom"
+            height={36}
+            iconType="circle"
+            wrapperStyle={{ 
+              paddingTop: '12px', 
+              fontSize: '12px',
+              fontWeight: '500',
+            }}
+          />
         </PieChart>
       </ResponsiveContainer>
     );
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <LineChartIcon className="h-5 w-5" />
-                {t('admin.dashboard.title')}
-              </CardTitle>
-              <CardDescription>{t('admin.dashboard.description')}</CardDescription>
+    <div className="min-h-screen space-y-8 pb-8">
+      {/* Hero Header Section */}
+      <Card className="border-2 hover:shadow-lg transition-shadow duration-300">
+        <CardHeader className="space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-500/20">
+                  <LineChartIcon className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                    {t('admin.dashboard.title')}
+                  </CardTitle>
+                  <CardDescription className="text-base mt-1">
+                    {t('admin.dashboard.description')}
+                  </CardDescription>
+                </div>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 shadow-sm">
                 <input
                   type="checkbox"
-                  className="accent-green-600"
+                  className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
                   checked={autoRefresh}
                   onChange={(e) => setAutoRefresh(e.target.checked)}
                 />
-                {t('admin.dashboard.autoRefresh')}
-              </label>
-              <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
+                <span className="text-sm font-medium">
+                  {t('admin.dashboard.autoRefresh')}
+                </span>
+              </div>
+              <Button 
+                size="default" 
+                className="rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 shadow-md hover:shadow-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200" 
+                onClick={() => refetch()} 
+                disabled={isFetching}
+              >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
                 {t('admin.dashboard.refreshNow')}
               </Button>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>
-                  {t('admin.dashboard.lastUpdated')}: {lastUpdated ? lastUpdated.toLocaleString() : '--'}
-                </span>
-              </div>
             </div>
           </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-lg px-4 py-2 border border-border">
+            <Clock className="h-4 w-4 text-green-600" />
+            <span>
+              {t('admin.dashboard.lastUpdated')}: <span className="font-medium text-foreground">{lastUpdated ? lastUpdated.toLocaleString() : '--'}</span>
+            </span>
+          </div>
         </CardHeader>
-        <CardContent>
-          {isLoading && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-green-500" />
-              <span className="ml-2 text-muted-foreground">{t('common.loading')}</span>
-            </div>
-          )}
-          {isError && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>{t('common.error')}</AlertTitle>
-              <AlertDescription>{error?.message || t('errors.loadFailed')}</AlertDescription>
-            </Alert>
-          )}
-          {!isLoading && !isError && (
-            <>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {summaryCards.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Card
-                      key={item.key}
-                      className={'p-4' + (item.onClick ? ' cursor-pointer hover:bg-accent/40 transition' : '')}
-                      onClick={item.onClick}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                            <Icon className="h-5 w-5" />
+          <CardContent className="pb-8">
+            {isLoading && (
+              <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                <div className="relative">
+                  <div className="h-16 w-16 rounded-full border-4 border-green-100 dark:border-green-900" />
+                  <Loader2 className="absolute inset-0 m-auto h-16 w-16 animate-spin text-green-500" />
+                </div>
+                <span className="text-base font-medium text-muted-foreground">{t('common.loading')}</span>
+              </div>
+            )}
+            {isError && (
+              <Alert variant="destructive" className="border-2">
+                <AlertCircle className="h-5 w-5" />
+                <AlertTitle className="text-base">{t('common.error')}</AlertTitle>
+                <AlertDescription className="text-sm">{error?.message || t('errors.loadFailed')}</AlertDescription>
+              </Alert>
+            )}
+            {!isLoading && !isError && (
+              <>
+                {/* Main Stats Grid */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                  {summaryCards.map((item, index) => {
+                    const Icon = item.icon;
+                    const gradients = [
+                      'from-blue-500/10 to-blue-600/10 dark:from-blue-500/20 dark:to-blue-600/20',
+                      'from-green-500/10 to-emerald-600/10 dark:from-green-500/20 dark:to-emerald-600/20',
+                      'from-purple-500/10 to-violet-600/10 dark:from-purple-500/20 dark:to-violet-600/20',
+                      'from-orange-500/10 to-amber-600/10 dark:from-orange-500/20 dark:to-amber-600/20',
+                      'from-pink-500/10 to-rose-600/10 dark:from-pink-500/20 dark:to-rose-600/20',
+                      'from-teal-500/10 to-cyan-600/10 dark:from-teal-500/20 dark:to-cyan-600/20',
+                      'from-indigo-500/10 to-blue-600/10 dark:from-indigo-500/20 dark:to-blue-600/20',
+                      'from-emerald-500/10 to-green-600/10 dark:from-emerald-500/20 dark:to-green-600/20',
+                    ];
+                    const iconColors = [
+                      'text-blue-600 dark:text-blue-400',
+                      'text-green-600 dark:text-green-400',
+                      'text-purple-600 dark:text-purple-400',
+                      'text-orange-600 dark:text-orange-400',
+                      'text-pink-600 dark:text-pink-400',
+                      'text-teal-600 dark:text-teal-400',
+                      'text-indigo-600 dark:text-indigo-400',
+                      'text-emerald-600 dark:text-emerald-400',
+                    ];
+                    return (
+                      <Card
+                        key={item.key}
+                        className={`group relative overflow-hidden border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
+                          item.onClick ? 'cursor-pointer' : ''
+                        }`}
+                        onClick={item.onClick}
+                      >
+                        <div className={`absolute inset-0 bg-gradient-to-br ${gradients[index % gradients.length]} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                        <CardContent className="relative p-6 space-y-4">
+                          <div className="flex items-start justify-between">
+                            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${gradients[index % gradients.length]} shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                              <Icon className={`h-7 w-7 ${iconColors[index % iconColors.length]}`} />
+                            </div>
+                            {item.onClick && (
+                              <ArrowUpRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                            )}
                           </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.title}</p>
-                            <p className="mt-1 text-2xl font-semibold leading-tight">{item.primary}</p>
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+                              {item.title}
+                            </p>
+                            <p className="text-3xl font-bold tracking-tight">{item.primary}</p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">{item.secondary}</p>
                           </div>
-                        </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* Mini Stats Bar */}
+                <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+                  {miniStats.map((item, index) => {
+                    const borderColors = [
+                      'border-l-blue-500',
+                      'border-l-green-500',
+                      'border-l-purple-500',
+                      'border-l-orange-500',
+                      'border-l-pink-500',
+                    ];
+                    return (
+                      <div 
+                        key={item.key} 
+                        className={`group rounded-xl border-2 border-l-4 ${borderColors[index % borderColors.length]} bg-card/50 backdrop-blur p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}
+                      >
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                          {item.label}
+                        </p>
+                        <p className="text-xl font-bold group-hover:scale-105 transition-transform duration-200">
+                          {item.value}
+                        </p>
                       </div>
-                      <p className="mt-3 text-xs text-muted-foreground">{item.secondary}</p>
-                    </Card>
-                  );
-                })}
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                {miniStats.map((item) => (
-                  <div key={item.key} className="rounded-md border border-border/60 p-4 text-sm">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
-                    <p className="mt-2 text-lg font-semibold">{item.value}</p>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
             </>
           )}
         </CardContent>
-      </Card>
-
-      {!isLoading && !isError && (
+      </Card>      {!isLoading && !isError && (
         <>
+          {/* Trends and Insights Section */}
           <div className="grid gap-6 xl:grid-cols-3">
-            <Card className="xl:col-span-2">
-              <CardHeader className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <CardTitle>{t('admin.dashboard.trendsTitle')}</CardTitle>
-                  <CardDescription>{t('admin.dashboard.trendsSubtitle')}</CardDescription>
+            <Card className="xl:col-span-2 border-2 hover:shadow-lg transition-shadow duration-300">
+              <CardHeader className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <CardTitle className="flex items-center gap-2 text-2xl">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500/10 to-violet-600/10">
+                        <Activity className="h-5 w-5 text-purple-600" />
+                      </div>
+                      {t('admin.dashboard.trendsTitle')}
+                    </CardTitle>
+                    <CardDescription className="text-sm">{t('admin.dashboard.trendsSubtitle')}</CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="rounded-xl border-2 hover:bg-purple-50 hover:border-purple-200 dark:hover:bg-purple-950/30 transition-all duration-200"
+                    onClick={() => navigate('/admin/activities')}
+                  >
+                    <LineChartIcon className="h-4 w-4 mr-2" />
+                    {t('admin.dashboard.viewActivities')}
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => navigate('/admin/activities')}>
-                  {t('admin.dashboard.viewActivities')}
-                </Button>
               </CardHeader>
-              <CardContent className="h-80">
+              <CardContent className="h-96 pb-6">
                 {trendChartData.length ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={trendChartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" minTickGap={20} tickFormatter={(value) => formatDateLabel(value, shortDateFormatter)} />
-                      <YAxis yAxisId="left" allowDecimals={false} />
-                      <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => decimalFormatter.format(value)} />
+                      <defs>
+                        <linearGradient id="colorCarbon" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.05}/>
+                        </linearGradient>
+                        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9}/>
+                          <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.8}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                      <XAxis 
+                        dataKey="date" 
+                        minTickGap={20} 
+                        tickFormatter={(value) => formatDateLabel(value, shortDateFormatter)}
+                        stroke="hsl(var(--muted-foreground))"
+                        style={{ fontSize: '12px' }}
+                      />
+                      <YAxis 
+                        yAxisId="left" 
+                        allowDecimals={false}
+                        stroke="#8b5cf6"
+                        style={{ fontSize: '12px', fontWeight: '500' }}
+                      />
+                      <YAxis 
+                        yAxisId="right" 
+                        orientation="right" 
+                        tickFormatter={(value) => decimalFormatter.format(value)}
+                        stroke="#10b981"
+                        style={{ fontSize: '12px', fontWeight: '500' }}
+                      />
                       <Tooltip
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '2px solid hsl(var(--border))',
+                          borderRadius: '12px',
+                          boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)',
+                          padding: '12px',
+                        }}
+                        labelStyle={{ fontWeight: '600', marginBottom: '8px', color: 'hsl(var(--foreground))' }}
                         labelFormatter={(value) => formatDateLabel(value, longDateFormatter)}
                         formatter={(value, name) => {
                           if (typeof value === 'number') {
@@ -676,218 +862,381 @@ export default function AdminDashboardPage() {
                           return [value, name];
                         }}
                       />
-                      <Legend />
+                      <Legend 
+                        wrapperStyle={{ paddingTop: '20px', fontSize: '13px', fontWeight: '500' }}
+                        iconType="circle"
+                      />
                       <Bar
                         yAxisId="left"
                         dataKey="transactions"
                         name={t('admin.dashboard.trendsTransactions')}
-                        fill="hsl(var(--chart-3))"
-                        radius={[4, 4, 0, 0]}
+                        fill="url(#barGradient)"
+                        radius={[8, 8, 0, 0]}
+                        maxBarSize={60}
                       />
                       <Area
                         yAxisId="right"
                         type="monotone"
                         dataKey="carbon_saved"
                         name={t('admin.dashboard.trendsCarbonSaved')}
-                        stroke="hsl(var(--chart-1))"
-                        fill="hsl(var(--chart-1))"
-                        fillOpacity={0.15}
-                        strokeWidth={2}
-                        dot={false}
+                        stroke="#10b981"
+                        fill="url(#colorCarbon)"
+                        strokeWidth={3}
+                        dot={{ r: 5, strokeWidth: 2, fill: '#ffffff', stroke: '#10b981' }}
+                        activeDot={{ r: 7, strokeWidth: 2 }}
                       />
                       <Line
                         yAxisId="right"
                         type="monotone"
                         dataKey="carbon_avg"
                         name={t('admin.dashboard.trendsCarbonAverage')}
-                        stroke="hsl(var(--chart-5))"
-                        strokeWidth={2}
+                        stroke="#f59e0b"
+                        strokeWidth={3}
+                        strokeDasharray="8 4"
                         dot={false}
                       />
                     </ComposedChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    {t('admin.dashboard.noData')}
+                  <div className="flex h-full items-center justify-center">
+                    <div className="text-center space-y-3">
+                      <div className="flex justify-center">
+                        <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center">
+                          <LineChartIcon className="h-8 w-8 text-muted-foreground/50" />
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{t('admin.dashboard.noData')}</p>
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.dashboard.keyInsights')}</CardTitle>
-                <CardDescription>{t('admin.dashboard.keyInsightsSubtitle')}</CardDescription>
+            <Card className="border-2 hover:shadow-lg transition-shadow duration-300">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Sparkles className="h-5 w-5 text-yellow-500" />
+                  {t('admin.dashboard.keyInsights')}
+                </CardTitle>
+                <CardDescription className="text-sm">{t('admin.dashboard.keyInsightsSubtitle')}</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {insights.map((insight) => (
-                    <div key={insight.key} className="rounded-md border border-border/60 p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-muted-foreground">{insight.label}</span>
-                        <span className="text-lg font-semibold">{insight.value}</span>
+              <CardContent className="space-y-3 pb-6">
+                {insights.map((insight, index) => {
+                  const bgGradients = [
+                    'from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20',
+                    'from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20',
+                    'from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20',
+                    'from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20',
+                    'from-pink-50 to-pink-100/50 dark:from-pink-950/30 dark:to-pink-900/20',
+                    'from-teal-50 to-teal-100/50 dark:from-teal-950/30 dark:to-teal-900/20',
+                    'from-indigo-50 to-indigo-100/50 dark:from-indigo-950/30 dark:to-indigo-900/20',
+                  ];
+                  return (
+                    <div 
+                      key={insight.key} 
+                      className={`group rounded-xl border-2 bg-gradient-to-br ${bgGradients[index % bgGradients.length]} p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                          {insight.label}
+                        </span>
+                        <span className="text-xl font-bold group-hover:scale-110 transition-transform duration-200">
+                          {insight.value}
+                        </span>
                       </div>
-                      <p className="mt-2 text-xs text-muted-foreground">{insight.description}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{insight.description}</p>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </CardContent>
             </Card>
           </div>
 
+          {/* Status Distribution Charts */}
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.dashboard.transactionStatusTitle')}</CardTitle>
-                <CardDescription>{t('admin.dashboard.transactionStatusSubtitle')}</CardDescription>
+            <Card className="group border-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <LineChartIcon className="h-4 w-4 text-blue-600" />
+                  </div>
+                  {t('admin.dashboard.transactionStatusTitle')}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {t('admin.dashboard.transactionStatusSubtitle')}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="h-64">
+              <CardContent className="h-72 pb-4">
                 {renderDonutChart(transactionStatusData)}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.dashboard.userStatusTitle')}</CardTitle>
-                <CardDescription>{t('admin.dashboard.userStatusSubtitle', {
-                  newUsers: integerFormatter.format(normalizedStats.users.new30d),
-                })}</CardDescription>
+            <Card className="group border-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-green-500/10 to-green-600/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <Users className="h-4 w-4 text-green-600" />
+                  </div>
+                  {t('admin.dashboard.userStatusTitle')}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {t('admin.dashboard.userStatusSubtitle', {
+                    newUsers: integerFormatter.format(normalizedStats.users.new30d),
+                  })}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="h-64">
+              <CardContent className="h-72 pb-4">
                 {renderDonutChart(userStatusData)}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.dashboard.exchangeStatusTitle')}</CardTitle>
-                <CardDescription>{t('admin.dashboard.exchangeStatusSubtitle')}</CardDescription>
+            <Card className="group border-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-600/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <Package className="h-4 w-4 text-purple-600" />
+                  </div>
+                  {t('admin.dashboard.exchangeStatusTitle')}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {t('admin.dashboard.exchangeStatusSubtitle')}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="h-64">
+              <CardContent className="h-72 pb-4">
                 {renderDonutChart(exchangeStatusData)}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.dashboard.messageStatusTitle')}</CardTitle>
-                <CardDescription>{t('admin.dashboard.messageStatusSubtitle')}</CardDescription>
+            <Card className="group border-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-orange-500/10 to-orange-600/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <MessageSquare className="h-4 w-4 text-orange-600" />
+                  </div>
+                  {t('admin.dashboard.messageStatusTitle')}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {t('admin.dashboard.messageStatusSubtitle')}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="h-64">
+              <CardContent className="h-72 pb-4">
                 {renderDonutChart(messageStatusData)}
               </CardContent>
             </Card>
           </div>
 
-          <Card>
-            <CardHeader className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <CardTitle>{t('admin.dashboard.topCarbonDaysTitle')}</CardTitle>
-                <CardDescription>{t('admin.dashboard.topCarbonDaysSubtitle')}</CardDescription>
+          {/* Top Carbon Days */}
+          <Card className="border-2 hover:shadow-lg transition-shadow duration-300">
+            <CardHeader className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2 text-2xl">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-600/10">
+                      <TrendingUp className="h-5 w-5 text-green-600" />
+                    </div>
+                    {t('admin.dashboard.topCarbonDaysTitle')}
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    {t('admin.dashboard.topCarbonDaysSubtitle')}
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="rounded-xl border-2 hover:bg-green-50 hover:border-green-200 dark:hover:bg-green-950/30 transition-all duration-200"
+                  onClick={() => navigate('/admin/activities')}
+                >
+                  <Activity className="h-4 w-4 mr-2" />
+                  {t('admin.dashboard.viewActivities')}
+                </Button>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigate('/admin/activities')}>
-                {t('admin.dashboard.viewActivities')}
-              </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-6">
               {topCarbonDays.length ? (
                 <div className="space-y-3">
-                  {topCarbonDays.map((day) => (
-                    <div
-                      key={day.date}
-                      className="flex items-center justify-between rounded-md border border-border/60 px-4 py-3"
-                    >
-                      <div>
-                        <p className="font-medium">{formatDateLabel(day.date, longDateFormatter)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {t('admin.dashboard.trendsTransactions')}: {integerFormatter.format(day.transactions)}
-                        </p>
+                  {topCarbonDays.map((day, index) => {
+                    const rankColors = [
+                      'from-yellow-400 to-yellow-600 text-white shadow-lg shadow-yellow-500/30',
+                      'from-gray-300 to-gray-500 text-white shadow-lg shadow-gray-500/30',
+                      'from-orange-400 to-orange-600 text-white shadow-lg shadow-orange-500/30',
+                      'from-blue-400 to-blue-600 text-white',
+                      'from-purple-400 to-purple-600 text-white',
+                    ];
+                    return (
+                      <div
+                        key={day.date}
+                        className="group flex items-center gap-4 rounded-xl border-2 bg-gradient-to-r from-card to-muted/20 px-5 py-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
+                      >
+                        <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${rankColors[index]} font-bold transition-transform duration-200 group-hover:scale-110`}>
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-base truncate">
+                            {formatDateLabel(day.date, longDateFormatter)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {t('admin.dashboard.trendsTransactions')}: <span className="font-medium text-foreground">{integerFormatter.format(day.transactions)}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 text-right">
+                          <Leaf className="h-5 w-5 text-green-600 flex-shrink-0" />
+                          <div>
+                            <div className="text-lg font-bold whitespace-nowrap">
+                              {decimalFormatter.format(day.carbon_saved)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {t('units.kg')}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm font-semibold">
-                        {decimalFormatter.format(day.carbon_saved)} {t('units.kg')}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="text-sm text-muted-foreground">{t('admin.dashboard.noData')}</div>
+                <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                  <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center">
+                    <TrendingUp className="h-8 w-8 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{t('admin.dashboard.noData')}</p>
+                </div>
               )}
             </CardContent>
           </Card>
+          {/* Recent Activity Section */}
           <div className="grid gap-6 xl:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.dashboard.recentPendingTransactions')}</CardTitle>
-                <CardDescription>{t('admin.dashboard.recentPendingTransactionsSubtitle')}</CardDescription>
+            <Card className="border-2 hover:shadow-lg transition-shadow duration-300">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500/10 to-amber-600/10 flex items-center justify-center">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                  </div>
+                  {t('admin.dashboard.recentPendingTransactions')}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {t('admin.dashboard.recentPendingTransactionsSubtitle')}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pb-6">
                 {recent.pendingTransactions.length ? (
-                  recent.pendingTransactions.map((item) => (
-                    <div key={item.id} className="rounded-md border border-border/60 px-3 py-2 text-sm">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">{item.username || t('admin.dashboard.unknownUser')}</span>
-                        <span className="font-mono">{decimalFormatter.format(safeNumber(item.points))} {t('units.points')}</span>
+                  recent.pendingTransactions.map((item, index) => (
+                    <div 
+                      key={item.id} 
+                      className="group rounded-xl border-2 bg-gradient-to-r from-card to-amber-50/30 dark:to-amber-950/10 px-4 py-3 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <span className="font-semibold text-sm truncate">
+                          {item.username || t('admin.dashboard.unknownUser')}
+                        </span>
+                        <div className="flex items-center gap-1.5 font-mono text-sm font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">
+                          <Sparkles className="h-3.5 w-3.5" />
+                          {decimalFormatter.format(safeNumber(item.points))}
+                        </div>
                       </div>
-                      <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{formatDateTime(item.created_at)}</span>
-                        <span className="uppercase tracking-wide">{item.status}</span>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="truncate">{formatDateTime(item.created_at)}</span>
+                        <span className="uppercase tracking-wider font-semibold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                          {item.status}
+                        </span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-sm text-muted-foreground">{t('admin.dashboard.noPendingTransactions')}</div>
+                  <div className="flex flex-col items-center justify-center py-8 space-y-2">
+                    <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
+                      <Clock className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">{t('admin.dashboard.noPendingTransactions')}</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.dashboard.recentPendingCarbon')}</CardTitle>
-                <CardDescription>{t('admin.dashboard.recentPendingCarbonSubtitle')}</CardDescription>
+            <Card className="border-2 hover:shadow-lg transition-shadow duration-300">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-green-500/10 to-emerald-600/10 flex items-center justify-center">
+                    <Leaf className="h-4 w-4 text-green-600" />
+                  </div>
+                  {t('admin.dashboard.recentPendingCarbon')}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {t('admin.dashboard.recentPendingCarbonSubtitle')}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pb-6">
                 {recent.pendingCarbonRecords.length ? (
                   recent.pendingCarbonRecords.map((item) => (
-                    <div key={item.id} className="rounded-md border border-border/60 px-3 py-2 text-sm">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">{item.activity_name_en || item.activity_name_zh || item.activity_id || t('admin.dashboard.unknownActivity')}</span>
-                        <span className="font-mono">{decimalFormatter.format(safeNumber(item.carbon_saved))} {t('units.kg')}</span>
+                    <div 
+                      key={item.id} 
+                      className="group rounded-xl border-2 bg-gradient-to-r from-card to-green-50/30 dark:to-green-950/10 px-4 py-3 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <span className="font-semibold text-sm truncate">
+                          {item.activity_name_en || item.activity_name_zh || item.activity_id || t('admin.dashboard.unknownActivity')}
+                        </span>
+                        <div className="flex items-center gap-1.5 font-mono text-sm font-bold text-green-700 dark:text-green-400 whitespace-nowrap">
+                          <Leaf className="h-3.5 w-3.5" />
+                          {decimalFormatter.format(safeNumber(item.carbon_saved))}
+                        </div>
                       </div>
-                      <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{item.username || t('admin.dashboard.unknownUser')}</span>
-                        <span>{formatDateTime(item.created_at)}</span>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="truncate">{item.username || t('admin.dashboard.unknownUser')}</span>
+                        <span className="truncate">{formatDateTime(item.created_at)}</span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-sm text-muted-foreground">{t('admin.dashboard.noPendingCarbon')}</div>
+                  <div className="flex flex-col items-center justify-center py-8 space-y-2">
+                    <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
+                      <Leaf className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">{t('admin.dashboard.noPendingCarbon')}</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.dashboard.latestUsers')}</CardTitle>
-                <CardDescription>{t('admin.dashboard.latestUsersSubtitle')}</CardDescription>
+            <Card className="border-2 hover:shadow-lg transition-shadow duration-300">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/10 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-blue-600" />
+                  </div>
+                  {t('admin.dashboard.latestUsers')}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {t('admin.dashboard.latestUsersSubtitle')}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pb-6">
                 {recent.latestUsers.length ? (
                   recent.latestUsers.map((item) => (
-                    <div key={item.id} className="rounded-md border border-border/60 px-3 py-2 text-sm">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">{item.username}</span>
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground">{item.status || t('admin.dashboard.statusUnknown')}</span>
+                    <div 
+                      key={item.id} 
+                      className="group rounded-xl border-2 bg-gradient-to-r from-card to-blue-50/30 dark:to-blue-950/10 px-4 py-3 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <span className="font-semibold text-sm truncate">{item.username}</span>
+                        <span className="text-xs uppercase tracking-wider font-semibold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
+                          {item.status || t('admin.dashboard.statusUnknown')}
+                        </span>
                       </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground truncate mb-1">
                         {item.email || t('admin.dashboard.noEmail')}
                       </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {formatDateTime(item.created_at)}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-sm text-muted-foreground">{t('admin.dashboard.noRecentUsers')}</div>
+                  <div className="flex flex-col items-center justify-center py-8 space-y-2">
+                    <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
+                      <Users className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">{t('admin.dashboard.noRecentUsers')}</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
