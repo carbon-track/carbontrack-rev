@@ -264,6 +264,7 @@ export const adminAPI = {
   },
   getUserOverview: (id) => api.get(`/admin/users/${id}/overview`),
   getUserBadges: (id, params = {}) => api.get(`/admin/users/${id}/badges`, { params }),
+  updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   
   // 调整用户积分
   adjustUserPoints: (id, data) => api.post('/admin/users/' + id + '/points/adjust', data),
@@ -290,6 +291,7 @@ export const adminAPI = {
   // 后端实际审核路由: /admin/activities/{id}/review
   // 为兼容旧路径, 如需可在后端加 alias; 这里直接指向正确路由
   reviewActivity: (id, data) => api.put(`/admin/activities/${id}/review`, data),
+  reviewActivitiesBulk: (data) => api.put('/admin/activities/review', data),
   getActivityStatistics: (id = null) => {
     const url = id ? `/admin/carbon-activities/${id}/statistics` : '/admin/carbon-activities/statistics';
     return api.get(url);
@@ -325,6 +327,9 @@ export const adminAPI = {
   
   // 获取单个兑换记录（管理员）
   getExchange: (id) => api.get(`/admin/exchanges/${id}`),
+
+  // 更新兑换状态（管理员）
+  updateExchangeStatus: (id, data) => api.put(`/admin/exchanges/${id}/status`, data),
   
   // 审核兑换记录（管理员）
   reviewExchange: (id, data) => api.put(`/admin/exchanges/${id}`, data),
@@ -342,6 +347,7 @@ export const adminAPI = {
   broadcastMessage: (data) => api.post('/admin/messages/broadcast', data),
   getBroadcasts: (params = {}) => api.get('/admin/messages/broadcasts', { params }),
   searchBroadcastRecipients: (params = {}) => api.get('/admin/messages/broadcast/recipients', { params }),
+  flushBroadcastQueue: (params = {}) => api.post('/admin/messages/broadcasts/flush', {}, { params }),
 
 };
 

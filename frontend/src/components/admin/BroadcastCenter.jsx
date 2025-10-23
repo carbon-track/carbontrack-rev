@@ -605,6 +605,25 @@ export function BroadcastCenter() {
     }
   );
 
+  const flushBroadcastMutation = useMutation(
+    (params = {}) => adminAPI.flushBroadcastQueue(params),
+    {
+      onSuccess: (res) => {
+        const processed = Array.isArray(res?.data?.processed) ? res.data.processed : [];
+        if (processed.length > 0) {
+          toast.success(t('admin.broadcast.history.flushSuccess', { count: processed.length }));
+        } else {
+          toast(t('admin.broadcast.history.flushEmpty'));
+        }
+        refetchHistory();
+      },
+      onError: (error) => {
+        const message = error?.response?.data?.error || error?.message || t('admin.broadcast.history.flushErrorDefault');
+        toast.error(t('admin.broadcast.history.flushError', { message }));
+      }
+    }
+  );
+
   const handlePreview = () => {
     const { payload, isValid, firstError } = validateForm();
     if (!isValid) {
@@ -630,6 +649,10 @@ export function BroadcastCenter() {
     setResult(null);
     broadcastMutation.mutate(payload);
   };
+
+  const handleFlushBroadcasts = useCallback(() => {
+    flushBroadcastMutation.mutate({ limit: 10 });
+  }, [flushBroadcastMutation]);
 
   const toggleDetails = (id) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -1196,6 +1219,16 @@ export function BroadcastCenter() {
             </Button>
             <Button variant="outline" size="sm" onClick={() => refetchHistory()} disabled={isHistoryLoading}>
               {t('common.refresh')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFlushBroadcasts}
+              disabled={flushBroadcastMutation.isLoading}
+            >
+              {flushBroadcastMutation.isLoading
+                ? t('admin.broadcast.history.flushLoading')
+                : t('admin.broadcast.history.flushButton')}
             </Button>
             <Button size="sm" onClick={handleExport} disabled={exportDisabled || isHistoryLoading}>
               {t('admin.broadcast.export.label')}

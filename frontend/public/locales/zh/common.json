@@ -954,7 +954,13 @@
         "empty": "暂无广播记录。",
         "showDetails": "显示接收详情",
         "hideDetails": "收起接收详情",
-        "more": "等 {{count}} 位用户"
+        "more": "等 {{count}} 位用户",
+        "flushButton": "处理排队邮件",
+        "flushLoading": "正在处理...",
+        "flushSuccess": "已处理 {{count}} 条排队公告。",
+        "flushEmpty": "暂无排队公告需要处理。",
+        "flushError": "处理排队邮件失败：{{message}}",
+        "flushErrorDefault": "未知错误"
       },
       "recipients": {
         "selected": "已选收件人",
@@ -1301,7 +1307,14 @@
           "delete": "禁用",
           "restore": "恢复"
         }
-      }
+      },
+      "selectionHint": "选择待审核的记录即可批量处理。",
+      "selectedCount": "已选择 {{count}} 条记录",
+      "bulkApprove": "批量通过",
+      "bulkReject": "批量驳回",
+      "selectAll": "选择全部待审核记录",
+      "selectRecord": "选择此记录",
+      "clearSelection": "清除选择"
     },
     "products": {
       "title": "商品管理",
@@ -2356,4 +2369,3 @@
     }
   }
 }
-

@@ -955,7 +955,13 @@
         "empty": "No broadcasts have been sent yet.",
         "showDetails": "Show recipients",
         "hideDetails": "Hide recipients",
-        "more": "+{{count}} more"
+        "more": "+{{count}} more",
+        "flushButton": "Process queued emails",
+        "flushLoading": "Processing...",
+        "flushSuccess": "{{count}} queued broadcast(s) processed.",
+        "flushEmpty": "No queued broadcasts to process.",
+        "flushError": "Failed to process queued emails: {{message}}",
+        "flushErrorDefault": "Unknown error"
       },
       "recipients": {
         "selected": "Selected recipients",
@@ -1436,7 +1442,14 @@
           "delete": "Disable",
           "restore": "Restore"
         }
-      }
+      },
+      "selectionHint": "Select pending records to enable batch actions.",
+      "selectedCount": "{{count}} record(s) selected",
+      "bulkApprove": "Approve Selected",
+      "bulkReject": "Reject Selected",
+      "selectAll": "Select all pending records",
+      "selectRecord": "Select record",
+      "clearSelection": "Clear selection"
     },
     "audit": {
       "title": "Audit Logs",

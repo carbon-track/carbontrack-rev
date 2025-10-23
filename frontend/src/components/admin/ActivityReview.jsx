@@ -4,10 +4,11 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useTranslation } from '../../hooks/useTranslation';
 import { formatNumber, formatDateSafe } from '../../lib/utils';
 import { adminAPI } from '../../lib/api';
-import { Loader2, CheckCircle, XCircle, Eye, Search, Filter, MessageSquare, Clock } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Eye, Search, MessageSquare, Clock } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/textarea';
+import { Checkbox } from '../ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -33,7 +34,8 @@ export function ActivityReview() {
     sort: 'created_at_asc' // Oldest first for review
   });
   const [selectedActivity, setSelectedActivity] = useState(null);
-  const [decisionDialog, setDecisionDialog] = useState({ open: false, mode: null, activity: null, reason: '', error: '' });
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [decisionDialog, setDecisionDialog] = useState({ open: false, mode: null, activity: null, bulkIds: [], reason: '', error: '' });
   // 自动刷新控制
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshIntervalMs, setRefreshIntervalMs] = useState(15000); // 15s 默认
@@ -88,6 +90,28 @@ export function ActivityReview() {
     };
   });
 
+  useEffect(() => {
+    const pendingSet = new Set(
+      normalizedActivities
+        .filter((item) => item.status === 'pending')
+        .map((item) => item.id)
+    );
+    setSelectedIds((prev) => prev.filter((id) => pendingSet.has(id)));
+  }, [normalizedActivities]);
+
+  const selectablePendingIds = normalizedActivities
+    .filter((item) => item.status === 'pending')
+    .map((item) => item.id);
+  const selectedPendingIds = selectedIds.filter((id) => selectablePendingIds.includes(id));
+  const headerCheckboxState =
+    selectablePendingIds.length === 0
+      ? false
+      : selectedPendingIds.length === selectablePendingIds.length
+        ? true
+        : selectedPendingIds.length > 0
+          ? 'indeterminate'
+          : false;
+
   const pagination = data?.data?.pagination || data?.pagination || { page: filters.page, limit: filters.limit, total: normalizedActivities.length, pages: 1 };
 
   const reviewActivityMutation = useMutation(
@@ -106,6 +130,23 @@ export function ActivityReview() {
     }
   );
 
+  const reviewActivitiesBulkMutation = useMutation(
+    ({ action, review_note, record_ids }) => adminAPI.reviewActivitiesBulk({ action, review_note, record_ids }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('adminActivities');
+        queryClient.invalidateQueries('activities');
+        toast.success(t('admin.activities.reviewSuccess'));
+        setSelectedActivity(null);
+        setSelectedIds([]);
+      },
+      onError: (err) => {
+        toast.error(t('admin.activities.reviewFailed'));
+        console.error('Bulk activity review failed:', err);
+      }
+    }
+  );
+
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
   };
@@ -119,15 +160,55 @@ export function ActivityReview() {
   };
 
   const closeDecisionDialog = () => {
-    setDecisionDialog({ open: false, mode: null, activity: null, reason: '', error: '' });
+    setDecisionDialog({ open: false, mode: null, activity: null, bulkIds: [], reason: '', error: '' });
   };
 
   const openApproveDialog = (activity) => {
-    setDecisionDialog({ open: true, mode: 'approve', activity, reason: '', error: '' });
+    setDecisionDialog({ open: true, mode: 'approve', activity, bulkIds: [], reason: '', error: '' });
   };
 
   const openRejectDialog = (activity) => {
-    setDecisionDialog({ open: true, mode: 'reject', activity, reason: '', error: '' });
+    setDecisionDialog({ open: true, mode: 'reject', activity, bulkIds: [], reason: '', error: '' });
+  };
+
+  const clearSelection = () => setSelectedIds([]);
+
+  const handleToggleSelect = (activityId, status, checked) => {
+    if (status !== 'pending') {
+      return;
+    }
+    setSelectedIds((prev) => {
+      const exists = prev.includes(activityId);
+      if (checked && !exists) {
+        return [...prev, activityId];
+      }
+      if (!checked && exists) {
+        return prev.filter((id) => id !== activityId);
+      }
+      return prev;
+    });
+  };
+
+  const handleToggleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...selectablePendingIds])));
+    } else {
+      setSelectedIds((prev) => prev.filter((id) => !selectablePendingIds.includes(id)));
+    }
+  };
+
+  const openBulkApproveDialog = () => {
+    if (selectedPendingIds.length === 0) {
+      return;
+    }
+    setDecisionDialog({ open: true, mode: 'approve', activity: null, bulkIds: selectedPendingIds, reason: '', error: '' });
+  };
+
+  const openBulkRejectDialog = () => {
+    if (selectedPendingIds.length === 0) {
+      return;
+    }
+    setDecisionDialog({ open: true, mode: 'reject', activity: null, bulkIds: selectedPendingIds, reason: '', error: '' });
   };
 
   const handleDecisionReasonChange = (event) => {
@@ -136,6 +217,30 @@ export function ActivityReview() {
   };
 
   const handleDecisionConfirm = () => {
+    const bulkIds = decisionDialog.bulkIds || [];
+
+    if (bulkIds.length > 0) {
+      if (decisionDialog.mode === 'approve') {
+        reviewActivitiesBulkMutation.mutate(
+          { action: 'approve', record_ids: bulkIds },
+          { onSettled: closeDecisionDialog }
+        );
+        return;
+      }
+
+      const trimmedReason = decisionDialog.reason.trim();
+      if (!trimmedReason) {
+        setDecisionDialog((prev) => ({ ...prev, error: t('admin.activities.rejectReasonRequired', '����д�ܾ�ԭ��') }));
+        return;
+      }
+
+      reviewActivitiesBulkMutation.mutate(
+        { action: 'reject', review_note: trimmedReason, record_ids: bulkIds },
+        { onSettled: closeDecisionDialog }
+      );
+      return;
+    }
+
     if (!decisionDialog.activity) {
       return;
     }
@@ -152,7 +257,7 @@ export function ActivityReview() {
 
     const trimmedReason = decisionDialog.reason.trim();
     if (!trimmedReason) {
-      setDecisionDialog((prev) => ({ ...prev, error: t('admin.activities.rejectReasonRequired', '请填写拒绝原因') }));
+      setDecisionDialog((prev) => ({ ...prev, error: t('admin.activities.rejectReasonRequired', '����д�ܾ�ԭ��') }));
       return;
     }
 
@@ -254,6 +359,56 @@ export function ActivityReview() {
         </div>
       ) : (
         <>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            {selectedPendingIds.length > 0 ? (
+              <p className="text-sm text-gray-600">
+                {t('admin.activities.selectedCount', { count: selectedPendingIds.length })}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {t('admin.activities.selectionHint', '选择待审核的记录后即可批量处理。')}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSelection}
+              disabled={selectedPendingIds.length === 0 || reviewActivitiesBulkMutation.isLoading}
+            >
+              {t('admin.activities.clearSelection', 'Clear selection')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openBulkApproveDialog}
+              disabled={selectedPendingIds.length === 0 || reviewActivitiesBulkMutation.isLoading}
+            >
+              {reviewActivitiesBulkMutation.isLoading && decisionDialog.bulkIds && decisionDialog.bulkIds.length > 0 && decisionDialog.mode === 'approve' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="mr-2 h-4 w-4" />
+              )}
+              {t('admin.activities.bulkApprove', '批量通过')}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={openBulkRejectDialog}
+              disabled={selectedPendingIds.length === 0 || reviewActivitiesBulkMutation.isLoading}
+            >
+              {reviewActivitiesBulkMutation.isLoading && decisionDialog.bulkIds && decisionDialog.bulkIds.length > 0 && decisionDialog.mode === 'reject' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <XCircle className="mr-2 h-4 w-4" />
+              )}
+              {t('admin.activities.bulkReject', '批量驳回')}
+            </Button>
+          </div>
+        </div>
+
           <div className="overflow-x-auto bg-white rounded-lg shadow-sm border relative">
             {initialLoadedRef.current && isFetching && (
               <div className="absolute top-2 right-2 flex items-center text-xs text-gray-500">
@@ -263,6 +418,14 @@ export function ActivityReview() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <Checkbox
+                      aria-label={t('admin.activities.selectAll', 'Select all pending')}
+                      checked={headerCheckboxState}
+                      onCheckedChange={(value) => handleToggleSelectAll(value === true)}
+                      disabled={selectablePendingIds.length === 0}
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.activities.table.images', 'Images')}</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.activities.table.user')}</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.activities.table.activity')}</th>
@@ -277,6 +440,14 @@ export function ActivityReview() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {normalizedActivities.map((activity) => (
                   <tr key={activity.id}>
+                    <td className="px-4 py-4 align-top">
+                      <Checkbox
+                        aria-label={t('admin.activities.selectRecord', 'Select record')}
+                        checked={selectedIds.includes(activity.id)}
+                        disabled={activity.status !== 'pending'}
+                        onCheckedChange={(value) => handleToggleSelect(activity.id, activity.status, value === true)}
+                      />
+                    </td>
                     <td className="px-4 py-4 whitespace-nowrap align-top">
                       <ImagePreviewGallery images={activity.images || []} maxThumbnails={1} />
                     </td>
