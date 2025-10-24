@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../hooks/useTranslation';
-import { QueryClientProvider } from 'react-query';
+import { QueryClientProvider, useQuery } from 'react-query';
 import { queryClient } from '../../lib/react-query';
 import { Navbar } from './Navbar';
 import {
@@ -41,7 +41,11 @@ import {
   Sparkles,
   ShieldCheck,
   Clock,
+  Bot,
+  Loader2,
 } from 'lucide-react';
+import api, { adminAPI } from '../../lib/api';
+import { toast } from 'react-hot-toast';
 
 const NAV_LINKS = [
   { key: 'dashboard', to: '/admin/dashboard', icon: LayoutDashboard },
@@ -60,6 +64,9 @@ export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [commandOpen, setCommandOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
+  const [debouncedCommandQuery, setDebouncedCommandQuery] = useState('');
+  const [isExecutingAiAction, setIsExecutingAiAction] = useState(false);
 
   const translatedLinks = useMemo(() => {
     return NAV_LINKS.map((link) => ({
@@ -111,9 +118,156 @@ export default function AdminLayout() {
     },
   ]), [navigate, t]);
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedCommandQuery(commandQuery.trim());
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [commandQuery]);
+
   const activeLink = useMemo(() => {
     return translatedLinks.find((link) => location.pathname.startsWith(link.to));
   }, [location.pathname, translatedLinks]);
+
+  useEffect(() => {
+    if (!commandOpen) {
+      setCommandQuery('');
+      setDebouncedCommandQuery('');
+    }
+  }, [commandOpen]);
+
+  const userLocale = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'zh-CN';
+
+  const aiContext = useMemo(() => ({
+    activeRoute: location.pathname,
+    locale: userLocale,
+  }), [location.pathname, userLocale]);
+
+  const shouldFetchAi = commandOpen && debouncedCommandQuery.length >= 4;
+
+  const {
+    data: aiData,
+    isFetching: isFetchingAi,
+    isError: isAiError,
+    error: aiError,
+  } = useQuery(
+    ['admin-ai-intent', debouncedCommandQuery, aiContext.activeRoute, aiContext.locale],
+    async () => {
+      const response = await adminAPI.analyzeCommand({
+        query: debouncedCommandQuery,
+        context: aiContext,
+        mode: 'suggest',
+      });
+      return response.data;
+    },
+    {
+      enabled: shouldFetchAi,
+      staleTime: 30000,
+      cacheTime: 60000,
+      retry: false,
+    }
+  );
+
+  const aiIntent = aiData?.intent ?? null;
+  const aiAlternatives = aiData?.alternatives ?? [];
+  const aiErrorMessage = useMemo(() => {
+    if (!isAiError || !aiError) {
+      return null;
+    }
+    const message = aiError?.response?.data?.error;
+    if (message) {
+      return message;
+    }
+    return t('admin.command.aiError', '�޷���ȡAI����');
+  }, [aiError, isAiError, t]);
+
+  const showAiSection = commandQuery.trim().length > 0 && (
+    isFetchingAi || aiIntent || aiAlternatives.length > 0 || isAiError
+  );
+
+  const buildRouteWithQuery = useCallback((route, query = {}) => {
+    if (!route) {
+      return null;
+    }
+    const entries = Object.entries(query || {}).filter(([, value]) => value !== undefined && value !== null && value !== '');
+    if (entries.length === 0) {
+      return route;
+    }
+    const params = new URLSearchParams();
+    entries.forEach(([key, value]) => {
+      params.set(key, String(value));
+    });
+    return `${route}?${params.toString()}`;
+  }, []);
+
+  const handleAiIntentSelect = useCallback(async (intent) => {
+    if (!intent || isExecutingAiAction) {
+      return;
+    }
+
+    if (intent.type === 'navigate' || intent.type === 'quick_action') {
+      const targetRoute = intent?.target?.route;
+      if (!targetRoute) {
+        toast.error(t('admin.command.aiMissingRoute', 'δ�ҵ�����תҳ��'));
+        return;
+      }
+      const fullRoute = buildRouteWithQuery(targetRoute, intent?.target?.query || {});
+      setCommandOpen(false);
+      setCommandQuery('');
+      navigate(fullRoute || targetRoute);
+      return;
+    }
+
+    if (intent.type === 'action' && intent.action) {
+      const missing = Array.isArray(intent.missing) ? intent.missing : [];
+      if (missing.length > 0) {
+        toast.error(missing[0]?.description || t('admin.command.aiMissingInfo', '�����������Ϣ�ټ���'));
+        return;
+      }
+
+      const apiConfig = intent.action.api || {};
+      let path = apiConfig.path || '';
+      if (!path) {
+        toast.error(t('admin.command.aiMissingPath', 'ȱ����ִ�еĽӿڵ�ַ'));
+        return;
+      }
+      const method = (apiConfig.method || 'post').toLowerCase();
+      if (path.startsWith('/api/v1')) {
+        path = path.replace('/api/v1', '') || '/';
+      }
+
+      const payload = apiConfig.payload || {};
+      const requestConfig = {
+        method,
+        url: path,
+      };
+      if (method === 'get' || method === 'delete') {
+        requestConfig.params = payload;
+      } else {
+        requestConfig.data = payload;
+      }
+
+      try {
+        setIsExecutingAiAction(true);
+        await api.request(requestConfig);
+        toast.success(t('admin.command.aiActionSuccess', 'ָ����ִ��'));
+        setCommandQuery('');
+        setCommandOpen(false);
+      } catch (error) {
+        const requestId = error?.response?.data?.request_id;
+        let message = t('admin.command.aiActionFailed', 'ָ��ִ��ʧ��');
+        if (requestId) {
+          message += ` (ReqID: ${requestId})`;
+        }
+        toast.error(message);
+      } finally {
+        setIsExecutingAiAction(false);
+      }
+      return;
+    }
+
+    toast(t('admin.command.aiNoMatch', '��ʱ�޷����˴�ָ��'), { icon: '🤖' });
+  }, [buildRouteWithQuery, isExecutingAiAction, navigate, setCommandOpen, setCommandQuery, t]);
 
   useEffect(() => {
     const handler = (event) => {
@@ -132,10 +286,78 @@ export default function AdminLayout() {
         <Navbar />
         <SidebarProvider>
           <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
-            <CommandInput placeholder={t('admin.command.placeholder', '快速跳转或执行操作')} />
+            <CommandInput
+              value={commandQuery}
+              onValueChange={setCommandQuery}
+              placeholder={t('admin.command.placeholder', '������ת��ִ�в���')}
+            />
+
             <CommandList>
-              <CommandEmpty>{t('admin.command.noResults', '没有匹配的结果')}</CommandEmpty>
-              <CommandGroup heading={t('admin.command.navigation', '界面导航')}>
+              <CommandEmpty>{t('admin.command.noResults', 'û��ƥ��Ľ��')}</CommandEmpty>
+              {showAiSection && (
+                <CommandGroup heading={t('admin.command.aiSuggestions', 'AI �Ƽ�')}>
+                  {isFetchingAi && (
+                    <CommandItem value="ai-loading" disabled>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>{t('admin.command.aiLoading', 'AI ����������ָ��...')}</span>
+                    </CommandItem>
+                  )}
+                  {!isFetchingAi && isAiError && (
+                    <CommandItem value="ai-error" disabled>
+                      <Bot className="h-4 w-4 text-rose-500" />
+                      <div className="flex flex-col">
+                        <span>{aiErrorMessage || t('admin.command.aiError', '�޷���ȡAI����')}</span>
+                        {aiError?.response?.data?.code && (
+                          <span className="text-xs text-muted-foreground">{aiError.response.data.code}</span>
+                        )}
+                      </div>
+                    </CommandItem>
+                  )}
+                  {!isFetchingAi && !isAiError && aiIntent && (
+                    <CommandItem
+                      value={aiIntent.label || 'AI suggestion'}
+                      onSelect={() => handleAiIntentSelect(aiIntent)}
+                      disabled={isExecutingAiAction && aiIntent.type === 'action'}
+                    >
+                      <Bot className="h-4 w-4 text-emerald-500" />
+                      <div className="flex flex-col">
+                        <span>{aiIntent.label}</span>
+                        {aiIntent.reasoning && (
+                          <span className="text-xs text-muted-foreground">{aiIntent.reasoning}</span>
+                        )}
+                      </div>
+                      {aiIntent.type === 'action' && (
+                        <span className="ml-auto text-xs text-emerald-600">
+                          {t('admin.command.aiExecute', 'ִ��')}
+                        </span>
+                      )}
+                    </CommandItem>
+                  )}
+                  {!isFetchingAi && !isAiError && aiAlternatives.map((alt, index) => (
+                    <CommandItem
+                      key={`ai-alt-${index}-${alt.label || alt.type}`}
+                      value={alt.label || `AI option ${index + 1}`}
+                      onSelect={() => handleAiIntentSelect(alt)}
+                      disabled={isExecutingAiAction && alt.type === 'action'}
+                    >
+                      <Sparkles className="h-4 w-4 text-emerald-500" />
+                      <div className="flex flex-col">
+                        <span>{alt.label}</span>
+                        {alt.reasoning && (
+                          <span className="text-xs text-muted-foreground">{alt.reasoning}</span>
+                        )}
+                      </div>
+                      {alt.type === 'action' && (
+                        <span className="ml-auto text-xs text-emerald-600">
+                          {t('admin.command.aiExecute', 'ִ��')}
+                        </span>
+                      )}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+              <CommandGroup heading={t('admin.command.navigation', '���浼��')}>
+
                 {translatedLinks.map((link) => (
                   <CommandItem
                     key={link.to}
@@ -280,3 +502,5 @@ export default function AdminLayout() {
   );
 
 }
+
+

@@ -37,10 +37,14 @@ use CarbonTrack\Controllers\AdminController;
 use CarbonTrack\Controllers\FileUploadController;
 use CarbonTrack\Services\BadgeService;
 use CarbonTrack\Services\StatisticsService;
+use CarbonTrack\Services\AdminAiIntentService;
 use CarbonTrack\Controllers\BadgeController;
 use CarbonTrack\Controllers\AdminBadgeController;
 use CarbonTrack\Middleware\RequestLoggingMiddleware;
 use CarbonTrack\Controllers\StatsController;
+use CarbonTrack\Services\Ai\OpenAiClientAdapter;
+use CarbonTrack\Controllers\AdminAiController;
+use OpenAI\Factory as OpenAiFactory;
 
 $__deps_initializer = function (Container $container) {
     // Logger
@@ -201,6 +205,53 @@ $__deps_initializer = function (Container $container) {
     $container->set(StatisticsService::class, function (ContainerInterface $c) {
         $db = $c->get(DatabaseService::class)->getConnection()->getPdo();
         return new StatisticsService($db);
+    });
+
+    // AI LLM client adapter (optional if API key is not configured)
+    $container->set('ai.llmClient', function () {
+        $apiKey = trim((string) ($_ENV['LLM_API_KEY'] ?? ''));
+        if ($apiKey === '') {
+            return null;
+        }
+
+        try {
+            $factory = new OpenAiFactory();
+            $factory = $factory->withApiKey($apiKey);
+
+            $baseUrl = trim((string) ($_ENV['LLM_API_BASE_URL'] ?? ''));
+            if ($baseUrl !== '') {
+                $factory = $factory->withBaseUri($baseUrl);
+            }
+
+            $organization = trim((string) ($_ENV['LLM_API_ORG'] ?? ''));
+            if ($organization !== '') {
+                $factory = $factory->withOrganization($organization);
+            }
+
+            $client = $factory->make();
+        } catch (\Throwable $exception) {
+            error_log('Failed to initialize OpenAI client: ' . $exception->getMessage());
+            return null;
+        }
+
+        return new OpenAiClientAdapter($client);
+    });
+
+    $container->set(AdminAiIntentService::class, function (ContainerInterface $c) {
+        /** @var \CarbonTrack\Services\Ai\LlmClientInterface|null $llmClient */
+        $llmClient = $c->get('ai.llmClient');
+
+        $config = [
+            'model' => $_ENV['LLM_API_MODEL'] ?? null,
+            'temperature' => $_ENV['LLM_API_TEMPERATURE'] ?? null,
+            'max_tokens' => $_ENV['LLM_API_MAX_TOKENS'] ?? null,
+        ];
+
+        return new AdminAiIntentService(
+            $llmClient,
+            $c->get(LoggerInterface::class),
+            $config
+        );
     });
 
     // Email Service
@@ -408,6 +459,15 @@ $__deps_initializer = function (Container $container) {
             $c->get(StatisticsService::class),
             $c->get(ErrorLogService::class),
             $c->get(CloudflareR2Service::class)
+        );
+    });
+
+    $container->set(AdminAiController::class, function (ContainerInterface $c) {
+        return new AdminAiController(
+            $c->get(AuthService::class),
+            $c->get(AdminAiIntentService::class),
+            $c->get(ErrorLogService::class),
+            $c->get(LoggerInterface::class)
         );
     });
 
