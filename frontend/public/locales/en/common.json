@@ -1024,7 +1024,32 @@
         "noResults": "No users match the current search conditions.",
         "noEmail": "No email on file",
         "pageInfo": "Page {{page}}",
-        "resultCount": "Showing {{count}} recipients on this page."
+        "resultCount": "Showing {{count}} recipients on this page.",
+        "hover": {
+          "userId": "User ID",
+          "school": "School",
+          "location": "Location",
+          "status": "Status",
+          "role": "Role"
+        },
+        "viewProfile": "View user"
+      },
+      "analytics": {
+        "loadFailedTitle": "Unable to load message analytics",
+        "trendTitle": "Message delivery trend",
+        "trendSubtitle": "Total vs unread messages in the last 30 days",
+        "refreshing": "Refreshing…",
+        "totalSeries": "Total sent",
+        "unreadSeries": "Unread",
+        "trendEmpty": "No message activity in this period",
+        "priorityTitle": "Priority distribution",
+        "prioritySubtitle": "Unread volume grouped by message priority",
+        "totalMessages": "Total messages",
+        "readMessages": "Read messages",
+        "unreadMessages": "Unread messages",
+        "unreadRatio": "Current unread rate",
+        "priorityEmpty": "No priority statistics available",
+        "unreadLabelShort": "Unread"
       }
     },
     "dashboard": {
@@ -1135,6 +1160,8 @@
       "status": "Status",
       "statusActive": "Active",
       "statusInactive": "Inactive",
+      "statusSuspended": "Suspended",
+      "statusPending": "Pending",
       "title": "User Management",
       "description": "View and manage platform users",
       "refreshing": "Refreshing...",

@@ -118,17 +118,96 @@ function ResultStat({ label, value, tone = 'default' }) {
   );
 }
 
-function UserChips({ users }) {
-  if (!users || users.length === 0) {
-    return null;
+function UserChips({ users, onViewUser, t }) {
+  if (!Array.isArray(users) || users.length === 0) {
+    return <p className="text-sm text-muted-foreground">{t('admin.broadcast.result.none')}</p>;
   }
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {users.map((user) => (
-        <Badge key={`${user.message_id ?? user.user_id ?? Math.random()}`} variant="outline" className="font-normal">
-          {user.username ?? `#${user.user_id ?? '?'}`}
-        </Badge>
-      ))}
+    <div className="space-y-2">
+      {users.map((entry, index) => {
+        const id = Number(entry?.user_id ?? entry?.id ?? index);
+        if (!Number.isFinite(id) || id <= 0) {
+          return null;
+        }
+
+        const label = entry?.username ?? entry?.email ?? `#${id}`;
+        const email = entry?.email ?? entry?.user_email ?? null;
+        const statusValue = typeof entry?.status === 'string' ? entry.status.toLowerCase() : '';
+        const statusLabel =
+          statusValue === 'active'
+            ? t('admin.users.statusActive')
+            : statusValue === 'inactive'
+              ? t('admin.users.statusInactive')
+              : statusValue === 'suspended'
+                ? t('admin.users.statusSuspended', 'Suspended')
+                : statusValue || null;
+        const hasAdminFlag = entry?.is_admin !== undefined && entry?.is_admin !== null && `${entry.is_admin}` !== '';
+        const isAdmin =
+          entry?.is_admin === true ||
+          entry?.is_admin === 1 ||
+          entry?.is_admin === '1' ||
+          entry?.is_admin === 'true';
+
+        const handleNavigate = (event) => {
+          if (onViewUser) {
+            onViewUser(event, { ...entry, id });
+          }
+        };
+
+        return (
+          <div
+            key={`${id}-${index}`}
+            className="flex items-center justify-between gap-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
+          >
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <span className="cursor-help text-sm font-medium text-gray-900 hover:text-green-600">
+                  {label}
+                </span>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-64 space-y-1 text-xs text-muted-foreground">
+                <div>
+                  <span className="font-medium text-gray-700">
+                    {t('admin.broadcast.recipientSearch.hover.userId', '用户ID')}
+                  </span>{' '}
+                  #{id}
+                </div>
+                {email && (
+                  <div>
+                    <span className="font-medium text-gray-700">{t('common.email', '邮箱')}</span>{' '}
+                    {email}
+                  </div>
+                )}
+                {statusLabel && (
+                  <div>
+                    <span className="font-medium text-gray-700">
+                      {t('admin.broadcast.recipientSearch.hover.status', '状态')}
+                    </span>{' '}
+                    {statusLabel}
+                  </div>
+                )}
+                {hasAdminFlag && (
+                  <div>
+                    <span className="font-medium text-gray-700">
+                      {t('admin.broadcast.recipientSearch.hover.role', '角色')}
+                    </span>{' '}
+                    {isAdmin ? t('admin.users.roleAdmin') : t('admin.users.roleUser')}
+                  </div>
+                )}
+              </HoverCardContent>
+            </HoverCard>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleNavigate}
+            >
+              {t('admin.broadcast.recipientSearch.viewProfile', '查看用户')}
+            </Button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1520,7 +1599,7 @@ export function BroadcastCenter() {
                   {t('admin.broadcast.analytics.trendTitle', '站内信发送趋势')}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {t('admin.broadcast.analytics.trendSubtitle', '最近14日总发送与未读趋势')}
+                  {t('admin.broadcast.analytics.trendSubtitle', '最近30日总发送与未读趋势')}
                 </p>
               </div>
               <Button
@@ -1860,7 +1939,7 @@ export function BroadcastCenter() {
                         <h5 className="text-sm font-medium text-green-700">
                           {t('admin.broadcast.result.sent')} ({item.read_count ?? read.list.length})
                         </h5>
-                        <UserChips users={read.list} />
+                        <UserChips users={read.list} onViewUser={handleViewUserProfile} t={t} />
                         {read.more > 0 && (
                           <p className="text-xs text-muted-foreground">{t('admin.broadcast.history.more', { count: read.more })}</p>
                         )}
@@ -1869,7 +1948,7 @@ export function BroadcastCenter() {
                         <h5 className="text-sm font-medium text-yellow-700">
                           {t('admin.broadcast.result.unread')} ({item.unread_count ?? unread.list.length})
                         </h5>
-                        <UserChips users={unread.list} />
+                        <UserChips users={unread.list} onViewUser={handleViewUserProfile} t={t} />
                         {unread.more > 0 && (
                           <p className="text-xs text-muted-foreground">{t('admin.broadcast.history.more', { count: unread.more })}</p>
                         )}

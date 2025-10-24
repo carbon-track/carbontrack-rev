@@ -1023,7 +1023,32 @@
         "noResults": "未找到符合当前条件的用户。",
         "noEmail": "暂无邮箱信息",
         "pageInfo": "第 {{page}} 页",
-        "resultCount": "本页显示 {{count}} 位用户。"
+        "resultCount": "本页显示 {{count}} 位用户。",
+        "hover": {
+          "userId": "用户ID",
+          "school": "学校",
+          "location": "地区",
+          "status": "状态",
+          "role": "角色"
+        },
+        "viewProfile": "查看用户"
+      },
+      "analytics": {
+        "loadFailedTitle": "无法加载站内信统计",
+        "trendTitle": "站内信发送趋势",
+        "trendSubtitle": "最近30日总发送与未读趋势",
+        "refreshing": "刷新中…",
+        "totalSeries": "总发送",
+        "unreadSeries": "未读",
+        "trendEmpty": "该时间段暂无消息数据",
+        "priorityTitle": "优先级分布",
+        "prioritySubtitle": "按消息优先级统计未读情况",
+        "totalMessages": "累计消息",
+        "readMessages": "已读消息",
+        "unreadMessages": "未读消息",
+        "unreadRatio": "当前未读率",
+        "priorityEmpty": "暂无按优先级统计数据",
+        "unreadLabelShort": "未读"
       }
     },
     "dashboard": {
@@ -1209,7 +1234,9 @@
         "carbonSaved": "累计碳减排 (kg)",
         "recordsApproved": "已审核记录数",
         "daysSinceRegistration": "注册天数"
-      }
+      },
+      "statusSuspended": "已暂停",
+      "statusPending": "待激活"
     },
     "activities": {
       "title": "活动管理",
