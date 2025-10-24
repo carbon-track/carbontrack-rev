@@ -1,5 +1,25 @@
 # 草稿与分析记录
 
+## 当前任务: 管理后台 /admin/diagnostics API 诊断界面改造
+
+### 差异检查
+- 项目 TODO 中暂无该任务记录，完成后需考虑更新 TODO.md
+- 当前前端页面仅展示 AI 诊断结果，未覆盖 OpenAPI 中定义的其他诊断端点
+- 后端 openapi.json 中包含 `/admin/diagnostics` 相关 schema，需确认字段与前端组件映射
+
+### 下一步计划
+- [x] 回顾现有 AI 诊断页面的结构与依赖（`frontend/src/pages/admin/Diagnostics.jsx`）
+- [x] 提取 `backend/openapi.json` 中 diagnostics 相关路径与 schema（`/admin/ai/diagnostics`、`/files/r2/diagnostics`、`/admin/files/stats`、`/admin/system-logs` 相关枚举字段等），梳理数据结构差异
+    - AI 诊断：当前页面已覆盖，需要保留“check”参数触发模式
+    - R2 诊断：返回 MIME / 扩展名 / 限制等配置型数据，适合渲染成详情/表格
+    - 文件统计：`total_files`/`total_size`/`expired_files` 等概要数据，可做 KPI 卡片
+    - 系统日志与广播等接口可提供最新异常、请求追踪概览，可作为扩展（先以列表入口/计数展示）
+- [ ] 评估 `adminAPI` 是否已有泛化调用工具，若缺失则扩展诊断 GET/POST 方法（新增 `getFileR2Diagnostics`、`getFileStats`、`getSystemLogSummary` 等）
+- [ ] 设计前端数据模型（模块枚举、卡片/表格配置、诊断动作按钮）并更新 UI 草图
+- [ ] 实现基于 OpenAPI 元数据的动态渲染与交互（列表加载、详情、触发诊断、状态提示）
+- [ ] 补充缺失的多语言文案 key 并校对
+- [ ] 手动测试刷新、搜索/筛选、诊断执行流程，记录验证结果并考虑同步 TODO.md
+
 ## 当前任务: 移动首页公告已读图表至管理员 Dashboard
 
 ### 差异检查

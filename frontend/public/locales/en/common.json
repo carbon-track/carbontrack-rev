@@ -946,6 +946,40 @@
         "refreshSuccess": "Diagnostics updated",
         "checkSuccess": "Connectivity check finished",
         "checkFailed": "Connectivity check failed: {{message}}"
+      },
+      "ai": {
+        "title": "AI Diagnostics",
+        "description": "Inspect AI assistant configuration, client status, and run live connectivity tests."
+      },
+      "r2": {
+        "title": "R2 Storage Diagnostics",
+        "description": "Inspect Cloudflare R2 storage configuration and file upload parameters.",
+        "fields": {
+          "bucket": "Bucket Name",
+          "endpoint": "Endpoint",
+          "region": "Region",
+          "publicUrl": "Public URL",
+          "maxFileSize": "Max File Size",
+          "allowedMimeTypes": "Allowed MIME Types",
+          "allowedExtensions": "Allowed Extensions"
+        }
+      },
+      "fileStats": {
+        "title": "File Storage Statistics",
+        "description": "Overview of file storage usage and expired files.",
+        "fields": {
+          "totalFiles": "Total Files",
+          "totalSize": "Total Size",
+          "expiredFiles": "Expired Files"
+        }
+      },
+      "systemLogs": {
+        "title": "System Logs Overview",
+        "description": "Recent system log entries and overall log count.",
+        "fields": {
+          "totalLogs": "Total Log Entries",
+          "recentLogs": "Recent System Logs"
+        }
       }
     },
     "broadcast": {
