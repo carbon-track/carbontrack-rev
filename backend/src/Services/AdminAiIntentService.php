@@ -10,151 +10,20 @@ use Psr\Log\LoggerInterface;
 
 class AdminAiIntentService
 {
-    private const NAVIGATION_TARGETS = [
-        'dashboard' => [
-            'id' => 'dashboard',
-            'label' => 'Admin Dashboard',
-            'route' => '/admin/dashboard',
-            'description' => 'Overall administration overview with key metrics and quick tasks.',
-            'keywords' => ['dashboard', 'overview', 'summary', '仪表盘', '总览', '首页'],
-        ],
-        'users' => [
-            'id' => 'users',
-            'label' => 'User Management',
-            'route' => '/admin/users',
-            'description' => 'Manage users, roles, points, and account status.',
-            'keywords' => ['user', 'account', '用户', '管理用户', '权限'],
-        ],
-        'activities' => [
-            'id' => 'activities',
-            'label' => 'Activity Review',
-            'route' => '/admin/activities',
-            'description' => 'Review and moderate carbon reduction activity submissions.',
-            'keywords' => ['activity', 'review', '碳减排', '审批', '活动'],
-        ],
-        'products' => [
-            'id' => 'products',
-            'label' => 'Reward Store',
-            'route' => '/admin/products',
-            'description' => 'Manage redemption products, inventory and pricing.',
-            'keywords' => ['store', 'product', '奖励', '兑换'],
-        ],
-        'badges' => [
-            'id' => 'badges',
-            'label' => 'Badge Management',
-            'route' => '/admin/badges',
-            'description' => 'Create, edit and award achievement badges.',
-            'keywords' => ['badge', '荣誉', '勋章', 'create badge', '颁发'],
-        ],
-        'avatars' => [
-            'id' => 'avatars',
-            'label' => 'Avatar Library',
-            'route' => '/admin/avatars',
-            'description' => 'Manage avatar assets and default selections.',
-            'keywords' => ['avatar', '头像'],
-        ],
-        'exchanges' => [
-            'id' => 'exchanges',
-            'label' => 'Exchange Orders',
-            'route' => '/admin/exchanges',
-            'description' => 'Review redemption requests and update fulfilment status.',
-            'keywords' => ['order', 'exchange', '兑换申请', '物流'],
-        ],
-        'broadcast' => [
-            'id' => 'broadcast',
-            'label' => 'Broadcast Center',
-            'route' => '/admin/broadcast',
-            'description' => 'Compose and send system broadcast messages.',
-            'keywords' => ['broadcast', '通知', 'announcement', '群发'],
-        ],
-        'systemLogs' => [
-            'id' => 'systemLogs',
-            'label' => 'System Logs',
-            'route' => '/admin/system-logs',
-            'description' => 'Inspect audit logs and request traces.',
-            'keywords' => ['log', '日志', '监控', '审计'],
-        ],
-    ];
+    /**
+     * @var array<string,array<string,mixed>>
+     */
+    private array $navigationTargets = [];
 
-    private const QUICK_ACTIONS = [
-        'search-users' => [
-            'id' => 'search-users',
-            'label' => 'Search users',
-            'description' => 'Focus the user search box for quick lookup.',
-            'routeId' => 'users',
-            'route' => '/admin/users',
-            'mode' => 'shortcut',
-            'query' => ['focus' => 'search'],
-            'keywords' => ['search user', 'find user', '查找用户', '搜用户'],
-        ],
-        'create-badge' => [
-            'id' => 'create-badge',
-            'label' => 'Create new badge',
-            'description' => 'Open the badge creation modal.',
-            'routeId' => 'badges',
-            'route' => '/admin/badges',
-            'mode' => 'shortcut',
-            'query' => ['create' => '1'],
-            'keywords' => ['new badge', 'badge builder', '创建徽章'],
-        ],
-        'pending-activities' => [
-            'id' => 'pending-activities',
-            'label' => 'Review pending activities',
-            'description' => 'Filter activity review list to pending items.',
-            'routeId' => 'activities',
-            'route' => '/admin/activities',
-            'mode' => 'shortcut',
-            'query' => ['filter' => 'pending'],
-            'keywords' => ['待审批', 'pending', '审核活动'],
-        ],
-        'compose-broadcast' => [
-            'id' => 'compose-broadcast',
-            'label' => 'Compose broadcast',
-            'description' => 'Open the broadcast composer.',
-            'routeId' => 'broadcast',
-            'route' => '/admin/broadcast',
-            'mode' => 'shortcut',
-            'query' => ['compose' => '1'],
-            'keywords' => ['广播', 'announcement', 'new broadcast'],
-        ],
-    ];
+    /**
+     * @var array<string,array<string,mixed>>
+     */
+    private array $quickActions = [];
 
-    private const ACTION_DEFINITIONS = [
-        'approve_carbon_records' => [
-            'name' => 'approve_carbon_records',
-            'label' => 'Approve carbon reduction records',
-            'description' => 'Approve one or more pending carbon reduction activity submissions by record id.',
-            'api' => [
-                'method' => 'PUT',
-                'path' => '/api/v1/admin/activities/review',
-                'payloadTemplate' => [
-                    'action' => 'approve',
-                    'record_ids' => [],
-                    'review_note' => null,
-                ],
-            ],
-            'requires' => ['record_ids'],
-            'contextHints' => ['selectedRecordIds'],
-            'autoExecute' => true,
-        ],
-        'reject_carbon_records' => [
-            'name' => 'reject_carbon_records',
-            'label' => 'Reject carbon reduction records',
-            'description' => 'Reject one or more pending carbon reduction records with an optional note.',
-            'api' => [
-                'method' => 'PUT',
-                'path' => '/api/v1/admin/activities/review',
-                'payloadTemplate' => [
-                    'action' => 'reject',
-                    'record_ids' => [],
-                    'review_note' => null,
-                ],
-            ],
-            'requires' => ['record_ids'],
-            'contextHints' => ['selectedRecordIds'],
-            'autoExecute' => true,
-        ],
-    ];
+    /**
+     * @var array<string,array<string,mixed>>
+     */
+    private array $actionDefinitions = [];
 
     private const ALLOWED_CONTEXT_KEYS = [
         'activeRoute',
@@ -167,12 +36,202 @@ class AdminAiIntentService
     public function __construct(
         private ?LlmClientInterface $client,
         private LoggerInterface $logger,
-        private array $config = []
+        private array $config = [],
+        ?array $commandConfig = null
     ) {
         $this->model = (string)($config['model'] ?? 'gpt-4o-mini');
         $this->temperature = isset($config['temperature']) ? (float)$config['temperature'] : 0.2;
         $this->maxTokens = isset($config['max_tokens']) ? (int)$config['max_tokens'] : 800;
         $this->enabled = $client !== null;
+        $this->loadCommandConfig($commandConfig);
+    }
+
+    private function loadCommandConfig(?array $commandConfig): void
+    {
+        $defaults = self::defaultCommandConfig();
+
+        $provided = $commandConfig ?? [];
+
+        $navigationTargets = $provided['navigationTargets'] ?? $defaults['navigationTargets'];
+        $quickActions = $provided['quickActions'] ?? $defaults['quickActions'];
+        $managementActions = $provided['managementActions'] ?? $defaults['managementActions'];
+
+        $this->navigationTargets = $this->indexById($navigationTargets);
+        $this->quickActions = $this->indexById($quickActions);
+        $this->actionDefinitions = $this->indexById($managementActions, 'name');
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $items
+     * @return array<string,array<string,mixed>>
+     */
+    private function indexById(array $items, string $key = 'id'): array
+    {
+        $indexed = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $identifier = $item[$key] ?? null;
+            if (!is_string($identifier) || $identifier === '') {
+                continue;
+            }
+            $indexed[$identifier] = $item;
+        }
+
+        return $indexed;
+    }
+
+    /**
+     * @return array{navigationTargets: array<int,array<string,mixed>>, quickActions: array<int,array<string,mixed>>, managementActions: array<int,array<string,mixed>>}
+     */
+    private static function defaultCommandConfig(): array
+    {
+        return [
+            'navigationTargets' => [
+                [
+                    'id' => 'dashboard',
+                    'label' => 'Admin Dashboard',
+                    'route' => '/admin/dashboard',
+                    'description' => 'Overall administration overview with key metrics and quick tasks.',
+                    'keywords' => ['dashboard', 'overview', 'summary', '仪表盘', '总览', '首页'],
+                ],
+                [
+                    'id' => 'users',
+                    'label' => 'User Management',
+                    'route' => '/admin/users',
+                    'description' => 'Manage users, roles, points, and account status.',
+                    'keywords' => ['user', 'account', '用户', '管理用户', '权限'],
+                ],
+                [
+                    'id' => 'activities',
+                    'label' => 'Activity Review',
+                    'route' => '/admin/activities',
+                    'description' => 'Review and moderate carbon reduction activity submissions.',
+                    'keywords' => ['activity', 'review', '碳减排', '审批', '活动'],
+                ],
+                [
+                    'id' => 'products',
+                    'label' => 'Reward Store',
+                    'route' => '/admin/products',
+                    'description' => 'Manage redemption products, inventory and pricing.',
+                    'keywords' => ['store', 'product', '奖励', '兑换'],
+                ],
+                [
+                    'id' => 'badges',
+                    'label' => 'Badge Management',
+                    'route' => '/admin/badges',
+                    'description' => 'Create, edit and award achievement badges.',
+                    'keywords' => ['badge', '荣誉', '勋章', 'create badge', '颁发'],
+                ],
+                [
+                    'id' => 'avatars',
+                    'label' => 'Avatar Library',
+                    'route' => '/admin/avatars',
+                    'description' => 'Manage avatar assets and default selections.',
+                    'keywords' => ['avatar', '头像'],
+                ],
+                [
+                    'id' => 'exchanges',
+                    'label' => 'Exchange Orders',
+                    'route' => '/admin/exchanges',
+                    'description' => 'Review redemption requests and update fulfilment status.',
+                    'keywords' => ['order', 'exchange', '兑换申请', '物流'],
+                ],
+                [
+                    'id' => 'broadcast',
+                    'label' => 'Broadcast Center',
+                    'route' => '/admin/broadcast',
+                    'description' => 'Compose and send system broadcast messages.',
+                    'keywords' => ['broadcast', '通知', 'announcement', '群发'],
+                ],
+                [
+                    'id' => 'systemLogs',
+                    'label' => 'System Logs',
+                    'route' => '/admin/system-logs',
+                    'description' => 'Inspect audit logs and request traces.',
+                    'keywords' => ['log', '日志', '监控', '审计'],
+                ],
+            ],
+            'quickActions' => [
+                [
+                    'id' => 'search-users',
+                    'label' => 'Search users',
+                    'description' => 'Focus the user search box for quick lookup.',
+                    'routeId' => 'users',
+                    'route' => '/admin/users',
+                    'mode' => 'shortcut',
+                    'query' => ['focus' => 'search'],
+                    'keywords' => ['search user', 'find user', '查找用户', '搜用户'],
+                ],
+                [
+                    'id' => 'create-badge',
+                    'label' => 'Create new badge',
+                    'description' => 'Open the badge creation modal.',
+                    'routeId' => 'badges',
+                    'route' => '/admin/badges',
+                    'mode' => 'shortcut',
+                    'query' => ['create' => '1'],
+                    'keywords' => ['new badge', 'badge builder', '创建徽章'],
+                ],
+                [
+                    'id' => 'pending-activities',
+                    'label' => 'Review pending activities',
+                    'description' => 'Filter activity review list to pending items.',
+                    'routeId' => 'activities',
+                    'route' => '/admin/activities',
+                    'mode' => 'shortcut',
+                    'query' => ['filter' => 'pending'],
+                    'keywords' => ['待审批', 'pending', '审核活动'],
+                ],
+                [
+                    'id' => 'compose-broadcast',
+                    'label' => 'Compose broadcast',
+                    'description' => 'Open the broadcast composer.',
+                    'routeId' => 'broadcast',
+                    'route' => '/admin/broadcast',
+                    'mode' => 'shortcut',
+                    'query' => ['compose' => '1'],
+                    'keywords' => ['广播', 'announcement', 'new broadcast'],
+                ],
+            ],
+            'managementActions' => [
+                [
+                    'name' => 'approve_carbon_records',
+                    'label' => 'Approve carbon reduction records',
+                    'description' => 'Approve one or more pending carbon reduction activity submissions by record id.',
+                    'api' => [
+                        'method' => 'PUT',
+                        'path' => '/api/v1/admin/activities/review',
+                        'payloadTemplate' => [
+                            'action' => 'approve',
+                            'record_ids' => [],
+                            'review_note' => null,
+                        ],
+                    ],
+                    'requires' => ['record_ids'],
+                    'contextHints' => ['selectedRecordIds'],
+                    'autoExecute' => true,
+                ],
+                [
+                    'name' => 'reject_carbon_records',
+                    'label' => 'Reject carbon reduction records',
+                    'description' => 'Reject one or more pending carbon reduction records with an optional note.',
+                    'api' => [
+                        'method' => 'PUT',
+                        'path' => '/api/v1/admin/activities/review',
+                        'payloadTemplate' => [
+                            'action' => 'reject',
+                            'record_ids' => [],
+                            'review_note' => null,
+                        ],
+                    ],
+                    'requires' => ['record_ids'],
+                    'contextHints' => ['selectedRecordIds'],
+                    'autoExecute' => true,
+                ],
+            ],
+        ];
     }
 
     public function isEnabled(): bool
@@ -326,38 +385,38 @@ class AdminAiIntentService
         $capabilities = [
             'navigationTargets' => array_values(array_map(
                 fn (array $target) => [
-                    'id' => $target['id'],
-                    'label' => $target['label'],
-                    'route' => $target['route'],
-                    'description' => $target['description'],
-                    'keywords' => $target['keywords'],
+                    'id' => $target['id'] ?? '',
+                    'label' => $target['label'] ?? ($target['id'] ?? ''),
+                    'route' => $target['route'] ?? null,
+                    'description' => $target['description'] ?? null,
+                    'keywords' => array_values((array)($target['keywords'] ?? [])),
                 ],
-                self::NAVIGATION_TARGETS
+                $this->navigationTargets
             )),
             'quickActions' => array_values(array_map(
                 fn (array $action) => [
-                    'id' => $action['id'],
-                    'label' => $action['label'],
-                    'routeId' => $action['routeId'],
-                    'route' => $action['route'],
-                    'mode' => $action['mode'],
-                    'query' => $action['query'],
-                    'description' => $action['description'],
-                    'keywords' => $action['keywords'],
+                    'id' => $action['id'] ?? '',
+                    'label' => $action['label'] ?? ($action['id'] ?? ''),
+                    'routeId' => $action['routeId'] ?? ($action['id'] ?? ''),
+                    'route' => $action['route'] ?? null,
+                    'mode' => $action['mode'] ?? 'navigation',
+                    'query' => is_array($action['query'] ?? null) ? $action['query'] : [],
+                    'description' => $action['description'] ?? null,
+                    'keywords' => array_values((array)($action['keywords'] ?? [])),
                 ],
-                self::QUICK_ACTIONS
+                $this->quickActions
             )),
             'managementActions' => array_values(array_map(
                 fn (array $definition) => [
-                    'name' => $definition['name'],
-                    'label' => $definition['label'],
-                    'description' => $definition['description'],
-                    'api' => $definition['api'],
-                    'requires' => $definition['requires'],
-                    'contextHints' => $definition['contextHints'],
-                    'autoExecute' => $definition['autoExecute'],
+                    'name' => $definition['name'] ?? '',
+                    'label' => $definition['label'] ?? ($definition['name'] ?? ''),
+                    'description' => $definition['description'] ?? null,
+                    'api' => $definition['api'] ?? [],
+                    'requires' => array_values((array)($definition['requires'] ?? [])),
+                    'contextHints' => array_values((array)($definition['contextHints'] ?? [])),
+                    'autoExecute' => (bool)($definition['autoExecute'] ?? false),
                 ],
-                self::ACTION_DEFINITIONS
+                $this->actionDefinitions
             )),
             'responseSchema' => [
                 'intent' => [
@@ -486,34 +545,49 @@ PROMPT;
         $target = $intent['target'] ?? [];
         $routeId = is_string($target['routeId'] ?? null) ? $target['routeId'] : null;
 
-        if ($routeId && isset(self::NAVIGATION_TARGETS[$routeId])) {
-            $definition = self::NAVIGATION_TARGETS[$routeId];
-            $mode = 'navigation';
-        } elseif ($routeId && isset(self::QUICK_ACTIONS[$routeId])) {
-            $definition = self::QUICK_ACTIONS[$routeId];
-            $mode = $definition['mode'] ?? 'shortcut';
-        } else {
-            $definition = null;
-            $mode = 'navigation';
-        }
+        $definition = null;
+        $mode = 'navigation';
 
-        if ($definition === null) {
-            // try fallback by route match
-            $route = is_string($target['route'] ?? null) ? $target['route'] : null;
-            if ($route) {
-                foreach (self::NAVIGATION_TARGETS as $nav) {
-                    if ($nav['route'] === $route) {
+        if ($routeId && isset($this->navigationTargets[$routeId])) {
+            $definition = $this->navigationTargets[$routeId];
+        } elseif ($routeId && isset($this->quickActions[$routeId])) {
+            $definition = $this->quickActions[$routeId];
+            $mode = $definition['mode'] ?? 'shortcut';
+        } elseif ($routeId) {
+            foreach ($this->quickActions as $quick) {
+                if (($quick['routeId'] ?? null) === $routeId) {
+                    $definition = $quick;
+                    $mode = $quick['mode'] ?? 'shortcut';
+                    $routeId = $quick['id'] ?? $routeId;
+                    break;
+                }
+            }
+            if ($definition === null) {
+                foreach ($this->navigationTargets as $nav) {
+                    if (($nav['id'] ?? null) === $routeId) {
                         $definition = $nav;
-                        $routeId = $nav['id'];
                         break;
                     }
                 }
-                if (!$definition) {
-                    foreach (self::QUICK_ACTIONS as $quick) {
-                        if ($quick['route'] === $route) {
+            }
+        }
+
+        if ($definition === null) {
+            $route = is_string($target['route'] ?? null) ? $target['route'] : null;
+            if ($route) {
+                foreach ($this->navigationTargets as $nav) {
+                    if (($nav['route'] ?? null) === $route) {
+                        $definition = $nav;
+                        $routeId = $nav['id'] ?? $routeId;
+                        break;
+                    }
+                }
+                if ($definition === null) {
+                    foreach ($this->quickActions as $quick) {
+                        if (($quick['route'] ?? null) === $route) {
                             $definition = $quick;
-                            $routeId = $quick['id'];
                             $mode = $quick['mode'] ?? 'shortcut';
+                            $routeId = $quick['id'] ?? $routeId;
                             break;
                         }
                     }
@@ -543,14 +617,15 @@ PROMPT;
 
         return [
             'target' => [
-                'routeId' => $routeId ?? $definition['id'],
-                'route' => $definition['route'],
+                'routeId' => $routeId ?? ($definition['id'] ?? null),
+                'route' => $definition['route'] ?? null,
                 'mode' => $mode,
                 'query' => $query,
             ],
             'missing' => [],
         ];
     }
+
 
     /**
      * @param array<string,mixed> $intent
@@ -560,7 +635,7 @@ PROMPT;
     {
         $action = $intent['action'] ?? [];
         $name = is_string($action['name'] ?? null) ? $action['name'] : null;
-        if (!$name || !isset(self::ACTION_DEFINITIONS[$name])) {
+        if (!$name || !isset($this->actionDefinitions[$name])) {
             return [
                 'type' => 'fallback',
                 'reasoning' => 'Requested action is not available.',
@@ -569,7 +644,10 @@ PROMPT;
             ];
         }
 
-        $definition = self::ACTION_DEFINITIONS[$name];
+        $definition = $this->actionDefinitions[$name];
+
+        $apiDefinition = $definition['api'] ?? [];
+        $payloadTemplate = $apiDefinition['payloadTemplate'] ?? [];
 
         $api = $action['api'] ?? [];
         $payload = $api['payload'] ?? null;
@@ -577,33 +655,38 @@ PROMPT;
             $payload = [];
         }
 
-        $payload = $this->mergePayloadTemplate($definition['api']['payloadTemplate'], $payload);
+        $payload = $this->mergePayloadTemplate($payloadTemplate, $payload);
 
-        $missing = $this->resolveMissingRequirements($definition['requires'], $payload);
+        $requires = is_array($definition['requires'] ?? null) ? $definition['requires'] : [];
+        $missing = $this->resolveMissingRequirements($requires, $payload);
 
         $summary = is_string($action['summary'] ?? null)
             ? trim($action['summary'])
-            : $definition['label'];
+            : ($definition['label'] ?? $name);
 
         $autoExecute = isset($action['autoExecute'])
             ? (bool)$action['autoExecute']
             : (bool)($definition['autoExecute'] ?? false);
 
+        $method = $apiDefinition['method'] ?? 'POST';
+        $path = $apiDefinition['path'] ?? '';
+
         return [
             'action' => [
-                'name' => $definition['name'],
+                'name' => $definition['name'] ?? $name,
                 'summary' => $summary,
                 'api' => [
-                    'method' => $definition['api']['method'],
-                    'path' => $definition['api']['path'],
+                    'method' => $method,
+                    'path' => $path,
                     'payload' => $payload,
                 ],
                 'autoExecute' => $autoExecute,
-                'requires' => $definition['requires'],
+                'requires' => $requires,
             ],
             'missing' => $missing,
         ];
     }
+
 
     /**
      * @param array<string,mixed> $template

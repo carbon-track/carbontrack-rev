@@ -237,6 +237,44 @@ $__deps_initializer = function (Container $container) {
         return new OpenAiClientAdapter($client);
     });
 
+    $container->set('admin.ai.commands', function () {
+        $defaultPath = dirname(__DIR__) . '/config/admin_ai_commands.php';
+        $configuredPath = trim((string) ($_ENV['ADMIN_AI_COMMANDS_PATH'] ?? ''));
+
+        $pathsToCheck = [];
+        if ($configuredPath !== '') {
+            $isAbsolute = false;
+            if (preg_match('/^[A-Za-z]:[\\\\\\/]/', $configuredPath) === 1) {
+                $isAbsolute = true;
+            } elseif ($configuredPath[0] === '/' || $configuredPath[0] === '\\') {
+                $isAbsolute = true;
+            }
+
+            if ($isAbsolute) {
+                $pathsToCheck[] = $configuredPath;
+            } else {
+                $baseDir = dirname(__DIR__, 1);
+                $pathsToCheck[] = $baseDir . DIRECTORY_SEPARATOR . ltrim($configuredPath, '/\\');
+            }
+        }
+        $pathsToCheck[] = $defaultPath;
+
+        foreach ($pathsToCheck as $path) {
+            if (!is_string($path) || $path === '') {
+                continue;
+            }
+            if (!is_file($path) || !is_readable($path)) {
+                continue;
+            }
+            $data = require $path;
+            if (is_array($data)) {
+                return $data;
+            }
+        }
+
+        return null;
+    });
+
     $container->set(AdminAiIntentService::class, function (ContainerInterface $c) {
         /** @var \CarbonTrack\Services\Ai\LlmClientInterface|null $llmClient */
         $llmClient = $c->get('ai.llmClient');
@@ -250,7 +288,8 @@ $__deps_initializer = function (Container $container) {
         return new AdminAiIntentService(
             $llmClient,
             $c->get(LoggerInterface::class),
-            $config
+            $config,
+            $c->get('admin.ai.commands')
         );
     });
 

@@ -111,6 +111,40 @@ class AdminAiIntentServiceTest extends TestCase
         $this->assertSame('fallback', $result['intent']['type']);
     }
 
+    public function testCustomConfigurationOverridesDefaults(): void
+    {
+        $responsePayload = $this->createChatResponse([
+            'intent' => [
+                'type' => 'navigate',
+                'label' => 'Open custom',
+                'confidence' => 0.7,
+                'target' => [
+                    'routeId' => 'custom-dashboard',
+                    'route' => '/admin/custom-dashboard',
+                ],
+            ],
+        ]);
+
+        $config = [
+            'navigationTargets' => [
+                [
+                    'id' => 'custom-dashboard',
+                    'label' => 'Custom Dashboard',
+                    'route' => '/admin/custom-dashboard',
+                ],
+            ],
+            'quickActions' => [],
+            'managementActions' => [],
+        ];
+
+        $service = new AdminAiIntentService(new FakeLlmClient($responsePayload), new NullLogger(), [], $config);
+
+        $result = $service->analyzeIntent('打开自定义面板', []);
+
+        $this->assertSame('navigate', $result['intent']['type']);
+        $this->assertSame('/admin/custom-dashboard', $result['intent']['target']['route']);
+    }
+
     /**
      * @param array<string,mixed> $content
      * @return array<string,mixed>
