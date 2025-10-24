@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../hooks/useTranslation';
-import { QueryClientProvider, useQuery } from 'react-query';
+import { QueryClientProvider, useQuery, useMutation } from 'react-query';
 import { queryClient } from '../../lib/react-query';
 import { Navbar } from './Navbar';
 import {
@@ -18,6 +18,7 @@ import {
 } from '../ui/sidebar';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/badge';
+import { Separator } from '../ui/separator';
 import {
   CommandDialog,
   CommandInput,
@@ -45,6 +46,11 @@ import {
 } from 'lucide-react';
 import api, { adminAPI } from '../../lib/api';
 import { toast } from 'react-hot-toast';
+import { Skeleton } from '../ui/skeleton';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const COMMAND_MIN_LENGTH = 2;
+const MAX_SESSIONS = 8;
 
 const NAV_LINKS = [
   { key: 'dashboard', to: '/admin/dashboard', icon: LayoutDashboard },
