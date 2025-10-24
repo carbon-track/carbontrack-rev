@@ -15,6 +15,7 @@ Communication between the frontend and backend is via a RESTful API, which is do
 - `backend/src/routes.php`: Defines all API endpoints and maps them to controller actions.
 - `frontend/src/router/`: Defines the client-side routes.
 - `database/localhost.sql`: Contains the primary database schema. All migration scripts in `database/migrations/` have been executed, so this file, along with the migration scripts, represents the definitive schema.
+- `backend/config/admin_ai_commands.json`: Source of truth for the admin AI assistant's command catalogue. Whenever you add, rename, or remove admin functionality that the AI should understand, update this file (and keep the companion loader `admin_ai_commands.php` in sync) so the knowledge base matches the code.
 
 ## Backend (PHP / Slim)
 
@@ -36,6 +37,7 @@ The backend is a lean API service. Avoid adding redundant database structure che
     - Add or update PHPUnit tests covering the changed behavior in `backend/tests/` (Unit and/or Integration). Focus on happy paths, validation errors, edge cases, and auth. Run it in the Powershell terminal to see output.
     - Ensure all tests pass before committing.
     - Use `database/localhost.sql` as the authoritative schema reference when adjusting models and API contracts.
+    - Keep the AI knowledge base current: if the change affects admin automation or navigation, update `backend/config/admin_ai_commands.json` (and any related metadata files) so the admin AI suggestions stay accurate.
     - Optionally run the OpenAPI compliance checks in `backend/check_openapi_compliance.php` or `backend/enhanced_openapi_check.php` to verify consistency.
 
 ## Frontend (React / Vite)
@@ -59,3 +61,4 @@ The frontend is a modern SPA.
 - **After Frontend Changes (Required)**: After modifying components, hooks, routes, state, or build config:
     - Run `pnpm build` to validate syntax, type-checking, and bundling issues before committing.
     - Do NOT execute `pnpm build` within this AI session if terminal output cannot be captured; rely on local/CI builds instead, and keep code lint/type-clean.
+    - If new admin UI flows or labels are introduced, update any corresponding AI knowledge base entries (e.g., adjust keywords and routes in `backend/config/admin_ai_commands.json`) so the command palette can surface them correctly.
