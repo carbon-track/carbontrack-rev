@@ -42,6 +42,10 @@ $_SERVER['APP_ENV'] = $resolvedAppEnv;
 putenv('APP_ENV=' . $resolvedAppEnv);
 $isProduction = $resolvedAppEnv === 'production';
 
+if (!defined('CARBONTRACK_NO_EMIT')) {
+    define('CARBONTRACK_NO_EMIT', false);
+}
+
 // Create Container and register dependencies before creating the app
 $container = new Container();
 $dependencies = require_once __DIR__ . '/../src/dependencies.php';
@@ -124,6 +128,9 @@ $errorMiddleware->setDefaultErrorHandler(
                 $container->get(LoggerInterface::class)->error('Unhandled application exception', [
                     'exception' => $exception,
                     'environment' => $resolvedAppEnv,
+                    'display_error_details' => $displayErrorDetails,
+                    'log_errors' => $logErrors,
+                    'log_error_details' => $logErrorDetails,
                 ]);
             }
         } catch (Throwable $loggerEx) {
@@ -131,7 +138,15 @@ $errorMiddleware->setDefaultErrorHandler(
         }
 
         $response = new \Slim\Psr7\Response();
-        $status = $exception instanceof HttpException ? $exception->getStatusCode() : 500;
+        $status = 500;
+        if ($exception instanceof HttpException) {
+            $status = $exception->getStatusCode();
+        } elseif (method_exists($exception, 'getStatusCode')) {
+            $derivedStatus = $exception->getStatusCode();
+            if (is_int($derivedStatus) && $derivedStatus >= 400 && $derivedStatus <= 599) {
+                $status = $derivedStatus;
+            }
+        }
         $payload = ErrorResponseBuilder::build($exception, $request, $resolvedAppEnv, $status);
         $response->getBody()->write(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         return $response
@@ -157,7 +172,7 @@ $app->get('/debug', function ($request, $response) {
 $routes = require_once __DIR__ . '/../src/routes.php';
 $routes($app);
 
-if (defined('CARBONTRACK_NO_EMIT') && CARBONTRACK_NO_EMIT === true) {
+if (CARBONTRACK_NO_EMIT === true) {
     return [
         'app' => $app,
         'container' => $container,

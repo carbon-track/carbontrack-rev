@@ -291,7 +291,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [\n                  "email",\n                  "cf_turnstile_response"\n                ],
+                "required": [
+                  "email",
+                  "cf_turnstile_response"
+                ],
                 "properties": {
                   "email": {
                     "type": "string",
