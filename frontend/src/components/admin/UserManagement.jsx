@@ -261,6 +261,30 @@ export function UserManagement() {
     }
   }, [searchParams, setSearchParams]);
 
+  useEffect(() => {
+    const userIdParam = searchParams.get('userId');
+    if (!userIdParam) {
+      return;
+    }
+    const cleanup = () => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('userId');
+        return next;
+      }, { replace: true });
+    };
+    const parsed = Number(userIdParam);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      cleanup();
+      return;
+    }
+    if (!detailState.open || detailState.userId !== parsed) {
+      setDetailState({ open: true, userId: parsed });
+      setShowRevokedBadges(false);
+    }
+    cleanup();
+  }, [searchParams, detailState.open, detailState.userId, setSearchParams, setShowRevokedBadges]);
+
   const { users, pagination } = useMemo(() => normalizeUsersResponse(usersQuery.data), [usersQuery.data]);
   const isInitialUsersLoading = usersQuery.isLoading && !usersQuery.data;
   const isRefetchingUsers = usersQuery.isFetching && !!usersQuery.data;
@@ -279,19 +303,24 @@ export function UserManagement() {
       ? badgeData.items
       : [];
   const badgeSummary = badgeData?.summary || overviewData?.badge_summary || { awarded: 0, revoked: 0, total: 0 };
+  const overviewUser = useMemo(
+    () => (overviewData?.user ? normalizeUser(overviewData.user) : null),
+    [overviewData]
+  );
+  const detailUser = selectedUser ?? overviewUser;
   const metricsCards = useMemo(() => {
-    if (!overviewData && !selectedUser) {
+    if (!overviewData && !detailUser) {
       return [];
     }
     const metrics = overviewData?.metrics || {};
     return [
-      { key: 'balance', label: t('admin.users.detail.pointsBalance', '积分余额'), value: selectedUser?.points ?? 0, icon: Award },
+      { key: 'balance', label: t('admin.users.detail.pointsBalance', '积分余额'), value: detailUser?.points ?? 0, icon: Award },
       { key: 'earned', label: t('admin.users.detail.pointsEarned', '累计积分'), value: metrics.total_points_earned ?? 0, icon: Sparkles },
       { key: 'carbon', label: t('admin.users.detail.carbonSaved', '累计碳减排 (kg)'), value: metrics.total_carbon_saved ?? 0, icon: Leaf },
       { key: 'records', label: t('admin.users.detail.recordsApproved', '审核通过记录'), value: metrics.total_approved_records ?? 0, icon: ClipboardList },
-      { key: 'days', label: t('admin.users.detail.daysSinceRegistration', '注册天数'), value: selectedUser?.days_since_registration ?? metrics.days_since_registration ?? 0, icon: CalendarDays },
+      { key: 'days', label: t('admin.users.detail.daysSinceRegistration', '注册天数'), value: detailUser?.days_since_registration ?? metrics.days_since_registration ?? 0, icon: CalendarDays },
     ];
-  }, [overviewData, selectedUser, t]);
+  }, [overviewData, detailUser, t]);
 
   const selectedUsers = useMemo(() => Array.from(selectedUsersMap.values()), [selectedUsersMap]);
   const badgeOptions = useMemo(() => {
@@ -434,27 +463,45 @@ export function UserManagement() {
     setSelectedUsersMap(new Map());
   };
 
-  const renderStatusBadge = (user) => (
-    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-      {user.status === 'active' ? (
-        <span className="bg-green-100 text-green-800 flex items-center gap-1 px-2 py-0.5 rounded-full">
-          <CheckCircle className="h-3 w-3" />
-          {t('admin.users.statusActive')}
+  const renderStatusBadge = (user) => {
+    if (!user || !user.status) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+          {t('common.unknown', '未知')}
         </span>
-      ) : (
-        <span className="bg-red-100 text-red-800 flex items-center gap-1 px-2 py-0.5 rounded-full">
-          <XCircle className="h-3 w-3" />
-          {t('admin.users.statusInactive')}
-        </span>
-      )}
-    </span>
-  );
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+        {user.status === 'active' ? (
+          <span className="bg-green-100 text-green-800 flex items-center gap-1 px-2 py-0.5 rounded-full">
+            <CheckCircle className="h-3 w-3" />
+            {t('admin.users.statusActive')}
+          </span>
+        ) : (
+          <span className="bg-red-100 text-red-800 flex items-center gap-1 px-2 py-0.5 rounded-full">
+            <XCircle className="h-3 w-3" />
+            {t('admin.users.statusInactive')}
+          </span>
+        )}
+      </span>
+    );
+  };
 
-  const renderRoleBadge = (user) => (
-    <Badge variant={user.is_admin ? 'default' : 'outline'}>
-      {user.is_admin ? t('admin.users.roleAdmin') : t('admin.users.roleUser')}
-    </Badge>
-  );
+  const renderRoleBadge = (user) => {
+    if (!user) {
+      return (
+        <Badge variant="outline">
+          {t('common.unknown', '未知')}
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant={user.is_admin ? 'default' : 'outline'}>
+        {user.is_admin ? t('admin.users.roleAdmin') : t('admin.users.roleUser')}
+      </Badge>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -731,11 +778,11 @@ export function UserManagement() {
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>
-              {selectedUser
-                ? t('admin.users.detailTitle', '用户详情：{{username}}', { username: selectedUser.username })
+              {detailUser
+                ? t('admin.users.detailTitle', '用户详情：{{username}}', { username: detailUser.username })
                 : t('admin.users.detailTitleFallback', '用户详情')}
             </DialogTitle>
-            <DialogDescription>{selectedUser?.email || ''}</DialogDescription>
+            <DialogDescription>{detailUser?.email || ''}</DialogDescription>
           </DialogHeader>
           {userOverviewQuery.isLoading ? (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
@@ -749,25 +796,25 @@ export function UserManagement() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-lg border bg-white p-4 shadow-sm">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.username', '用户名')}</p>
-                  <p className="mt-1 text-sm font-medium text-gray-900">{selectedUser?.username}</p>
+                  <p className="mt-1 text-sm font-medium text-gray-900">{detailUser?.username}</p>
                 </div>
                 <div className="rounded-lg border bg-white p-4 shadow-sm">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.role', '角色')}</p>
-                  <p className="mt-1 text-sm font-medium text-gray-900">{renderRoleBadge(selectedUser)}</p>
+                  <p className="mt-1 text-sm font-medium text-gray-900">{renderRoleBadge(detailUser)}</p>
                 </div>
                 <div className="rounded-lg border bg-white p-4 shadow-sm">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.status', '状态')}</p>
-                  <p className="mt-1 text-sm font-medium text-gray-900">{renderStatusBadge(selectedUser)}</p>
+                  <p className="mt-1 text-sm font-medium text-gray-900">{renderStatusBadge(detailUser)}</p>
                 </div>
                 <div className="rounded-lg border bg-white p-4 shadow-sm">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.registrationDays', '注册天数')}</p>
-                  <p className="mt-1 text-sm font-medium text-gray-900">{selectedUser?.days_since_registration ?? 0}</p>
+                  <p className="mt-1 text-sm font-medium text-gray-900">{detailUser?.days_since_registration ?? 0}</p>
                 </div>
-                {selectedUser?.lastlgn && (
+                {detailUser?.lastlgn && (
                   <div className="rounded-lg border bg-white p-4 shadow-sm sm:col-span-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('admin.users.detail.lastLogin', '最近登录')}</p>
                     <p className="mt-1 text-sm font-medium text-gray-900">
-                      {format(new Date(selectedUser.lastlgn), 'yyyy-MM-dd HH:mm')}
+                      {format(new Date(detailUser.lastlgn), 'yyyy-MM-dd HH:mm')}
                     </p>
                   </div>
                 )}

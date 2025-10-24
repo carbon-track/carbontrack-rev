@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ImagePreviewGallery } from '../common/ImagePreviewGallery';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -66,7 +66,7 @@ export function ActivityReview() {
   const recordsArray = Array.isArray(rawRecords) ? rawRecords : [];
 
   // 归一化：将 carbon_records 与 carbon_activities 定义混合的不同字段统一到渲染层字段
-  const normalizedActivities = recordsArray.map((item) => {
+  const normalizedActivities = useMemo(() => recordsArray.map((item) => {
     // 判断是“记录”还是“活动定义”
     const isRecord = 'status' in item && ('carbon_saved' in item || 'points_earned' in item || 'user_id' in item);
     const username = item.user_username || item.username || item.user_name || item.user || '-';
@@ -88,7 +88,7 @@ export function ActivityReview() {
       created_at: item.created_at || item.date || item.updated_at || null,
       description,
     };
-  });
+  }), [recordsArray, t]);
 
   useEffect(() => {
     const pendingSet = new Set(
@@ -96,7 +96,13 @@ export function ActivityReview() {
         .filter((item) => item.status === 'pending')
         .map((item) => item.id)
     );
-    setSelectedIds((prev) => prev.filter((id) => pendingSet.has(id)));
+    setSelectedIds((prev) => {
+      const filtered = prev.filter((id) => pendingSet.has(id));
+      if (filtered.length === prev.length && filtered.every((id, index) => id === prev[index])) {
+        return prev;
+      }
+      return filtered;
+    });
   }, [normalizedActivities]);
 
   const selectablePendingIds = normalizedActivities

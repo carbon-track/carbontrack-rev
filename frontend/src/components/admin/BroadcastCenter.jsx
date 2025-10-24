@@ -1,6 +1,20 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { useMutation, useQuery } from 'react-query';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Legend,
+  Tooltip as RechartsTooltip,
+  BarChart,
+  Bar,
+  Cell,
+} from 'recharts';
 import { useTranslation } from '../../hooks/useTranslation';
 import { adminAPI } from '../../lib/api';
 import { Button } from '../ui/Button';
@@ -12,8 +26,16 @@ import { Switch } from '../ui/switch';
 import { Checkbox } from '../ui/checkbox';
 import { Pagination } from '../ui/Pagination';
 import { cn } from '../../lib/utils';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '../ui/hover-card';
 
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
+const PRIORITY_COLORS = {
+  urgent: '#ef4444',
+  high: '#f97316',
+  normal: '#3b82f6',
+  low: '#10b981',
+  default: '#6b7280',
+};
 const INITIAL_FORM = {
   title: '',
   content: '',
@@ -113,6 +135,16 @@ function UserChips({ users }) {
 
 export function BroadcastCenter() {
   const { t } = useTranslation();
+  const numberFormatter = useMemo(() => new Intl.NumberFormat(), []);
+  const percentFormatter = useMemo(
+    () => new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 }),
+    []
+  );
+  const shortDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }),
+    []
+  );
+  const navigate = useNavigate();
   const [form, setForm] = useState(INITIAL_FORM);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
@@ -152,6 +184,22 @@ export function BroadcastCenter() {
   );
 
   const {
+    data: adminStatsData,
+    isLoading: isMessageStatsLoading,
+    isFetching: isMessageStatsFetching,
+    isError: isMessageStatsError,
+    error: messageStatsError,
+    refetch: refetchMessageStats,
+  } = useQuery(
+    ['admin-message-stats'],
+    () => adminAPI.getStats().then((res) => res.data?.data ?? {}),
+    {
+      staleTime: 60000,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  const {
     data: historyResponse,
     isLoading: isHistoryLoading,
     isFetching: isHistoryFetching,
@@ -168,6 +216,87 @@ export function BroadcastCenter() {
 
   const historyItems = historyResponse?.data ?? [];
   const pagination = historyResponse?.pagination ?? {};
+  const messageOverview = useMemo(() => {
+    const stats = adminStatsData?.messages ?? {};
+    const totalRaw = Number(stats?.total_messages ?? 0);
+    const unreadRaw = Number(stats?.unread_messages ?? 0);
+    let readRaw = Number(stats?.read_messages ?? 0);
+    const total = Number.isFinite(totalRaw) ? Math.max(0, totalRaw) : 0;
+    const unread = Number.isFinite(unreadRaw) ? Math.max(0, unreadRaw) : 0;
+    if (!Number.isFinite(readRaw) || (readRaw === 0 && total >= unread)) {
+      readRaw = total - unread;
+    }
+    const read = Math.max(0, Number.isFinite(readRaw) ? readRaw : total - unread);
+    const ratioRaw = Number(stats?.unread_ratio ?? (total > 0 ? unread / Math.max(total, 1) : 0));
+    const unreadRatio = Math.min(Math.max(Number.isFinite(ratioRaw) ? ratioRaw : 0, 0), 1);
+    return { total, unread, read, unreadRatio };
+  }, [adminStatsData]);
+
+  const messagePriorityData = useMemo(() => {
+    const rows = adminStatsData?.messages?.priority_breakdown;
+    if (!Array.isArray(rows)) {
+      return [];
+    }
+    return rows.map((row) => {
+      const priorityRaw = typeof row?.priority === 'string' ? row.priority : 'normal';
+      const priority = priorityRaw.toLowerCase() || 'normal';
+      const totalRaw = Number(row?.total ?? 0);
+      const unreadRaw = Number(row?.unread ?? 0);
+      let readRaw = Number(row?.read ?? 0);
+      const total = Number.isFinite(totalRaw) ? Math.max(0, totalRaw) : 0;
+      const unread = Number.isFinite(unreadRaw) ? Math.max(0, unreadRaw) : 0;
+      if (!Number.isFinite(readRaw) || (readRaw === 0 && total >= unread)) {
+        readRaw = total - unread;
+      }
+      const read = Math.max(0, Number.isFinite(readRaw) ? readRaw : total - unread);
+      const ratioRaw = Number(row?.unread_ratio ?? (total > 0 ? unread / Math.max(total, 1) : 0));
+      const unreadRatio = Math.min(Math.max(Number.isFinite(ratioRaw) ? ratioRaw : 0, 0), 1);
+      return { priority, total, unread, read, unreadRatio };
+    });
+  }, [adminStatsData]);
+
+  const messageTrendData = useMemo(() => {
+    const rows = adminStatsData?.messages?.daily_counts;
+    if (!Array.isArray(rows)) {
+      return [];
+    }
+    return rows.map((row) => {
+      const date = typeof row?.date === 'string' ? row.date : '';
+      const totalRaw = Number(row?.total ?? 0);
+      const unreadRaw = Number(row?.unread ?? 0);
+      let readRaw = Number(row?.read ?? 0);
+      const total = Number.isFinite(totalRaw) ? Math.max(0, totalRaw) : 0;
+      const unread = Number.isFinite(unreadRaw) ? Math.max(0, unreadRaw) : 0;
+      if (!Number.isFinite(readRaw) || (readRaw === 0 && total >= unread)) {
+        readRaw = total - unread;
+      }
+      const read = Math.max(0, Number.isFinite(readRaw) ? readRaw : total - unread);
+      return { date, total, unread, read };
+    });
+  }, [adminStatsData]);
+
+  const messageTrendHasData = useMemo(
+    () => messageTrendData.some((item) => item.total > 0 || item.unread > 0),
+    [messageTrendData]
+  );
+  const messagePriorityHasData = useMemo(
+    () => messagePriorityData.some((item) => item.total > 0 || item.unread > 0),
+    [messagePriorityData]
+  );
+  const messagePriorityChartData = useMemo(
+    () =>
+      messagePriorityData.map((item) => {
+        const fallback =
+          item.priority.charAt(0).toUpperCase() + item.priority.slice(1);
+        return {
+          ...item,
+          name: t(`messages.priority.${item.priority}`, fallback),
+          color: PRIORITY_COLORS[item.priority] ?? PRIORITY_COLORS.default,
+        };
+      }),
+    [messagePriorityData, t]
+  );
+  const messageStatsInitialLoading = isMessageStatsLoading && !adminStatsData;
 
   const filteredItems = useMemo(() => {
     if (!Array.isArray(historyItems)) {
@@ -443,6 +572,26 @@ export function BroadcastCenter() {
       });
     },
     [ensureCustomScope]
+  );
+
+  const handleViewUserProfile = useCallback(
+    (event, recipient) => {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      if (!recipient || recipient.id === undefined || recipient.id === null) {
+        toast.error(t('admin.broadcast.recipientSearch.invalidUser', '无法打开该用户信息'));
+        return;
+      }
+      const userId = Number(recipient.id);
+      if (!Number.isInteger(userId) || userId <= 0) {
+        toast.error(t('admin.broadcast.recipientSearch.invalidUser', '无法打开该用户信息'));
+        return;
+      }
+      navigate(`/admin/users?userId=${userId}`);
+    },
+    [navigate, t]
   );
 
   const removeSelectedRecipient = (id) => {
@@ -1044,18 +1193,123 @@ export function BroadcastCenter() {
                       const id = Number(item?.id ?? 0);
                       const checked = selectedRecipients.has(id);
                       const label = item.username || item.email || `#${id}`;
+                      const statusValue = typeof item?.status === 'string' ? item.status.toLowerCase() : '';
+                      const statusLabel =
+                        statusValue === 'active'
+                          ? t('admin.users.statusActive', '活跃')
+                          : statusValue === 'inactive'
+                            ? t('admin.users.statusInactive', '未激活')
+                            : statusValue === 'suspended'
+                              ? t('admin.users.statusSuspended', '已暂停')
+                              : statusValue || '';
+                      const rawAdmin = item?.is_admin;
+                      const hasAdminFlag = rawAdmin !== undefined && rawAdmin !== null && `${rawAdmin}` !== '';
+                      const isAdmin =
+                        rawAdmin === true ||
+                        rawAdmin === 1 ||
+                        rawAdmin === '1' ||
+                        rawAdmin === 'true';
                       return (
                         <label
                           key={id}
                           className="flex items-start gap-3 rounded-md border border-gray-200 bg-white p-3 shadow-sm"
                         >
                           <Checkbox checked={checked} onCheckedChange={() => toggleRecipientSelection(item)} />
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-gray-800">{label}</p>
+                          <div className="flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <HoverCard>
+                                <HoverCardTrigger asChild>
+                                  <span className="cursor-help text-sm font-medium text-gray-800 hover:text-green-600">
+                                    {label}
+                                  </span>
+                                </HoverCardTrigger>
+                                <HoverCardContent className="w-72">
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-semibold text-gray-900">{label}</p>
+                                    <div className="space-y-1 text-xs text-muted-foreground">
+                                      <div>
+                                        <span className="font-medium text-gray-700">
+                                          {t('admin.broadcast.recipientSearch.hover.userId', '用户ID')}:
+                                        </span>{' '}
+                                        #{id}
+                                      </div>
+                                      {item.email && (
+                                        <div>
+                                          <span className="font-medium text-gray-700">{t('common.email', '邮箱')}:</span>{' '}
+                                          {item.email}
+                                        </div>
+                                      )}
+                                      {item.school && (
+                                        <div>
+                                          <span className="font-medium text-gray-700">
+                                            {t('admin.broadcast.recipientSearch.hover.school', '学校')}:
+                                          </span>{' '}
+                                          {item.school}
+                                        </div>
+                                      )}
+                                      {item.location && (
+                                        <div>
+                                          <span className="font-medium text-gray-700">
+                                            {t('admin.broadcast.recipientSearch.hover.location', '地区')}:
+                                          </span>{' '}
+                                          {item.location}
+                                        </div>
+                                      )}
+                                      {(statusLabel || hasAdminFlag) && (
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          {statusLabel && (
+                                            <span
+                                              className={cn(
+                                                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                                                statusValue === 'active'
+                                                  ? 'bg-green-100 text-green-800'
+                                                  : 'bg-amber-100 text-amber-800'
+                                              )}
+                                            >
+                                              {statusLabel}
+                                            </span>
+                                          )}
+                                          {hasAdminFlag && (
+                                            <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                                              {isAdmin
+                                                ? t('admin.users.roleAdmin', '管理员')
+                                                : t('admin.users.roleUser', '用户')}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </HoverCardContent>
+                              </HoverCard>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={(event) => handleViewUserProfile(event, item)}
+                              >
+                                {t('admin.broadcast.recipientSearch.viewProfile', '查看用户')}
+                              </Button>
+                            </div>
                             <p className="text-xs text-muted-foreground">
                               {item.email ? item.email : t('admin.broadcast.recipientSearch.noEmail', 'No email on file')}
                               {item.school ? ` • ${item.school}` : ''}
                             </p>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              <span>#{id}</span>
+                              {statusLabel && (
+                                <span
+                                  className={statusValue === 'active' ? 'font-medium text-green-600' : 'font-medium text-amber-700'}
+                                >
+                                  {statusLabel}
+                                </span>
+                              )}
+                              {hasAdminFlag && (
+                                <span className="font-medium text-gray-700">
+                                  {isAdmin ? t('admin.users.roleAdmin', '管理员') : t('admin.users.roleUser', '用户')}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </label>
                       );
@@ -1249,6 +1503,181 @@ export function BroadcastCenter() {
           <ResultStat label={t('admin.broadcast.summary.delivered')} value={summary.sent} tone="success" />
           <ResultStat label={t('admin.broadcast.summary.read')} value={summary.read} />
           <ResultStat label={t('admin.broadcast.summary.unread')} value={summary.unread} tone={summary.unread ? 'warning' : 'default'} />
+        </div>
+
+        {isMessageStatsError && (
+          <Alert variant="destructive">
+            <AlertTitle>{t('admin.broadcast.analytics.loadFailedTitle', '无法加载站内信统计')}</AlertTitle>
+            <AlertDescription>{messageStatsError?.message ?? t('common.retry', '请稍后重试')}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="rounded-lg border bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {t('admin.broadcast.analytics.trendTitle', '站内信发送趋势')}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {t('admin.broadcast.analytics.trendSubtitle', '最近14日总发送与未读趋势')}
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => refetchMessageStats()}
+                disabled={isMessageStatsFetching}
+              >
+                {isMessageStatsFetching
+                  ? t('admin.broadcast.analytics.refreshing', '刷新中...')
+                  : t('common.refresh', '刷新')}
+              </Button>
+            </div>
+            <div className="mt-4 h-72">
+              {messageStatsInitialLoading ? (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  {t('common.loading', '加载中...')}
+                </div>
+              ) : messageTrendHasData ? (
+                <ResponsiveContainer>
+                  <LineChart data={messageTrendData}>
+                    <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(value) => {
+                        if (!value) return value;
+                        const date = new Date(`${value}T00:00:00`);
+                        return Number.isNaN(date.getTime()) ? value : shortDateFormatter.format(date);
+                      }}
+                      stroke="#475569"
+                      fontSize={12}
+                    />
+                    <YAxis allowDecimals={false} stroke="#475569" fontSize={12} />
+                    <RechartsTooltip
+                      formatter={(value) => numberFormatter.format(value)}
+                      labelFormatter={(label) => {
+                        if (!label) return label;
+                        const date = new Date(`${label}T00:00:00`);
+                        return Number.isNaN(date.getTime()) ? label : shortDateFormatter.format(date);
+                      }}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="total"
+                      stroke="#2563eb"
+                      strokeWidth={2}
+                      dot={false}
+                      name={t('admin.broadcast.analytics.totalSeries', '总发送')}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="unread"
+                      stroke="#f97316"
+                      strokeWidth={2}
+                      dot={false}
+                      name={t('admin.broadcast.analytics.unreadSeries', '未读')}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  {t('admin.broadcast.analytics.trendEmpty', '暂无趋势数据')}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {t('admin.broadcast.analytics.priorityTitle', '优先级分布')}
+              </h3>
+              <span className="text-xs text-muted-foreground">
+                {t('admin.broadcast.analytics.prioritySubtitle', '按消息优先级统计未读情况')}
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <ResultStat
+                label={t('admin.broadcast.analytics.totalMessages', '累计消息')}
+                value={numberFormatter.format(messageOverview.total)}
+              />
+              <ResultStat
+                label={t('admin.broadcast.analytics.readMessages', '已读消息')}
+                value={numberFormatter.format(messageOverview.read)}
+                tone="success"
+              />
+              <ResultStat
+                label={t('admin.broadcast.analytics.unreadMessages', '未读消息')}
+                value={numberFormatter.format(messageOverview.unread)}
+                tone={messageOverview.unread ? 'warning' : 'default'}
+              />
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {t('admin.broadcast.analytics.unreadRatio', '当前未读率')}{' '}
+              <span className="font-semibold text-orange-500">
+                {percentFormatter.format(messageOverview.unreadRatio || 0)}
+              </span>
+            </p>
+            <div className="mt-4 h-64">
+              {messageStatsInitialLoading ? (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  {t('common.loading', '加载中...')}
+                </div>
+              ) : messagePriorityHasData ? (
+                <ResponsiveContainer>
+                  <BarChart data={messagePriorityChartData} layout="vertical">
+                    <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" />
+                    <XAxis type="number" allowDecimals={false} stroke="#475569" fontSize={12} />
+                    <YAxis type="category" dataKey="name" stroke="#475569" fontSize={12} width={90} />
+                    <RechartsTooltip formatter={(value) => numberFormatter.format(value)} />
+                    <Legend />
+                    <Bar
+                      dataKey="total"
+                      name={t('admin.broadcast.analytics.totalSeries', '总发送')}
+                      barSize={14}
+                    >
+                      {messagePriorityChartData.map((item) => (
+                        <Cell key={`priority-total-${item.priority}`} fill={item.color} />
+                      ))}
+                    </Bar>
+                    <Bar
+                      dataKey="unread"
+                      name={t('admin.broadcast.analytics.unreadSeries', '未读')}
+                      barSize={14}
+                      fill="#f97316"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  {t('admin.broadcast.analytics.priorityEmpty', '暂无按优先级统计数据')}
+                </div>
+              )}
+            </div>
+            <div className="mt-4 space-y-2 text-xs text-muted-foreground">
+              {messagePriorityChartData.map((entry) => (
+                <div key={entry.priority} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: entry.color }}
+                    />
+                    <span className="font-medium text-gray-700">{entry.name}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span>{numberFormatter.format(entry.total)}</span>
+                    <span className="text-sky-600">
+                      {t('admin.broadcast.analytics.unreadLabelShort', '未读')}{' '}
+                      {numberFormatter.format(entry.unread)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">
