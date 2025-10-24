@@ -22,7 +22,12 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
+
+const MESSAGE_COLORS = ['#22c55e', '#38bdf8'];
 
 export default function AdminPage() {
   const { t } = useTranslation();
@@ -59,6 +64,42 @@ export default function AdminPage() {
 
   const number = useMemo(() => new Intl.NumberFormat(), []);
   const decimal = useMemo(() => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }), []);
+  const percent = useMemo(() => new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 }), []);
+
+  const messageSummary = useMemo(() => {
+    const summary = statsData?.messages ?? {};
+    const totalRaw = Number(summary.total_messages ?? 0);
+    const unreadRaw = Number(summary.unread_messages ?? 0);
+    const readRaw = Number(summary.read_messages ?? (totalRaw - unreadRaw));
+
+    const total = Number.isFinite(totalRaw) ? Math.max(0, totalRaw) : 0;
+    const unread = Number.isFinite(unreadRaw) ? Math.max(0, unreadRaw) : 0;
+    let read = Number.isFinite(readRaw) ? Math.max(0, readRaw) : Math.max(0, total - unread);
+    if (read === 0 && total >= unread) {
+      read = Math.max(0, total - unread);
+    }
+    const ratioRaw = Number(summary.unread_ratio ?? (total > 0 ? unread / total : 0));
+    const unreadRatio = Number.isFinite(ratioRaw) ? Math.max(0, ratioRaw) : 0;
+
+    return {
+      total,
+      unread,
+      read,
+      unreadRatio,
+    };
+  }, [statsData]);
+
+  const messageChartData = useMemo(
+    () => [
+      { name: t('admin.dashboard.messages.readShort', '已读'), value: messageSummary.read },
+      { name: t('admin.dashboard.messages.unreadShort', '未读'), value: messageSummary.unread },
+    ],
+    [messageSummary.read, messageSummary.unread, t]
+  );
+
+  const unreadPercent = messageSummary.total > 0 ? messageSummary.unread / messageSummary.total : 0;
+  const unreadRate = Math.min(Math.max(unreadPercent, 0), 1);
+  const hasMessageData = messageSummary.total > 0 || messageSummary.unread > 0;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -169,6 +210,87 @@ export default function AdminPage() {
                       <p className="text-2xl font-bold">{number.format(statsData?.activities?.total_records ?? 0)}</p>
                       <p className="text-xs text-muted-foreground mt-1">{t('admin.dashboard.approvedActivities')}: {number.format(statsData?.activities?.approved_records ?? 0)} · {t('admin.dashboard.pendingActivities')}: {number.format(statsData?.activities?.pending_records ?? 0)}</p>
                     </Card>
+                  </div>
+
+                  <div className="mt-6 grid gap-6 lg:grid-cols-2">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {t('admin.dashboard.messages.title', '平台公告阅读情况')}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {t('admin.dashboard.messages.subtitle', '展示最近公告与系统消息的阅读比例')}
+                          </p>
+                        </div>
+                        <div className="rounded-full bg-sky-100 px-4 py-2 text-sm font-semibold text-sky-600">
+                          {t('admin.dashboard.messages.unreadBadge', '未读')} {number.format(messageSummary.unread)}
+                        </div>
+                      </div>
+                      <div className="mt-6 h-64">
+                        {hasMessageData ? (
+                          <ResponsiveContainer>
+                            <PieChart>
+                              <Pie data={messageChartData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={100} paddingAngle={4} stroke="#fff">
+                                {messageChartData.map((entry, index) => (
+                                  <Cell key={`admin-message-segment-${entry.name}`} fill={MESSAGE_COLORS[index % MESSAGE_COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                formatter={(value, name) => [number.format(value), name]}
+                                contentStyle={{
+                                  borderRadius: '0.75rem',
+                                  border: '1px solid hsl(var(--border))',
+                                  backgroundColor: 'white',
+                                  boxShadow: '0 10px 25px -15px rgb(0 0 0 / 0.35)',
+                                }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                            {t('admin.dashboard.messages.empty', '暂无公告阅读数据')}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {t('admin.dashboard.messages.detailsTitle', '阅读明细')}
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        {t('admin.dashboard.messages.detailsSubtitle', '统计截止最近一次后台刷新')}
+                      </p>
+
+                      <div className="mt-6 space-y-3 text-sm text-gray-600">
+                        <div className="flex items-center justify-between">
+                          <span>{t('admin.dashboard.messages.totalLabel', '总消息数')}</span>
+                          <span className="font-semibold text-gray-900">{number.format(messageSummary.total)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>{t('admin.dashboard.messages.readLabel', '已读消息')}</span>
+                          <span className="font-semibold text-emerald-600">{number.format(messageSummary.read)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>{t('admin.dashboard.messages.unreadLabel', '未读消息')}</span>
+                          <span className="font-semibold text-sky-600">{number.format(messageSummary.unread)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>{t('admin.dashboard.messages.unreadRatioLabel', '未读率')}</span>
+                          <span className="font-semibold text-orange-500">{percent.format(unreadRate)}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 flex flex-wrap items-center gap-3">
+                        <div className="flex-1 rounded-lg bg-slate-50 p-4 text-xs text-slate-600">
+                          {t('admin.dashboard.messages.tip', '提示：前往广播中心可查看公告发送记录与优先级分析。')}
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => setActiveTab('broadcast')}>
+                          {t('admin.dashboard.messages.viewBroadcast', '前往广播中心')}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="mt-6">

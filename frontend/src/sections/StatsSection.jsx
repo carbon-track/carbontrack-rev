@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { useQuery } from 'react-query';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { useTranslation } from '../hooks/useTranslation';
 import { statsAPI } from '../lib/api';
 
@@ -8,8 +7,6 @@ const ACCENT_CLASSES = ['text-green-600', 'text-blue-600', 'text-purple-600', 't
 const integerFormatter = new Intl.NumberFormat();
 const compactFormatter = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 });
 const decimalFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
-const percentFormatter = new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 });
-const MESSAGE_COLORS = ['#38bdf8', '#f97316'];
 
 const formatInteger = (value) => integerFormatter.format(Math.max(0, Math.round(value || 0)));
 const formatCompact = (value) => compactFormatter.format(Math.max(0, value || 0));
@@ -79,41 +76,6 @@ export default function StatsSection() {
     ];
   }, [summaryData, t]);
 
-  const messageSummary = useMemo(() => {
-    const summary = summaryData?.messages ?? {};
-    const totalRaw = Number(summary.total_messages ?? summaryData?.total_messages ?? 0);
-    const unreadRaw = Number(summary.unread_messages ?? summaryData?.unread_messages ?? 0);
-    let readRaw = Number(summary.read_messages ?? summaryData?.read_messages ?? (totalRaw - unreadRaw));
-
-    const total = Number.isFinite(totalRaw) ? Math.max(0, totalRaw) : 0;
-    const unread = Number.isFinite(unreadRaw) ? Math.max(0, unreadRaw) : 0;
-    let read = Number.isFinite(readRaw) ? Math.max(0, readRaw) : Math.max(0, total - unread);
-    if (read === 0 && total >= unread) {
-      read = Math.max(0, total - unread);
-    }
-    const ratioRaw = Number(summary.unread_ratio ?? summaryData?.unread_ratio ?? (total > 0 ? unread / total : 0));
-    const unreadRatio = Number.isFinite(ratioRaw) ? Math.max(0, ratioRaw) : 0;
-
-    return {
-      total,
-      unread,
-      read,
-      unreadRatio,
-    };
-  }, [summaryData]);
-
-  const messageChartData = useMemo(
-    () => [
-      { name: t('home.stats.messages.read', '已读'), value: messageSummary.read },
-      { name: t('home.stats.messages.unread', '未读'), value: messageSummary.unread },
-    ],
-    [messageSummary.read, messageSummary.unread, t]
-  );
-
-  const unreadPercent = messageSummary.total > 0 ? messageSummary.unread / messageSummary.total : 0;
-  const unreadRate = Math.min(Math.max(unreadPercent, 0), 1);
-  const hasMessageData = messageSummary.total > 0 || messageSummary.unread > 0;
-
   const updatedAt = useMemo(() => {
     if (!summaryData?.generated_at) {
       return null;
@@ -151,92 +113,6 @@ export default function StatsSection() {
             )}
           </div>
         ))}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {t('home.stats.messages.title', '站内信概览')}
-              </h3>
-              <p className="text-sm text-gray-500">
-                {t('home.stats.messages.subtitle', '展示最近站内信的阅读情况')}
-              </p>
-            </div>
-            <div className="rounded-full bg-sky-100 px-4 py-2 text-sm font-semibold text-sky-600">
-              {t('home.stats.messages.unreadLabelShort', '未读')} {formatInteger(messageSummary.unread)}
-            </div>
-          </div>
-          <div className="mt-6 h-64">
-            {hasMessageData ? (
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={messageChartData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={4}
-                    stroke="#fff"
-                  >
-                    {messageChartData.map((entry, index) => (
-                      <Cell key={`message-segment-${entry.name}`} fill={MESSAGE_COLORS[index % MESSAGE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value, name) => [formatInteger(value), name]}
-                    contentStyle={{
-                      borderRadius: '0.75rem',
-                      border: '1px solid hsl(var(--border))',
-                      backgroundColor: 'white',
-                      boxShadow: '0 10px 25px -15px rgb(0 0 0 / 0.35)',
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-gray-400">
-                {t('home.stats.messages.empty', '暂时没有站内信数据')}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900">
-            {t('home.stats.messages.detailsTitle', '详细数据')}
-          </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {t('home.stats.messages.detailsSubtitle', '统计截止当前时间的汇总情况')}
-          </p>
-
-          <div className="mt-6 space-y-3 text-sm text-gray-600">
-            <div className="flex items-center justify-between">
-              <span>{t('home.stats.messages.totalLabel', '总消息数')}</span>
-              <span className="font-semibold text-gray-900">{formatInteger(messageSummary.total)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>{t('home.stats.messages.readLabel', '已读消息')}</span>
-              <span className="font-semibold text-emerald-600">{formatInteger(messageSummary.read)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>{t('home.stats.messages.unreadLabel', '未读消息')}</span>
-              <span className="font-semibold text-sky-600">{formatInteger(messageSummary.unread)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>{t('home.stats.messages.unreadRatioLabel', '未读率')}</span>
-              <span className="font-semibold text-orange-500">
-                {percentFormatter.format(unreadRate)}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-6 rounded-lg bg-slate-50 p-4 text-xs text-slate-600">
-            {t('home.stats.messages.tip', '提示：管理员可以前往后台广播中心查看更详细的趋势图和按优先级的分布情况。')}
-          </div>
-        </div>
       </div>
     </div>
   );

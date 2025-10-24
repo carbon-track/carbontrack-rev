@@ -853,6 +853,17 @@
     "edit": "编辑",
     "delete": "删除",
     "restore": "恢复",
+    "nav": {
+      "dashboard": "管理总览",
+      "users": "用户管理",
+      "activities": "碳活动管理",
+      "products": "兑换商品",
+      "badges": "徽章管理",
+      "avatars": "头像管理",
+      "exchanges": "积分兑换",
+      "broadcast": "公告广播",
+      "systemLogs": "系统日志"
+    },
     "tabs": {
       "dashboard": "仪表盘",
       "users": "用户管理",
@@ -1902,6 +1913,7 @@
     "command": {
       "placeholder": "快速跳转或执行操作",
       "noResults": "没有匹配的结果",
+      "hint": "提示：直接在上方输入自然语言命令，AI 会结合当前页面给出建议。",
       "navigation": "界面导航",
       "quickActions": "快捷操作",
       "searchUsers": "搜索用户",

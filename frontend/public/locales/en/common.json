@@ -854,6 +854,17 @@
     "edit": "Edit",
     "delete": "Delete",
     "restore": "Restore",
+    "nav": {
+      "dashboard": "Overview",
+      "users": "Users",
+      "activities": "Activities",
+      "products": "Products",
+      "badges": "Badges",
+      "avatars": "Avatars",
+      "exchanges": "Exchanges",
+      "broadcast": "Broadcast Center",
+      "systemLogs": "System Logs"
+    },
     "tabs": {
       "dashboard": "Dashboard",
       "users": "Users",
@@ -1903,6 +1914,7 @@
     "command": {
       "placeholder": "Quickly jump or run an action",
       "noResults": "No matching results",
+      "hint": "Tip: Enter natural language commands above and the assistant will suggest context-aware actions.",
       "navigation": "Navigation",
       "quickActions": "Quick actions",
       "searchUsers": "Search users",

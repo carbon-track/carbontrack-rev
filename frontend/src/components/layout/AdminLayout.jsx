@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../hooks/useTranslation';
 import { QueryClientProvider, useQuery } from 'react-query';
@@ -37,10 +37,8 @@ import {
   Repeat2,
   Radio,
   ScrollText,
-  Search,
   Sparkles,
   ShieldCheck,
-  Clock,
   Bot,
   Loader2,
 } from 'lucide-react';
@@ -61,17 +59,33 @@ const NAV_LINKS = [
 
 export default function AdminLayout() {
   const { t } = useTranslation();
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [debouncedCommandQuery, setDebouncedCommandQuery] = useState('');
   const [isExecutingAiAction, setIsExecutingAiAction] = useState(false);
+  const [aiSessions, setAiSessions] = useState([]);
+
+  const lastAiSignatureRef = useRef('');
 
   const translatedLinks = useMemo(() => {
+    const fallbackLabels = {
+      dashboard: '管理总览',
+      users: '用户管理',
+      activities: '碳活动管理',
+      products: '兑换商品',
+      badges: '徽章管理',
+      avatars: '头像管理',
+      exchanges: '积分兑换',
+      broadcast: '公告广播',
+      systemLogs: '系统日志',
+    };
+
     return NAV_LINKS.map((link) => ({
       ...link,
-      label: t(['admin', 'tabs', link.key].join('.'), link.key),
+      label: t(`admin.nav.${link.key}`, fallbackLabels[link.key] || link.key),
     }));
   }, [t]);
 
@@ -116,7 +130,18 @@ export default function AdminLayout() {
         setCommandOpen(false);
       },
     },
-  ]), [navigate, t]);
+  ]), [navigate, setCommandOpen, t]);
+
+  const getTapHint = useCallback((intentType) => {
+    switch (intentType) {
+      case 'action':
+        return t('admin.command.aiTapToRun', '点击执行此操作');
+      case 'quick_action':
+        return t('admin.command.aiTapQuick', '点击执行快捷操作');
+      default:
+        return t('admin.command.aiTapToOpen', '点击前往该位置');
+    }
+  }, [t]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -168,8 +193,6 @@ export default function AdminLayout() {
     }
   );
 
-  const aiIntent = aiData?.intent ?? null;
-  const aiAlternatives = aiData?.alternatives ?? [];
   const aiErrorMessage = useMemo(() => {
     if (!isAiError || !aiError) {
       return null;
@@ -178,12 +201,90 @@ export default function AdminLayout() {
     if (message) {
       return message;
     }
-    return t('admin.command.aiError', '�޷���ȡAI����');
+    return t('admin.command.aiError', '无法获取 AI 响应');
   }, [aiError, isAiError, t]);
 
-  const showAiSection = commandQuery.trim().length > 0 && (
-    isFetchingAi || aiIntent || aiAlternatives.length > 0 || isAiError
-  );
+  useEffect(() => {
+    if (!commandOpen) {
+      setAiSessions([]);
+      lastAiSignatureRef.current = '';
+    }
+  }, [commandOpen]);
+
+  useEffect(() => {
+    if (!commandOpen) {
+      return;
+    }
+    if (debouncedCommandQuery.length < 4) {
+      return;
+    }
+    if (isFetchingAi) {
+      return;
+    }
+    if (!aiData && !isAiError) {
+      return;
+    }
+
+    const normalizedQuery = debouncedCommandQuery;
+    const alternatives = Array.isArray(aiData?.alternatives) ? aiData.alternatives : [];
+    const sessionPayload = {
+      query: normalizedQuery,
+      route: aiContext.activeRoute,
+      intent: aiData?.intent ?? null,
+      alternatives,
+      error: isAiError ? (aiErrorMessage || '无法获取 AI 响应') : null,
+      errorCode: isAiError ? aiError?.response?.data?.code ?? null : null,
+      timestamp: Date.now(),
+    };
+
+    if (!sessionPayload.intent && sessionPayload.alternatives.length === 0 && !sessionPayload.error) {
+      return;
+    }
+
+    const signature = [
+      normalizedQuery,
+      aiContext.activeRoute,
+      sessionPayload.intent?.type || '',
+      sessionPayload.intent?.label || '',
+      sessionPayload.error || '',
+      sessionPayload.alternatives.map((alt) => `${alt.type || ''}:${alt.label || alt.type || ''}`).join('|'),
+      sessionPayload.errorCode || '',
+    ].join('::');
+
+    if (signature === lastAiSignatureRef.current) {
+      return;
+    }
+
+    setAiSessions((prev) => {
+      const existingIndex = prev.findIndex(
+        (session) => session.query === normalizedQuery && session.route === aiContext.activeRoute
+      );
+
+      if (existingIndex >= 0) {
+        const next = [...prev];
+        next[existingIndex] = {
+          ...next[existingIndex],
+          intent: sessionPayload.intent,
+          alternatives: sessionPayload.alternatives,
+          error: sessionPayload.error,
+          errorCode: sessionPayload.errorCode,
+          timestamp: sessionPayload.timestamp,
+        };
+        return next;
+      }
+
+      const newSession = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        ...sessionPayload,
+      };
+      const trimmed = [...prev, newSession];
+      return trimmed.length > 5 ? trimmed.slice(-5) : trimmed;
+    });
+
+    lastAiSignatureRef.current = signature;
+  }, [aiData, aiContext.activeRoute, aiError, aiErrorMessage, commandOpen, debouncedCommandQuery, isAiError, isFetchingAi]);
+
+  const showAiSection = commandQuery.trim().length > 0 && (isFetchingAi || aiSessions.length > 0);
 
   const buildRouteWithQuery = useCallback((route, query = {}) => {
     if (!route) {
@@ -194,11 +295,70 @@ export default function AdminLayout() {
       return route;
     }
     const params = new URLSearchParams();
-    entries.forEach(([key, value]) => {
+    for (const [key, value] of entries) {
       params.set(key, String(value));
-    });
+    }
     return `${route}?${params.toString()}`;
   }, []);
+
+  const handleNavigationIntent = useCallback((intent) => {
+    const targetRoute = intent?.target?.route;
+    if (!targetRoute) {
+      toast.error(t('admin.command.aiMissingRoute', '未找到目标跳转页面'));
+      return;
+    }
+    const fullRoute = buildRouteWithQuery(targetRoute, intent?.target?.query || {});
+    setCommandOpen(false);
+    setCommandQuery('');
+    navigate(fullRoute || targetRoute);
+  }, [buildRouteWithQuery, navigate, setCommandOpen, setCommandQuery, t]);
+
+  const executeIntentAction = useCallback(async (intent) => {
+    const missing = Array.isArray(intent.missing) ? intent.missing : [];
+    if (missing.length > 0) {
+      toast.error(missing[0]?.description || t('admin.command.aiMissingInfo', '请补充必要信息后再试'));
+      return;
+    }
+
+    const apiConfig = intent.action?.api || {};
+    let path = apiConfig.path || '';
+    if (!path) {
+      toast.error(t('admin.command.aiMissingPath', '缺少要执行的接口地址'));
+      return;
+    }
+    const method = (apiConfig.method || 'post').toLowerCase();
+    if (path.startsWith('/api/v1')) {
+      path = path.replace('/api/v1', '') || '/';
+    }
+
+    const payload = apiConfig.payload || {};
+    const requestConfig = {
+      method,
+      url: path,
+    };
+    if (method === 'get' || method === 'delete') {
+      requestConfig.params = payload;
+    } else {
+      requestConfig.data = payload;
+    }
+
+    try {
+      setIsExecutingAiAction(true);
+      await api.request(requestConfig);
+      toast.success(t('admin.command.aiActionSuccess', '指令已执行'));
+      setCommandQuery('');
+      setCommandOpen(false);
+    } catch (error) {
+      const requestId = error?.response?.data?.request_id;
+      let message = t('admin.command.aiActionFailed', '指令执行失败');
+      if (requestId) {
+        message += ` (ReqID: ${requestId})`;
+      }
+      toast.error(message);
+    } finally {
+      setIsExecutingAiAction(false);
+    }
+  }, [setCommandOpen, setCommandQuery, setIsExecutingAiAction, t]);
 
   const handleAiIntentSelect = useCallback(async (intent) => {
     if (!intent || isExecutingAiAction) {
@@ -206,78 +366,33 @@ export default function AdminLayout() {
     }
 
     if (intent.type === 'navigate' || intent.type === 'quick_action') {
-      const targetRoute = intent?.target?.route;
-      if (!targetRoute) {
-        toast.error(t('admin.command.aiMissingRoute', 'δ�ҵ�����תҳ��'));
-        return;
-      }
-      const fullRoute = buildRouteWithQuery(targetRoute, intent?.target?.query || {});
-      setCommandOpen(false);
-      setCommandQuery('');
-      navigate(fullRoute || targetRoute);
+      handleNavigationIntent(intent);
       return;
     }
 
     if (intent.type === 'action' && intent.action) {
-      const missing = Array.isArray(intent.missing) ? intent.missing : [];
-      if (missing.length > 0) {
-        toast.error(missing[0]?.description || t('admin.command.aiMissingInfo', '�����������Ϣ�ټ���'));
-        return;
-      }
-
-      const apiConfig = intent.action.api || {};
-      let path = apiConfig.path || '';
-      if (!path) {
-        toast.error(t('admin.command.aiMissingPath', 'ȱ����ִ�еĽӿڵ�ַ'));
-        return;
-      }
-      const method = (apiConfig.method || 'post').toLowerCase();
-      if (path.startsWith('/api/v1')) {
-        path = path.replace('/api/v1', '') || '/';
-      }
-
-      const payload = apiConfig.payload || {};
-      const requestConfig = {
-        method,
-        url: path,
-      };
-      if (method === 'get' || method === 'delete') {
-        requestConfig.params = payload;
-      } else {
-        requestConfig.data = payload;
-      }
-
-      try {
-        setIsExecutingAiAction(true);
-        await api.request(requestConfig);
-        toast.success(t('admin.command.aiActionSuccess', 'ָ����ִ��'));
-        setCommandQuery('');
-        setCommandOpen(false);
-      } catch (error) {
-        const requestId = error?.response?.data?.request_id;
-        let message = t('admin.command.aiActionFailed', 'ָ��ִ��ʧ��');
-        if (requestId) {
-          message += ` (ReqID: ${requestId})`;
-        }
-        toast.error(message);
-      } finally {
-        setIsExecutingAiAction(false);
-      }
+      await executeIntentAction(intent);
       return;
     }
 
-    toast(t('admin.command.aiNoMatch', '��ʱ�޷����˴�ָ��'), { icon: '🤖' });
-  }, [buildRouteWithQuery, isExecutingAiAction, navigate, setCommandOpen, setCommandQuery, t]);
+    toast(t('admin.command.aiNoMatch', '暂时无法理解该指令'), { icon: '🤖' });
+  }, [executeIntentAction, handleNavigationIntent, isExecutingAiAction, t]);
 
   useEffect(() => {
+    const target = typeof globalThis !== 'undefined' ? globalThis : undefined;
+    if (!target?.addEventListener) {
+      return undefined;
+    }
+
     const handler = (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setCommandOpen((open) => !open);
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+
+    target.addEventListener('keydown', handler);
+    return () => target.removeEventListener('keydown', handler);
   }, []);
 
   return (
@@ -289,75 +404,120 @@ export default function AdminLayout() {
             <CommandInput
               value={commandQuery}
               onValueChange={setCommandQuery}
-              placeholder={t('admin.command.placeholder', '������ת��ִ�в���')}
+              placeholder={t('admin.command.placeholder', '输入命令以跳转或执行操作')}
             />
 
             <CommandList>
-              <CommandEmpty>{t('admin.command.noResults', 'û��ƥ��Ľ��')}</CommandEmpty>
+              <CommandEmpty>{t('admin.command.noResults', '没有匹配的结果')}</CommandEmpty>
+              <div className="px-4 py-2 text-xs text-muted-foreground">
+                {t('admin.command.hint', '提示：直接在上方输入自然语言命令，AI 会结合当前页面给出建议。')}
+              </div>
               {showAiSection && (
-                <CommandGroup heading={t('admin.command.aiSuggestions', 'AI �Ƽ�')}>
-                  {isFetchingAi && (
-                    <CommandItem value="ai-loading" disabled>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>{t('admin.command.aiLoading', 'AI ����������ָ��...')}</span>
-                    </CommandItem>
-                  )}
-                  {!isFetchingAi && isAiError && (
-                    <CommandItem value="ai-error" disabled>
-                      <Bot className="h-4 w-4 text-rose-500" />
-                      <div className="flex flex-col">
-                        <span>{aiErrorMessage || t('admin.command.aiError', '�޷���ȡAI����')}</span>
-                        {aiError?.response?.data?.code && (
-                          <span className="text-xs text-muted-foreground">{aiError.response.data.code}</span>
+                <CommandGroup heading={t('admin.command.aiConversation', 'AI 对话')}>
+                  <div className="flex flex-col gap-3 py-1">
+                    {aiSessions.map((session) => (
+                      <React.Fragment key={session.id}>
+                        <CommandItem
+                          value={`user-${session.id}`}
+                          disabled
+                          className="pointer-events-none items-start gap-3 rounded-2xl bg-transparent px-0 py-0"
+                        >
+                          <span className="mt-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                            {t('admin.command.userLabel', '你')}
+                          </span>
+                          <div className="max-w-full rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-700 shadow-sm">
+                            {session.query}
+                          </div>
+                        </CommandItem>
+                        {session.error ? (
+                          <CommandItem
+                            value={`ai-error-${session.id}`}
+                            disabled
+                            className="pointer-events-none items-start gap-3 rounded-2xl bg-transparent px-0 py-0"
+                          >
+                            <span className="mt-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600">
+                              {t('admin.command.aiLabel', '助手')}
+                            </span>
+                            <div className="flex w-full flex-col gap-1 rounded-2xl border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-600 shadow-sm">
+                              <span>{session.error}</span>
+                              {session.errorCode && (
+                                <span className="text-xs text-rose-500/80">
+                                  {t('admin.command.aiErrorCode', '错误代码')}：{session.errorCode}
+                                </span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ) : (
+                          <React.Fragment>
+                            {session.intent && (
+                              <CommandItem
+                                value={`ai-intent-${session.id}`}
+                                onSelect={() => handleAiIntentSelect(session.intent)}
+                                disabled={isExecutingAiAction && session.intent.type === 'action'}
+                                className="items-start gap-3 rounded-2xl bg-transparent px-0 py-0"
+                              >
+                                <span className="mt-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                                  {t('admin.command.aiLabel', '助手')}
+                                </span>
+                                <div className="flex w-full flex-col gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 shadow-sm">
+                                  <span className="font-medium">{session.intent.label || t('admin.command.aiSuggestionFallback', '智能建议')}</span>
+                                  {session.intent.reasoning && (
+                                    <span className="text-xs text-emerald-700">{session.intent.reasoning}</span>
+                                  )}
+                                  <span className="self-start rounded-full bg-emerald-200 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+                                    {getTapHint(session.intent.type)}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            )}
+                            {session.alternatives.map((alt, index) => (
+                              <CommandItem
+                                key={`ai-alt-${session.id}-${index}`}
+                                value={alt.label || `AI option ${index + 1}`}
+                                onSelect={() => handleAiIntentSelect(alt)}
+                                disabled={isExecutingAiAction && alt.type === 'action'}
+                                className="items-start gap-3 rounded-2xl bg-transparent px-0 py-0"
+                              >
+                                <span className="mt-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
+                                  {t('admin.command.aiLabel', '助手')}
+                                </span>
+                                <div className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+                                  <div className="flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4 text-emerald-500" />
+                                    <span className="font-medium">{alt.label || t('admin.command.aiAlternativeFallback', '可选方案')}</span>
+                                  </div>
+                                  {alt.reasoning && (
+                                    <span className="text-xs text-muted-foreground">{alt.reasoning}</span>
+                                  )}
+                                  <span className="self-start rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                                    {getTapHint(alt.type)}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </React.Fragment>
                         )}
-                      </div>
-                    </CommandItem>
-                  )}
-                  {!isFetchingAi && !isAiError && aiIntent && (
-                    <CommandItem
-                      value={aiIntent.label || 'AI suggestion'}
-                      onSelect={() => handleAiIntentSelect(aiIntent)}
-                      disabled={isExecutingAiAction && aiIntent.type === 'action'}
-                    >
-                      <Bot className="h-4 w-4 text-emerald-500" />
-                      <div className="flex flex-col">
-                        <span>{aiIntent.label}</span>
-                        {aiIntent.reasoning && (
-                          <span className="text-xs text-muted-foreground">{aiIntent.reasoning}</span>
-                        )}
-                      </div>
-                      {aiIntent.type === 'action' && (
-                        <span className="ml-auto text-xs text-emerald-600">
-                          {t('admin.command.aiExecute', 'ִ��')}
+                      </React.Fragment>
+                    ))}
+                    {isFetchingAi && (
+                      <CommandItem
+                        value="ai-loading"
+                        disabled
+                        className="pointer-events-none items-start gap-3 rounded-2xl bg-transparent px-0 py-0"
+                      >
+                        <span className="mt-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                          {t('admin.command.aiLabel', '助手')}
                         </span>
-                      )}
-                    </CommandItem>
-                  )}
-                  {!isFetchingAi && !isAiError && aiAlternatives.map((alt, index) => (
-                    <CommandItem
-                      key={`ai-alt-${index}-${alt.label || alt.type}`}
-                      value={alt.label || `AI option ${index + 1}`}
-                      onSelect={() => handleAiIntentSelect(alt)}
-                      disabled={isExecutingAiAction && alt.type === 'action'}
-                    >
-                      <Sparkles className="h-4 w-4 text-emerald-500" />
-                      <div className="flex flex-col">
-                        <span>{alt.label}</span>
-                        {alt.reasoning && (
-                          <span className="text-xs text-muted-foreground">{alt.reasoning}</span>
-                        )}
-                      </div>
-                      {alt.type === 'action' && (
-                        <span className="ml-auto text-xs text-emerald-600">
-                          {t('admin.command.aiExecute', 'ִ��')}
-                        </span>
-                      )}
-                    </CommandItem>
-                  ))}
+                        <div className="flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-600 shadow-sm">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>{t('admin.command.aiLoading', 'AI 正在分析指令...')}</span>
+                        </div>
+                      </CommandItem>
+                    )}
+                  </div>
                 </CommandGroup>
               )}
-              <CommandGroup heading={t('admin.command.navigation', '���浼��')}>
-
+              <CommandGroup heading={t('admin.command.navigation', '导航菜单')}>
                 {translatedLinks.map((link) => (
                   <CommandItem
                     key={link.to}
@@ -467,15 +627,15 @@ export default function AdminLayout() {
                         className="hidden items-center gap-2 rounded-full border-emerald-200 bg-white/80 px-4 md:inline-flex"
                         onClick={() => setCommandOpen(true)}
                       >
-                        <Search className="h-4 w-4" />
-                        {t('admin.command.open', '搜索 / Ctrl + K')}
+                        <Bot className="h-4 w-4" />
+                        {t('admin.command.open', '打开 AI 面板 / Ctrl + K')}
                       </Button>
                       <Button
                         variant="ghost"
                         className="md:hidden"
                         onClick={() => setCommandOpen(true)}
                       >
-                        <Search className="h-4 w-4" />
+                        <Bot className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="default"
@@ -500,7 +660,6 @@ export default function AdminLayout() {
       </div>
     </QueryClientProvider>
   );
-
 }
 
 
