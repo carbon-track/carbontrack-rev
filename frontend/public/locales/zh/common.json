@@ -862,7 +862,8 @@
       "avatars": "头像管理",
       "exchanges": "积分兑换",
       "broadcast": "公告广播",
-      "systemLogs": "系统日志"
+      "systemLogs": "系统日志",
+      "diagnostics": "AI 诊断"
     },
     "tabs": {
       "dashboard": "仪表盘",
@@ -875,6 +876,76 @@
       "avatars": "头像管理",
       "audit": "审计日志",
       "systemLogs": "系统日志"
+    },
+    "diagnostics": {
+      "title": "AI 诊断面板",
+      "description": "查看 AI 助手的配置、客户端状态，并可执行实时连通性检测。",
+      "actions": {
+        "refresh": "刷新状态",
+        "refreshing": "正在刷新诊断信息...",
+        "check": "执行连通性检测",
+        "checking": "正在检查与模型的连通性..."
+      },
+      "labels": {
+        "enabled": "AI 助手已启用",
+        "disabled": "AI 助手未启用",
+        "yes": "是",
+        "no": "否",
+        "lastUpdated": "最近更新 {{value}}",
+        "never": "从未"
+      },
+      "status": {
+        "disabledTitle": "助手未启用",
+        "disabledDescription": "请在服务器上配置有效的 LLM API Key 和相关参数后再试。"
+      },
+      "connectivity": {
+        "title": "连通性状态",
+        "status": {
+          "ok": "连通正常",
+          "error": "连通失败",
+          "skipped": "已跳过",
+          "not_checked": "尚未检测"
+        },
+        "description": {
+          "ok": "已成功连通至 AI 服务提供商。",
+          "error": "连通性检测失败，请查看下方的错误信息。",
+          "skipped": "因为助手未启用，已跳过连通性检测。",
+          "not_checked": "执行一次连通性检测以确认可以访问 AI 服务。"
+        },
+        "fields": {
+          "model": "模型",
+          "finishReason": "结束原因",
+          "usage": "令牌用量",
+          "error": "错误信息",
+          "exception": "异常类型",
+          "reason": "原因说明"
+        }
+      },
+      "configuration": {
+        "title": "模型配置",
+        "description": "当前生效的助手模型运行参数。",
+        "model": "模型",
+        "temperature": "温度",
+        "maxTokens": "最大 Token 数"
+      },
+      "client": {
+        "title": "客户端适配器",
+        "description": "底层 HTTP 客户端与适配器信息。",
+        "available": "客户端可用",
+        "class": "适配器类名"
+      },
+      "commands": {
+        "title": "指令目录",
+        "description": "已注册的导航目标与自动化操作数量。",
+        "navigation": "导航目标数量",
+        "quick": "快捷操作数量",
+        "management": "管理操作数量"
+      },
+      "messages": {
+        "refreshSuccess": "诊断信息已更新",
+        "checkSuccess": "连通性检测完成",
+        "checkFailed": "连通性检测失败：{{message}}"
+      }
     },
     "broadcast": {
       "title": "广播中心",

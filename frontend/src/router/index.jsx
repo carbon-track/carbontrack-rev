@@ -31,6 +31,7 @@ const AdminProductsPage = React.lazy(() => import('../pages/admin/Products'));
 const AdminExchangesPage = React.lazy(() => import('../pages/admin/Exchanges'));
 const AdminBroadcastPage = React.lazy(() => import('../pages/admin/Broadcast'));
 const AdminSystemLogsPage = React.lazy(() => import('../pages/admin/SystemLogs'));
+const AdminDiagnosticsPage = React.lazy(() => import('../pages/admin/Diagnostics'));
 const NotFoundPage = React.lazy(() => import('../pages/NotFoundPage'));
 
 const LoadingSpinner = () => (
@@ -84,7 +85,8 @@ export const router = createBrowserRouter([
       { path: 'products', element: <React.Suspense fallback={<LoadingSpinner />}><AdminProductsPage /></React.Suspense> },
       { path: 'exchanges', element: <React.Suspense fallback={<LoadingSpinner />}><AdminExchangesPage /></React.Suspense> },
       { path: 'broadcast', element: <React.Suspense fallback={<LoadingSpinner />}><AdminBroadcastPage /></React.Suspense> },
-      { path: 'system-logs', element: <React.Suspense fallback={<LoadingSpinner />}><AdminSystemLogsPage /></React.Suspense> }
+      { path: 'system-logs', element: <React.Suspense fallback={<LoadingSpinner />}><AdminSystemLogsPage /></React.Suspense> },
+      { path: 'diagnostics', element: <React.Suspense fallback={<LoadingSpinner />}><AdminDiagnosticsPage /></React.Suspense> }
     ]
   },
   {

@@ -280,6 +280,7 @@ export const adminAPI = {
 
   // AI指挥助手
   analyzeCommand: (data) => api.post('/admin/ai/intents', data),
+  getAiDiagnostics: (params = {}) => api.get('/admin/ai/diagnostics', { params }),
   
   // 碳减排活动管理
   // 兼容旧组件调用名称 getActivities / reviewActivity

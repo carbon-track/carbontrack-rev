@@ -37,6 +37,7 @@ import {
   Repeat2,
   Radio,
   ScrollText,
+  Stethoscope,
   Sparkles,
   ShieldCheck,
   Bot,
@@ -55,6 +56,7 @@ const NAV_LINKS = [
   { key: 'exchanges', to: '/admin/exchanges', icon: Repeat2 },
   { key: 'broadcast', to: '/admin/broadcast', icon: Radio },
   { key: 'systemLogs', to: '/admin/system-logs', icon: ScrollText },
+  { key: 'diagnostics', to: '/admin/diagnostics', icon: Stethoscope },
 ];
 
 export default function AdminLayout() {
@@ -81,6 +83,7 @@ export default function AdminLayout() {
       exchanges: '积分兑换',
       broadcast: '公告广播',
       systemLogs: '系统日志',
+      diagnostics: 'AI 诊断',
     };
 
     return NAV_LINKS.map((link) => ({

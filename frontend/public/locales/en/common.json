@@ -863,7 +863,8 @@
       "avatars": "Avatars",
       "exchanges": "Exchanges",
       "broadcast": "Broadcast Center",
-      "systemLogs": "System Logs"
+      "systemLogs": "System Logs",
+      "diagnostics": "AI Diagnostics"
     },
     "tabs": {
       "dashboard": "Dashboard",
@@ -876,6 +877,76 @@
       "avatars": "Avatars",
       "audit": "Audit logs",
       "systemLogs": "System logs"
+    },
+    "diagnostics": {
+      "title": "AI Diagnostics",
+      "description": "Inspect AI assistant configuration, client status, and run live connectivity tests.",
+      "actions": {
+        "refresh": "Refresh status",
+        "refreshing": "Refreshing diagnostics...",
+        "check": "Run connectivity check",
+        "checking": "Checking connectivity..."
+      },
+      "labels": {
+        "enabled": "AI assistant enabled",
+        "disabled": "AI assistant disabled",
+        "yes": "Yes",
+        "no": "No",
+        "lastUpdated": "Last updated {{value}}",
+        "never": "Never"
+      },
+      "status": {
+        "disabledTitle": "Assistant disabled",
+        "disabledDescription": "Provide a valid LLM API key and configuration on the server to enable the assistant."
+      },
+      "connectivity": {
+        "title": "Connectivity status",
+        "status": {
+          "ok": "Connection successful",
+          "error": "Connection failed",
+          "skipped": "Skipped",
+          "not_checked": "Not checked"
+        },
+        "description": {
+          "ok": "The AI provider responded successfully.",
+          "error": "Connectivity test failed. Review the error details below.",
+          "skipped": "Connectivity check skipped because the assistant is disabled.",
+          "not_checked": "Run a connectivity check to verify access to the AI provider."
+        },
+        "fields": {
+          "model": "Model",
+          "finishReason": "Finish reason",
+          "usage": "Usage",
+          "error": "Error message",
+          "exception": "Exception",
+          "reason": "Reason"
+        }
+      },
+      "configuration": {
+        "title": "Model configuration",
+        "description": "Current runtime settings for the assistant model.",
+        "model": "Model",
+        "temperature": "Temperature",
+        "maxTokens": "Max tokens"
+      },
+      "client": {
+        "title": "Client adapter",
+        "description": "Underlying HTTP client and adapter details.",
+        "available": "Client available",
+        "class": "Adapter class"
+      },
+      "commands": {
+        "title": "Command catalog",
+        "description": "Number of registered targets and automation actions.",
+        "navigation": "Navigation targets",
+        "quick": "Quick actions",
+        "management": "Management actions"
+      },
+      "messages": {
+        "refreshSuccess": "Diagnostics updated",
+        "checkSuccess": "Connectivity check finished",
+        "checkFailed": "Connectivity check failed: {{message}}"
+      }
     },
     "broadcast": {
       "title": "Broadcast Center",
