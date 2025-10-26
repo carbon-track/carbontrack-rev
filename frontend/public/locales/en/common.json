@@ -793,6 +793,29 @@
     "username": "Username",
     "email": "Email",
     "school": "School",
+    "schoolSectionTitle": "School information",
+    "schoolEditDescription": "Select an existing school or type a new name below. New entries will be created after verification.",
+    "schoolCurrentLabel": "Current:",
+    "schoolUnset": "Not set",
+    "schoolSearchPlaceholder": "Search for a school or enter a new name",
+    "schoolInputHint": "Choosing from the list keeps the directory consistent. Typing a new name will create it for everyone after review.",
+    "schoolSuggestions": "Suggestions",
+    "clearSelection": "Clear selection",
+    "loadingSchools": "Loading schools...",
+    "selected": "Selected",
+    "schoolNoResults": "No matching schools. Enter a new name above.",
+    "schoolInputHint": "Choosing from the list keeps the directory consistent. Typing a new name will create it for everyone after review.",
+    "schoolSuggestions": "Suggestions",
+    "turnstileNotice": "Verification is required to prevent automated updates.",
+    "saveSchool": "Save school",
+    "resetSchool": "Reset",
+    "schoolNoChanges": "No changes detected.",
+    "schoolUpdateSuccess": "School updated successfully.",
+    "schoolUpdateFailed": "Unable to update school information.",
+    "schoolCreatePending": "A new school entry has been submitted and will be created after verification.",
+    "schoolCreateSuccess": "New school created and associated with your account.",
+    "schoolCreateFailed": "Failed to create the new school. Please try again later.",
+    "schoolPendingApproval": "School creation submitted and pending verification. It may take up to 24 hours.",
     "location": "Location",
     "joinDate": "Join Date",
     "lastLogin": "Last Login",
@@ -815,7 +838,7 @@
     "avatarUpdateSuccess": "Avatar updated successfully",
     "avatarUpdateFailed": "Failed to update avatar",
     "avatarLoadError": "Failed to load avatars",
-    "editInfoHint": "Need to update your school or other details? Please contact an administrator or complete the onboarding flow again.",
+    "editInfoHint": "Need to update your school? Use the editor below and complete the short verification to keep the directory healthy.",
     "form": {
       "personalInfo": "Personal Information",
       "contactInfo": "Contact Information",
@@ -949,6 +972,46 @@
         "in": "In",
         "required": "Required",
         "type": "Type"
+      },
+      "tester": {
+        "title": "Live request tester",
+        "description": "Send an on-demand request to validate status codes and payloads.",
+        "actions": {
+          "open": "Open tester",
+          "close": "Hide tester",
+          "send": "Send request",
+          "reset": "Reset fields",
+          "sending": "Sending request..."
+        },
+        "fields": {
+          "baseUrl": "Base URL",
+          "resolvedPath": "Resolved path preview",
+          "finalUrl": "Final request URL",
+          "pathParams": "Path parameters",
+          "query": "Query parameters (JSON object)",
+          "headers": "Headers (JSON object)",
+          "body": "Request body (JSON)",
+          "auth": "Include auth token",
+          "authDescription": "Attach the stored bearer token when available."
+        },
+        "placeholders": {
+          "query": "{\"status\":\"pending\"}",
+          "headers": "{\"X-Debug\":true}",
+          "body": "{\n  \"example\": true\n}"
+        },
+        "messages": {
+          "pathParam": "Path parameter {{name}}",
+          "pathParamRequired": "Please provide a value for required parameter \"{{name}}\".",
+          "bodyNotAllowed": "This HTTP method does not accept a request body.",
+          "requestFailed": "Request failed",
+          "duration": "Completed in {{value}} ms",
+          "invalidJsonObject": "{{field}} must be a valid JSON object.",
+          "invalidJsonValue": "{{field}} must be valid JSON."
+        },
+        "results": {
+          "headers": "Response headers",
+          "body": "Response body"
+        }
       }
     },
     "broadcast": {

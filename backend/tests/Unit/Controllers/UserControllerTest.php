@@ -203,7 +203,7 @@ class UserControllerTest extends TestCase
                 $stmtUpdate,
                 $stmtJoined
             );
-            $pdo->method('lastInsertId')->willReturn(42);
+            $pdo->method('lastInsertId')->willReturn('42');
 
             $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
 

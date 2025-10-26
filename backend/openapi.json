@@ -51,7 +51,7 @@
           "Auth"
         ],
         "summary": "Register User",
-        "description": "���µ�ǰ��֤�û��ĸ���������Ϣ��֧���ύ school_id ���� new_school_name ���޸�ѧУ��Ϣ��������ѧУʱ����� cf_turnstile_response ��ͨ�� Cloudflare Turnstile ��֤����ͬʱ��֧��ͷ��ID���»�",
+        "description": "更新当前认证用户的个人资料信息。允许通过提供 school_id 或 new_school_name 调整学校，并在填写学校时要求携带 cf_turnstile_response 以通过 Cloudflare Turnstile 验证，同时仍支持更新头像。",
         "security": [],
         "requestBody": {
           "required": true,
@@ -127,7 +127,7 @@
         },
         "responses": {
           "200": {
-            "description": "���µ�ǰ��֤�û��ĸ���������Ϣ��֧���ύ school_id ���� new_school_name ���޸�ѧУ��Ϣ��������ѧУʱ����� cf_turnstile_response ��ͨ�� Cloudflare Turnstile ��֤����ͬʱ��֧��ͷ��ID���»�",
+            "description": "Profile updated successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -137,7 +137,7 @@
             }
           },
           "400": {
-            "description": "���µ�ǰ��֤�û��ĸ���������Ϣ��֧���ύ school_id ���� new_school_name ���޸�ѧУ��Ϣ��������ѧУʱ����� cf_turnstile_response ��ͨ�� Cloudflare Turnstile ��֤����ͬʱ��֧��ͷ��ID���»�",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {

@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useQuery } from 'react-query';
 import {
@@ -13,6 +13,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 import { Input } from '../../components/ui/Input';
+import { Textarea } from '../../components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -26,6 +27,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '../../components/ui/accordion';
+import { Switch } from '../../components/ui/switch';
 import {
   RefreshCw,
   Loader2,
@@ -44,6 +46,8 @@ const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head'
 const UNTAGGED_TOKEN = '__untagged__';
 const REMOTE_SPEC_FALLBACK =
   'https://raw.githubusercontent.com/carbon-track/carbontrack-rev/refs/heads/main/backend/openapi.json';
+const API_TEST_BASE_URL = import.meta.env?.VITE_API_URL || 'http://localhost:8080/api/v1';
+const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 const HTTP_METHOD_STYLES = {
   GET: 'border-emerald-200 bg-emerald-50 text-emerald-700',
@@ -704,6 +708,10 @@ export default function AdminDiagnosticsPage() {
                           </div>
                         )}
                       </Section>
+
+                      <Section title={t('admin.diagnostics.tester.title', 'Live request tester')}>
+                        <RequestTester operation={operation} />
+                      </Section>
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -801,4 +809,456 @@ function InfoBlock({ title, value }) {
       )}
     </div>
   );
+}
+
+function RequestTester({ operation }) {
+  const { t } = useTranslation();
+  const pathParams = useMemo(
+    () => (operation.parameters || []).filter((param) => param.in === 'path'),
+    [operation.parameters]
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const [baseUrl, setBaseUrl] = useState(API_TEST_BASE_URL);
+  const [paramValues, setParamValues] = useState(() => initializePathParamValues(pathParams));
+  const [queryInput, setQueryInput] = useState('');
+  const [headersInput, setHeadersInput] = useState('');
+  const [bodyInput, setBodyInput] = useState('');
+  const [includeAuth, setIncludeAuth] = useState(operation.requiresAuth);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState(null);
+  const [responseInfo, setResponseInfo] = useState(null);
+  const [lastUrl, setLastUrl] = useState('');
+
+  useEffect(() => {
+    setParamValues(initializePathParamValues(pathParams));
+  }, [pathParams]);
+
+  const resolvedPath = useMemo(
+    () => replacePathParams(operation.path, paramValues),
+    [operation.path, paramValues]
+  );
+  const previewUrl = useMemo(() => composePreviewUrl(baseUrl, resolvedPath), [baseUrl, resolvedPath]);
+  const canSendBody = METHODS_WITH_BODY.has(operation.method);
+
+  const handleSendTest = async () => {
+    setError(null);
+    setResponseInfo(null);
+
+    const missingRequired = pathParams.find(
+      (param) => param.required && !paramValues[param.name]
+    );
+    if (missingRequired) {
+      setError(
+        t('admin.diagnostics.tester.messages.pathParamRequired', {
+          name: missingRequired.name,
+        })
+      );
+      return;
+    }
+
+    let queryObject = {};
+    let headerObject = {};
+    let bodyValue = null;
+
+    try {
+      queryObject = parseJsonObject(queryInput);
+    } catch {
+      setError(
+        t('admin.diagnostics.tester.messages.invalidJsonObject', {
+          field: t('admin.diagnostics.tester.fields.query', 'Query parameters (JSON object)'),
+        })
+      );
+      return;
+    }
+
+    try {
+      headerObject = parseJsonObject(headersInput);
+    } catch {
+      setError(
+        t('admin.diagnostics.tester.messages.invalidJsonObject', {
+          field: t('admin.diagnostics.tester.fields.headers', 'Headers (JSON object)'),
+        })
+      );
+      return;
+    }
+
+    try {
+      bodyValue = parseJsonValue(bodyInput);
+    } catch {
+      setError(
+        t('admin.diagnostics.tester.messages.invalidJsonValue', {
+          field: t('admin.diagnostics.tester.fields.body', 'Request body (JSON)'),
+        })
+      );
+      return;
+    }
+
+    if (bodyValue !== null && !canSendBody) {
+      setError(
+        t('admin.diagnostics.tester.messages.bodyNotAllowed', 'This HTTP method does not accept a request body.')
+      );
+      return;
+    }
+
+    const url = buildFinalUrl(baseUrl, resolvedPath, queryObject);
+    setIsSending(true);
+    try {
+      const headers = Object.entries(headerObject).reduce((acc, [key, value]) => {
+        if (!key) return acc;
+        acc[key] = value == null ? '' : String(value);
+        return acc;
+      }, {});
+
+      if (includeAuth && typeof window !== 'undefined') {
+        const token = window.localStorage?.getItem('auth_token');
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+      }
+
+      let bodyPayload;
+      if (bodyValue !== null) {
+        bodyPayload = typeof bodyValue === 'string' ? bodyValue : JSON.stringify(bodyValue);
+        if (
+          typeof bodyValue !== 'string' &&
+          !headers['Content-Type'] &&
+          !headers['content-type']
+        ) {
+          headers['Content-Type'] = 'application/json';
+        }
+      }
+
+      const start = performance.now();
+      const response = await fetch(url, {
+        method: operation.method,
+        headers,
+        body: bodyPayload,
+      });
+      const duration = performance.now() - start;
+      const responseText = await response.text();
+      let parsedBody = null;
+      try {
+        parsedBody = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        parsedBody = null;
+      }
+      const headerList = [];
+      response.headers.forEach((value, key) => {
+        headerList.push({ key, value });
+      });
+      setResponseInfo({
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText || '',
+        duration,
+        headers: headerList,
+        body: parsedBody ?? responseText,
+        isJson: parsedBody !== null,
+      });
+      setLastUrl(url);
+    } catch (requestError) {
+      setError(
+        requestError?.message ||
+          t('admin.diagnostics.tester.messages.requestFailed', 'Request failed')
+      );
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleReset = () => {
+    setQueryInput('');
+    setHeadersInput('');
+    setBodyInput('');
+    setResponseInfo(null);
+    setError(null);
+    setLastUrl('');
+  };
+
+  return (
+    <div className="space-y-4 rounded-xl border border-slate-200/80 bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">
+            {t('admin.diagnostics.tester.title', 'Live request tester')}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {t(
+              'admin.diagnostics.tester.description',
+              'Send a live request to confirm endpoint status and payloads.'
+            )}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" type="button" onClick={() => setIsOpen((prev) => !prev)}>
+          {isOpen
+            ? t('admin.diagnostics.tester.actions.close', 'Hide tester')
+            : t('admin.diagnostics.tester.actions.open', 'Open tester')}
+        </Button>
+      </div>
+
+      {isOpen && (
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-slate-700">
+                {t('admin.diagnostics.tester.fields.baseUrl', 'Base URL')}
+              </label>
+              <Input
+                value={baseUrl}
+                onChange={(event) => setBaseUrl(event.target.value)}
+                placeholder="https://api.example.com"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700">
+                {t('admin.diagnostics.tester.fields.resolvedPath', 'Resolved path')}
+              </label>
+              <Input value={resolvedPath} readOnly className="font-mono text-xs" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700">
+              {t('admin.diagnostics.tester.fields.finalUrl', 'Final request URL')}
+            </label>
+            <Input value={lastUrl || previewUrl} readOnly className="font-mono text-xs" />
+          </div>
+
+          {pathParams.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-700">
+                {t('admin.diagnostics.tester.fields.pathParams', 'Path parameters')}
+              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                {pathParams.map((param) => (
+                  <div key={param.name}>
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      {t('admin.diagnostics.tester.messages.pathParam', {
+                        name: param.name,
+                      })}
+                    </label>
+                    <Input
+                      value={paramValues[param.name] ?? ''}
+                      placeholder={param.description || param.name}
+                      onChange={(event) =>
+                        setParamValues((current) => ({
+                          ...current,
+                          [param.name]: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-slate-700">
+                {t('admin.diagnostics.tester.fields.query', 'Query parameters (JSON object)')}
+              </label>
+              <Textarea
+                value={queryInput}
+                onChange={(event) => setQueryInput(event.target.value)}
+                placeholder={t('admin.diagnostics.tester.placeholders.query', '{"status":"pending"}')}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700">
+                {t('admin.diagnostics.tester.fields.headers', 'Headers (JSON object)')}
+              </label>
+              <Textarea
+                value={headersInput}
+                onChange={(event) => setHeadersInput(event.target.value)}
+                placeholder={t('admin.diagnostics.tester.placeholders.headers', '{"X-Debug":true}')}
+                className="font-mono text-xs"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700">
+              {t('admin.diagnostics.tester.fields.body', 'Request body (JSON)')}
+            </label>
+            <Textarea
+              value={bodyInput}
+              onChange={(event) => setBodyInput(event.target.value)}
+              placeholder={t(
+                'admin.diagnostics.tester.placeholders.body',
+                '{\n  "example": true\n}'
+              )}
+              className="font-mono text-xs"
+              disabled={!canSendBody}
+            />
+            {!canSendBody && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t(
+                  'admin.diagnostics.tester.messages.bodyNotAllowed',
+                  'This HTTP method does not accept a request body.'
+                )}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 rounded-lg border border-slate-200/80 bg-slate-50/80 p-3">
+            <Switch
+              id={`tester-auth-${operation.id}`}
+              checked={includeAuth}
+              onCheckedChange={setIncludeAuth}
+            />
+            <div>
+              <label className="text-sm font-medium text-slate-700" htmlFor={`tester-auth-${operation.id}`}>
+                {t('admin.diagnostics.tester.fields.auth', 'Include auth token')}
+              </label>
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  'admin.diagnostics.tester.fields.authDescription',
+                  'Attach the stored bearer token when available.'
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Button type="button" onClick={handleSendTest} disabled={isSending}>
+              {isSending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('admin.diagnostics.tester.actions.sending', 'Sending request...')}
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {t('admin.diagnostics.tester.actions.send', 'Send request')}
+                </>
+              )}
+            </Button>
+            <Button type="button" variant="outline" onClick={handleReset} disabled={isSending}>
+              {t('admin.diagnostics.tester.actions.reset', 'Reset fields')}
+            </Button>
+          </div>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>
+                {t('admin.diagnostics.tester.messages.requestFailed', 'Request failed')}
+              </AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {responseInfo && (
+            <div className="space-y-3 rounded-xl border border-slate-200/80 bg-slate-50/80 p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge
+                  variant={responseInfo.ok ? 'secondary' : 'destructive'}
+                  className="font-mono text-xs"
+                >
+                  {responseInfo.status} {responseInfo.statusText}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {t('admin.diagnostics.tester.messages.duration', {
+                    value: responseInfo.duration.toFixed(1),
+                  })}
+                </span>
+                {lastUrl && (
+                  <span className="font-mono text-[11px] text-slate-600 break-all">{lastUrl}</span>
+                )}
+              </div>
+              {responseInfo.headers.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t('admin.diagnostics.tester.results.headers', 'Response headers')}
+                  </p>
+                  <ul className="mt-2 space-y-1 text-xs font-mono text-slate-700">
+                    {responseInfo.headers.map((header) => (
+                      <li key={`${header.key}-${header.value}`}>
+                        <span className="text-slate-500">{header.key}:</span> {header.value}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t('admin.diagnostics.tester.results.body', 'Response body')}
+                </p>
+                <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-slate-900/95 p-3 text-xs leading-relaxed text-emerald-100">
+                  {responseInfo.isJson
+                    ? JSON.stringify(responseInfo.body, null, 2)
+                    : String(responseInfo.body ?? '')}
+                </pre>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function initializePathParamValues(params) {
+  return params.reduce((acc, param) => {
+    acc[param.name] = '';
+    return acc;
+  }, {});
+}
+
+function replacePathParams(path, values) {
+  return path.replace(/{([^}]+)}/g, (match, key) => {
+    const value = values[key];
+    return value !== undefined && value !== '' ? encodeURIComponent(value) : match;
+  });
+}
+
+function composePreviewUrl(base, path) {
+  if (!base) {
+    return path;
+  }
+  const trimmedBase = base.replace(/\/+$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${trimmedBase}${normalizedPath}`;
+}
+
+function buildFinalUrl(base, path, query) {
+  const preview = composePreviewUrl(base, path);
+  const searchParams = new URLSearchParams();
+  Object.entries(query || {}).forEach(([key, value]) => {
+    if (key) {
+      searchParams.append(key, value == null ? '' : String(value));
+    }
+  });
+  const queryString = searchParams.toString();
+  if (!queryString) {
+    return preview;
+  }
+  return `${preview}${preview.includes('?') ? '&' : '?'}${queryString}`;
+}
+
+function parseJsonObject(value) {
+  if (!value || !value.trim()) {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed;
+    }
+  } catch {
+    /* noop */
+  }
+  throw new Error('INVALID_JSON_OBJECT');
+}
+
+function parseJsonValue(value) {
+  if (!value || !value.trim()) {
+    return null;
+  }
+  try {
+    return JSON.parse(value);
+  } catch {
+    throw new Error('INVALID_JSON_VALUE');
+  }
 }

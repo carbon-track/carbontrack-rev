@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../hooks/useTranslation';
 import { QueryClientProvider, useQuery, useMutation } from 'react-query';
@@ -75,7 +75,7 @@ export default function AdminLayout() {
   const [debouncedCommandQuery, setDebouncedCommandQuery] = useState('');
   const [isExecutingAiAction, setIsExecutingAiAction] = useState(false);
   const [aiSessions, setAiSessions] = useState([]);
-
+  const [isAiRequesting, setIsAiRequesting] = useState(false);
   const lastAiSignatureRef = useRef('');
 
   const translatedLinks = useMemo(() => {
@@ -152,13 +152,6 @@ export default function AdminLayout() {
     }
   }, [t]);
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedCommandQuery(commandQuery.trim());
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [commandQuery]);
-
   const activeLink = useMemo(() => {
     return translatedLinks.find((link) => location.pathname.startsWith(link.to));
   }, [location.pathname, translatedLinks]);
@@ -166,7 +159,6 @@ export default function AdminLayout() {
   useEffect(() => {
     if (!commandOpen) {
       setCommandQuery('');
-      setDebouncedCommandQuery('');
     }
   }, [commandOpen]);
 
@@ -177,123 +169,101 @@ export default function AdminLayout() {
     locale: userLocale,
   }), [location.pathname, userLocale]);
 
-  const shouldFetchAi = commandOpen && debouncedCommandQuery.length >= 4;
-
-  const {
-    data: aiData,
-    isFetching: isFetchingAi,
-    isError: isAiError,
-    error: aiError,
-  } = useQuery(
-    ['admin-ai-intent', debouncedCommandQuery, aiContext.activeRoute, aiContext.locale],
-    async () => {
-      const response = await adminAPI.analyzeCommand({
-        query: debouncedCommandQuery,
-        context: aiContext,
-        mode: 'suggest',
-      });
-      return response.data;
-    },
-    {
-      enabled: shouldFetchAi,
-      staleTime: 30000,
-      cacheTime: 60000,
-      retry: false,
-    }
-  );
-
-  const aiErrorMessage = useMemo(() => {
-    if (!isAiError || !aiError) {
-      return null;
-    }
-    const message = aiError?.response?.data?.error;
-    if (message) {
-      return message;
-    }
-    return t('admin.command.aiError', '无法获取 AI 响应');
-  }, [aiError, isAiError, t]);
-
   useEffect(() => {
     if (!commandOpen) {
       setAiSessions([]);
-      lastAiSignatureRef.current = '';
     }
   }, [commandOpen]);
 
-  useEffect(() => {
-    if (!commandOpen) {
-      return;
-    }
-    if (debouncedCommandQuery.length < 4) {
-      return;
-    }
-    if (isFetchingAi) {
-      return;
-    }
-    if (!aiData && !isAiError) {
+  const showAiSection = aiSessions.length > 0 || isAiRequesting;
+  const canSendAiCommand = commandQuery.trim().length >= COMMAND_MIN_LENGTH && !isAiRequesting;
+
+  const sendAiCommand = useCallback(async () => {
+    const trimmed = commandQuery.trim();
+    if (trimmed.length < COMMAND_MIN_LENGTH || isAiRequesting) {
       return;
     }
 
-    const normalizedQuery = debouncedCommandQuery;
-    const alternatives = Array.isArray(aiData?.alternatives) ? aiData.alternatives : [];
-    const sessionPayload = {
-      query: normalizedQuery,
+    const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const baseSession = {
+      id: sessionId,
+      query: trimmed,
       route: aiContext.activeRoute,
-      intent: aiData?.intent ?? null,
-      alternatives,
-      error: isAiError ? (aiErrorMessage || '无法获取 AI 响应') : null,
-      errorCode: isAiError ? aiError?.response?.data?.code ?? null : null,
+      intent: null,
+      alternatives: [],
+      metadata: null,
+      capabilities: null,
+      error: null,
+      errorCode: null,
+      status: 'pending',
       timestamp: Date.now(),
     };
 
-    if (!sessionPayload.intent && sessionPayload.alternatives.length === 0 && !sessionPayload.error) {
-      return;
-    }
-
-    const signature = [
-      normalizedQuery,
-      aiContext.activeRoute,
-      sessionPayload.intent?.type || '',
-      sessionPayload.intent?.label || '',
-      sessionPayload.error || '',
-      sessionPayload.alternatives.map((alt) => `${alt.type || ''}:${alt.label || alt.type || ''}`).join('|'),
-      sessionPayload.errorCode || '',
-    ].join('::');
-
-    if (signature === lastAiSignatureRef.current) {
-      return;
-    }
-
     setAiSessions((prev) => {
-      const existingIndex = prev.findIndex(
-        (session) => session.query === normalizedQuery && session.route === aiContext.activeRoute
-      );
-
-      if (existingIndex >= 0) {
-        const next = [...prev];
-        next[existingIndex] = {
-          ...next[existingIndex],
-          intent: sessionPayload.intent,
-          alternatives: sessionPayload.alternatives,
-          error: sessionPayload.error,
-          errorCode: sessionPayload.errorCode,
-          timestamp: sessionPayload.timestamp,
-        };
-        return next;
-      }
-
-      const newSession = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        ...sessionPayload,
-      };
-      const trimmed = [...prev, newSession];
-      return trimmed.length > 5 ? trimmed.slice(-5) : trimmed;
+      const next = [...prev, baseSession];
+      return next.length > MAX_SESSIONS ? next.slice(-MAX_SESSIONS) : next;
     });
+    setIsAiRequesting(true);
 
-    lastAiSignatureRef.current = signature;
-  }, [aiData, aiContext.activeRoute, aiError, aiErrorMessage, commandOpen, debouncedCommandQuery, isAiError, isFetchingAi]);
+    try {
+      const response = await adminAPI.analyzeCommand({
+        query: trimmed,
+        context: aiContext,
+        mode: 'suggest',
+      });
+      const data = response.data;
+      setAiSessions((prev) =>
+        prev.map((session) =>
+          session.id === sessionId
+            ? {
+                ...session,
+                intent: data.intent ?? null,
+                alternatives: Array.isArray(data.alternatives) ? data.alternatives : [],
+                metadata: data.metadata ?? null,
+                capabilities: data.capabilities ?? null,
+                status: 'resolved',
+                timestamp: Date.now(),
+              }
+            : session
+        )
+      );
+    } catch (err) {
+      const apiError = err?.response?.data;
+      const message =
+        apiError?.error || t('admin.command.aiErrorGeneric', '无法获取 AI 响应，请稍后再试');
+      setAiSessions((prev) =>
+        prev.map((session) =>
+          session.id === sessionId
+            ? {
+                ...session,
+                error: message,
+                errorCode: apiError?.code ?? null,
+                status: 'error',
+                timestamp: Date.now(),
+              }
+            : session
+        )
+      );
+    } finally {
+      setIsAiRequesting(false);
+      setCommandQuery('');
+    }
+  }, [aiContext, commandQuery, isAiRequesting, t]);
 
-  const showAiSection = commandQuery.trim().length > 0 && (isFetchingAi || aiSessions.length > 0);
+  const handleCommandKeyDown = useCallback(
+    (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendAiCommand();
+      }
+    },
+    [sendAiCommand]
+  );
+
+  const aiInputHint = t('admin.command.aiHint', '按 Enter 或点击发送，让 AI 帮你导航或执行操作');
+  const sendButtonLabel = isAiRequesting
+    ? t('admin.command.aiSending', 'AI 正在解析…')
+    : t('admin.command.send', '发送指令');
 
   const buildRouteWithQuery = useCallback((route, query = {}) => {
     if (!route) {
@@ -413,9 +383,26 @@ export default function AdminLayout() {
             <CommandInput
               value={commandQuery}
               onValueChange={setCommandQuery}
+              onKeyDown={handleCommandKeyDown}
               placeholder={t('admin.command.placeholder', '输入命令以跳转或执行操作')}
             />
-
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/70 bg-slate-50/80 px-4 py-2 text-xs text-muted-foreground">
+              <span className="text-[11px] text-slate-500">{aiInputHint}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="inline-flex items-center gap-2 rounded-full"
+                disabled={!canSendAiCommand}
+                onClick={sendAiCommand}
+              >
+                {isAiRequesting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Bot className="h-3.5 w-3.5 text-emerald-600" />
+                )}
+                <span>{sendButtonLabel}</span>
+              </Button>
+            </div>
             <CommandList>
               <CommandEmpty>{t('admin.command.noResults', '没有匹配的结果')}</CommandEmpty>
               <div className="px-4 py-2 text-xs text-muted-foreground">
@@ -424,6 +411,26 @@ export default function AdminLayout() {
               {showAiSection && (
                 <CommandGroup heading={t('admin.command.aiConversation', 'AI 对话')}>
                   <div className="flex flex-col gap-3 py-1">
+                    {aiSessions.length === 0 && !isAiRequesting && (
+                      <div className="rounded-2xl border border-dashed border-slate-300/80 bg-white/70 px-4 py-6 text-center text-sm text-slate-500">
+                        {t('admin.command.aiEmptyState', '还没有对话，试着描述你想做的事情吧。')}
+                      </div>
+                    )}
+                    {isAiRequesting && (
+                      <CommandItem
+                        value="ai-loading"
+                        disabled
+                        className="pointer-events-none items-start gap-3 rounded-2xl bg-transparent px-0 py-0"
+                      >
+                        <span className="mt-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                          {t('admin.command.aiLabel', '助手')}
+                        </span>
+                        <div className="flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-600 shadow-sm">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>{t('admin.command.aiLoading', 'AI 正在分析指令...')}</span>
+                        </div>
+                      </CommandItem>
+                    )}
                     {aiSessions.map((session) => (
                       <React.Fragment key={session.id}>
                         <CommandItem
@@ -473,6 +480,24 @@ export default function AdminLayout() {
                                   {session.intent.reasoning && (
                                     <span className="text-xs text-emerald-700">{session.intent.reasoning}</span>
                                   )}
+                                  {(session.metadata?.model ||
+                                    session.metadata?.usage?.total_tokens ||
+                                    session.capabilities?.fingerprint) && (
+                                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-emerald-800/80">
+                                      {session.metadata?.model && <span>{session.metadata.model}</span>}
+                                      {session.metadata?.mode && <span>{session.metadata.mode}</span>}
+                                      {session.metadata?.usage?.total_tokens && (
+                                        <span>
+                                          {t('admin.command.aiTokens', 'Tokens')}：{session.metadata.usage.total_tokens}
+                                        </span>
+                                      )}
+                                      {session.capabilities?.fingerprint && (
+                                        <span className="uppercase tracking-wide">
+                                          KB {session.capabilities.fingerprint.slice(0, 8)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                   <span className="self-start rounded-full bg-emerald-200 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
                                     {getTapHint(session.intent.type)}
                                   </span>
@@ -496,7 +521,7 @@ export default function AdminLayout() {
                                     <span className="font-medium">{alt.label || t('admin.command.aiAlternativeFallback', '可选方案')}</span>
                                   </div>
                                   {alt.reasoning && (
-                                    <span className="text-xs text-muted-foreground">{alt.reasoning}</span>
+                                    <span className="text-xs text-slate-500">{alt.reasoning}</span>
                                   )}
                                   <span className="self-start rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
                                     {getTapHint(alt.type)}
@@ -508,21 +533,6 @@ export default function AdminLayout() {
                         )}
                       </React.Fragment>
                     ))}
-                    {isFetchingAi && (
-                      <CommandItem
-                        value="ai-loading"
-                        disabled
-                        className="pointer-events-none items-start gap-3 rounded-2xl bg-transparent px-0 py-0"
-                      >
-                        <span className="mt-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                          {t('admin.command.aiLabel', '助手')}
-                        </span>
-                        <div className="flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-600 shadow-sm">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>{t('admin.command.aiLoading', 'AI 正在分析指令...')}</span>
-                        </div>
-                      </CommandItem>
-                    )}
                   </div>
                 </CommandGroup>
               )}
@@ -670,5 +680,3 @@ export default function AdminLayout() {
     </QueryClientProvider>
   );
 }
-
-
