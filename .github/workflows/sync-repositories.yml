@@ -141,25 +141,24 @@ jobs:
         body: |
           Automated sync from monorepo `frontend/` folder.
         labels: sync
+        draft: true
 
-    - name: Auto-merge frontend PR
+    - name: Mark frontend PR ready for review
       if: steps.frontend-changes.outputs.changed == 'true'
       env:
         FRONTEND_TOKEN: ${{ secrets.FRONTEND_REPO_TOKEN }}
       run: |
-        echo "Attempting to auto-merge frontend PR..."
+        echo "Marking frontend PR ready_for_review to trigger target-repo checks..."
         REPO="carbon-track/frontend"
         BRANCH="sync/monorepo-${GITHUB_SHA}"
-        # find PR by head
         PR_JSON=$(curl -s -H "Authorization: token $FRONTEND_TOKEN" "https://api.github.com/repos/$REPO/pulls?head=carbon-track:$BRANCH")
         PR_NUM=$(echo "$PR_JSON" | jq -r '.[0].number')
         if [ -z "$PR_NUM" ] || [ "$PR_NUM" = "null" ]; then
           echo "No frontend PR found for branch $BRANCH"
           exit 0
         fi
-        echo "Found PR #$PR_NUM — merging..."
-        # merge the PR
-        curl -s -X PUT -H "Authorization: token $FRONTEND_TOKEN" -d '{"merge_method":"merge","commit_title":"sync: automated merge"}' "https://api.github.com/repos/$REPO/pulls/$PR_NUM/merge" | jq -r '.message // .merged'
+        echo "Found PR #$PR_NUM — marking ready for review..."
+        curl -s -X POST -H "Authorization: token $FRONTEND_TOKEN" "https://api.github.com/repos/$REPO/pulls/$PR_NUM/ready_for_review" || true
 
     - name: Sync backend repository
       if: steps.backend-changes.outputs.changed == 'true'
@@ -246,13 +245,14 @@ jobs:
         body: |
           Automated sync from monorepo `backend/` folder.
         labels: sync
+        draft: true
 
-    - name: Auto-merge backend PR
+    - name: Mark backend PR ready for review
       if: steps.backend-changes.outputs.changed == 'true'
       env:
         BACKEND_TOKEN: ${{ secrets.BACKEND_REPO_TOKEN }}
       run: |
-        echo "Attempting to auto-merge backend PR..."
+        echo "Marking backend PR ready_for_review to trigger target-repo checks..."
         REPO="carbon-track/backend"
         BRANCH="sync/monorepo-${GITHUB_SHA}"
         PR_JSON=$(curl -s -H "Authorization: token $BACKEND_TOKEN" "https://api.github.com/repos/$REPO/pulls?head=carbon-track:$BRANCH")
@@ -261,8 +261,8 @@ jobs:
           echo "No backend PR found for branch $BRANCH"
           exit 0
         fi
-        echo "Found PR #$PR_NUM — merging..."
-        curl -s -X PUT -H "Authorization: token $BACKEND_TOKEN" -d '{"merge_method":"merge","commit_title":"sync: automated merge"}' "https://api.github.com/repos/$REPO/pulls/$PR_NUM/merge" | jq -r '.message // .merged'
+        echo "Found PR #$PR_NUM — marking ready for review..."
+        curl -s -X POST -H "Authorization: token $BACKEND_TOKEN" "https://api.github.com/repos/$REPO/pulls/$PR_NUM/ready_for_review" || true
 
     - name: Create summary comment (for PRs)
       if: github.event_name == 'pull_request' && (steps.frontend-changes.outputs.changed == 'true' || steps.backend-changes.outputs.changed == 'true')
