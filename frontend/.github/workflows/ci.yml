@@ -1,0 +1,81 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  install-deps:
+    name: frontend:install-deps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Enable corepack
+        run: |
+          corepack enable || true
+          corepack prepare pnpm@latest --activate || true
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+
+  build:
+    name: frontend:build
+    runs-on: ubuntu-latest
+    needs: install-deps
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Enable corepack
+        run: |
+          corepack enable || true
+          corepack prepare pnpm@latest --activate || true
+
+      - name: Build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+  unit-tests:
+    name: frontend:unit-tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Enable corepack
+        run: |
+          corepack enable || true
+          corepack prepare pnpm@latest --activate || true
+
+      - name: Run unit tests
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm test || true
