@@ -129,9 +129,38 @@
   }
 }
 
+@keyframes mobileNavIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-0.75rem) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes mobileNavOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.5rem) scale(0.98);
+  }
+}
+
 @layer utilities {
   .animate-shimmer {
     animation: shimmer 2s infinite;
   }
-}
 
+  .animate-mobile-nav-in {
+    animation: mobileNavIn 0.25s ease-out forwards;
+  }
+
+  .animate-mobile-nav-out {
+    animation: mobileNavOut 0.2s ease-in forwards;
+  }
+}
