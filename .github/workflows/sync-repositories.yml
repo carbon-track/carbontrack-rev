@@ -96,6 +96,14 @@ jobs:
         pnpm build
         echo "Frontend build succeeded"
 
+        # Switch to the cloned frontend repo and copy build output into it
+        cd ..
+        if [ ! -d frontend-repo ]; then
+          echo "frontend-repo not found; expected clone from earlier step"
+          exit 1
+        fi
+        cd frontend-repo
+
         # 清空现有内容（除了 .git）
         shopt -s extglob
         rm -rf !(".git")
@@ -134,46 +142,37 @@ jobs:
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.FRONTEND_REPO_TOKEN }}
-              # Now switch to the cloned frontend repo and copy build output into it
-              cd ..
-              if [ ! -d frontend-repo ]; then
-                echo "frontend-repo not found; expected clone from earlier step"
-                exit 1
-              fi
-              cd frontend-repo
+        commit-message: 'sync: update from monorepo (${GITHUB_SHA::7})'
+        branch: 'sync/monorepo-${{ github.sha }}'
+        base: main
+        title: 'sync: update from monorepo (${GITHUB_SHA::7})'
+        body: |
+          Automated sync from monorepo `frontend/` folder.
+        labels: sync
+        draft: true
 
-              # 清空现有内容（除了 .git）
-              shopt -s extglob
-              rm -rf !(".git")
-              shopt -u extglob
+    - name: Mark frontend PR ready for review
+      if: steps.frontend-changes.outputs.changed == 'true'
+      env:
+        FRONTEND_TOKEN: ${{ secrets.FRONTEND_REPO_TOKEN }}
+      run: |
+        echo "Marking frontend PR ready_for_review to trigger target-repo checks..."
+        REPO="carbon-track/frontend"
+        BRANCH="sync/monorepo-${GITHUB_SHA}"
+        PR_JSON=$(curl -s -H "Authorization: token $FRONTEND_TOKEN" "https://api.github.com/repos/$REPO/pulls?head=carbon-track:$BRANCH")
+        PR_NUM=$(echo "$PR_JSON" | jq -r '.[0].number')
+        if [ -z "$PR_NUM" ] || [ "$PR_NUM" = "null" ]; then
+          echo "No frontend PR found for branch $BRANCH"
+          exit 0
+        fi
+        echo "Found PR #$PR_NUM — marking ready for review..."
+        curl -s -X POST -H "Authorization: token $FRONTEND_TOKEN" "https://api.github.com/repos/$REPO/pulls/$PR_NUM/ready_for_review" || true
 
-              # 复制新内容（包括隐藏文件）
-              cp -r ../frontend/* . 2>/dev/null || true
-              cp -r ../frontend/.[!.]* . 2>/dev/null || true
-
-              # 配置提交者信息（CI 环境）
-              git config user.name "github-actions[bot]"
-              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-              # 如果没有变化则退出
-              if git diff --quiet --exit-code && git diff --staged --quiet --exit-code; then
-                echo "No changes to commit in frontend repository"
-                cd ..
-                rm -rf frontend-repo
-                exit 0
-              fi
-
-              # 添加并提交变更（允许在无差异时忽略错误）
-              git add -A
-              git commit -m "sync: update from monorepo (${GITHUB_SHA::7})" || true
-
-              # 推送到临时分支并由 PR 合并（避免直接改写 main）
-              BRANCH="sync/monorepo-${GITHUB_SHA}"
-              git push origin HEAD:$BRANCH --force-with-lease
-              echo "Pushed frontend changes to branch $BRANCH"
-
-              cd ..
-              rm -rf frontend-repo
+        # Since target repo has no CI checks configured, merge now (safe because monorepo checks passed)
+        echo "Attempting to merge frontend PR #$PR_NUM"
+        MERGE_RESP=$(curl -s -X PUT -H "Authorization: token $FRONTEND_TOKEN" -d '{"merge_method":"merge","commit_title":"sync: automated merge"}' "https://api.github.com/repos/$REPO/pulls/$PR_NUM/merge")
+        MERGED=$(echo "$MERGE_RESP" | jq -r '.merged // false')
+        if [ "$MERGED" = "true" ]; then
           echo "Frontend PR #$PR_NUM merged successfully"
         else
           echo "Frontend PR #$PR_NUM not merged: $(echo $MERGE_RESP | jq -r '.message // "unknown"')"
@@ -218,6 +217,14 @@ jobs:
           rm /tmp/backend_start_pid || true
         fi
         echo "Backend tests completed"
+
+        # Switch to the cloned backend repo and copy monorepo backend files into it
+        cd ..
+        if [ ! -d backend-repo ]; then
+          echo "backend-repo not found; expected clone from earlier step"
+          exit 1
+        fi
+        cd backend-repo
 
         # 清空现有内容（除了 .git）
         shopt -s extglob
