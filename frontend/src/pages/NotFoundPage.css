@@ -1,6 +1,7 @@
 .emoji {
   display: inline-block;
   will-change: transform, color;
+  transform-origin: center;
   /* All animation handled in JS for continuous acceleration */
 }
 

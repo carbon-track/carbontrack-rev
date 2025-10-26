@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { useTranslation } from '../hooks/useTranslation';
@@ -6,17 +6,18 @@ import './NotFoundPage.css';
 
 export default function NotFoundPage() {
   const { t } = useTranslation();
-  const [isHovered, setIsHovered] = useState(false);
   const emojiRef = useRef(null);
   const angleRef = useRef(0); // degrees
-  const velocityRef = useRef(30); // degrees per second, start with small spin
+  const velocityRef = useRef(40); // deg/s
   const rafRef = useRef(null);
   const lastTimeRef = useRef(null);
-
-  // animation parameters
-  const ACCEL = 240; // degrees per second^2 (how quickly angular velocity changes)
-  const SCALE_LERP = 40; // much faster lerp so scale snaps quickly when hovered
-  const COLOR_LERP = 8; // slightly faster color smoothing
+  const directionRef = useRef(1);
+  const isHoveredRef = useRef(false);
+  const BASE_SPEED = 40;
+  const ANGULAR_ACCEL = 360;
+  const SCALE_BASE_RATE = 1.2;
+  const SCALE_VELOCITY_FACTOR = 1 / 800;
+  const COLOR_LERP = 8;
   const scaleRef = useRef(1);
   const colorMixRef = useRef(0); // 0..1
 
@@ -45,31 +46,30 @@ export default function NotFoundPage() {
       const dt = Math.min(0.05, (time - lastTimeRef.current) / 1000); // seconds, clamp to avoid big jumps
       lastTimeRef.current = time;
 
-
-      // accelerate velocity: hovering -> positive accel (speed up clockwise), leaving -> negative accel (decelerate / reverse)
-      const accel = isHovered ? ACCEL : -ACCEL;
-      velocityRef.current += accel * dt;
-
-      // integrate angle
+      const hovered = isHoveredRef.current;
+      if (hovered) {
+        velocityRef.current += directionRef.current * ANGULAR_ACCEL * dt;
+      } else {
+        const dir = directionRef.current;
+        const speed = Math.abs(velocityRef.current || dir * BASE_SPEED);
+        if (speed > BASE_SPEED) {
+          const decel = ANGULAR_ACCEL * dt;
+          const newSpeed = Math.max(BASE_SPEED, speed - decel);
+          velocityRef.current = dir * newSpeed;
+        } else {
+          velocityRef.current = dir * BASE_SPEED;
+        }
+      }
       angleRef.current += velocityRef.current * dt;
 
-      // scale behavior:
-      // - when NOT hovered: keep scale at 1 (no growth)
-      // - when hovered: quickly grow based on velocity + an extra hover boost
-      let scaleTarget = 1;
-      if (isHovered) {
-        const baseScaleFromVelocity = 1 + Math.abs(velocityRef.current) / 300; // stronger influence when hovered
-        const hoverExtra = 0.8; // immediate extra growth on hover
-        scaleTarget = Math.max(1, baseScaleFromVelocity + hoverExtra);
+      const scaleRate = SCALE_BASE_RATE + Math.abs(velocityRef.current) * SCALE_VELOCITY_FACTOR;
+      if (hovered) {
+        scaleRef.current += scaleRate * dt;
+      } else {
+        scaleRef.current = Math.max(1, scaleRef.current - scaleRate * dt);
       }
 
-      // smooth scale towards target (use exponential smoothing so large frame gaps don't jump)
-      // alpha = 1 - e^{-lambda * dt}
-      const scaleAlpha = 1 - Math.exp(-SCALE_LERP * dt);
-      scaleRef.current += (scaleTarget - scaleRef.current) * scaleAlpha;
-
-      // color mix driven by hover state (r channel increases when hovered), smoothed with same approach
-      const colorTarget = isHovered ? 1 : 0;
+      const colorTarget = hovered ? 1 : 0;
       const colorAlpha = 1 - Math.exp(-COLOR_LERP * dt);
       colorMixRef.current += (colorTarget - colorMixRef.current) * colorAlpha;
       const mixedRgb = lerpColor(baseRgb, redRgb, colorMixRef.current);
@@ -87,17 +87,18 @@ export default function NotFoundPage() {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
-    // isHovered included so animation responds to hover state
-  }, [isHovered]);
+    // empty dependency so RAF loop never restarts unexpectedly
+  }, []);
 
-  const handleMouseEnter = () => setIsHovered(true);
-  const handleMouseLeave = () => setIsHovered(false);
-
-  const emojiStyle = {
-    display: 'inline-block',
-    animation: `spin 20s linear infinite${isHovered ? ', emoji-hover-effect 2s ease-in-out' : ''}`,
-    '--emoji-color-start': 'inherit', 
-    '--emoji-color-end': '#ff6347',
+  const handleMouseEnter = () => {
+    isHoveredRef.current = true;
+  };
+  const handleMouseLeave = () => {
+    const prevVelocity = velocityRef.current || directionRef.current * BASE_SPEED;
+    isHoveredRef.current = false;
+    const newDirection = prevVelocity >= 0 ? -1 : 1;
+    directionRef.current = newDirection;
+    velocityRef.current = -prevVelocity;
   };
 
   return (
