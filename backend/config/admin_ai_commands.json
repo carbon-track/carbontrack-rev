@@ -204,6 +204,60 @@
         "发布公告",
         "新建广播"
       ]
+    },
+    {
+      "id": "pending-exchanges",
+      "label": "Review pending exchanges",
+      "description": "Filter reward exchange requests to pending status for fulfillment review.",
+      "routeId": "exchanges",
+      "route": "/admin/exchanges",
+      "mode": "shortcut",
+      "query": {
+        "status": "pending"
+      },
+      "keywords": [
+        "exchange",
+        "pending exchanges",
+        "兑换订单",
+        "待审核兑换",
+        "reward requests"
+      ]
+    },
+    {
+      "id": "system-logs-search",
+      "label": "Search system logs",
+      "description": "Jump directly to the system log search console for trace investigations.",
+      "routeId": "systemLogs",
+      "route": "/admin/system-logs",
+      "mode": "shortcut",
+      "query": {
+        "view": "search"
+      },
+      "keywords": [
+        "logs",
+        "log search",
+        "系统日志",
+        "日志检索",
+        "trace search"
+      ]
+    },
+    {
+      "id": "diagnostics-openapi",
+      "label": "Review API diagnostics",
+      "description": "Open the diagnostics view focused on OpenAPI coverage and endpoint health.",
+      "routeId": "diagnostics",
+      "route": "/admin/diagnostics",
+      "mode": "shortcut",
+      "query": {
+        "panel": "openapi"
+      },
+      "keywords": [
+        "api diagnostics",
+        "openapi coverage",
+        "接口诊断",
+        "接口健康",
+        "spec review"
+      ]
     }
   ],
   "managementActions": [
