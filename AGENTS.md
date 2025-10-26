@@ -55,10 +55,9 @@ The frontend is a modern SPA.
 
 ### Developer Workflow
 - **Setup**: Run `pnpm install` in the `frontend` directory.
-- **Run Dev Server**: `pnpm dev` (runs `vite`).
 - **Build**: `pnpm build`.
 - **Lint**: `pnpm lint`.
 - **After Frontend Changes (Required)**: After modifying components, hooks, routes, state, or build config:
     - Run `pnpm build` to validate syntax, type-checking, and bundling issues before committing.
-    - Do NOT execute `pnpm build` within this AI session if terminal output cannot be captured; rely on local/CI builds instead, and keep code lint/type-clean.
-    - If new admin UI flows or labels are introduced, update any corresponding AI knowledge base entries (e.g., adjust keywords and routes in `backend/config/admin_ai_commands.json`) so the command palette can surface them correctly.
+    - Do NOT execute `pnpm dev` within this AI session if terminal output cannot be captured; rely on local/CI builds instead, and keep code lint/type-clean.
+    - If new admin UI flows, functions or labels are introduced, update any corresponding AI knowledge base entries (e.g., adjust keywords and routes in `backend/config/admin_ai_commands.json`) so the command palette can surface them correctly.

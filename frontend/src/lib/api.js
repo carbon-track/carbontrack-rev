@@ -210,8 +210,10 @@ export const messageAPI = {
 };
 
 export const schoolAPI = {
-  // 获取学校列表
-  getSchools: () => api.get('/schools'),
+  // ��ȡѧУ�б�
+  getSchools: (params = {}) => api.get('/schools', { params }),
+  // �������ѧУ(��������ڲ���)
+  createOrFetchSchool: (data) => api.post('/schools', data),
 };
 
 export const avatarAPI = {

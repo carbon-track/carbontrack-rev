@@ -863,7 +863,7 @@
       "exchanges": "积分兑换",
       "broadcast": "公告广播",
       "systemLogs": "系统日志",
-      "diagnostics": "AI 诊断"
+      "diagnostics": "API 诊断"
     },
     "tabs": {
       "dashboard": "仪表盘",
@@ -878,73 +878,76 @@
       "systemLogs": "系统日志"
     },
     "diagnostics": {
-      "title": "AI 诊断面板",
-      "description": "查看 AI 助手的配置、客户端状态，并可执行实时连通性检测。",
-      "actions": {
-        "refresh": "刷新状态",
-        "refreshing": "正在刷新诊断信息...",
-        "check": "执行连通性检测",
-        "checking": "正在检查与模型的连通性..."
+      "title": "API 诊断",
+      "description": "可视化后端 OpenAPI 契约，快速检索接口并核对请求/响应定义。",
+      "spec": {
+        "title": "API",
+        "version": "规范版本",
+        "fetchedAt": "最近拉取",
+        "download": "下载规范",
+        "servers": "服务节点"
       },
-      "labels": {
-        "enabled": "AI 助手已启用",
-        "disabled": "AI 助手未启用",
-        "yes": "是",
-        "no": "否",
-        "lastUpdated": "最近更新 {{value}}",
-        "never": "从未"
+      "actions": {
+        "refresh": "重新加载规范"
+      },
+      "stats": {
+        "endpoints": "接口总数",
+        "secured": "需鉴权",
+        "public": "公共接口",
+        "tags": "标签/分组",
+        "methods": "HTTP 方法"
+      },
+      "filters": {
+        "title": "筛选器",
+        "description": "按方法、标签、安全策略或响应码过滤接口。",
+        "search": "检索",
+        "searchPlaceholder": "按路径、摘要或描述搜索",
+        "method": "HTTP 方法",
+        "methodAll": "全部方法",
+        "tag": "标签",
+        "tagAll": "全部标签",
+        "security": "安全性",
+        "securityAll": "全部接口",
+        "securitySecured": "需要鉴权",
+        "securityPublic": "无需鉴权",
+        "status": "响应码",
+        "statusAll": "全部状态码"
+      },
+      "results": {
+        "title": "接口目录",
+        "count": "共有 {{count}} 个接口符合筛选条件"
       },
       "status": {
-        "disabledTitle": "助手未启用",
-        "disabledDescription": "请在服务器上配置有效的 LLM API Key 和相关参数后再试。"
+        "errorTitle": "无法加载 API 规范",
+        "errorDescription": "无法读取 OpenAPI 文档，请检查配置的地址或稍后再试。",
+        "loading": "正在加载 OpenAPI 规范...",
+        "empty": "没有匹配当前筛选条件的接口。"
       },
-      "connectivity": {
-        "title": "连通性状态",
-        "status": {
-          "ok": "连通正常",
-          "error": "连通失败",
-          "skipped": "已跳过",
-          "not_checked": "尚未检测"
-        },
-        "description": {
-          "ok": "已成功连通至 AI 服务提供商。",
-          "error": "连通性检测失败，请查看下方的错误信息。",
-          "skipped": "因为助手未启用，已跳过连通性检测。",
-          "not_checked": "执行一次连通性检测以确认可以访问 AI 服务。"
-        },
-        "fields": {
-          "model": "模型",
-          "finishReason": "结束原因",
-          "usage": "令牌用量",
-          "error": "错误信息",
-          "exception": "异常类型",
-          "reason": "原因说明"
-        }
+      "labels": {
+        "untagged": "未分组",
+        "authRequired": "需要鉴权",
+        "publicEndpoint": "公共接口",
+        "deprecated": "已废弃",
+        "noSummary": "未提供摘要",
+        "tags": "标签",
+        "security": "安全策略",
+        "parameters": "请求参数",
+        "noParameters": "未记录任何参数",
+        "yes": "是",
+        "no": "否",
+        "requestBody": "请求体",
+        "requestBodyDescription": "请求负载",
+        "noRequestBody": "无需请求体",
+        "responses": "响应",
+        "noResponses": "未记录响应",
+        "noResponseDescription": "未提供描述",
+        "responseContent": "内容类型"
       },
-      "configuration": {
-        "title": "模型配置",
-        "description": "当前生效的助手模型运行参数。",
-        "model": "模型",
-        "temperature": "温度",
-        "maxTokens": "最大 Token 数"
-      },
-      "client": {
-        "title": "客户端适配器",
-        "description": "底层 HTTP 客户端与适配器信息。",
-        "available": "客户端可用",
-        "class": "适配器类名"
-      },
-      "commands": {
-        "title": "指令目录",
-        "description": "已注册的导航目标与自动化操作数量。",
-        "navigation": "导航目标数量",
-        "quick": "快捷操作数量",
-        "management": "管理操作数量"
-      },
-      "messages": {
-        "refreshSuccess": "诊断信息已更新",
-        "checkSuccess": "连通性检测完成",
-        "checkFailed": "连通性检测失败：{{message}}"
+      "table": {
+        "name": "名称",
+        "in": "位置",
+        "required": "必填",
+        "type": "类型"
       }
     },
     "broadcast": {

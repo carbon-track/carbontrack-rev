@@ -864,7 +864,7 @@
       "exchanges": "Exchanges",
       "broadcast": "Broadcast Center",
       "systemLogs": "System Logs",
-      "diagnostics": "AI Diagnostics"
+      "diagnostics": "API Diagnostics"
     },
     "tabs": {
       "dashboard": "Dashboard",
@@ -879,107 +879,76 @@
       "systemLogs": "System logs"
     },
     "diagnostics": {
-      "title": "AI Diagnostics",
-      "description": "Inspect AI assistant configuration, client status, and run live connectivity tests.",
-      "actions": {
-        "refresh": "Refresh status",
-        "refreshing": "Refreshing diagnostics...",
-        "check": "Run connectivity check",
-        "checking": "Checking connectivity..."
+      "title": "API Diagnostics",
+      "description": "Visualize the published OpenAPI contract, inspect endpoints, and verify request/response coverage.",
+      "spec": {
+        "title": "API",
+        "version": "Spec version",
+        "fetchedAt": "Fetched",
+        "download": "Download spec",
+        "servers": "Servers"
       },
-      "labels": {
-        "enabled": "AI assistant enabled",
-        "disabled": "AI assistant disabled",
-        "yes": "Yes",
-        "no": "No",
-        "lastUpdated": "Last updated {{value}}",
-        "never": "Never"
+      "actions": {
+        "refresh": "Reload spec"
+      },
+      "stats": {
+        "endpoints": "Endpoints",
+        "secured": "Secured",
+        "public": "Public",
+        "tags": "Tags",
+        "methods": "HTTP methods"
+      },
+      "filters": {
+        "title": "Filters",
+        "description": "Search and narrow down endpoints by method, tag, security requirements, or response codes.",
+        "search": "Search",
+        "searchPlaceholder": "Search path, summary, or description",
+        "method": "HTTP method",
+        "methodAll": "All methods",
+        "tag": "Tag",
+        "tagAll": "All tags",
+        "security": "Security",
+        "securityAll": "All endpoints",
+        "securitySecured": "Requires auth",
+        "securityPublic": "Public",
+        "status": "Response code",
+        "statusAll": "All status codes"
+      },
+      "results": {
+        "title": "Endpoint catalog",
+        "count": "{{count}} endpoints match the current filters"
       },
       "status": {
-        "disabledTitle": "Assistant disabled",
-        "disabledDescription": "Provide a valid LLM API key and configuration on the server to enable the assistant."
+        "errorTitle": "Unable to load API spec",
+        "errorDescription": "The OpenAPI document could not be loaded. Check the configured URL or try again.",
+        "loading": "Loading OpenAPI specification...",
+        "empty": "No endpoints match the selected filters."
       },
-      "connectivity": {
-        "title": "Connectivity status",
-        "status": {
-          "ok": "Connection successful",
-          "error": "Connection failed",
-          "skipped": "Skipped",
-          "not_checked": "Not checked"
-        },
-        "description": {
-          "ok": "The AI provider responded successfully.",
-          "error": "Connectivity test failed. Review the error details below.",
-          "skipped": "Connectivity check skipped because the assistant is disabled.",
-          "not_checked": "Run a connectivity check to verify access to the AI provider."
-        },
-        "fields": {
-          "model": "Model",
-          "finishReason": "Finish reason",
-          "usage": "Usage",
-          "error": "Error message",
-          "exception": "Exception",
-          "reason": "Reason"
-        }
+      "labels": {
+        "untagged": "Untagged",
+        "authRequired": "Requires auth",
+        "publicEndpoint": "Public endpoint",
+        "deprecated": "Deprecated",
+        "noSummary": "No summary provided",
+        "tags": "Tags",
+        "security": "Security",
+        "parameters": "Parameters",
+        "noParameters": "No parameters documented",
+        "yes": "Yes",
+        "no": "No",
+        "requestBody": "Request body",
+        "requestBodyDescription": "Request payload",
+        "noRequestBody": "No request body",
+        "responses": "Responses",
+        "noResponses": "No responses documented",
+        "noResponseDescription": "No description provided",
+        "responseContent": "Content types"
       },
-      "configuration": {
-        "title": "Model configuration",
-        "description": "Current runtime settings for the assistant model.",
-        "model": "Model",
-        "temperature": "Temperature",
-        "maxTokens": "Max tokens"
-      },
-      "client": {
-        "title": "Client adapter",
-        "description": "Underlying HTTP client and adapter details.",
-        "available": "Client available",
-        "class": "Adapter class"
-      },
-      "commands": {
-        "title": "Command catalog",
-        "description": "Number of registered targets and automation actions.",
-        "navigation": "Navigation targets",
-        "quick": "Quick actions",
-        "management": "Management actions"
-      },
-      "messages": {
-        "refreshSuccess": "Diagnostics updated",
-        "checkSuccess": "Connectivity check finished",
-        "checkFailed": "Connectivity check failed: {{message}}"
-      },
-      "ai": {
-        "title": "AI Diagnostics",
-        "description": "Inspect AI assistant configuration, client status, and run live connectivity tests."
-      },
-      "r2": {
-        "title": "R2 Storage Diagnostics",
-        "description": "Inspect Cloudflare R2 storage configuration and file upload parameters.",
-        "fields": {
-          "bucket": "Bucket Name",
-          "endpoint": "Endpoint",
-          "region": "Region",
-          "publicUrl": "Public URL",
-          "maxFileSize": "Max File Size",
-          "allowedMimeTypes": "Allowed MIME Types",
-          "allowedExtensions": "Allowed Extensions"
-        }
-      },
-      "fileStats": {
-        "title": "File Storage Statistics",
-        "description": "Overview of file storage usage and expired files.",
-        "fields": {
-          "totalFiles": "Total Files",
-          "totalSize": "Total Size",
-          "expiredFiles": "Expired Files"
-        }
-      },
-      "systemLogs": {
-        "title": "System Logs Overview",
-        "description": "Recent system log entries and overall log count.",
-        "fields": {
-          "totalLogs": "Total Log Entries",
-          "recentLogs": "Recent System Logs"
-        }
+      "table": {
+        "name": "Name",
+        "in": "In",
+        "required": "Required",
+        "type": "Type"
       }
     },
     "broadcast": {
