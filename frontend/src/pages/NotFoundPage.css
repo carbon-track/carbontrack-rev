@@ -1,0 +1,12 @@
+.emoji {
+  display: inline-block;
+  will-change: transform, color;
+  /* All animation handled in JS for continuous acceleration */
+}
+
+/* keep a subtle focus outline for accessibility */
+.emoji:focus {
+  outline: 3px solid rgba(59,130,246,0.25);
+  outline-offset: 4px;
+}
+  

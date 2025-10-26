@@ -55,7 +55,15 @@ export const router = createBrowserRouter([
       { path: 'profile', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><ProfilePage /></React.Suspense></ProtectedRoute> },
       { path: 'achievements', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><AchievementsPage /></React.Suspense></ProtectedRoute> },
       { path: 'onboarding', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><OnboardingPage /></React.Suspense></ProtectedRoute> },
-      { path: 'settings/notifications', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><NotificationSettingsPage /></React.Suspense></ProtectedRoute> }
+      { path: 'settings/notifications', element: <ProtectedRoute requireAuth><React.Suspense fallback={<LoadingSpinner />}><NotificationSettingsPage /></React.Suspense></ProtectedRoute> },
+      {
+        path: '*',
+        element: (
+          <React.Suspense fallback={<LoadingSpinner />}>
+            <NotFoundPage />
+          </React.Suspense>
+        )
+      }
     ]
   },
   {
@@ -87,13 +95,6 @@ export const router = createBrowserRouter([
       { path: 'broadcast', element: <React.Suspense fallback={<LoadingSpinner />}><AdminBroadcastPage /></React.Suspense> },
       { path: 'system-logs', element: <React.Suspense fallback={<LoadingSpinner />}><AdminSystemLogsPage /></React.Suspense> },
       { path: 'diagnostics', element: <React.Suspense fallback={<LoadingSpinner />}><AdminDiagnosticsPage /></React.Suspense> }
-    ]
-  },
-  {
-    path: '*',
-    element: <Layout />,
-    children: [
-      { index: true, element: <React.Suspense fallback={<LoadingSpinner />}><NotFoundPage /></React.Suspense> }
     ]
   }
 ]);
