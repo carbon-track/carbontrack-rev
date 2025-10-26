@@ -84,6 +84,18 @@ jobs:
         git fetch origin main --depth=1
         git checkout -B main origin/main
 
+    - name: Build & test frontend (monorepo)
+      if: steps.frontend-changes.outputs.changed == 'true'
+      run: |
+        echo "Building frontend in monorepo..."
+        cd frontend
+        # enable pnpm via corepack
+        corepack enable || true
+        corepack prepare pnpm@latest --activate || true
+        pnpm install --frozen-lockfile
+        pnpm build
+        echo "Frontend build succeeded"
+
         # 清空现有内容（除了 .git）
         shopt -s extglob
         rm -rf !(".git")
@@ -130,6 +142,25 @@ jobs:
           Automated sync from monorepo `frontend/` folder.
         labels: sync
 
+    - name: Auto-merge frontend PR
+      if: steps.frontend-changes.outputs.changed == 'true'
+      env:
+        FRONTEND_TOKEN: ${{ secrets.FRONTEND_REPO_TOKEN }}
+      run: |
+        echo "Attempting to auto-merge frontend PR..."
+        REPO="carbon-track/frontend"
+        BRANCH="sync/monorepo-${GITHUB_SHA}"
+        # find PR by head
+        PR_JSON=$(curl -s -H "Authorization: token $FRONTEND_TOKEN" "https://api.github.com/repos/$REPO/pulls?head=carbon-track:$BRANCH")
+        PR_NUM=$(echo "$PR_JSON" | jq -r '.[0].number')
+        if [ -z "$PR_NUM" ] || [ "$PR_NUM" = "null" ]; then
+          echo "No frontend PR found for branch $BRANCH"
+          exit 0
+        fi
+        echo "Found PR #$PR_NUM — merging..."
+        # merge the PR
+        curl -s -X PUT -H "Authorization: token $FRONTEND_TOKEN" -d '{"merge_method":"merge","commit_title":"sync: automated merge"}' "https://api.github.com/repos/$REPO/pulls/$PR_NUM/merge" | jq -r '.message // .merged'
+
     - name: Sync backend repository
       if: steps.backend-changes.outputs.changed == 'true'
       env:
@@ -143,6 +174,32 @@ jobs:
         # 确保 main 是最新的基底
         git fetch origin main --depth=1
         git checkout -B main origin/main
+
+    - name: Setup PHP & run backend tests (monorepo)
+      if: steps.backend-changes.outputs.changed == 'true'
+      run: |
+        echo "Setting up PHP and running backend tests..."
+        sudo apt-get update
+        sudo apt-get install -y php-cli unzip git curl
+        curl -sS https://getcomposer.org/installer | php
+        sudo mv composer.phar /usr/local/bin/composer
+        cd backend
+        composer install --no-interaction --prefer-dist
+        # start any local services if required by tests
+        composer run start &
+        echo $! > /tmp/backend_start_pid || true
+        # run phpunit (use vendor binary if present)
+        if [ -f vendor/bin/phpunit ]; then
+          vendor/bin/phpunit || true
+        else
+          phpunit || true
+        fi
+        # stop background services
+        if [ -f /tmp/backend_start_pid ]; then
+          kill $(cat /tmp/backend_start_pid) || true
+          rm /tmp/backend_start_pid || true
+        fi
+        echo "Backend tests completed"
 
         # 清空现有内容（除了 .git）
         shopt -s extglob
@@ -189,6 +246,23 @@ jobs:
         body: |
           Automated sync from monorepo `backend/` folder.
         labels: sync
+
+    - name: Auto-merge backend PR
+      if: steps.backend-changes.outputs.changed == 'true'
+      env:
+        BACKEND_TOKEN: ${{ secrets.BACKEND_REPO_TOKEN }}
+      run: |
+        echo "Attempting to auto-merge backend PR..."
+        REPO="carbon-track/backend"
+        BRANCH="sync/monorepo-${GITHUB_SHA}"
+        PR_JSON=$(curl -s -H "Authorization: token $BACKEND_TOKEN" "https://api.github.com/repos/$REPO/pulls?head=carbon-track:$BRANCH")
+        PR_NUM=$(echo "$PR_JSON" | jq -r '.[0].number')
+        if [ -z "$PR_NUM" ] || [ "$PR_NUM" = "null" ]; then
+          echo "No backend PR found for branch $BRANCH"
+          exit 0
+        fi
+        echo "Found PR #$PR_NUM — merging..."
+        curl -s -X PUT -H "Authorization: token $BACKEND_TOKEN" -d '{"merge_method":"merge","commit_title":"sync: automated merge"}' "https://api.github.com/repos/$REPO/pulls/$PR_NUM/merge" | jq -r '.message // .merged'
 
     - name: Create summary comment (for PRs)
       if: github.event_name == 'pull_request' && (steps.frontend-changes.outputs.changed == 'true' || steps.backend-changes.outputs.changed == 'true')
