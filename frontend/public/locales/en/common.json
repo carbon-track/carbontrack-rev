@@ -2367,6 +2367,14 @@
     "tooManyFiles": "Too many files selected (maximum {{max}})",
     "singleFileOnly": "Only single file uploads are supported"
   },
+  "notFoundPage": {
+    "code": "404",
+    "emoji": "🤔",
+    "message": "Sorry about that! Something went wrong.",
+    "submessage": "We’re making it right. Try refreshing or come back later.",
+    "refresh": "Refresh",
+    "home": "Go to Home"
+  },
   "success": {
     "login": "Login successful",
     "register": "Registration successful",
