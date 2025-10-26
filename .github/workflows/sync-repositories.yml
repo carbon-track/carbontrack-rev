@@ -159,6 +159,16 @@ jobs:
         fi
         echo "Found PR #$PR_NUM — marking ready for review..."
         curl -s -X POST -H "Authorization: token $FRONTEND_TOKEN" "https://api.github.com/repos/$REPO/pulls/$PR_NUM/ready_for_review" || true
+        
+        # Since target repo has no CI checks configured, merge now (safe because monorepo checks passed)
+        echo "Attempting to merge frontend PR #$PR_NUM"
+        MERGE_RESP=$(curl -s -X PUT -H "Authorization: token $FRONTEND_TOKEN" -d '{"merge_method":"merge","commit_title":"sync: automated merge"}' "https://api.github.com/repos/$REPO/pulls/$PR_NUM/merge")
+        MERGED=$(echo "$MERGE_RESP" | jq -r '.merged // false')
+        if [ "$MERGED" = "true" ]; then
+          echo "Frontend PR #$PR_NUM merged successfully"
+        else
+          echo "Frontend PR #$PR_NUM not merged: $(echo $MERGE_RESP | jq -r '.message // "unknown"')"
+        fi
 
     - name: Sync backend repository
       if: steps.backend-changes.outputs.changed == 'true'
@@ -263,6 +273,16 @@ jobs:
         fi
         echo "Found PR #$PR_NUM — marking ready for review..."
         curl -s -X POST -H "Authorization: token $BACKEND_TOKEN" "https://api.github.com/repos/$REPO/pulls/$PR_NUM/ready_for_review" || true
+        
+        # Target repo has no CI checks, perform merge now
+        echo "Attempting to merge backend PR #$PR_NUM"
+        MERGE_RESP=$(curl -s -X PUT -H "Authorization: token $BACKEND_TOKEN" -d '{"merge_method":"merge","commit_title":"sync: automated merge"}' "https://api.github.com/repos/$REPO/pulls/$PR_NUM/merge")
+        MERGED=$(echo "$MERGE_RESP" | jq -r '.merged // false')
+        if [ "$MERGED" = "true" ]; then
+          echo "Backend PR #$PR_NUM merged successfully"
+        else
+          echo "Backend PR #$PR_NUM not merged: $(echo $MERGE_RESP | jq -r '.message // "unknown"')"
+        fi
 
     - name: Create summary comment (for PRs)
       if: github.event_name == 'pull_request' && (steps.frontend-changes.outputs.changed == 'true' || steps.backend-changes.outputs.changed == 'true')
