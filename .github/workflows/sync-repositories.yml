@@ -24,6 +24,12 @@ jobs:
         git config --global user.name 'GitHub Actions Bot'
         git config --global user.email 'actions@github.com'
 
+    - name: Bootstrap target repos with CI workflows
+      run: |
+        echo "Ensuring target repos have CI workflow files from monorepo..."
+      # This step intentionally left as a placeholder; detailed steps follow per-repo below
+
+
     - name: Check for frontend changes
       id: frontend-changes
       run: |
@@ -137,6 +143,29 @@ jobs:
         cd ..
         rm -rf frontend-repo
 
+    - name: Bootstrap frontend CI to target repo
+      env:
+        FRONTEND_TOKEN: ${{ secrets.FRONTEND_REPO_TOKEN }}
+      run: |
+        echo "Bootstrapping frontend CI in target repo (if different)"
+        git clone https://x-access-token:${FRONTEND_TOKEN}@github.com/carbon-track/frontend.git frontend-repo-boot
+        cd frontend-repo-boot
+        git fetch origin main --depth=1
+        git checkout -B main origin/main
+        mkdir -p .github/workflows
+        cp -f ../frontend/.github/workflows/ci.yml .github/workflows/ci.yml || true
+        if git status --porcelain | grep -q .; then
+          git add .github/workflows/ci.yml
+          git commit -m "chore(ci): sync frontend CI from monorepo (${GITHUB_SHA::7})" || true
+          BRANCH="sync/bootstrap-ci-${GITHUB_SHA}"
+          git push origin HEAD:$BRANCH --force-with-lease
+        else
+          echo "Frontend CI up-to-date; no changes"
+        fi
+        cd ..
+        rm -rf frontend-repo-boot
+
+
     - name: Create PR for frontend
       if: steps.frontend-changes.outputs.changed == 'true'
       uses: peter-evans/create-pull-request@v5
@@ -150,6 +179,19 @@ jobs:
           Automated sync from monorepo `frontend/` folder.
         labels: sync
         draft: true
+
+    - name: Create bootstrap PR for frontend
+      if: always()
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.FRONTEND_REPO_TOKEN }}
+        commit-message: 'chore(ci): bootstrap frontend CI from monorepo (${GITHUB_SHA::7})'
+        branch: 'sync/bootstrap-ci-${{ github.sha }}'
+        base: main
+        title: 'chore(ci): bootstrap frontend CI from monorepo (${GITHUB_SHA::7})'
+        body: |
+          This PR bootstraps/updates the frontend CI workflow in the target repo from the monorepo.
+        labels: sync,bootstrap
 
     - name: Mark frontend PR ready for review
       if: steps.frontend-changes.outputs.changed == 'true'
@@ -259,6 +301,29 @@ jobs:
         cd ..
         rm -rf backend-repo
 
+    - name: Bootstrap backend CI to target repo
+      env:
+        BACKEND_TOKEN: ${{ secrets.BACKEND_REPO_TOKEN }}
+      run: |
+        echo "Bootstrapping backend CI in target repo (if different)"
+        git clone https://x-access-token:${BACKEND_TOKEN}@github.com/carbon-track/backend.git backend-repo-boot
+        cd backend-repo-boot
+        git fetch origin main --depth=1
+        git checkout -B main origin/main
+        mkdir -p .github/workflows
+        cp -f ../backend/.github/workflows/ci.yml .github/workflows/ci.yml || true
+        if git status --porcelain | grep -q .; then
+          git add .github/workflows/ci.yml
+          git commit -m "chore(ci): sync backend CI from monorepo (${GITHUB_SHA::7})" || true
+          BRANCH="sync/bootstrap-ci-${GITHUB_SHA}"
+          git push origin HEAD:$BRANCH --force-with-lease
+        else
+          echo "Backend CI up-to-date; no changes"
+        fi
+        cd ..
+        rm -rf backend-repo-boot
+
+
     - name: Create PR for backend
       if: steps.backend-changes.outputs.changed == 'true'
       uses: peter-evans/create-pull-request@v5
@@ -272,6 +337,19 @@ jobs:
           Automated sync from monorepo `backend/` folder.
         labels: sync
         draft: true
+
+    - name: Create bootstrap PR for backend
+      if: always()
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.BACKEND_REPO_TOKEN }}
+        commit-message: 'chore(ci): bootstrap backend CI from monorepo (${GITHUB_SHA::7})'
+        branch: 'sync/bootstrap-ci-${{ github.sha }}'
+        base: main
+        title: 'chore(ci): bootstrap backend CI from monorepo (${GITHUB_SHA::7})'
+        body: |
+          This PR bootstraps/updates the backend CI workflow in the target repo from the monorepo.
+        labels: sync,bootstrap
 
     - name: Mark backend PR ready for review
       if: steps.backend-changes.outputs.changed == 'true'
