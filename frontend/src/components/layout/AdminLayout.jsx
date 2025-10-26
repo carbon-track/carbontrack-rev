@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../hooks/useTranslation';
-import { QueryClientProvider, useQuery, useMutation } from 'react-query';
+import { QueryClientProvider } from 'react-query';
 import { queryClient } from '../../lib/react-query';
 import { Navbar } from './Navbar';
 import {
@@ -18,7 +18,6 @@ import {
 } from '../ui/sidebar';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/badge';
-import { Separator } from '../ui/separator';
 import {
   CommandDialog,
   CommandInput,
@@ -46,8 +45,6 @@ import {
 } from 'lucide-react';
 import api, { adminAPI } from '../../lib/api';
 import { toast } from 'react-hot-toast';
-import { Skeleton } from '../ui/skeleton';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const COMMAND_MIN_LENGTH = 2;
 const MAX_SESSIONS = 8;
@@ -72,11 +69,9 @@ export default function AdminLayout() {
 
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
-  const [debouncedCommandQuery, setDebouncedCommandQuery] = useState('');
   const [isExecutingAiAction, setIsExecutingAiAction] = useState(false);
   const [aiSessions, setAiSessions] = useState([]);
   const [isAiRequesting, setIsAiRequesting] = useState(false);
-  const lastAiSignatureRef = useRef('');
 
   const translatedLinks = useMemo(() => {
     const fallbackLabels = {
@@ -169,15 +164,112 @@ export default function AdminLayout() {
     locale: userLocale,
   }), [location.pathname, userLocale]);
 
-  useEffect(() => {
-    if (!commandOpen) {
-      setAiSessions([]);
+  const sanitizedCommand = commandQuery.trim();
+  const showAiSection = aiSessions.length > 0 || isAiRequesting || sanitizedCommand.length > 0;
+  const canSendAiCommand = sanitizedCommand.length >= COMMAND_MIN_LENGTH && !isAiRequesting;
+
+  const buildRouteWithQuery = useCallback((route, query = {}) => {
+    if (!route) {
+      return null;
     }
-  }, [commandOpen]);
+    const entries = Object.entries(query || {}).filter(
+      ([, value]) => value !== undefined && value !== null && value !== ''
+    );
+    if (entries.length === 0) {
+      return route;
+    }
+    const params = new URLSearchParams();
+    for (const [key, value] of entries) {
+      params.set(key, String(value));
+    }
+    return `${route}?${params.toString()}`;
+  }, []);
 
-  const showAiSection = aiSessions.length > 0 || isAiRequesting;
-  const canSendAiCommand = commandQuery.trim().length >= COMMAND_MIN_LENGTH && !isAiRequesting;
+  const handleNavigationIntent = useCallback(
+    (intent) => {
+      const targetRoute = intent?.target?.route;
+      if (!targetRoute) {
+        toast.error(t('admin.command.aiMissingRoute', '未找到目标跳转页面'));
+        return;
+      }
+      const fullRoute = buildRouteWithQuery(targetRoute, intent?.target?.query || {});
+      setCommandOpen(false);
+      setCommandQuery('');
+      navigate(fullRoute || targetRoute);
+    },
+    [buildRouteWithQuery, navigate, setCommandOpen, setCommandQuery, t]
+  );
 
+  const executeIntentAction = useCallback(
+    async (intent) => {
+      const missing = Array.isArray(intent.missing) ? intent.missing : [];
+      if (missing.length > 0) {
+        toast.error(missing[0]?.description || t('admin.command.aiMissingInfo', '请补全所需信息后再试'));
+        return;
+      }
+
+      const apiConfig = intent.action?.api || {};
+      let path = apiConfig.path || '';
+      if (!path) {
+        toast.error(t('admin.command.aiMissingPath', '缺少要执行的接口路径'));
+        return;
+      }
+      const method = (apiConfig.method || 'post').toLowerCase();
+      if (path.startsWith('/api/v1')) {
+        path = path.replace('/api/v1', '') || '/';
+      }
+
+      const payload = apiConfig.payload || {};
+      const requestConfig = {
+        method,
+        url: path,
+      };
+      if (method === 'get' || method === 'delete') {
+        requestConfig.params = payload;
+      } else {
+        requestConfig.data = payload;
+      }
+
+      try {
+        setIsExecutingAiAction(true);
+        await api.request(requestConfig);
+        toast.success(t('admin.command.aiActionSuccess', 'Command executed'));
+        setCommandQuery('');
+        setCommandOpen(false);
+      } catch (error) {
+        const requestId = error?.response?.data?.request_id;
+        let message = t('admin.command.aiActionFailed', 'Command failed');
+        if (requestId) {
+          message += ` (ReqID: ${requestId})`;
+        }
+        toast.error(message);
+      } finally {
+        setIsExecutingAiAction(false);
+      }
+    },
+    [setCommandOpen, t]
+  );
+
+  const handleAiIntentSelect = useCallback(
+    async (intent) => {
+      if (!intent || isExecutingAiAction) {
+        return;
+      }
+
+      if (intent.type === 'navigate' || intent.type === 'quick_action') {
+        handleNavigationIntent(intent);
+        return;
+      }
+
+      if (intent.type === 'action' && intent.action) {
+        await executeIntentAction(intent);
+        return;
+      }
+
+      toast(t('admin.command.aiNoMatch', '暂时无法理解该指令'), { icon: '🤖' });
+    },
+    [executeIntentAction, handleNavigationIntent, isExecutingAiAction, t]
+  );
   const sendAiCommand = useCallback(async () => {
     const trimmed = commandQuery.trim();
     if (trimmed.length < COMMAND_MIN_LENGTH || isAiRequesting) {
@@ -211,14 +303,17 @@ export default function AdminLayout() {
         context: aiContext,
         mode: 'suggest',
       });
-      const data = response.data;
+      const data = response.data ?? {};
+      const resolvedIntent = data.intent ?? null;
+      const alternatives = Array.isArray(data.alternatives) ? data.alternatives : [];
+
       setAiSessions((prev) =>
         prev.map((session) =>
           session.id === sessionId
             ? {
                 ...session,
-                intent: data.intent ?? null,
-                alternatives: Array.isArray(data.alternatives) ? data.alternatives : [],
+                intent: resolvedIntent,
+                alternatives,
                 metadata: data.metadata ?? null,
                 capabilities: data.capabilities ?? null,
                 status: 'resolved',
@@ -227,6 +322,17 @@ export default function AdminLayout() {
             : session
         )
       );
+
+      const hasMissing =
+        Array.isArray(resolvedIntent?.missing) && resolvedIntent.missing.length > 0;
+      if (
+        resolvedIntent &&
+        !hasMissing &&
+        (resolvedIntent.type === 'navigate' || resolvedIntent.type === 'quick_action') &&
+        alternatives.length === 0
+      ) {
+        await handleAiIntentSelect(resolvedIntent);
+      }
     } catch (err) {
       const apiError = err?.response?.data;
       const message =
@@ -248,7 +354,7 @@ export default function AdminLayout() {
       setIsAiRequesting(false);
       setCommandQuery('');
     }
-  }, [aiContext, commandQuery, isAiRequesting, t]);
+  }, [aiContext, commandQuery, handleAiIntentSelect, isAiRequesting, t]);
 
   const handleCommandKeyDown = useCallback(
     (event) => {
@@ -264,98 +370,6 @@ export default function AdminLayout() {
   const sendButtonLabel = isAiRequesting
     ? t('admin.command.aiSending', 'AI 正在解析…')
     : t('admin.command.send', '发送指令');
-
-  const buildRouteWithQuery = useCallback((route, query = {}) => {
-    if (!route) {
-      return null;
-    }
-    const entries = Object.entries(query || {}).filter(([, value]) => value !== undefined && value !== null && value !== '');
-    if (entries.length === 0) {
-      return route;
-    }
-    const params = new URLSearchParams();
-    for (const [key, value] of entries) {
-      params.set(key, String(value));
-    }
-    return `${route}?${params.toString()}`;
-  }, []);
-
-  const handleNavigationIntent = useCallback((intent) => {
-    const targetRoute = intent?.target?.route;
-    if (!targetRoute) {
-      toast.error(t('admin.command.aiMissingRoute', '未找到目标跳转页面'));
-      return;
-    }
-    const fullRoute = buildRouteWithQuery(targetRoute, intent?.target?.query || {});
-    setCommandOpen(false);
-    setCommandQuery('');
-    navigate(fullRoute || targetRoute);
-  }, [buildRouteWithQuery, navigate, setCommandOpen, setCommandQuery, t]);
-
-  const executeIntentAction = useCallback(async (intent) => {
-    const missing = Array.isArray(intent.missing) ? intent.missing : [];
-    if (missing.length > 0) {
-      toast.error(missing[0]?.description || t('admin.command.aiMissingInfo', '请补充必要信息后再试'));
-      return;
-    }
-
-    const apiConfig = intent.action?.api || {};
-    let path = apiConfig.path || '';
-    if (!path) {
-      toast.error(t('admin.command.aiMissingPath', '缺少要执行的接口地址'));
-      return;
-    }
-    const method = (apiConfig.method || 'post').toLowerCase();
-    if (path.startsWith('/api/v1')) {
-      path = path.replace('/api/v1', '') || '/';
-    }
-
-    const payload = apiConfig.payload || {};
-    const requestConfig = {
-      method,
-      url: path,
-    };
-    if (method === 'get' || method === 'delete') {
-      requestConfig.params = payload;
-    } else {
-      requestConfig.data = payload;
-    }
-
-    try {
-      setIsExecutingAiAction(true);
-      await api.request(requestConfig);
-      toast.success(t('admin.command.aiActionSuccess', '指令已执行'));
-      setCommandQuery('');
-      setCommandOpen(false);
-    } catch (error) {
-      const requestId = error?.response?.data?.request_id;
-      let message = t('admin.command.aiActionFailed', '指令执行失败');
-      if (requestId) {
-        message += ` (ReqID: ${requestId})`;
-      }
-      toast.error(message);
-    } finally {
-      setIsExecutingAiAction(false);
-    }
-  }, [setCommandOpen, setCommandQuery, setIsExecutingAiAction, t]);
-
-  const handleAiIntentSelect = useCallback(async (intent) => {
-    if (!intent || isExecutingAiAction) {
-      return;
-    }
-
-    if (intent.type === 'navigate' || intent.type === 'quick_action') {
-      handleNavigationIntent(intent);
-      return;
-    }
-
-    if (intent.type === 'action' && intent.action) {
-      await executeIntentAction(intent);
-      return;
-    }
-
-    toast(t('admin.command.aiNoMatch', '暂时无法理解该指令'), { icon: '🤖' });
-  }, [executeIntentAction, handleNavigationIntent, isExecutingAiAction, t]);
 
   useEffect(() => {
     const target = typeof globalThis !== 'undefined' ? globalThis : undefined;
