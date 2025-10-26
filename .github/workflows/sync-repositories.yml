@@ -109,39 +109,26 @@ jobs:
         git add -A
         git commit -m "sync: update from monorepo (${GITHUB_SHA::7})" || true
 
-        # 推送带重试（优先正常 push，失败时尝试安全强制推送）
-        MAX_ATTEMPTS=5
-        attempt=0
-        while [ $attempt -lt $MAX_ATTEMPTS ]; do
-          echo "Attempt $((attempt+1)) to push..."
-          if git push origin main; then
-            echo "Frontend repository updated successfully"
-            break
-          fi
-
-          echo "Push failed; fetching latest origin/main and reapplying changes..."
-          attempt=$((attempt+1))
-          git fetch origin main
-          git reset --soft origin/main
-          git commit -m "sync: update from monorepo (${GITHUB_SHA::7})" || true
-
-          if git push --force-with-lease origin main; then
-            echo "Pushed successfully with force-with-lease"
-            break
-          fi
-
-          sleep $((attempt * 2))
-        done
-
-        if [ $attempt -ge $MAX_ATTEMPTS ]; then
-          echo "Failed to push to frontend repository after ${MAX_ATTEMPTS} attempts"
-          cd ..
-          rm -rf frontend-repo
-          exit 1
-        fi
+        # 推送到临时分支并由 PR 合并（避免直接改写 main）
+        BRANCH="sync/monorepo-${GITHUB_SHA}"
+        git push origin HEAD:$BRANCH --force-with-lease
+        echo "Pushed frontend changes to branch $BRANCH"
 
         cd ..
         rm -rf frontend-repo
+
+    - name: Create PR for frontend
+      if: steps.frontend-changes.outputs.changed == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.FRONTEND_REPO_TOKEN }}
+        commit-message: 'sync: update from monorepo (${GITHUB_SHA::7})'
+        branch: 'sync/monorepo-${{ github.sha }}'
+        base: main
+        title: 'sync: update from monorepo (${GITHUB_SHA::7})'
+        body: |
+          Automated sync from monorepo `frontend/` folder.
+        labels: sync
 
     - name: Sync backend repository
       if: steps.backend-changes.outputs.changed == 'true'
@@ -182,39 +169,26 @@ jobs:
         git add -A
         git commit -m "sync: update from monorepo (${GITHUB_SHA::7})" || true
 
-        # 推送带重试（优先正常 push，失败时尝试安全强制推送）
-        MAX_ATTEMPTS=5
-        attempt=0
-        while [ $attempt -lt $MAX_ATTEMPTS ]; do
-          echo "Attempt $((attempt+1)) to push..."
-          if git push origin main; then
-            echo "Backend repository updated successfully"
-            break
-          fi
-
-          echo "Push failed; fetching latest origin/main and reapplying changes..."
-          attempt=$((attempt+1))
-          git fetch origin main
-          git reset --soft origin/main
-          git commit -m "sync: update from monorepo (${GITHUB_SHA::7})" || true
-
-          if git push --force-with-lease origin main; then
-            echo "Pushed successfully with force-with-lease"
-            break
-          fi
-
-          sleep $((attempt * 2))
-        done
-
-        if [ $attempt -ge $MAX_ATTEMPTS ]; then
-          echo "Failed to push to backend repository after ${MAX_ATTEMPTS} attempts"
-          cd ..
-          rm -rf backend-repo
-          exit 1
-        fi
+        # 推送到临时分支并由 PR 合并（避免直接改写 main）
+        BRANCH="sync/monorepo-${GITHUB_SHA}"
+        git push origin HEAD:$BRANCH --force-with-lease
+        echo "Pushed backend changes to branch $BRANCH"
 
         cd ..
         rm -rf backend-repo
+
+    - name: Create PR for backend
+      if: steps.backend-changes.outputs.changed == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.BACKEND_REPO_TOKEN }}
+        commit-message: 'sync: update from monorepo (${GITHUB_SHA::7})'
+        branch: 'sync/monorepo-${{ github.sha }}'
+        base: main
+        title: 'sync: update from monorepo (${GITHUB_SHA::7})'
+        body: |
+          Automated sync from monorepo `backend/` folder.
+        labels: sync
 
     - name: Create summary comment (for PRs)
       if: github.event_name == 'pull_request' && (steps.frontend-changes.outputs.changed == 'true' || steps.backend-changes.outputs.changed == 'true')
