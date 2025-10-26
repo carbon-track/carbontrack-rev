@@ -36,6 +36,7 @@ export function ActivityReview() {
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [decisionDialog, setDecisionDialog] = useState({ open: false, mode: null, activity: null, bulkIds: [], reason: '', error: '' });
+  const [confirmSuccess, setConfirmSuccess] = useState(false);
   // 自动刷新控制
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshIntervalMs, setRefreshIntervalMs] = useState(15000); // 15s 默认
@@ -124,10 +125,16 @@ export function ActivityReview() {
     ({ id, status, admin_notes }) => adminAPI.reviewActivity(id, { status, admin_notes }),
     {
       onSuccess: () => {
-        queryClient.invalidateQueries('adminActivities');
-        queryClient.invalidateQueries('activities'); // Invalidate user's activities as well
-        toast.success(t('admin.activities.reviewSuccess'));
-        setSelectedActivity(null);
+        // show a short success animation on confirm button, then close dialog and refresh
+        setConfirmSuccess(true);
+        setTimeout(() => {
+          setConfirmSuccess(false);
+          queryClient.invalidateQueries('adminActivities');
+          queryClient.invalidateQueries('activities'); // Invalidate user's activities as well
+          toast.success(t('admin.activities.reviewSuccess'));
+          setSelectedActivity(null);
+          closeDecisionDialog();
+        }, 600);
       },
       onError: (err) => {
         toast.error(t('admin.activities.reviewFailed'));
@@ -140,11 +147,17 @@ export function ActivityReview() {
     ({ action, review_note, record_ids }) => adminAPI.reviewActivitiesBulk({ action, review_note, record_ids }),
     {
       onSuccess: () => {
-        queryClient.invalidateQueries('adminActivities');
-        queryClient.invalidateQueries('activities');
-        toast.success(t('admin.activities.reviewSuccess'));
-        setSelectedActivity(null);
-        setSelectedIds([]);
+        // show success animation then refresh and clear selection
+        setConfirmSuccess(true);
+        setTimeout(() => {
+          setConfirmSuccess(false);
+          queryClient.invalidateQueries('adminActivities');
+          queryClient.invalidateQueries('activities');
+          toast.success(t('admin.activities.reviewSuccess'));
+          setSelectedActivity(null);
+          setSelectedIds([]);
+          closeDecisionDialog();
+        }, 600);
       },
       onError: (err) => {
         toast.error(t('admin.activities.reviewFailed'));
@@ -236,7 +249,7 @@ export function ActivityReview() {
 
       const trimmedReason = decisionDialog.reason.trim();
       if (!trimmedReason) {
-        setDecisionDialog((prev) => ({ ...prev, error: t('admin.activities.rejectReasonRequired', '����д�ܾ�ԭ��') }));
+        setDecisionDialog((prev) => ({ ...prev, error: t('admin.activities.rejectReasonRequired', '请填写拒绝原因') }));
         return;
       }
 
@@ -263,7 +276,7 @@ export function ActivityReview() {
 
     const trimmedReason = decisionDialog.reason.trim();
     if (!trimmedReason) {
-      setDecisionDialog((prev) => ({ ...prev, error: t('admin.activities.rejectReasonRequired', '����д�ܾ�ԭ��') }));
+      setDecisionDialog((prev) => ({ ...prev, error: t('admin.activities.rejectReasonRequired', '请填写拒绝原因') }));
       return;
     }
 
@@ -272,6 +285,9 @@ export function ActivityReview() {
       { onSettled: closeDecisionDialog }
     );
   };
+
+  // Combined loading state for single + bulk review mutations
+  const isReviewSubmitting = reviewActivityMutation.isLoading || reviewActivitiesBulkMutation.isLoading;
 
   return (
     <div className="space-y-6">
@@ -391,11 +407,12 @@ export function ActivityReview() {
               size="sm"
               onClick={openBulkApproveDialog}
               disabled={selectedPendingIds.length === 0 || reviewActivitiesBulkMutation.isLoading}
+              className="group inline-flex items-center transition-transform duration-150 hover:scale-105"
             >
               {reviewActivitiesBulkMutation.isLoading && decisionDialog.bulkIds && decisionDialog.bulkIds.length > 0 && decisionDialog.mode === 'approve' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <CheckCircle className="mr-2 h-4 w-4" />
+                <CheckCircle className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
               )}
               {t('admin.activities.bulkApprove', '批量通过')}
             </Button>
@@ -569,18 +586,26 @@ export function ActivityReview() {
             <Button
               variant={decisionDialog.mode === 'reject' ? 'destructive' : 'default'}
               onClick={handleDecisionConfirm}
-              disabled={reviewActivityMutation.isLoading}
+              disabled={isReviewSubmitting}
+              className="group inline-flex items-center transition-transform duration-150 hover:scale-105"
             >
-              {reviewActivityMutation.isLoading ? (
+              {confirmSuccess ? (
+                <span className="inline-flex items-center bg-green-600 text-white px-3 py-1 rounded-md animate-pulse">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {t('admin.activities.dialog.approveAction', '通过审核')}
+                </span>
+              ) : isReviewSubmitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : decisionDialog.mode === 'approve' ? (
-                <CheckCircle className="mr-2 h-4 w-4" />
+                <CheckCircle className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
               ) : (
                 <XCircle className="mr-2 h-4 w-4" />
               )}
-              {decisionDialog.mode === 'approve'
-                ? t('admin.activities.dialog.approveAction', '通过审核')
-                : t('admin.activities.dialog.rejectAction', '拒绝活动')}
+              {!confirmSuccess && (
+                decisionDialog.mode === 'approve'
+                  ? t('admin.activities.dialog.approveAction', '通过审核')
+                  : t('admin.activities.dialog.rejectAction', '拒绝活动')
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

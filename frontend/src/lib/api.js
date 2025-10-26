@@ -7,7 +7,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/
 // 创建axios实例
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+    // Extend timeout to 30s to avoid frontend XHR being canceled for long-running admin ops
+    timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -210,9 +211,9 @@ export const messageAPI = {
 };
 
 export const schoolAPI = {
-  // ��ȡѧУ�б�
+  // 获取学校列表
   getSchools: (params = {}) => api.get('/schools', { params }),
-  // �������ѧУ(��������ڲ���)
+  // 创建或获取学校（存在则返回，不存在则创建）
   createOrFetchSchool: (data) => api.post('/schools', data),
 };
 
