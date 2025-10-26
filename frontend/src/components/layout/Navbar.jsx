@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import clsx from 'clsx';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Menu,
@@ -10,6 +11,7 @@ import {
   Settings,
   LogOut,
   Bell,
+  MessageSquare,
   Info
 } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -19,6 +21,8 @@ import LanguageSwitcher from '../LanguageSwitcher';
 import { Button } from '../ui/Button';
 import R2Image from '../common/R2Image';
 
+const NAV_SECTION_ORDER = ['overview', 'insights', 'marketplace'];
+
 export function Navbar() {
   const { t } = useTranslation();
   const location = useLocation();
@@ -27,6 +31,15 @@ export function Navbar() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { count: unreadCount, isLoading: unreadLoading } = useUnreadMessagesCount();
   const navigate = useNavigate();
+  const getIsPortrait = () => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return true;
+    }
+    return window.matchMedia('(orientation: portrait)').matches;
+  };
+  const [isPortrait, setIsPortrait] = useState(getIsPortrait);
+  const [renderMobileNav, setRenderMobileNav] = useState(false);
+  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
 
   useEffect(() => {
     const { isAuthenticated: authStatus, user: currentUser } = checkAuthStatus();
@@ -53,6 +66,62 @@ export function Navbar() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return;
+    }
+    const mediaQuery = window.matchMedia('(orientation: portrait)');
+    const handleOrientationChange = (event) => {
+      setIsPortrait(event.matches);
+    };
+    setIsPortrait(mediaQuery.matches);
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleOrientationChange);
+      return () => mediaQuery.removeEventListener('change', handleOrientationChange);
+    }
+
+    mediaQuery.addListener(handleOrientationChange);
+    return () => mediaQuery.removeListener(handleOrientationChange);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setRenderMobileNav(true);
+      setIsAnimatingOut(false);
+      return;
+    }
+    if (!renderMobileNav) {
+      return;
+    }
+
+    setIsAnimatingOut(true);
+    const timeout = setTimeout(() => {
+      setRenderMobileNav(false);
+      setIsAnimatingOut(false);
+    }, 220);
+
+    return () => clearTimeout(timeout);
+  }, [isOpen, renderMobileNav]);
+
+  useEffect(() => {
+    if (!isPortrait || !renderMobileNav || typeof document === 'undefined') {
+      return;
+    }
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isPortrait, renderMobileNav]);
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location.pathname]);
+
+  const mobilePanelId = 'navbar-mobile-panel';
+
   const handleLogout = async () => {
     try {
       await authAPI.logout();
@@ -67,7 +136,7 @@ export function Navbar() {
   };
 
   const toggleMobile = () => {
-    setIsOpen(!isOpen);
+    setIsOpen((prev) => !prev);
   };
 
   const closeMobile = () => {
@@ -83,31 +152,41 @@ export function Navbar() {
       path: '/',
       label: t('nav.home'),
       icon: Home,
-      public: true
+      public: true,
+      section: 'overview',
+      hint: t('nav.hints.home', { defaultValue: 'Return to the overview and hero content' })
     },
     {
       path: '/about-us',
       label: t('nav.about'),
       icon: Info,
-      public: true
+      public: true,
+      section: 'overview',
+      hint: t('nav.hints.about', { defaultValue: 'Learn more about our purpose and team' })
     },
     {
       path: '/calculate',
       label: t('nav.calculate'),
       icon: Calculator,
-      auth: true
+      auth: true,
+      section: 'insights',
+      hint: t('nav.hints.calculate', { defaultValue: 'Estimate your carbon emissions in minutes' })
     },
     {
       path: '/dashboard',
       label: t('nav.dashboard'),
       icon: BarChart3,
-      auth: true
+      auth: true,
+      section: 'insights',
+      hint: t('nav.hints.dashboard', { defaultValue: 'Monitor historic trends and live targets' })
     },
     {
       path: '/store',
       label: t('nav.products'),
       icon: ShoppingBag,
-      auth: true
+      auth: true,
+      section: 'marketplace',
+      hint: t('nav.hints.products', { defaultValue: 'Redeem climate rewards and eco products' })
     }
   ];
 
@@ -117,11 +196,86 @@ export function Navbar() {
     return true;
   });
 
+  const navSectionsMeta = useMemo(() => ({
+    overview: {
+      title: t('nav.sections.overview', { defaultValue: 'Overview' }),
+      description: t('nav.sections.overviewDesc', { defaultValue: 'Get to know the platform quickly' })
+    },
+    insights: {
+      title: t('nav.sections.insights', { defaultValue: 'Tracking' }),
+      description: t('nav.sections.insightsDesc', { defaultValue: 'Manage calculations and dashboards' })
+    },
+    marketplace: {
+      title: t('nav.sections.marketplace', { defaultValue: 'Marketplace' }),
+      description: t('nav.sections.marketplaceDesc', { defaultValue: 'Redeem credits and eco products' })
+    }
+  }), [t]);
+
+  const mobileNavSections = useMemo(() => {
+    return NAV_SECTION_ORDER
+      .map((key) => {
+        const items = filteredNavItems.filter(
+          (item) => (item.section || 'overview') === key
+        );
+
+        if (!items.length) {
+          return null;
+        }
+
+        const sectionMeta = navSectionsMeta[key] || {};
+        return {
+          key,
+          ...sectionMeta,
+          items
+        };
+      })
+      .filter(Boolean);
+  }, [filteredNavItems, navSectionsMeta]);
+
   const userInitial = useMemo(() => {
     if (!user?.username) return 'C';
     const trimmed = String(user.username).trim();
     return trimmed ? trimmed.charAt(0).toUpperCase() : 'C';
   }, [user?.username]);
+
+  const accountActions = useMemo(() => {
+    if (!isAuthenticated) {
+      return [];
+    }
+
+    const actions = [
+      {
+        key: 'messages',
+        label: t('nav.messages'),
+        to: '/messages',
+        icon: MessageSquare,
+        badge: !unreadLoading && unreadCount > 0 ? unreadCount : null
+      },
+      {
+        key: 'profile',
+        label: t('nav.profile'),
+        to: '/profile',
+        icon: Settings
+      },
+      {
+        key: 'notifications',
+        label: t('nav.notifications'),
+        to: '/settings/notifications',
+        icon: Bell
+      }
+    ];
+
+    if (user?.is_admin) {
+      actions.push({
+        key: 'admin',
+        label: t('nav.admin'),
+        to: '/admin',
+        icon: Settings
+      });
+    }
+
+    return actions;
+  }, [isAuthenticated, t, unreadCount, unreadLoading, user?.is_admin]);
 
   const renderUserAvatar = (sizeClass = 'h-8 w-8') => {
     const fallback = (
@@ -271,7 +425,17 @@ export function Navbar() {
 
           {/* Mobile menu button */}
           <div className="md:hidden">
-            <Button variant="ghost" onClick={toggleMobile}>
+            <Button
+              variant="ghost"
+              onClick={toggleMobile}
+              aria-expanded={isOpen}
+              aria-controls={mobilePanelId}
+              aria-label={
+                isOpen
+                  ? t('nav.closeMenu', { defaultValue: 'Close menu' })
+                  : t('nav.openMenu', { defaultValue: 'Open menu' })
+              }
+            >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
@@ -279,114 +443,200 @@ export function Navbar() {
       </div>
 
       {/* Mobile Navigation */}
-      {isOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            {filteredNavItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={closeMobile}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium transition-colors relative ${
-                    isActivePath(item.path)
-                      ? 'text-green-600 bg-green-50'
-                      : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                  {item.badge && item.badge > 0 && (
-                    <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {item.badge > 99 ? '99+' : item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-          
-          {/* Mobile User Section */}
-          <div className="pt-4 pb-3 border-t border-gray-200">
-            <div className="px-3 space-y-3">
-              <LanguageSwitcher />
-              
-              {isAuthenticated ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 px-3 py-2">
-                    {renderUserAvatar('h-10 w-10')}
-                    <span className="text-base font-medium text-gray-900">
-                      {user?.username}
-                    </span>
-                  </div>
-                  
-                  <Link
-                    to="/messages"
-                    onClick={closeMobile}
-                    className="flex items-center gap-3 px-3 py-2 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md relative"
-                  >
-                    <Bell className="h-5 w-5" />
-                    {t('nav.messages')}
-                    {!unreadLoading && unreadCount > 0 && (
-                      <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                  
-                  <Link
-                    to="/profile"
-                    onClick={closeMobile}
-                    className="flex items-center gap-3 px-3 py-2 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md"
-                  >
-                    <Settings className="h-5 w-5" />
-                    {t('nav.profile')}
-                  </Link>
+      {isPortrait && renderMobileNav && (
+        <button
+          type="button"
+          onClick={closeMobile}
+          aria-label={t('nav.closeMenu', { defaultValue: 'Close menu' })}
+          className={clsx(
+            'fixed inset-x-0 top-16 bottom-0 z-[55] bg-black/30 transition-opacity duration-200 ease-out md:hidden',
+            isAnimatingOut ? 'opacity-0' : 'opacity-100'
+          )}
+        />
+      )}
+      {renderMobileNav && (
+        <div
+          id={mobilePanelId}
+          role={isPortrait ? 'dialog' : 'region'}
+          aria-modal={isPortrait ? 'true' : undefined}
+          className={clsx(
+            'md:hidden bg-white border-t border-gray-200',
+            isPortrait
+              ? 'fixed inset-x-3 top-20 bottom-4 z-[60] rounded-2xl border border-gray-100 shadow-2xl backdrop-blur'
+              : 'z-10 rounded-b-2xl border border-gray-100 shadow-lg',
+            isAnimatingOut ? 'animate-mobile-nav-out' : 'animate-mobile-nav-in'
+          )}
+        >
+          <div
+            className={clsx(
+              'space-y-5',
+              isPortrait ? 'h-full overflow-y-auto px-4 pt-5 pb-8' : 'px-3 pt-4 pb-6'
+            )}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  {t('nav.menuTitle', { defaultValue: 'Navigate CarbonTrack' })}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {t('nav.menuSubtitle', { defaultValue: 'Jump between key areas effortlessly' })}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={closeMobile}
+                aria-label={t('nav.closeMenu', { defaultValue: 'Close menu' })}
+                className="h-9 w-9 rounded-full border border-gray-200"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
 
-                  <Link
-                    to="/settings/notifications"
-                    onClick={closeMobile}
-                    className="flex items-center gap-3 px-3 py-2 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md"
-                  >
-                    <Bell className="h-5 w-5" />
-                    {t('nav.notifications')}
-                  </Link>
-                  
-                  {user?.is_admin && (
-                    <Link
-                      to="/admin"
-                      onClick={closeMobile}
-                      className="flex items-center gap-3 px-3 py-2 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md"
-                    >
-                      <Settings className="h-5 w-5" />
-                      {t('nav.admin')}
-                    </Link>
+            {mobileNavSections.map((section) => (
+              <div
+                key={section.key}
+                className="rounded-2xl border border-gray-100 bg-white/95 p-4 shadow-sm"
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-green-600">
+                    {section.title}
+                  </p>
+                  {section.description && (
+                    <p className="mt-1 text-sm text-gray-500">{section.description}</p>
                   )}
-                  
+                </div>
+                <div
+                  className={clsx(
+                    'mt-4 gap-3',
+                    isPortrait ? 'grid grid-cols-1 min-[420px]:grid-cols-2' : 'flex flex-col'
+                  )}
+                >
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = isActivePath(item.path);
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={closeMobile}
+                        className={clsx(
+                          'flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/40',
+                          isActive
+                            ? 'border-green-200 bg-green-50/80 text-green-700 shadow-sm'
+                            : 'border-gray-100 text-gray-700 hover:border-green-200 hover:bg-gray-50/80 hover:text-green-700'
+                        )}
+                      >
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-green-50 text-green-600">
+                          <Icon className="h-5 w-5" />
+                        </span>
+                        <div className="flex-1">
+                          <span className="text-sm font-semibold">{item.label}</span>
+                          {item.hint && (
+                            <p className="mt-0.5 text-xs text-gray-500">{item.hint}</p>
+                          )}
+                        </div>
+                        {item.badge && item.badge > 0 && (
+                          <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white">
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-gray-100 bg-white/95 p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-green-600">
+                      {t('nav.languageSection', { defaultValue: 'Language' })}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {t('nav.languageDescription', { defaultValue: 'Switch the interface language' })}
+                    </p>
+                  </div>
+                  <LanguageSwitcher variant="ghost" size="sm" showText={false} />
+                </div>
+              </div>
+
+              {isAuthenticated ? (
+                <div className="rounded-2xl border border-gray-100 bg-gradient-to-br from-green-50/70 to-white p-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    {renderUserAvatar('h-12 w-12')}
+                    <div>
+                      <p className="text-base font-semibold text-gray-900">
+                        {user?.username}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {t('nav.accountSignedIn', { defaultValue: 'Signed in account' })}
+                      </p>
+                    </div>
+                  </div>
+
+                    {accountActions.length > 0 && (
+                      <div
+                        className={clsx(
+                          'mt-4 gap-3',
+                          isPortrait ? 'grid grid-cols-2' : 'flex flex-col'
+                        )}
+                      >
+                        {accountActions.map((action) => {
+                          const ActionIcon = action.icon;
+                          return (
+                            <Link
+                              key={action.key}
+                              to={action.to}
+                              onClick={closeMobile}
+                              className="flex items-center gap-2 rounded-xl border border-white/60 bg-white/80 px-3 py-3 text-sm font-medium text-gray-700 transition hover:-translate-y-0.5 hover:border-green-200 hover:text-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/40"
+                            >
+                              <ActionIcon className="h-4 w-4" />
+                              <span>{action.label}</span>
+                              {typeof action.badge === 'number' && action.badge > 0 && (
+                                <span className="ml-auto rounded-full bg-red-500 px-2 text-xs font-semibold text-white">
+                                  {action.badge > 99 ? '99+' : action.badge}
+                                </span>
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+
                   <button
                     onClick={() => {
                       handleLogout();
                       closeMobile();
                     }}
-                    className="flex items-center gap-3 w-full px-3 py-2 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md"
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-transparent bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/60"
                   >
-                    <LogOut className="h-5 w-5" />
+                    <LogOut className="h-4 w-4" />
                     {t('nav.logout')}
                   </button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <Link to="/auth/login" onClick={closeMobile}>
-                    <Button variant="ghost" className="w-full justify-start">
-                      {t('nav.login')}
-                    </Button>
-                  </Link>
-                  <Link to="/auth/register" onClick={closeMobile}>
-                    <Button className="w-full">
-                      {t('nav.register')}
-                    </Button>
-                  </Link>
+                <div className="rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-4 shadow-sm">
+                  <p className="text-base font-semibold text-gray-900">
+                    {t('nav.getStarted', { defaultValue: 'Get started with CarbonTrack' })}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-600">
+                    {t('nav.accountDescription', { defaultValue: 'Create an account to save progress across devices.' })}
+                  </p>
+                  <div className="mt-4 space-y-2">
+                    <Link to="/auth/login" onClick={closeMobile}>
+                      <Button variant="outline" className="w-full justify-center">
+                        {t('nav.login')}
+                      </Button>
+                    </Link>
+                    <Link to="/auth/register" onClick={closeMobile}>
+                      <Button className="w-full">
+                        {t('nav.register')}
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
