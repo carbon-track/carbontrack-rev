@@ -171,6 +171,7 @@ jobs:
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.FRONTEND_REPO_TOKEN }}
+        repository: carbon-track/frontend
         commit-message: 'sync: update from monorepo (${GITHUB_SHA::7})'
         branch: 'sync/monorepo-${{ github.sha }}'
         base: main
@@ -185,6 +186,7 @@ jobs:
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.FRONTEND_REPO_TOKEN }}
+        repository: carbon-track/frontend
         commit-message: 'chore(ci): bootstrap frontend CI from monorepo (${GITHUB_SHA::7})'
         branch: 'sync/bootstrap-ci-${{ github.sha }}'
         base: main
@@ -322,6 +324,7 @@ jobs:
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.BACKEND_REPO_TOKEN }}
+        repository: carbon-track/backend
         commit-message: 'sync: update from monorepo (${GITHUB_SHA::7})'
         branch: 'sync/monorepo-${{ github.sha }}'
         base: main
@@ -336,6 +339,7 @@ jobs:
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.BACKEND_REPO_TOKEN }}
+        repository: carbon-track/backend
         commit-message: 'chore(ci): bootstrap backend CI from monorepo (${GITHUB_SHA::7})'
         branch: 'sync/bootstrap-ci-${{ github.sha }}'
         base: main
