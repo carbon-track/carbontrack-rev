@@ -80,3 +80,4 @@ E2E sync test note: updating this file to trigger the monorepo -> repo sync work
 E2E sync test trigger 2: retrigger bootstrap PR creation (2025-10-27).
 E2E sync test trigger 3: retrigger after path fixes (2025-10-27).
 \nE2E sync test trigger 3: retrigger after path fixes (2025-10-27).\n
+\nE2E sync test trigger 4: ensure bootstrap clones kept (2025-10-27).\n
