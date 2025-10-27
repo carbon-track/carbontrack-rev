@@ -162,7 +162,7 @@ jobs:
           echo "Frontend CI up-to-date; no changes"
         fi
         cd ..
-        rm -rf frontend-repo-boot
+        # do not remove frontend-repo-boot here; PR creation step needs this directory
 
 
     - name: Create PR for frontend
@@ -328,7 +328,7 @@ jobs:
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.BACKEND_REPO_TOKEN }}
-        repository: carbon-track/backend
+        path: backend-repo
         commit-message: 'sync: update from monorepo (${GITHUB_SHA::7})'
         branch: 'sync/monorepo-${{ github.sha }}'
         base: main
@@ -343,7 +343,7 @@ jobs:
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.BACKEND_REPO_TOKEN }}
-        repository: carbon-track/backend
+        path: backend-repo-boot
         commit-message: 'chore(ci): bootstrap backend CI from monorepo (${GITHUB_SHA::7})'
         branch: 'sync/bootstrap-ci-${{ github.sha }}'
         base: main
