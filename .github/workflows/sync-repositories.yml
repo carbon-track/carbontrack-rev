@@ -167,18 +167,24 @@ jobs:
 
     - name: Create PR for frontend
       if: steps.frontend-changes.outputs.changed == 'true'
+      # prepare a short sha for nicer commit messages and titles
+    - name: Prepare short sha
+      id: vars
+      run: |
+        echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.FRONTEND_REPO_TOKEN }}
         path: frontend-repo
-        commit-message: 'sync: update from monorepo (${GITHUB_SHA::7})'
+        commit-message: "sync: update from monorepo (${{ steps.vars.outputs.short_sha }})"
         branch: 'sync/monorepo-${{ github.sha }}'
         base: main
-        title: 'sync: update from monorepo (${GITHUB_SHA::7})'
+        title: "sync: update from monorepo (${{ steps.vars.outputs.short_sha }})"
         body: |
           Automated sync from monorepo `frontend/` folder.
         labels: sync
-        draft: true
+        draft: false
 
     - name: Create bootstrap PR for frontend
       if: always()
@@ -186,13 +192,14 @@ jobs:
       with:
         token: ${{ secrets.FRONTEND_REPO_TOKEN }}
         path: frontend-repo-boot
-        commit-message: 'chore(ci): bootstrap frontend CI from monorepo (${GITHUB_SHA::7})'
+        commit-message: "chore(ci): bootstrap frontend CI from monorepo (${{ steps.vars.outputs.short_sha }})"
         branch: 'sync/bootstrap-ci-${{ github.sha }}'
         base: main
-        title: 'chore(ci): bootstrap frontend CI from monorepo (${GITHUB_SHA::7})'
+        title: "chore(ci): bootstrap frontend CI from monorepo (${{ steps.vars.outputs.short_sha }})"
         body: |
           This PR bootstraps/updates the frontend CI workflow in the target repo from the monorepo.
         labels: sync,bootstrap
+        draft: false
 
     - name: Mark frontend PR ready for review
       if: steps.frontend-changes.outputs.changed == 'true'
