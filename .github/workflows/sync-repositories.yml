@@ -320,7 +320,7 @@ jobs:
           echo "Backend CI up-to-date; no changes"
         fi
         cd ..
-        rm -rf backend-repo-boot
+        # do not remove backend-repo-boot here; PR creation step needs this directory
 
 
     - name: Create PR for backend
