@@ -336,14 +336,14 @@ jobs:
       with:
         token: ${{ secrets.BACKEND_REPO_TOKEN }}
         path: backend-repo
-        commit-message: 'sync: update from monorepo (${GITHUB_SHA::7})'
+        commit-message: "sync: update from monorepo (${{ steps.vars.outputs.short_sha }})"
         branch: 'sync/monorepo-${{ github.sha }}'
         base: main
-        title: 'sync: update from monorepo (${GITHUB_SHA::7})'
+        title: "sync: update from monorepo (${{ steps.vars.outputs.short_sha }})"
         body: |
           Automated sync from monorepo `backend/` folder.
         labels: sync
-        draft: true
+        draft: false
 
     - name: Create bootstrap PR for backend
       if: always()
@@ -351,13 +351,14 @@ jobs:
       with:
         token: ${{ secrets.BACKEND_REPO_TOKEN }}
         path: backend-repo-boot
-        commit-message: 'chore(ci): bootstrap backend CI from monorepo (${GITHUB_SHA::7})'
+        commit-message: "chore(ci): bootstrap backend CI from monorepo (${{ steps.vars.outputs.short_sha }})"
         branch: 'sync/bootstrap-ci-${{ github.sha }}'
         base: main
-        title: 'chore(ci): bootstrap backend CI from monorepo (${GITHUB_SHA::7})'
+        title: "chore(ci): bootstrap backend CI from monorepo (${{ steps.vars.outputs.short_sha }})"
         body: |
           This PR bootstraps/updates the backend CI workflow in the target repo from the monorepo.
         labels: sync,bootstrap
+        draft: false
 
     - name: Mark backend PR ready for review
       if: steps.backend-changes.outputs.changed == 'true'
