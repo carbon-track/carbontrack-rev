@@ -79,3 +79,4 @@ VITE_TURNSTILE_SITE_KEY=你的_site_key
 E2E sync test note: updating this file to trigger the monorepo -> repo sync workflow on 2025-10-27.
 E2E sync test trigger 2: retrigger bootstrap PR creation (2025-10-27).
 E2E sync test trigger 3: retrigger after path fixes (2025-10-27).
+\nE2E sync test trigger 3: retrigger after path fixes (2025-10-27).\n
