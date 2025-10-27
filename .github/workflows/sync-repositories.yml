@@ -141,7 +141,6 @@ jobs:
         echo "Pushed frontend changes to branch $BRANCH"
 
         cd ..
-        rm -rf frontend-repo
 
     - name: Bootstrap frontend CI to target repo
       env:
@@ -171,7 +170,7 @@ jobs:
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.FRONTEND_REPO_TOKEN }}
-        repository: carbon-track/frontend
+        path: frontend-repo
         commit-message: 'sync: update from monorepo (${GITHUB_SHA::7})'
         branch: 'sync/monorepo-${{ github.sha }}'
         base: main
@@ -186,7 +185,7 @@ jobs:
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.FRONTEND_REPO_TOKEN }}
-        repository: carbon-track/frontend
+        path: frontend-repo-boot
         commit-message: 'chore(ci): bootstrap frontend CI from monorepo (${GITHUB_SHA::7})'
         branch: 'sync/bootstrap-ci-${{ github.sha }}'
         base: main
@@ -214,6 +213,12 @@ jobs:
 
         # Do NOT merge here — target repo controls merge (enable branch protection & auto-merge there)
         echo "Frontend PR #$PR_NUM is ready for review. No merge will be attempted from monorepo." 
+
+    - name: Cleanup frontend-repo
+      if: steps.frontend-changes.outputs.changed == 'true'
+      run: |
+        echo "Cleaning up cloned frontend-repo"
+        rm -rf frontend-repo || true
 
     - name: Sync backend repository
       if: steps.backend-changes.outputs.changed == 'true'
@@ -294,7 +299,6 @@ jobs:
         echo "Pushed backend changes to branch $BRANCH"
 
         cd ..
-        rm -rf backend-repo
 
     - name: Bootstrap backend CI to target repo
       env:
