@@ -165,14 +165,13 @@ jobs:
         # do not remove frontend-repo-boot here; PR creation step needs this directory
 
 
-    - name: Create PR for frontend
-      if: steps.frontend-changes.outputs.changed == 'true'
-      # prepare a short sha for nicer commit messages and titles
     - name: Prepare short sha
       id: vars
       run: |
         echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
+    - name: Create PR for frontend
+      if: steps.frontend-changes.outputs.changed == 'true'
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.FRONTEND_REPO_TOKEN }}
