@@ -81,3 +81,6 @@ E2E sync test trigger 2: retrigger bootstrap PR creation (2025-10-27).
 E2E sync test trigger 3: retrigger after path fixes (2025-10-27).
 \nE2E sync test trigger 3: retrigger after path fixes (2025-10-27).\n
 \nE2E sync test trigger 4: ensure bootstrap clones kept (2025-10-27).\n
+
+E2E manual test trigger by user at 2025-10-27T12:13:25.5966618+08:00
+
