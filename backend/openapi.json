@@ -1953,6 +1953,16 @@
               }
             }
           },
+          "503": {
+            "description": "部署配置已禁用 Passkeys。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "500": {
             "description": "删除 Passkey 失败。",
             "content": {

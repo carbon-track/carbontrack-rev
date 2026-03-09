@@ -340,6 +340,8 @@ class PasskeyService
 
     public function deleteForUser(int $userId, int $passkeyId): void
     {
+        $this->ensureEnabled();
+
         $passkey = $this->userPasskeyModel->findActiveByIdForUser($passkeyId, $userId);
         if ($passkey === null) {
             throw new PasskeyOperationException('Passkey was not found.', 'PASSKEY_NOT_FOUND', 404);
@@ -649,16 +651,24 @@ class PasskeyService
 
     private function touchUserLogin(int $userId): void
     {
+        $timestamp = gmdate('Y-m-d H:i:s');
+
         try {
-            $stmt = $this->db->prepare('UPDATE users SET lastlgn = NOW() WHERE id = ?');
-            $stmt->execute([$userId]);
+            $stmt = $this->db->prepare('UPDATE users SET lastlgn = ? WHERE id = ?');
+            $stmt->execute([$timestamp, $userId]);
             return;
         } catch (\Throwable $exception) {
+            if ($this->logger !== null) {
+                $this->logger->debug('Failed to update legacy user login timestamp after passkey authentication', [
+                    'error' => $exception->getMessage(),
+                    'user_id' => $userId,
+                ]);
+            }
         }
 
         try {
-            $stmt = $this->db->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?');
-            $stmt->execute([$userId]);
+            $stmt = $this->db->prepare('UPDATE users SET last_login_at = ? WHERE id = ?');
+            $stmt->execute([$timestamp, $userId]);
         } catch (\Throwable $exception) {
             if ($this->logger !== null) {
                 $this->logger->debug('Failed to update user login timestamp after passkey authentication', [

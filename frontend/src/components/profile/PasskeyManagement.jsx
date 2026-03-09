@@ -61,6 +61,11 @@ export function PasskeyManagement() {
       
       // 3. Create credential in browser
       const credential = await navigator.credentials.create(publicKeyCredentialCreationOptions);
+      if (!credential) {
+        const cancellationError = new Error('Passkey registration was cancelled.');
+        cancellationError.code = 'PASSKEY_REGISTRATION_CANCELLED';
+        throw cancellationError;
+      }
       
       // 4. Encode and send to backend
       const encodedCredential = encodeRegistrationResponse(credential);
@@ -77,6 +82,10 @@ export function PasskeyManagement() {
       },
       onError: (err) => {
         console.error('Passkey registration error:', err);
+        if (err?.code === 'PASSKEY_REGISTRATION_CANCELLED') {
+          toast.error(t('profile.passkey.registerCancelled', '通行密钥注册已取消'));
+          return;
+        }
         toast.error(t('profile.passkey.registerFailed'));
       }
     }

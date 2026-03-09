@@ -62,6 +62,9 @@ export function LoginForm() {
 
       const publicKeyCredentialRequestOptions = prepareAuthenticationOptions(publicKeyOptions);
       const credential = await navigator.credentials.get(publicKeyCredentialRequestOptions);
+      if (!credential) {
+        return;
+      }
 
       const encodedCredential = encodeAuthenticationResponse(credential);
       const result = await authAPI.loginWithPasskey({

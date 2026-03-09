@@ -993,6 +993,7 @@
       "registering": "正在注册...",
       "registerSuccess": "通行密钥注册成功",
       "registerFailed": "通行密钥注册失败",
+      "registerCancelled": "通行密钥注册已取消",
       "deleteConfirm": "确定要删除此通行密钥吗？",
       "deleteSuccess": "通行密钥已删除",
       "deleteFailed": "删除通行密钥失败",
