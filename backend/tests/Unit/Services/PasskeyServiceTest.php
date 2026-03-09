@@ -192,6 +192,69 @@ class PasskeyServiceTest extends TestCase
         }
     }
 
+    public function testBeginAuthenticationReturnsGenericOptionsForUnknownIdentifier(): void
+    {
+        $result = $this->service->beginAuthentication([
+            'identifier' => 'missing@testdomain.com',
+        ]);
+
+        $this->assertNotEmpty($result['challenge_id']);
+        $this->assertArrayNotHasKey('allowCredentials', $result['public_key']);
+    }
+
+    public function testBeginAuthenticationReturnsGenericOptionsWhenAccountHasNoPasskeys(): void
+    {
+        $result = $this->service->beginAuthentication([
+            'identifier' => 'admin@testdomain.com',
+        ]);
+
+        $this->assertNotEmpty($result['challenge_id']);
+        $this->assertArrayNotHasKey('allowCredentials', $result['public_key']);
+    }
+
+    public function testCompleteAuthenticationRejectsCredentialWhenIdentifierDoesNotMatch(): void
+    {
+        $registration = $this->service->beginRegistration($this->userFixture(), [
+            'label' => 'Phone',
+        ]);
+        $keyPair = $this->generateEcKeyPair();
+        $credentialIdBytes = 'credential-auth-mismatch';
+        $credentialId = $this->base64UrlEncode($credentialIdBytes);
+
+        $this->service->completeRegistration($this->userFixture(), [
+            'challenge_id' => $registration['challenge_id'],
+            'credential' => $this->buildRegistrationCredential(
+                $registration['public_key']['challenge'],
+                'https://app.example.test',
+                $keyPair['x'],
+                $keyPair['y'],
+                $credentialIdBytes
+            ),
+        ]);
+
+        $authentication = $this->service->beginAuthentication([
+            'identifier' => 'missing@testdomain.com',
+        ]);
+
+        try {
+            $this->service->completeAuthentication([
+                'challenge_id' => $authentication['challenge_id'],
+                'credential' => $this->buildAuthenticationCredential(
+                    $authentication['public_key']['challenge'],
+                    'https://app.example.test',
+                    $credentialId,
+                    $keyPair['private_key'],
+                    'NTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMGFh',
+                    2
+                ),
+            ]);
+            $this->fail('Expected PasskeyOperationException was not thrown.');
+        } catch (PasskeyOperationException $exception) {
+            $this->assertSame('PASSKEY_ACCOUNT_MISMATCH', $exception->getErrorCode());
+            $this->assertSame(401, $exception->getHttpStatus());
+        }
+    }
+
     public function testCompleteAuthenticationReturnsNotFoundForUnknownCredential(): void
     {
         $authentication = $this->service->beginAuthentication();

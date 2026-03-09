@@ -1972,7 +1972,7 @@
           "Passkeys"
         ],
         "summary": "创建 Passkey 登录选项",
-        "description": "生成 WebAuthn assertion challenge。可选传入 identifier 以限定账号并返回 allowCredentials；若不传，则走 discoverable credential 登录流程。",
+        "description": "生成 WebAuthn assertion challenge。可选传入 identifier 以辅助账号匹配；无论账号是否存在或是否已注册 Passkey，均返回通用登录选项以降低枚举风险。",
         "requestBody": {
           "required": false,
           "content": {
@@ -1990,26 +1990,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PasskeyAuthenticationOptionsResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "identifier 对应用户不存在或尚未注册 Passkey。",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "identifier 对应账号缺少可用于 Passkey 的 UUID 身份。",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

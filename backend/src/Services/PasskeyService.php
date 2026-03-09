@@ -7,6 +7,7 @@ namespace CarbonTrack\Services;
 use CarbonTrack\Models\UserPasskey;
 use CarbonTrack\Models\WebauthnChallenge;
 use CarbonTrack\Services\Webauthn\Base64Url;
+use CarbonTrack\Support\Uuid;
 use Monolog\Logger;
 use PDO;
 
@@ -14,7 +15,6 @@ class PasskeyService
 {
     private const FLOW_AUTHENTICATION = 'authentication';
     private const FLOW_REGISTRATION = 'registration';
-    private const UUID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
 
     public function __construct(
         private PasskeyConfig $config,
@@ -66,7 +66,7 @@ class PasskeyService
 
         $label = $this->sanitizeLabel($payload['label'] ?? null);
         $passkeys = $this->userPasskeyModel->listActiveByUserId($userId);
-        $challengeId = $this->generateUuidV4();
+        $challengeId = Uuid::generateV4();
         $challenge = Base64Url::encode(random_bytes(32));
         $userHandle = $this->resolveUserHandle($user);
         $expiresAt = gmdate('Y-m-d H:i:s', time() + $this->config->getChallengeTtlSeconds());
@@ -197,19 +197,17 @@ class PasskeyService
 
         if ($identifier !== null) {
             $user = $this->findUserByIdentifier($identifier);
-            if ($user === null) {
-                throw new PasskeyOperationException('No account matched that identifier.', 'PASSKEY_USER_NOT_FOUND', 404);
-            }
-
-            $this->requireUserUuid($user);
-            $userId = (int) $user['id'];
-            $passkeys = $this->userPasskeyModel->listActiveByUserId($userId);
-            if ($passkeys === []) {
-                throw new PasskeyOperationException('No passkeys are registered for that account.', 'PASSKEYS_NOT_FOUND', 404);
+            if ($user !== null && $this->userHasValidUuid($user)) {
+                $candidateUserId = (int) $user['id'];
+                $candidatePasskeys = $this->userPasskeyModel->listActiveByUserId($candidateUserId);
+                if ($candidatePasskeys !== []) {
+                    $userId = $candidateUserId;
+                    $passkeys = $candidatePasskeys;
+                }
             }
         }
 
-        $challengeId = $this->generateUuidV4();
+        $challengeId = Uuid::generateV4();
         $challenge = Base64Url::encode(random_bytes(32));
         $expiresAt = gmdate('Y-m-d H:i:s', time() + $this->config->getChallengeTtlSeconds());
         $this->challengeModel->create([
@@ -297,6 +295,12 @@ class PasskeyService
             throw new PasskeyOperationException('The passkey owner account was not found.', 'PASSKEY_USER_NOT_FOUND', 404);
         }
         $this->requireUserUuid($user);
+
+        $context = is_array($challengeRecord['context'] ?? null) ? $challengeRecord['context'] : [];
+        $identifier = $this->sanitizeIdentifier($context['identifier'] ?? null);
+        if ($identifier !== null && !$this->userMatchesIdentifier($user, $identifier)) {
+            throw new PasskeyOperationException('Passkey credential does not match the challenged account.', 'PASSKEY_ACCOUNT_MISMATCH', 401);
+        }
 
         $this->touchUserLogin((int) $user['id']);
         if ($this->checkinService !== null) {
@@ -571,7 +575,7 @@ class PasskeyService
     private function requireUserUuid(array $user): string
     {
         $uuid = trim((string) ($user['uuid'] ?? ''));
-        if ($uuid === '' || preg_match(self::UUID_PATTERN, $uuid) !== 1) {
+        if ($uuid === '' || !Uuid::isValid($uuid)) {
             throw new PasskeyOperationException(
                 'Passkey operations require a valid persisted user UUID.',
                 'USER_UUID_REQUIRED',
@@ -580,6 +584,28 @@ class PasskeyService
         }
 
         return strtolower($uuid);
+    }
+
+    /**
+     * @param array<string, mixed> $user
+     */
+    private function userHasValidUuid(array $user): bool
+    {
+        $uuid = trim((string) ($user['uuid'] ?? ''));
+
+        return $uuid !== '' && Uuid::isValid($uuid);
+    }
+
+    /**
+     * @param array<string, mixed> $user
+     */
+    private function userMatchesIdentifier(array $user, string $identifier): bool
+    {
+        if (filter_var($identifier, FILTER_VALIDATE_EMAIL) !== false) {
+            return strcasecmp((string) ($user['email'] ?? ''), $identifier) === 0;
+        }
+
+        return strcasecmp((string) ($user['username'] ?? ''), $identifier) === 0;
     }
 
     /**
@@ -718,12 +744,4 @@ class PasskeyService
         ]);
     }
 
-    private function generateUuidV4(): string
-    {
-        $bytes = random_bytes(16);
-        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
-        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
-
-        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
-    }
 }
