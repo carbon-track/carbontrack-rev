@@ -82,11 +82,13 @@ class WebauthnChallenge
         );
 
         $now = gmdate('Y-m-d H:i:s');
-        return $stmt->execute([
+        $stmt->execute([
             'consumed_at' => $now,
             'updated_at' => $now,
             'id' => $id,
         ]);
+
+        return $stmt->rowCount() > 0;
     }
 
     public function deleteExpired(): int

@@ -133,6 +133,10 @@ class PasskeyService
             $this->config
         );
 
+        if (!$this->challengeModel->markConsumed((int) $challengeRecord['id'])) {
+            throw new PasskeyOperationException('Challenge has already been consumed or expired.', 'PASSKEY_CHALLENGE_CONSUMED', 400);
+        }
+
         $credentialId = trim((string) ($verified['credential_id'] ?? ''));
         if ($credentialId === '') {
             throw new PasskeyOperationException('Verified passkey response did not contain a credential id.', 'INVALID_CREDENTIAL', 400);
@@ -171,7 +175,6 @@ class PasskeyService
             throw new PasskeyOperationException('Passkey registration could not be stored.', 'PASSKEY_PERSIST_FAILED', 500);
         }
 
-        $this->challengeModel->markConsumed((int) $challengeRecord['id']);
         $this->logPasskeyEvent('passkey_registered', $userId, 'success', [
             'challenge_id' => $challengeId,
             'passkey_id' => $created['id'] ?? null,
@@ -279,6 +282,10 @@ class PasskeyService
             $this->config
         );
 
+        if (!$this->challengeModel->markConsumed((int) $challengeRecord['id'])) {
+            throw new PasskeyOperationException('Challenge has already been consumed or expired.', 'PASSKEY_CHALLENGE_CONSUMED', 400);
+        }
+
         $updated = $this->userPasskeyModel->touchAuthentication(
             (int) $passkey['id'],
             (int) ($verified['sign_count'] ?? (int) ($passkey['sign_count'] ?? 0)),
@@ -289,7 +296,6 @@ class PasskeyService
             throw new PasskeyOperationException('Passkey authentication state could not be updated.', 'PASSKEY_TOUCH_FAILED', 500);
         }
 
-        $this->challengeModel->markConsumed((int) $challengeRecord['id']);
         $user = $this->findUserDetailed((int) $passkey['user_id']);
         if ($user === null) {
             throw new PasskeyOperationException('The passkey owner account was not found.', 'PASSKEY_USER_NOT_FOUND', 404);

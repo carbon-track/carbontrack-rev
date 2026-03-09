@@ -36,15 +36,13 @@ export function arrayBufferToBase64url(buffer) {
 }
 
 /**
- * Checks if the browser supports WebAuthn and platform authenticators.
+ * Checks if the browser supports WebAuthn.
+ * We no longer require `isUserVerifyingPlatformAuthenticatorAvailable()` to return true,
+ * because users may use roaming authenticators (like a security key, or hybrid cross-device flows).
  * @returns {Promise<boolean>}
  */
 export async function isPasskeySupported() {
-  return (
-    window.PublicKeyCredential &&
-    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable &&
-    (await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())
-  );
+  return !!window.PublicKeyCredential;
 }
 
 /**
