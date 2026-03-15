@@ -94,6 +94,7 @@ jobs:
           repositories: |
             frontend
           permission-contents: write
+          permission-workflows: write
 
       - name: Resolve frontend app bot identity
         id: frontend-bot
@@ -176,6 +177,7 @@ jobs:
           repositories: |
             backend
           permission-contents: write
+          permission-workflows: write
 
       - name: Resolve backend app bot identity
         id: backend-bot
