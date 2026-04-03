@@ -45,6 +45,47 @@ class CarbonActivityControllerTest extends TestCase
         $this->assertCount(1, $json['data']['activities'][0]['activities']);
     }
 
+    public function testGetCategoriesWritesAuditMetadata(): void
+    {
+        $calc = $this->createMock(CarbonCalculatorService::class);
+        $audit = $this->createMock(AuditLogService::class);
+        $calc->method('getCategories')->willReturn(['daily', 'transport']);
+
+        $audit->expects($this->once())
+            ->method('logAudit')
+            ->with($this->callback(function (array $payload): bool {
+                $this->assertSame('carbon_management', $payload['operation_category'] ?? null);
+                $this->assertSame('carbon_activity_categories_alias_read', $payload['action'] ?? null);
+                $this->assertSame(99, $payload['user_id'] ?? null);
+                $this->assertSame('user', $payload['actor_type'] ?? null);
+                $this->assertSame('read', $payload['change_type'] ?? null);
+                $this->assertSame('GET', $payload['request_method'] ?? null);
+                $this->assertSame('/api/v1/activities/categories', $payload['endpoint'] ?? null);
+                $this->assertSame('success', $payload['status'] ?? null);
+                $this->assertSame('req-cat-1', $payload['request_id'] ?? null);
+                $this->assertIsArray($payload['data'] ?? null);
+                $this->assertTrue($payload['data']['deprecated_alias'] ?? false);
+                $this->assertSame(2, $payload['data']['category_count'] ?? null);
+                return true;
+            }))
+            ->willReturn(true);
+
+        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $controller = new CarbonActivityController($calc, $audit, $errorLog);
+
+        $request = makeRequest('GET', '/api/v1/activities/categories')
+            ->withAttribute('user_id', 99)
+            ->withHeader('X-Request-ID', 'req-cat-1');
+        $response = new \Slim\Psr7\Response();
+
+        $resp = $controller->getCategories($request, $response);
+        $this->assertSame(200, $resp->getStatusCode());
+
+        $json = json_decode((string) $resp->getBody(), true);
+        $this->assertTrue($json['success']);
+        $this->assertSame(['daily', 'transport'], $json['data']);
+    }
+
     public function testCreateActivityValidationFails(): void
     {
         $calc = $this->createMock(CarbonCalculatorService::class);
