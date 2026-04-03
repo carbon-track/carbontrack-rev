@@ -33,9 +33,26 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Run Semgrep on backend only
-        run: semgrep scan backend --config="auto" --config=".semgrep/custom-rules.yml" --config="p/php" --config="p/owasp-top-ten" --sarif --output semgrep.sarif
+        run: |
+          BASELINE_ARG=""
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            BASELINE_ARG="--baseline-commit=${{ github.event.pull_request.base.sha }}"
+          elif [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ]; then
+            BASELINE_ARG="--baseline-commit=${{ github.event.before }}"
+          fi
+
+          semgrep scan backend \
+            --config="auto" \
+            --config=".semgrep/custom-rules.yml" \
+            --config="p/php" \
+            --config="p/owasp-top-ten" \
+            $BASELINE_ARG \
+            --sarif \
+            --output semgrep.sarif
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
