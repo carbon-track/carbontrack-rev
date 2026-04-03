@@ -129,7 +129,7 @@ class CarbonActivityController
                 ],
             ]);
             $this->logExceptionWithFallback($e, $request, 'CarbonActivityController::getCategories error: ' . $e->getMessage());
-            return $this->errorResponse($response, 'Failed to fetch categories: ' . $e->getMessage(), 500);
+            return $this->errorResponse($response, 'Failed to fetch categories', 500);
         }
     }
 
