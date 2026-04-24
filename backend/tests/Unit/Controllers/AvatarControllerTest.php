@@ -256,6 +256,49 @@ class AvatarControllerTest extends TestCase
         $this->assertSame('VALIDATION_ERROR', $payload['code']);
     }
 
+    public function testUpdateAvatarReturnsStorageUnavailableWhenR2PathCannotBeVerified(): void
+    {
+        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+
+        $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
+        $avatarModel->expects($this->once())
+            ->method('getAvatarById')
+            ->with(5)
+            ->willReturn([
+                'id' => 5,
+                'name' => 'Leaf',
+                'file_path' => '/avatars/default/old.png',
+                'is_default' => 0,
+                'is_active' => 1,
+            ]);
+        $avatarModel->expects($this->never())->method('updateAvatar');
+        $logger->expects($this->once())
+            ->method('error')
+            ->with('Avatar storage service is unavailable');
+
+        /** @var \CarbonTrack\Models\Avatar $avatarModel */
+        /** @var \CarbonTrack\Services\AuthService $auth */
+        /** @var \CarbonTrack\Services\AuditLogService $audit */
+        /** @var \Monolog\Logger $logger */
+        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        $controller = new AvatarController($avatarModel, $auth, $audit, null, $logger, $errorLog);
+
+        $response = $controller->updateAvatar(
+            makeRequest('PUT', '/admin/avatars/5', ['file_path' => '/avatars/default/new.png']),
+            new \Slim\Psr7\Response(),
+            ['id' => 5]
+        );
+
+        $this->assertSame(503, $response->getStatusCode());
+        $payload = json_decode((string) $response->getBody(), true);
+        $this->assertFalse($payload['success']);
+        $this->assertSame('AVATAR_STORAGE_UNAVAILABLE', $payload['code']);
+    }
+
     public function testCreateAvatarRejectsNonObjectRequestBody(): void
     {
         $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
@@ -285,6 +328,41 @@ class AvatarControllerTest extends TestCase
         $payload = json_decode((string) $response->getBody(), true);
         $this->assertFalse($payload['success']);
         $this->assertSame('INVALID_REQUEST_BODY', $payload['code']);
+    }
+
+    public function testCreateAvatarReturnsStorageUnavailableWhenR2PathCannotBeVerified(): void
+    {
+        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+
+        $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
+        $avatarModel->expects($this->never())->method('createAvatar');
+        $logger->expects($this->once())
+            ->method('error')
+            ->with('Avatar storage service is unavailable');
+
+        /** @var \CarbonTrack\Models\Avatar $avatarModel */
+        /** @var \CarbonTrack\Services\AuthService $auth */
+        /** @var \CarbonTrack\Services\AuditLogService $audit */
+        /** @var \Monolog\Logger $logger */
+        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        $controller = new AvatarController($avatarModel, $auth, $audit, null, $logger, $errorLog);
+
+        $response = $controller->createAvatar(
+            makeRequest('POST', '/admin/avatars', [
+                'name' => 'Leaf',
+                'file_path' => '/avatars/default/leaf.png',
+            ]),
+            new \Slim\Psr7\Response()
+        );
+
+        $this->assertSame(503, $response->getStatusCode());
+        $payload = json_decode((string) $response->getBody(), true);
+        $this->assertFalse($payload['success']);
+        $this->assertSame('AVATAR_STORAGE_UNAVAILABLE', $payload['code']);
     }
 
     public function testCreateAvatarRejectsInactiveDefaultAvatar(): void
@@ -367,6 +445,97 @@ class AvatarControllerTest extends TestCase
         $this->assertSame('Default avatar must remain active', $payload['message']);
     }
 
+    public function testUpdateAvatarRejectsDisablingCurrentDefaultEvenWhenPayloadClearsDefault(): void
+    {
+        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+
+        $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
+        $avatarModel->expects($this->once())
+            ->method('getAvatarById')
+            ->with(5)
+            ->willReturn([
+                'id' => 5,
+                'name' => 'Default Avatar',
+                'file_path' => '/avatars/default.png',
+                'is_default' => 1,
+                'is_active' => 1,
+            ]);
+        $avatarModel->expects($this->never())->method('getDefaultAvatar');
+        $avatarModel->expects($this->never())->method('updateAvatarAndReassignUsers');
+        $avatarModel->expects($this->never())->method('updateAvatar');
+
+        /** @var \CarbonTrack\Models\Avatar $avatarModel */
+        /** @var \CarbonTrack\Services\AuthService $auth */
+        /** @var \CarbonTrack\Services\AuditLogService $audit */
+        /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+        /** @var \Monolog\Logger $logger */
+        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
+
+        $response = $controller->updateAvatar(
+            makeRequest('PUT', '/admin/avatars/5', ['is_default' => false, 'is_active' => false]),
+            new \Slim\Psr7\Response(),
+            ['id' => 5]
+        );
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode((string) $response->getBody(), true);
+        $this->assertFalse($payload['success']);
+        $this->assertSame('VALIDATION_ERROR', $payload['code']);
+        $this->assertSame('Default avatar must remain active', $payload['message']);
+    }
+
+    public function testUpdateAvatarSucceedsWhenOptionalAuditAndLoggerAreMissing(): void
+    {
+        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+
+        $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
+        $avatarModel->expects($this->exactly(2))
+            ->method('getAvatarById')
+            ->with(5)
+            ->willReturnOnConsecutiveCalls(
+                [
+                    'id' => 5,
+                    'name' => 'Leaf',
+                    'file_path' => '/avatars/leaf.png',
+                    'is_default' => 0,
+                    'is_active' => 1,
+                ],
+                [
+                    'id' => 5,
+                    'name' => 'Leaf Prime',
+                    'file_path' => '/avatars/leaf.png',
+                    'is_default' => 0,
+                    'is_active' => 1,
+                ]
+            );
+        $avatarModel->expects($this->once())
+            ->method('updateAvatar')
+            ->with(5, ['name' => 'Leaf Prime'])
+            ->willReturn(true);
+
+        /** @var \CarbonTrack\Models\Avatar $avatarModel */
+        /** @var \CarbonTrack\Services\AuthService $auth */
+        $controller = new AvatarController($avatarModel, $auth);
+
+        $response = $controller->updateAvatar(
+            makeRequest('PUT', '/admin/avatars/5', ['name' => 'Leaf Prime']),
+            new \Slim\Psr7\Response(),
+            ['id' => 5]
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode((string) $response->getBody(), true);
+        $this->assertTrue($payload['success']);
+        $this->assertSame('Leaf Prime', $payload['data']['name']);
+    }
+
     public function testUpdateAvatarDisablesAvatarReassignsUsersAndSendsNotifications(): void
     {
         $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
@@ -399,24 +568,21 @@ class AvatarControllerTest extends TestCase
                 ]
             );
         $avatarModel->expects($this->once())
-            ->method('getUsersAssignedToAvatar')
-            ->with(5)
-            ->willReturn([
-                ['id' => 101, 'username' => 'alice', 'email' => 'alice@example.com'],
-                ['id' => 202, 'username' => 'bob', 'email' => 'bob@example.com'],
-            ]);
-        $avatarModel->expects($this->once())
-            ->method('getDefaultAvatar')
-            ->willReturn([
-                'id' => 1,
-                'name' => 'Default Seedling',
-                'file_path' => '/avatars/default.png',
-                'is_default' => 1,
-            ]);
-        $avatarModel->expects($this->once())
             ->method('updateAvatarAndReassignUsers')
-            ->with(5, ['is_active' => false], 1)
-            ->willReturn(2);
+            ->with(5, ['is_active' => false], null)
+            ->willReturn([
+                'reassigned_user_count' => 2,
+                'users' => [
+                    ['id' => 101, 'username' => 'alice', 'email' => 'alice@example.com'],
+                    ['id' => 202, 'username' => 'bob', 'email' => 'bob@example.com'],
+                ],
+                'fallback_avatar' => [
+                    'id' => 1,
+                    'name' => 'Default Seedling',
+                    'file_path' => '/avatars/default.png',
+                    'is_default' => 1,
+                ],
+            ]);
         $avatarModel->expects($this->never())->method('updateAvatar');
 
         $messageService->expects($this->exactly(2))
@@ -474,15 +640,9 @@ class AvatarControllerTest extends TestCase
                 'is_active' => 1,
             ]);
         $avatarModel->expects($this->once())
-            ->method('getUsersAssignedToAvatar')
-            ->with(5)
-            ->willReturn([
-                ['id' => 101, 'username' => 'alice', 'email' => 'alice@example.com'],
-            ]);
-        $avatarModel->expects($this->once())
-            ->method('getDefaultAvatar')
-            ->willReturn(null);
-        $avatarModel->expects($this->never())->method('updateAvatarAndReassignUsers');
+            ->method('updateAvatarAndReassignUsers')
+            ->with(5, ['is_active' => false], null)
+            ->willThrowException(new \CarbonTrack\Models\AvatarFallbackUnavailableException());
         $avatarModel->expects($this->never())->method('updateAvatar');
 
         /** @var \CarbonTrack\Models\Avatar $avatarModel */

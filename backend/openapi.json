@@ -2279,6 +2279,16 @@
               }
             }
           },
+          "503": {
+            "description": "头像对象存储服务不可用，无法验证 /avatars/ 路径。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "500": {
             "description": "创建头像失败。",
             "content": {
@@ -2377,7 +2387,7 @@
           "Avatars"
         ],
         "summary": "更新头像信息",
-        "description": "管理员更新头像资源信息，可修改名称、分类、排序、启用状态及文件路径。若 is_default=true，会自动取消其他头像的默认状态，确保同一时间最多一个默认头像；默认头像必须保持启用。若将某个正在被用户使用的头像停用，系统会将这些用户自动回退到默认头像，并发送站内信与遵循通知偏好的邮件提醒。",
+        "description": "管理员更新头像资源信息，可修改名称、分类、排序、启用状态及文件路径。若 is_default=true，会自动取消其他头像的默认状态，确保同一时间最多一个默认头像；默认头像必须保持启用。若将某个正在被用户使用的头像停用，系统会将这些用户自动回退到默认头像，并发送站内信；该站内信会通过消息联动邮件链路按 system 通知偏好发送邮件提醒。",
         "security": [
           {
             "bearerAuth": []
@@ -2457,6 +2467,16 @@
           },
           "409": {
             "description": "尝试停用正在被使用的头像，但系统中没有可回退的启用默认头像。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "头像对象存储服务不可用，无法验证 /avatars/ 路径。",
             "content": {
               "application/json": {
                 "schema": {
@@ -28164,6 +28184,17 @@
               "type": "string"
             },
             "description": "已上传附件的 file_path 列表。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "in_progress",
+              "waiting_user",
+              "resolved",
+              "closed"
+            ],
+            "description": "客服端回复可选。用于在同一请求中追加回复并设置最终工单状态，例如发送回复并标记为 resolved，避免先发 waiting_user 再发 workflow update。用户端回复会忽略该字段。"
           },
           "cf_turnstile_response": {
             "type": "string",
