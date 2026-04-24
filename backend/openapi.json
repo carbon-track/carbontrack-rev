@@ -28177,13 +28177,7 @@
             "type": "object",
             "required": [
               "cf_turnstile_response"
-            ],
-            "properties": {
-              "cf_turnstile_response": {
-                "type": "string",
-                "description": "Cloudflare Turnstile 验证令牌。"
-              }
-            }
+            ]
           }
         ]
       },
