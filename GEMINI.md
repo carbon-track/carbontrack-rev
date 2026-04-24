@@ -97,6 +97,12 @@ The frontend is a modern SPA.
 - If the agent adds or changes keyword fallback routing, synonym matching, or “continue from result” affordances, update `backend/config/admin_ai_commands.json` keywords alongside the workspace UI so natural-language prompts and one-click follow-up actions stay aligned.
 - Any change to admin AI tools, keywords, navigation targets, confirmation behavior, session audit structure, or route contracts must update both root agent docs (`AGENTS.md`, `GEMINI.md`).
 
+## Pull Request Review Gate
+
+- After creating a PR, and after pushing any additional commit to an existing PR, wait for coding-agent review feedback before treating the PR as ready or mergeable. This includes Copilot code review or any equivalent automated Codex/code-review agent configured for the repository.
+- If the automated review does not trigger on its own, manually request a Copilot/code-agent review through the available GitHub tools or UI, then wait for the result.
+- Address actionable review comments with follow-up commits, resolve the corresponding review threads, and repeat the review wait/request cycle after each new commit pushed to the PR.
+
 ## Git Commit Guidelines
 
 - **Language Style**: All git commit messages MUST be written in **Classical Chinese (Simplified forms)** (简体中文文言文).
