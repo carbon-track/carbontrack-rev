@@ -28151,28 +28151,23 @@
         }
       },
       "CreateMySupportTicketMessageRequest": {
-        "type": "object",
-        "required": [
-          "content",
-          "cf_turnstile_response"
-        ],
-        "properties": {
-          "content": {
-            "type": "string",
-            "minLength": 1
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CreateSupportTicketMessageRequest"
           },
-          "attachments": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "已上传附件的 file_path 列表。"
-          },
-          "cf_turnstile_response": {
-            "type": "string",
-            "description": "Cloudflare Turnstile 验证令牌。"
+          {
+            "type": "object",
+            "required": [
+              "cf_turnstile_response"
+            ],
+            "properties": {
+              "cf_turnstile_response": {
+                "type": "string",
+                "description": "Cloudflare Turnstile 验证令牌。"
+              }
+            }
           }
-        }
+        ]
       },
       "CreateSupportTicketMessageRequest": {
         "type": "object",
