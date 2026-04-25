@@ -212,7 +212,7 @@ class AdminAiController
             );
             if (PHP_SAPI !== 'cli' && !headers_sent()) {
                 foreach ($streamHeaders as $name => $value) {
-                    header($name . ': ' . $value);
+                    header($name . ': ' . $value, true);
                 }
             }
             $body = $streamResponse->getBody();
