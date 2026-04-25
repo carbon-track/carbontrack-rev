@@ -493,14 +493,31 @@ class AdminAiConversationStoreService
         ?string $rollbackState = null
     ): void {
         try {
+            $finishedAt = gmdate('Y-m-d H:i:s');
+            $startedAt = null;
+            $startedStmt = $this->db->prepare("SELECT started_at FROM admin_ai_steps WHERE run_id = :run_id AND step_id = :step_id LIMIT 1");
+            $startedStmt->execute([
+                ':run_id' => $runId,
+                ':step_id' => $stepId,
+            ]);
+            $startedAtValue = $startedStmt->fetchColumn();
+            if (is_string($startedAtValue) && trim($startedAtValue) !== '') {
+                $startedAt = strtotime($startedAtValue);
+            }
+            $finishedTimestamp = strtotime($finishedAt);
+            $durationMs = $startedAt !== null && $finishedTimestamp !== false
+                ? max(0, ($finishedTimestamp - $startedAt) * 1000)
+                : null;
+
             $stmt = $this->db->prepare("UPDATE admin_ai_steps
                 SET status = :status,
                     output_json = :output_json,
                     error_message = :error_message,
                     approval_state = COALESCE(:approval_state, approval_state),
                     rollback_state = COALESCE(:rollback_state, rollback_state),
-                    finished_at = CURRENT_TIMESTAMP,
-                    updated_at = CURRENT_TIMESTAMP
+                    finished_at = :finished_at,
+                    duration_ms = :duration_ms,
+                    updated_at = :finished_at
                 WHERE run_id = :run_id AND step_id = :step_id");
             $stmt->execute([
                 ':run_id' => $runId,
@@ -509,6 +526,8 @@ class AdminAiConversationStoreService
                 ':error_message' => $errorMessage,
                 ':approval_state' => $approvalState,
                 ':rollback_state' => $rollbackState,
+                ':finished_at' => $finishedAt,
+                ':duration_ms' => $durationMs,
                 ':step_id' => $stepId,
             ]);
         } catch (\Throwable $exception) {

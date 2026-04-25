@@ -28,7 +28,7 @@ class AdminAiRollbackService
                         'user_id' => $user['id'] ?? ($payload['user_id'] ?? null),
                         'user_uuid' => $user['uuid'] ?? ($payload['user_uuid'] ?? null),
                         'delta' => -1 * $delta,
-                        'reason' => sprintf('Rollback admin AI proposal #%d', $proposalId),
+                        'reason' => $this->buildRollbackReason($proposalId),
                     ], static fn ($value) => $value !== null && $value !== '');
                 }
                 break;
@@ -41,7 +41,7 @@ class AdminAiRollbackService
                         'user_id' => $user['id'] ?? ($payload['user_id'] ?? null),
                         'user_uuid' => $user['uuid'] ?? ($payload['user_uuid'] ?? null),
                         'status' => $result['old_status'],
-                        'admin_notes' => sprintf('Rollback admin AI proposal #%d', $proposalId),
+                        'admin_notes' => $this->buildRollbackReason($proposalId),
                     ], static fn ($value) => $value !== null && $value !== '');
                 }
                 break;
@@ -68,7 +68,7 @@ class AdminAiRollbackService
                     $rollbackPayload = array_filter([
                         'product_id' => $product['id'] ?? ($payload['product_id'] ?? null),
                         'target_stock' => (int) $result['old_stock'],
-                        'reason' => sprintf('Rollback admin AI proposal #%d', $proposalId),
+                        'reason' => $this->buildRollbackReason($proposalId),
                     ], static fn ($value) => $value !== null && $value !== '');
                 }
                 break;
@@ -81,8 +81,12 @@ class AdminAiRollbackService
             return null;
         }
 
-        $promptZh = sprintf('回滚刚才的 %s 操作，原提案 #%d。', $actionName, $proposalId);
-        $promptEn = sprintf('Rollback the previous %s action from proposal #%d.', $actionName, $proposalId);
+        $promptZh = $proposalId > 0
+            ? sprintf('回滚刚才的 %s 操作，原提案 #%d。', $actionName, $proposalId)
+            : sprintf('回滚刚才自动执行的 %s 操作。', $actionName);
+        $promptEn = $proposalId > 0
+            ? sprintf('Rollback the previous %s action from proposal #%d.', $actionName, $proposalId)
+            : sprintf('Rollback the auto-executed %s action.', $actionName);
 
         return [
             'source_proposal_id' => $proposalId,
@@ -97,6 +101,13 @@ class AdminAiRollbackService
                 'en' => $promptEn,
             ],
         ];
+    }
+
+    private function buildRollbackReason(int $proposalId): string
+    {
+        return $proposalId > 0
+            ? sprintf('Rollback admin AI proposal #%d', $proposalId)
+            : 'Rollback auto-executed admin AI action';
     }
 
     /**

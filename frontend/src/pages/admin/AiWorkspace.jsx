@@ -51,7 +51,7 @@ async function streamAdminAiChat(payload, onEvent) {
   });
 
   const contentType = response.headers.get('content-type') || '';
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     tokenManager.removeToken();
     userManager.removeUser();
     if (window.location.pathname !== '/auth/login') {
@@ -132,6 +132,7 @@ async function streamAdminAiChat(payload, onEvent) {
     }
   }
 
+  buffer += decoder.decode();
   const tail = buffer.trim();
   if (tail) {
     dispatchFrame(tail);
@@ -1708,7 +1709,16 @@ export default function AdminAiWorkspacePage() {
         }, handleStreamEvent);
         return { data: payload };
       } catch (error) {
-        if (error?.code && error.code !== 'AI_STREAM_FAILED') {
+        const status = error?.response?.status;
+        const contentType = error?.response?.headers?.['content-type'] || '';
+        const shouldFallbackToJson =
+          status === 404 ||
+          status === 406 ||
+          status === 415 ||
+          status === 501 ||
+          (!!contentType && !contentType.toLowerCase().includes('text/event-stream'));
+
+        if (!shouldFallbackToJson) {
           throw error;
         }
 

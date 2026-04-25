@@ -692,7 +692,9 @@ class AdminAiAgentService
                 }
 
                 if ($runStepSequence >= $maxToolExecutions) {
-                    $lastOutcome = $this->buildAgentLimitOutcome($assistantParts, $runId, 'max_tool_executions');
+                    $lastOutcome = $blockingOutcomes !== []
+                        ? $this->mergeBlockingToolOutcomes($blockingOutcomes, $assistantParts, $lastOutcome, $runId)
+                        : $this->buildAgentLimitOutcome($assistantParts, $runId, 'max_tool_executions');
                     $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $lastOutcome, $context);
                     return $lastOutcome;
                 }
