@@ -313,14 +313,21 @@ class AdminAiAgentService
             ]);
         }
 
-        if (isset($outcome['proposal']) && is_array($outcome['proposal'])) {
+        $approvalProposals = [];
+        if (isset($outcome['proposals']) && is_array($outcome['proposals'])) {
+            $approvalProposals = array_values(array_filter($outcome['proposals'], 'is_array'));
+        } elseif (isset($outcome['proposal']) && is_array($outcome['proposal'])) {
+            $approvalProposals = [$outcome['proposal']];
+        }
+
+        foreach ($approvalProposals as $proposal) {
             $emitEvent('approval.required', [
-                'proposal' => $outcome['proposal'],
+                'proposal' => $proposal,
             ]);
         }
 
         $hasMissingInput = isset($outcome['meta']['missing']) && $outcome['meta']['missing'] !== null;
-        $runStatus = isset($outcome['proposal']) ? 'waiting_approval' : ($hasMissingInput ? 'waiting_input' : 'finished');
+        $runStatus = $approvalProposals !== [] ? 'waiting_approval' : ($hasMissingInput ? 'waiting_input' : 'finished');
         $this->conversationStoreService->finishRun($runId, $runStatus, null, [
             'message' => $outcome['assistant_text'] ?? '',
         ]);
@@ -597,6 +604,7 @@ class AdminAiAgentService
         string $autonomyMode
     ): array {
         $maxSteps = max(1, min(12, (int) ($this->agentConfig['max_run_steps'] ?? $this->agentConfig['max_auto_read_steps'] ?? 6)));
+        $maxToolExecutions = max(1, min(24, (int) ($this->agentConfig['max_run_tool_executions'] ?? $maxSteps)));
         $assistantParts = [];
         $lastOutcome = [
             'assistant_text' => '',
@@ -677,9 +685,16 @@ class AdminAiAgentService
                 $assistantParts[] = $content;
             }
 
+            $blockingOutcomes = [];
             foreach ($toolCalls as $toolCall) {
                 if (!is_array($toolCall)) {
                     continue;
+                }
+
+                if ($runStepSequence >= $maxToolExecutions) {
+                    $lastOutcome = $this->buildAgentLimitOutcome($assistantParts, $runId, 'max_tool_executions');
+                    $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $lastOutcome, $context);
+                    return $lastOutcome;
                 }
 
                 $outcome = $this->executeToolCallForRun(
@@ -700,8 +715,8 @@ class AdminAiAgentService
                 }
 
                 if (isset($outcome['proposal']) || isset($outcome['meta']['missing'])) {
-                    $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $outcome, $context);
-                    return $outcome;
+                    $blockingOutcomes[] = $outcome;
+                    continue;
                 }
 
                 $toolCallId = (string) ($toolCall['id'] ?? $this->generateStepId());
@@ -717,18 +732,83 @@ class AdminAiAgentService
                 ];
             }
 
+            if ($blockingOutcomes !== []) {
+                $lastOutcome = $this->mergeBlockingToolOutcomes($blockingOutcomes, $assistantParts, $lastOutcome, $runId);
+                $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $lastOutcome, $context);
+                return $lastOutcome;
+            }
+
             $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $lastOutcome, $context);
         }
 
-        $lastOutcome['assistant_text'] = $assistantParts !== []
-            ? implode("\n\n", array_values(array_unique(array_filter($assistantParts))))
+        return $this->buildAgentLimitOutcome($assistantParts, $runId, 'max_steps', $lastOutcome);
+    }
+
+    /**
+     * @param array<int,string> $assistantParts
+     * @param array<string,mixed> $baseOutcome
+     * @return array<string,mixed>
+     */
+    private function buildAgentLimitOutcome(
+        array $assistantParts,
+        string $runId,
+        string $stopReason,
+        array $baseOutcome = []
+    ): array {
+        $assistantText = implode("\n\n", array_values(array_unique(array_filter($assistantParts))));
+        $warning = $stopReason === 'max_tool_executions'
+            ? '已达到本次 agent 运行的最大工具执行数，请缩小请求范围后继续。'
             : '已达到本次 agent 运行的最大步骤数，请缩小请求范围后继续。';
-        $lastOutcome['metadata'] = array_merge($lastOutcome['metadata'] ?? [], [
+        $baseOutcome['assistant_text'] = ($assistantText !== '' ? $assistantText . "\n\n" : '') . $warning;
+        $baseOutcome['metadata'] = array_merge($baseOutcome['metadata'] ?? [], [
             'run_id' => $runId,
-            'stop_reason' => 'max_steps',
+            'stop_reason' => $stopReason,
         ]);
 
-        return $lastOutcome;
+        return $baseOutcome;
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $outcomes
+     * @param array<int,string> $assistantParts
+     * @param array<string,mixed> $baseOutcome
+     * @return array<string,mixed>
+     */
+    private function mergeBlockingToolOutcomes(array $outcomes, array $assistantParts, array $baseOutcome, string $runId): array
+    {
+        $merged = $outcomes[0] ?? $baseOutcome;
+        $proposals = [];
+        $missing = [];
+        foreach ($outcomes as $outcome) {
+            if (isset($outcome['proposal']) && is_array($outcome['proposal'])) {
+                $proposals[] = $outcome['proposal'];
+            }
+            if (isset($outcome['meta']['missing']) && is_array($outcome['meta']['missing'])) {
+                $missing = array_merge($missing, $outcome['meta']['missing']);
+            }
+        }
+
+        $assistantText = implode("\n\n", array_values(array_unique(array_filter($assistantParts))));
+        if ($assistantText !== '') {
+            $merged['assistant_text'] = $assistantText;
+        }
+
+        if ($proposals !== []) {
+            $merged['proposal'] = $proposals[0];
+            $merged['proposals'] = $proposals;
+        }
+        if ($missing !== []) {
+            if (!isset($merged['meta']) || !is_array($merged['meta'])) {
+                $merged['meta'] = [];
+            }
+            $merged['meta']['missing'] = $missing;
+        }
+        $merged['metadata'] = array_merge($merged['metadata'] ?? [], [
+            'run_id' => $runId,
+            'blocking_tool_count' => count($outcomes),
+        ]);
+
+        return $merged;
     }
 
     /**
@@ -750,9 +830,7 @@ class AdminAiAgentService
         callable $emitEvent,
         string $autonomyMode
     ): array {
-        $stepId = isset($toolCall['id']) && is_string($toolCall['id']) && trim($toolCall['id']) !== ''
-            ? trim($toolCall['id'])
-            : $this->generateStepId();
+        $modelToolCallId = isset($toolCall['id']) && is_string($toolCall['id']) ? trim($toolCall['id']) : '';
         $functionName = (string) ($toolCall['function']['name'] ?? '');
         $arguments = json_decode((string) ($toolCall['function']['arguments'] ?? '{}'), true);
         if (!is_array($arguments)) {
@@ -760,9 +838,11 @@ class AdminAiAgentService
         }
 
         $sequence = ++$runStepSequence;
+        $stepId = $this->generateStepId();
         $this->conversationStoreService->startRunStep($runId, $stepId, $sequence, 'tool', $functionName, $arguments);
         $emitEvent('tool.started', [
             'step_id' => $stepId,
+            'model_tool_call_id' => $modelToolCallId !== '' ? $modelToolCallId : null,
             'tool_name' => $functionName,
             'arguments' => $arguments,
         ]);
@@ -785,6 +865,7 @@ class AdminAiAgentService
             $this->conversationStoreService->finishRunStep($runId, $stepId, 'error', null, $exception->getMessage());
             $emitEvent('tool.error', [
                 'step_id' => $stepId,
+                'model_tool_call_id' => $modelToolCallId !== '' ? $modelToolCallId : null,
                 'tool_name' => $functionName,
                 'error' => $exception->getMessage(),
             ]);
@@ -812,6 +893,7 @@ class AdminAiAgentService
 
         $eventPayload = [
             'step_id' => $stepId,
+            'model_tool_call_id' => $modelToolCallId !== '' ? $modelToolCallId : null,
             'tool_name' => $functionName,
             'status' => $status,
             'result' => $outcome['result'] ?? null,
@@ -824,6 +906,7 @@ class AdminAiAgentService
         if ($status === 'waiting_input') {
             $emitEvent('missing.input', [
                 'step_id' => $stepId,
+                'model_tool_call_id' => $modelToolCallId !== '' ? $modelToolCallId : null,
                 'tool_name' => $functionName,
                 'missing' => $outcome['meta']['missing'] ?? [],
                 'message' => $outcome['assistant_text'] ?? null,

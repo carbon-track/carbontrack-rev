@@ -1236,6 +1236,64 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertSame('success', $secondResult['conversation']['runs'][1]['steps'][0]['status']);
     }
 
+    public function testStreamChatUsesUniqueStepIdsWhenProviderRepeatsToolCallIdsInSameRun(): void
+    {
+        $pdo = $this->makePdo();
+        $pdo->exec("INSERT INTO users (id, username, email, status, is_admin, uuid, points) VALUES (4, 'repeat_user', 'repeat@example.com', 'active', 0, '550e8400-e29b-41d4-a716-4466554400c4', 18)");
+
+        $service = new AdminAiAgentService(
+            $pdo,
+            new QueueLlmClient([
+                $this->toolResponse('manage_admin', [
+                    'action' => 'get_user_overview',
+                    'payload' => [
+                        'user_id' => 4,
+                    ],
+                ]),
+                $this->toolResponse('manage_admin', [
+                    'action' => 'get_user_overview',
+                    'payload' => [
+                        'user_id' => 4,
+                    ],
+                ]),
+                $this->plainTextResponse('两次查询均已完成。'),
+            ]),
+            new NullLogger(),
+            ['model' => 'test-model'],
+            [
+                'agent' => ['max_history_messages' => 12, 'max_run_steps' => 4, 'max_run_tool_executions' => 4],
+                'managementActions' => [
+                    [
+                        'name' => 'get_user_overview',
+                        'label' => 'Get user overview',
+                        'description' => 'Read user overview.',
+                        'api' => ['payloadTemplate' => []],
+                        'requires' => ['user_id'],
+                        'contextHints' => [],
+                        'risk_level' => 'read',
+                        'requires_confirmation' => false,
+                    ],
+                ],
+            ],
+            new LlmLogService($pdo, new Logger('test'))
+        );
+
+        $result = $service->streamChat(null, '连续查两次用户', [], null, [
+            'request_id' => 'req-stream-repeat-tool-id',
+            'actor_type' => 'admin',
+            'actor_id' => 1,
+            'source' => '/admin/ai/chat/stream',
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('两次查询均已完成。', $result['message']);
+        $steps = $result['conversation']['runs'][0]['steps'];
+        $this->assertCount(2, $steps);
+        $this->assertNotSame($steps[0]['step_id'], $steps[1]['step_id']);
+        $this->assertSame([1, 2], array_map(static fn (array $step): int => (int) $step['sequence'], $steps));
+        $this->assertSame(['success', 'success'], array_column($steps, 'status'));
+    }
+
     public function testLlmTimeoutIsMappedSeparatelyFromProviderUnavailable(): void
     {
         $service = new AdminAiAgentService(
