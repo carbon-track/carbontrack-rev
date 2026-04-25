@@ -201,7 +201,8 @@ class AdminAiController
                 ->withHeader('Content-Type', 'text/event-stream; charset=utf-8')
                 ->withHeader('Cache-Control', 'no-cache, no-transform')
                 ->withHeader('Connection', 'keep-alive')
-                ->withHeader('X-Accel-Buffering', 'no');
+                ->withHeader('X-Accel-Buffering', 'no')
+                ->withHeader('X-Content-Type-Options', 'nosniff');
             $body = $streamResponse->getBody();
 
             $emit = static function (string $event, array $payload) use ($body): void {

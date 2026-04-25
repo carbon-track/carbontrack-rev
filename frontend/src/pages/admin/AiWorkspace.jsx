@@ -348,7 +348,36 @@ function hasRenderableMessages(conversation) {
   return Array.isArray(conversation?.messages) && conversation.messages.some((item) => item?.kind === 'message');
 }
 
-function buildFallbackConversation(conversation, conversationId, previousConversation, userMessage, assistantMessage) {
+function normalizeI18nMessagePayload(payload) {
+  if (!payload || typeof payload !== 'object' || typeof payload.key !== 'string' || payload.key.trim() === '') {
+    return null;
+  }
+
+  return {
+    key: payload.key,
+    values: payload.values && typeof payload.values === 'object' && !Array.isArray(payload.values) ? payload.values : {},
+  };
+}
+
+function getMessageI18nPayload(message) {
+  return normalizeI18nMessagePayload(message?.message_i18n)
+    || normalizeI18nMessagePayload(message?.meta?.data?.message_i18n)
+    || normalizeI18nMessagePayload(message?.meta?.data?.metadata?.message_i18n)
+    || normalizeI18nMessagePayload(message?.meta?.data?.meta?.message_i18n);
+}
+
+function translateI18nMessage(t, messageI18n, fallback) {
+  if (!messageI18n || typeof t !== 'function') {
+    return fallback;
+  }
+
+  return t(messageI18n.key, {
+    ...messageI18n.values,
+    defaultValue: fallback || messageI18n.key,
+  });
+}
+
+function buildFallbackConversation(conversation, conversationId, previousConversation, userMessage, assistantMessage, assistantMessageI18n = null) {
   if (hasRenderableMessages(conversation)) {
     return conversation;
   }
@@ -376,7 +405,12 @@ function buildFallbackConversation(conversation, conversationId, previousConvers
       role: 'assistant',
       content: assistantMessage,
       created_at: new Date().toISOString(),
-      meta: { data: { source: 'client_fallback' } },
+      meta: {
+        data: {
+          source: 'client_fallback',
+          ...(assistantMessageI18n ? { message_i18n: assistantMessageI18n } : {}),
+        },
+      },
     });
   }
 
@@ -969,7 +1003,7 @@ function WorkspaceSectionButton({ active, icon, label, count, onClick }) {
   );
 }
 
-function AgentStreamEventCard({ item, isZh, disabled, onRollback }) {
+function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
   const event = item?.event;
   const data = item?.data || {};
 
@@ -986,6 +1020,16 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback }) {
   }
 
   if (event === 'assistant.delta' || event === 'assistant.message') {
+    const content = event === 'assistant.message'
+      ? translateI18nMessage(
+          t,
+          normalizeI18nMessagePayload(data.message_i18n)
+            || normalizeI18nMessagePayload(data.metadata?.message_i18n)
+            || normalizeI18nMessagePayload(data.meta?.message_i18n),
+          data.content
+        )
+      : data.content;
+
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
         <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -994,7 +1038,7 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback }) {
             ? (isZh ? '正在生成回复' : 'Streaming response')
             : (isZh ? 'AI 回复' : 'Assistant message')}
         </div>
-        <div className="whitespace-pre-wrap">{data.content}</div>
+        <div className="whitespace-pre-wrap">{content}</div>
       </div>
     );
   }
@@ -1381,6 +1425,7 @@ function MessageBubble({
   message,
   locale,
   isZh,
+  t,
   disabled,
   onNavigateSuggestion,
   onConfirmProposal,
@@ -1393,6 +1438,9 @@ function MessageBubble({
   const actionName = message?.meta?.data?.meta?.action_name || null;
   const missing = Array.isArray(message?.meta?.data?.meta?.missing) ? message.meta.data.meta.missing : [];
   const messageWidthClass = 'w-full max-w-[min(100%,36rem)]';
+  const messageContent = !isUser
+    ? translateI18nMessage(t, getMessageI18nPayload(message), message?.content)
+    : message?.content;
 
   return (
     <MotionDiv
@@ -1424,7 +1472,7 @@ function MessageBubble({
             ? 'rounded-tr-lg border-slate-200 bg-white text-slate-900 dark:border-white/12 dark:bg-white/[0.08] dark:text-white'
             : 'rounded-tl-lg border-emerald-200 bg-emerald-50/85 text-slate-800 dark:border-emerald-400/14 dark:bg-emerald-400/[0.08] dark:text-slate-100'
         )}>
-          {message?.content || (isZh ? 'AI 未返回文本。' : 'No assistant text returned.')}
+          {messageContent || (isZh ? 'AI 未返回文本。' : 'No assistant text returned.')}
         </div>
 
         {!isUser && (actionName || result || missing.length > 0) ? (
@@ -1526,7 +1574,7 @@ export default function AdminAiWorkspacePage() {
   const queryClient = useQueryClient();
   const composerRef = useRef(null);
   const [searchParams] = useSearchParams();
-  const { currentLanguage } = useTranslation();
+  const { currentLanguage, t } = useTranslation('admin');
 
   const currentAdminId = useMemo(() => {
     const user = userManager.getUser();
@@ -1755,7 +1803,8 @@ export default function AdminAiWorkspacePage() {
           payload.conversation_id || variables.conversationId || null,
           activeConversation,
           variables.message,
-          payload.message || null
+          payload.message || null,
+          normalizeI18nMessagePayload(payload.message_i18n || payload.metadata?.message_i18n)
         );
         const nextConversationId = payload.conversation_id || nextConversation?.conversation_id || null;
 
@@ -1833,7 +1882,8 @@ export default function AdminAiWorkspacePage() {
           payload.conversation_id || variables?.conversationId || null,
           previousConversation,
           null,
-          payload.message || null
+          payload.message || null,
+          normalizeI18nMessagePayload(payload.message_i18n || payload.metadata?.message_i18n)
         );
         const nextConversationId = payload.conversation_id || variables?.conversationId || null;
 
@@ -2320,6 +2370,7 @@ export default function AdminAiWorkspacePage() {
                                   message={item}
                                   locale={locale}
                                   isZh={isZh}
+                                  t={t}
                                   disabled={disableProposalActions}
                                   onNavigateSuggestion={handleNavigateSuggestion}
                                   onConfirmProposal={(proposalId) => normalizedSelectedConversationId && decisionMutation.mutate({
@@ -2359,6 +2410,7 @@ export default function AdminAiWorkspacePage() {
                                 key={item.id}
                                 item={item}
                                 isZh={isZh}
+                                t={t}
                                 disabled={disableProposalActions}
                                 onRollback={handleCreateRollback}
                               />

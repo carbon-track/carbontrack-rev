@@ -1984,7 +1984,7 @@
         },
         "responses": {
           "200": {
-            "description": "SSE stream. Events include run.started, assistant.delta, assistant.message, tool.started, tool.result, tool.error, approval.required, approval.resolved, rollback.available, run.finished, and run.error.",
+            "description": "SSE stream. Events include run.started, assistant.delta, assistant.message, tool.started, tool.result, tool.error, approval.required, approval.resolved, rollback.available, run.finished, and run.error. assistant.message events may include message_i18n for frontend-side localization.",
             "content": {
               "text/event-stream": {
                 "schema": {
@@ -25048,6 +25048,24 @@
           }
         }
       },
+      "AdminAiI18nMessage": {
+        "type": "object",
+        "required": [
+          "key",
+          "values"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "admin.aiWorkspace.messages.rollbackConfirmationGenerated"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
       "AdminAiChatResponse": {
         "type": "object",
         "properties": {
@@ -25059,6 +25077,17 @@
           },
           "message": {
             "type": "string"
+          },
+          "message_i18n": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AdminAiI18nMessage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional i18n key/value payload. Frontend clients should translate this when present and use message as a fallback."
           },
           "metadata": {
             "type": "object",

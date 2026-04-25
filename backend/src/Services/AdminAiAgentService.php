@@ -255,6 +255,7 @@ class AdminAiAgentService
             }
             $emitEvent('assistant.message', [
                 'content' => (string) ($result['message'] ?? ''),
+                'message_i18n' => $result['message_i18n'] ?? $result['metadata']['message_i18n'] ?? null,
                 'metadata' => $result['metadata'] ?? [],
             ]);
             $this->conversationStoreService->finishRun($runId, 'finished', null, [
@@ -615,7 +616,7 @@ class AdminAiAgentService
         callable $emitEvent,
         string $autonomyMode
     ): array {
-        $maxSteps = max(1, min(12, (int) ($this->agentConfig['max_run_steps'] ?? $this->agentConfig['max_auto_read_steps'] ?? 6)));
+        $maxSteps = max(1, min(12, (int) ($this->agentConfig['max_run_steps'] ?? 6)));
         $maxToolExecutions = max(1, min(24, (int) ($this->agentConfig['max_run_tool_executions'] ?? ($maxSteps * 2))));
         $assistantParts = [];
         $lastOutcome = [
@@ -1090,14 +1091,16 @@ class AdminAiAgentService
             'status' => 'pending',
         ]);
 
+        $assistantMessageI18n = $this->buildAssistantMessageI18n('proposalReady', ['summary' => $summary]);
+
         return [
-            'assistant_text' => sprintf("已整理待执行操作：%s\n如需执行，请确认。", $summary),
+            'assistant_text' => $this->assistantMessageFallback($assistantMessageI18n),
             'proposal' => array_merge($proposalData, [
                 'proposal_id' => $proposalId,
                 'status' => 'pending',
             ]),
             'metadata' => $this->extractMetadata($rawResponse),
-            'meta' => ['action_name' => $actionName, 'proposal_id' => $proposalId],
+            'meta' => ['action_name' => $actionName, 'proposal_id' => $proposalId, 'message_i18n' => $assistantMessageI18n],
         ];
     }
 
@@ -1132,18 +1135,20 @@ class AdminAiAgentService
                 'action_name' => $actionName,
                 'request_data' => $payload,
             ]);
-            $assistantText = '已取消该待执行操作。你可以补充条件后重新下达指令。';
+            $assistantMessageI18n = $this->buildAssistantMessageI18n('actionRejected');
+            $assistantText = $this->assistantMessageFallback($assistantMessageI18n);
             $this->conversationStoreService->logConversationEvent('admin_ai_assistant_message', $logContext, [
                 'conversation_id' => $conversationId,
                 'visible_text' => $assistantText,
                 'role' => 'assistant',
-                'meta' => ['decision' => 'rejected', 'proposal_id' => $proposalId],
+                'meta' => ['decision' => 'rejected', 'proposal_id' => $proposalId, 'message_i18n' => $assistantMessageI18n],
             ]);
             return [
                 'success' => true,
                 'conversation_id' => $conversationId,
                 'message' => $assistantText,
-                'metadata' => ['decision' => 'rejected', 'timestamp' => gmdate(DATE_ATOM)],
+                'message_i18n' => $assistantMessageI18n,
+                'metadata' => ['decision' => 'rejected', 'message_i18n' => $assistantMessageI18n, 'timestamp' => gmdate(DATE_ATOM)],
                 'conversation' => $this->getConversationDetail($conversationId),
             ];
         }
@@ -1191,8 +1196,14 @@ class AdminAiAgentService
                 'proposal_id' => $proposalId,
                 'action_name' => $actionName,
             ]);
-            $assistantText = '执行该操作时出现错误，请稍后重试。';
-            $meta = ['decision' => 'confirmed', 'proposal_id' => $proposalId, 'error' => $exception->getMessage()];
+            $assistantMessageI18n = $this->buildAssistantMessageI18n('actionExecutionFailed');
+            $assistantText = $this->assistantMessageFallback($assistantMessageI18n);
+            $meta = [
+                'decision' => 'confirmed',
+                'proposal_id' => $proposalId,
+                'error' => $exception->getMessage(),
+                'message_i18n' => $assistantMessageI18n,
+            ];
         }
 
         $this->conversationStoreService->logConversationEvent('admin_ai_assistant_message', $logContext, [
@@ -1206,6 +1217,7 @@ class AdminAiAgentService
             'success' => true,
             'conversation_id' => $conversationId,
             'message' => $assistantText,
+            'message_i18n' => $meta['message_i18n'] ?? null,
             'metadata' => array_merge($meta, ['timestamp' => gmdate(DATE_ATOM)]),
             'conversation' => $this->getConversationDetail($conversationId),
         ];
@@ -1302,25 +1314,61 @@ class AdminAiAgentService
             'status' => 'pending',
         ]);
 
-        $assistantText = '已生成回滚确认卡。请确认后执行反向操作。';
+        $assistantMessageI18n = $this->buildAssistantMessageI18n('rollbackConfirmationGenerated');
+        $assistantText = $this->assistantMessageFallback($assistantMessageI18n);
         $this->conversationStoreService->logConversationEvent('admin_ai_assistant_message', $logContext, [
             'conversation_id' => $conversationId,
             'visible_text' => $assistantText,
             'role' => 'assistant',
-            'meta' => ['decision' => 'rollback', 'proposal_id' => $proposalId],
+            'meta' => ['decision' => 'rollback', 'proposal_id' => $proposalId, 'message_i18n' => $assistantMessageI18n],
         ]);
 
         return [
             'success' => true,
             'conversation_id' => $conversationId,
             'message' => $assistantText,
+            'message_i18n' => $assistantMessageI18n,
             'proposal' => array_merge($proposalData, [
                 'proposal_id' => $proposalId,
                 'status' => 'pending',
             ]),
-            'metadata' => ['decision' => 'rollback', 'proposal_id' => $proposalId, 'timestamp' => gmdate(DATE_ATOM)],
+            'metadata' => [
+                'decision' => 'rollback',
+                'proposal_id' => $proposalId,
+                'message_i18n' => $assistantMessageI18n,
+                'timestamp' => gmdate(DATE_ATOM),
+            ],
             'conversation' => $this->getConversationDetail($conversationId),
         ];
+    }
+
+    /**
+     * @param array<string,mixed> $values
+     * @return array{key:string,values:array<string,mixed>}
+     */
+    private function buildAssistantMessageI18n(string $messageId, array $values = []): array
+    {
+        return [
+            'key' => 'admin.aiWorkspace.messages.' . $messageId,
+            'values' => $values,
+        ];
+    }
+
+    /**
+     * @param array{key:string,values:array<string,mixed>} $messageI18n
+     */
+    private function assistantMessageFallback(array $messageI18n): string
+    {
+        return match ($messageI18n['key']) {
+            'admin.aiWorkspace.messages.actionRejected' => 'The pending action was cancelled. Add more details and send a new instruction when ready.',
+            'admin.aiWorkspace.messages.actionExecutionFailed' => 'The action failed while executing. Please try again later.',
+            'admin.aiWorkspace.messages.rollbackConfirmationGenerated' => 'Rollback confirmation card generated. Please confirm to execute the reverse action.',
+            'admin.aiWorkspace.messages.proposalReady' => sprintf(
+                "Draft action prepared: %s\nConfirm when you want to execute it.",
+                (string) ($messageI18n['values']['summary'] ?? '')
+            ),
+            default => $messageI18n['key'],
+        };
     }
 
     /**
