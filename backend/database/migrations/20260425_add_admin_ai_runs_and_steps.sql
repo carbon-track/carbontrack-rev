@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS admin_ai_steps (
   created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uniq_admin_ai_steps_step_id (step_id),
+  UNIQUE KEY uniq_admin_ai_steps_run_step (run_id, step_id),
   KEY idx_admin_ai_steps_run_id (run_id),
   KEY idx_admin_ai_steps_run_sequence (run_id, sequence_no),
   KEY idx_admin_ai_steps_status (status),

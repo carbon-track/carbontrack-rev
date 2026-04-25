@@ -1270,7 +1270,7 @@ ALTER TABLE `admin_ai_runs`
 --
 ALTER TABLE `admin_ai_steps`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_admin_ai_steps_step_id` (`step_id`),
+  ADD UNIQUE KEY `uniq_admin_ai_steps_run_step` (`run_id`,`step_id`),
   ADD KEY `idx_admin_ai_steps_run_id` (`run_id`),
   ADD KEY `idx_admin_ai_steps_run_sequence` (`run_id`,`sequence_no`),
   ADD KEY `idx_admin_ai_steps_status` (`status`),

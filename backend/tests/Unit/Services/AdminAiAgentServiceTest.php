@@ -1191,6 +1191,49 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertContains('tool.started', $eventNames);
         $this->assertContains('tool.result', $eventNames);
         $this->assertSame('run.finished', end($eventNames));
+
+        $secondService = new AdminAiAgentService(
+            $pdo,
+            new QueueLlmClient([
+                $this->toolResponse('manage_admin', [
+                    'action' => 'get_user_overview',
+                    'payload' => [
+                        'user_id' => 3,
+                    ],
+                ]),
+                $this->plainTextResponse('用户信息第二次查询完毕。'),
+            ]),
+            new NullLogger(),
+            ['model' => 'test-model'],
+            [
+                'agent' => ['max_history_messages' => 12, 'max_run_steps' => 4],
+                'managementActions' => [
+                    [
+                        'name' => 'get_user_overview',
+                        'label' => 'Get user overview',
+                        'description' => 'Read user overview.',
+                        'api' => ['payloadTemplate' => []],
+                        'requires' => ['user_id'],
+                        'contextHints' => [],
+                        'risk_level' => 'read',
+                        'requires_confirmation' => false,
+                    ],
+                ],
+            ],
+            new LlmLogService($pdo, new Logger('test'))
+        );
+
+        $secondResult = $secondService->streamChat($result['conversation_id'], '再查一次', [], null, [
+            'request_id' => 'req-stream-read-loop-2',
+            'actor_type' => 'admin',
+            'actor_id' => 1,
+            'source' => '/admin/ai/chat/stream',
+        ]);
+
+        $this->assertTrue($secondResult['success']);
+        $this->assertCount(2, $secondResult['conversation']['runs']);
+        $this->assertSame('success', $secondResult['conversation']['runs'][0]['steps'][0]['status']);
+        $this->assertSame('success', $secondResult['conversation']['runs'][1]['steps'][0]['status']);
     }
 
     public function testLlmTimeoutIsMappedSeparatelyFromProviderUnavailable(): void

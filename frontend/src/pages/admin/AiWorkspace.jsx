@@ -25,7 +25,7 @@ import {
 import { toast } from 'sonner';
 
 import { API_BASE_URL, adminAPI } from '../../lib/api';
-import { userManager } from '../../lib/auth';
+import { tokenManager, userManager } from '../../lib/auth';
 import { useTranslation } from '../../hooks/useTranslation';
 import { cn } from '../../lib/utils';
 import { Button } from '../../components/ui/Button';
@@ -51,6 +51,14 @@ async function streamAdminAiChat(payload, onEvent) {
   });
 
   const contentType = response.headers.get('content-type') || '';
+  if (response.status === 401 || response.status === 403) {
+    tokenManager.removeToken();
+    userManager.removeUser();
+    if (window.location.pathname !== '/auth/login') {
+      window.location.href = '/auth/login';
+    }
+  }
+
   if (!response.ok || !response.body || !contentType.includes('text/event-stream')) {
     let errorPayload = null;
     try {
@@ -98,6 +106,7 @@ async function streamAdminAiChat(payload, onEvent) {
     if (event === 'run.error') {
       const error = new Error(data?.error || 'AI stream failed');
       error.code = data?.code || 'AI_STREAM_FAILED';
+      error.response = { data };
       error.streamEvent = data;
       throw error;
     }
@@ -1737,7 +1746,7 @@ export default function AdminAiWorkspacePage() {
           toast.error(isZh ? '模型处理超时，可能请求过复杂，请拆分任务或稍后重试。' : 'The model timed out. Try splitting the task or retry later.');
           return;
         }
-        toast.error(error?.response?.data?.error || (isZh ? 'AI 请求失败，请稍后重试。' : 'AI request failed. Please try again.'));
+        toast.error(error?.response?.data?.error || error?.message || (isZh ? 'AI 请求失败，请稍后重试。' : 'AI request failed. Please try again.'));
       },
     }
   );
@@ -1750,26 +1759,13 @@ export default function AdminAiWorkspacePage() {
         outcome,
         ...(rollback ? { rollback } : {}),
       };
-      try {
-        const payload = await streamAdminAiChat({
-          conversation_id: conversationId,
-          context: aiContext,
-          decision: decisionPayload,
-          source: 'admin:/admin/ai',
-        }, handleStreamEvent);
-        return { data: payload };
-      } catch (error) {
-        if (error?.code && error.code !== 'AI_STREAM_FAILED') {
-          throw error;
-        }
-
-        return adminAPI.chatWithAdminAi({
-          conversation_id: conversationId,
-          context: aiContext,
-          decision: decisionPayload,
-          source: 'admin:/admin/ai',
-        });
-      }
+      const payload = await streamAdminAiChat({
+        conversation_id: conversationId,
+        context: aiContext,
+        decision: decisionPayload,
+        source: 'admin:/admin/ai',
+      }, handleStreamEvent);
+      return { data: payload };
     },
     {
       onSuccess: (response, variables) => {
@@ -1802,7 +1798,7 @@ export default function AdminAiWorkspacePage() {
           toast.error(isZh ? '模型处理超时，可能请求过复杂，请拆分任务或稍后重试。' : 'The model timed out. Try splitting the task or retry later.');
           return;
         }
-        toast.error(error?.response?.data?.error || (isZh ? '操作决策失败。' : 'Decision failed.'));
+        toast.error(error?.response?.data?.error || error?.message || (isZh ? '操作决策失败。' : 'Decision failed.'));
       },
     }
   );

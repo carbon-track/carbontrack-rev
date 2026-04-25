@@ -174,7 +174,7 @@ class AdminAiAgentService
      * @param array<string,mixed> $context
      * @param array<string,mixed>|null $decision
      * @param array<string,mixed> $logContext
-     * @param callable(string,array<string,mixed>):void $emit
+     * @param callable(string,array<string,mixed>):void|null $emit
      * @return array<string,mixed>
      */
     public function streamChat(
@@ -183,7 +183,7 @@ class AdminAiAgentService
         array $context = [],
         ?array $decision = null,
         array $logContext = [],
-        callable $emit = null
+        ?callable $emit = null
     ): array {
         if (!$this->enabled) {
             throw new \RuntimeException('AI agent service is disabled');
@@ -319,7 +319,8 @@ class AdminAiAgentService
             ]);
         }
 
-        $runStatus = isset($outcome['proposal']) ? 'waiting_approval' : 'finished';
+        $hasMissingInput = isset($outcome['meta']['missing']) && $outcome['meta']['missing'] !== null;
+        $runStatus = isset($outcome['proposal']) ? 'waiting_approval' : ($hasMissingInput ? 'waiting_input' : 'finished');
         $this->conversationStoreService->finishRun($runId, $runStatus, null, [
             'message' => $outcome['assistant_text'] ?? '',
         ]);
@@ -601,6 +602,7 @@ class AdminAiAgentService
             'assistant_text' => '',
             'metadata' => ['run_id' => $runId],
         ];
+        $runStepSequence = 0;
 
         for ($stepIndex = 0; $stepIndex < $maxSteps; $stepIndex++) {
             $payload = [
@@ -683,7 +685,7 @@ class AdminAiAgentService
                 $outcome = $this->executeToolCallForRun(
                     $conversationId,
                     $runId,
-                    $stepIndex,
+                    $runStepSequence,
                     $toolCall,
                     $context,
                     $logContext,
@@ -740,7 +742,7 @@ class AdminAiAgentService
     private function executeToolCallForRun(
         string $conversationId,
         string $runId,
-        int $stepIndex,
+        int &$runStepSequence,
         array $toolCall,
         array $context,
         array $logContext,
@@ -757,7 +759,7 @@ class AdminAiAgentService
             $arguments = [];
         }
 
-        $sequence = $stepIndex + 1;
+        $sequence = ++$runStepSequence;
         $this->conversationStoreService->startRunStep($runId, $stepId, $sequence, 'tool', $functionName, $arguments);
         $emitEvent('tool.started', [
             'step_id' => $stepId,
@@ -780,7 +782,7 @@ class AdminAiAgentService
                 ],
             };
         } catch (\Throwable $exception) {
-            $this->conversationStoreService->finishRunStep($stepId, 'error', null, $exception->getMessage());
+            $this->conversationStoreService->finishRunStep($runId, $stepId, 'error', null, $exception->getMessage());
             $emitEvent('tool.error', [
                 'step_id' => $stepId,
                 'tool_name' => $functionName,
@@ -806,7 +808,7 @@ class AdminAiAgentService
             'assistant_text' => $outcome['assistant_text'] ?? null,
         ];
         $rollbackState = isset($outcome['meta']['rollback_available']) ? 'available' : null;
-        $this->conversationStoreService->finishRunStep($stepId, $status, $output, null, $approvalState, $rollbackState);
+        $this->conversationStoreService->finishRunStep($runId, $stepId, $status, $output, null, $approvalState, $rollbackState);
 
         $eventPayload = [
             'step_id' => $stepId,
@@ -829,120 +831,6 @@ class AdminAiAgentService
         }
 
         return $outcome;
-    }
-
-    /**
-     * @param array<string,mixed> $context
-     * @param array<string,mixed> $logContext
-     * @param array<string,mixed> $rawResponse
-     * @param callable(string,array<string,mixed>):void $emitEvent
-     * @return array<string,mixed>
-     */
-    private function processModelResponseForStream(
-        string $conversationId,
-        string $userMessage,
-        array $context,
-        array $logContext,
-        array $rawResponse,
-        callable $emitEvent
-    ): array {
-        $choice = $rawResponse['choices'][0] ?? [];
-        $message = $choice['message'] ?? [];
-        $toolCalls = isset($message['tool_calls']) && is_array($message['tool_calls']) ? $message['tool_calls'] : [];
-        $content = isset($message['content']) ? trim((string) $message['content']) : '';
-
-        if ($toolCalls === []) {
-            $fallback = $this->resolveKeywordFallbackAction($userMessage, $content);
-            if ($fallback !== null) {
-                $toolCalls = [[
-                    'id' => $this->generateStepId(),
-                    'type' => 'function',
-                    'function' => [
-                        'name' => 'manage_admin',
-                        'arguments' => json_encode($fallback, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                    ],
-                ]];
-            } else {
-                return [
-                    'assistant_text' => $content !== '' ? $content : '我暂时无法完成这项操作，请再具体一些。',
-                    'metadata' => $this->extractMetadata($rawResponse),
-                ];
-            }
-        }
-
-        $assistantParts = [];
-        $lastOutcome = [
-            'metadata' => $this->extractMetadata($rawResponse),
-        ];
-
-        foreach ($toolCalls as $toolCall) {
-            if (!is_array($toolCall)) {
-                continue;
-            }
-
-            $stepId = isset($toolCall['id']) && is_string($toolCall['id']) && trim($toolCall['id']) !== ''
-                ? trim($toolCall['id'])
-                : $this->generateStepId();
-            $functionName = (string) ($toolCall['function']['name'] ?? '');
-            $arguments = json_decode((string) ($toolCall['function']['arguments'] ?? '{}'), true);
-            if (!is_array($arguments)) {
-                $arguments = [];
-            }
-
-            $emitEvent('tool.started', [
-                'step_id' => $stepId,
-                'tool_name' => $functionName,
-                'arguments' => $arguments,
-            ]);
-
-            try {
-                $outcome = match ($functionName) {
-                    'navigate' => $this->handleNavigationTool($arguments, $rawResponse),
-                    'execute_shortcut' => $this->handleShortcutTool($arguments, $rawResponse),
-                    'manage_admin' => $this->handleManageAdminTool($conversationId, $arguments, $context, $logContext, $rawResponse, [
-                        'step_id' => $stepId,
-                        'run_id' => $logContext['run_id'] ?? null,
-                    ]),
-                    default => [
-                        'assistant_text' => '我没有找到可执行的管理员工具，请换个说法再试一次。',
-                        'metadata' => $this->extractMetadata($rawResponse),
-                    ],
-                };
-            } catch (\Throwable $exception) {
-                $emitEvent('tool.error', [
-                    'step_id' => $stepId,
-                    'tool_name' => $functionName,
-                    'error' => $exception->getMessage(),
-                ]);
-                throw $exception;
-            }
-
-            $emitEvent('tool.result', [
-                'step_id' => $stepId,
-                'tool_name' => $functionName,
-                'status' => isset($outcome['proposal']) ? 'waiting_approval' : 'success',
-                'result' => $outcome['result'] ?? null,
-                'proposal' => $outcome['proposal'] ?? null,
-                'suggestion' => $outcome['suggestion'] ?? null,
-                'meta' => $outcome['meta'] ?? null,
-            ]);
-
-            if (isset($outcome['proposal']) && is_array($outcome['proposal'])) {
-                return $outcome;
-            }
-
-            $assistantText = trim((string) ($outcome['assistant_text'] ?? ''));
-            if ($assistantText !== '') {
-                $assistantParts[] = $assistantText;
-            }
-            $lastOutcome = $outcome;
-        }
-
-        if ($assistantParts !== []) {
-            $lastOutcome['assistant_text'] = implode("\n\n", array_values(array_unique($assistantParts)));
-        }
-
-        return $lastOutcome;
     }
 
     private function handleNavigationTool(array $arguments, array $rawResponse): array

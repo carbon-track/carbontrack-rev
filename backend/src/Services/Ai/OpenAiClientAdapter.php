@@ -19,7 +19,8 @@ class OpenAiClientAdapter implements LlmClientInterface
         private ?HttpClientInterface $httpClient = null,
         private string $baseUri = 'https://api.openai.com/v1',
         private ?string $apiKey = null,
-        private ?string $organization = null
+        private ?string $organization = null,
+        private ?HttpClientInterface $streamHttpClient = null
     ) {}
 
     /**
@@ -51,8 +52,8 @@ class OpenAiClientAdapter implements LlmClientInterface
     public function streamChatCompletion(array $payload, callable $onEvent): array
     {
         if (
-            $this->httpClient === null
-            || !method_exists($this->httpClient, 'request')
+            ($this->streamHttpClient ?? $this->httpClient) === null
+            || !method_exists($this->streamHttpClient ?? $this->httpClient, 'request')
             || !is_string($this->apiKey)
             || trim($this->apiKey) === ''
         ) {
@@ -72,7 +73,7 @@ class OpenAiClientAdapter implements LlmClientInterface
         );
 
         /** @var object{request:callable} $client */
-        $client = $this->httpClient;
+        $client = $this->streamHttpClient ?? $this->httpClient;
         $response = $client->request('POST', $this->buildChatCompletionUri(), [
             'headers' => $this->buildHeaders('text/event-stream'),
             'json' => $streamPayload,
@@ -108,12 +109,17 @@ class OpenAiClientAdapter implements LlmClientInterface
         $toolCalls = [];
         $buffer = '';
         $body = $response->getBody();
+        $emptyReadBackoffMicros = 10000;
+        $maxEmptyReadBackoffMicros = 100000;
         while (!$body->eof()) {
             $chunk = $body->read(8192);
             if ($chunk === '') {
+                usleep($emptyReadBackoffMicros);
+                $emptyReadBackoffMicros = min($emptyReadBackoffMicros * 2, $maxEmptyReadBackoffMicros);
                 continue;
             }
 
+            $emptyReadBackoffMicros = 10000;
             $buffer .= $chunk;
             while (($separator = strpos($buffer, "\n\n")) !== false) {
                 $frame = substr($buffer, 0, $separator);

@@ -1925,8 +1925,28 @@
               }
             }
           },
+          "500": {
+            "description": "管理员 AI 会话处理失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "503": {
             "description": "AI 服务暂时不可用。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "AI 服务处理超时。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2003,8 +2023,28 @@
               }
             }
           },
+          "500": {
+            "description": "流式会话启动失败或服务端运行异常。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "503": {
             "description": "AI 服务未配置或暂时不可用。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "AI 服务处理超时；已建立的 SSE 连接也可能以 run.error 事件返回 AI_PROVIDER_TIMEOUT。",
             "content": {
               "application/json": {
                 "schema": {
