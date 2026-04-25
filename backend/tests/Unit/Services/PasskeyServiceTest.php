@@ -150,6 +150,34 @@ class PasskeyServiceTest extends TestCase
         $this->assertSame(-7, $publicKey['alg']);
     }
 
+    public function testCompleteRegistrationPadsShortEcCoordinates(): void
+    {
+        $registration = $this->service->beginRegistration($this->userFixture(), [
+            'label' => 'Short Coordinate Key',
+        ]);
+        $shortX = str_repeat("\x7f", 31);
+        $y = str_repeat("\x22", 32);
+        $credentialIdBytes = 'credential-short-coordinate-1';
+
+        $result = $this->service->completeRegistration($this->userFixture(), [
+            'challenge_id' => $registration['challenge_id'],
+            'credential' => $this->buildRegistrationCredential(
+                $registration['public_key']['challenge'],
+                'https://app.example.test',
+                $shortX,
+                $y,
+                $credentialIdBytes
+            ),
+        ]);
+
+        $stored = $this->pdo->query('SELECT public_key FROM user_passkeys WHERE credential_id = "' . $result['credential_id'] . '"')->fetch(PDO::FETCH_ASSOC);
+        $this->assertIsArray($stored);
+        $publicKey = json_decode((string) $stored['public_key'], true);
+        $this->assertSame("\x00" . $shortX, $this->base64UrlDecode((string) $publicKey['x']));
+        $this->assertSame($y, $this->base64UrlDecode((string) $publicKey['y']));
+        $this->assertStringContainsString('-----BEGIN PUBLIC KEY-----', (string) $publicKey['pem']);
+    }
+
     public function testCompleteAuthenticationVerifiesAssertionAndUpdatesCounter(): void
     {
         $registration = $this->service->beginRegistration($this->userFixture(), [
@@ -730,5 +758,15 @@ class PasskeyServiceTest extends TestCase
     private function base64UrlEncode(string $value): string
     {
         return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+    }
+
+    private function base64UrlDecode(string $value): string
+    {
+        $padding = strlen($value) % 4;
+        if ($padding > 0) {
+            $value .= str_repeat('=', 4 - $padding);
+        }
+
+        return base64_decode(strtr($value, '-_', '+/')) ?: '';
     }
 }
