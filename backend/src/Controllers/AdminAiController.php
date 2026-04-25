@@ -870,6 +870,16 @@ class AdminAiController
                 'description' => isset($action['description']) && is_string($action['description']) ? $action['description'] : null,
                 'risk_level' => isset($action['risk_level']) && is_string($action['risk_level']) ? $action['risk_level'] : null,
                 'requires_confirmation' => !empty($action['requires_confirmation']),
+                'approval_policy' => isset($action['approval_policy']) && is_string($action['approval_policy']) ? $action['approval_policy'] : null,
+                'autonomy_min_mode' => isset($action['autonomy_min_mode']) && is_string($action['autonomy_min_mode']) ? $action['autonomy_min_mode'] : null,
+                'rollback_strategy' => isset($action['rollback_strategy']) && is_string($action['rollback_strategy']) ? $action['rollback_strategy'] : null,
+                'rollback_window_minutes' => isset($action['rollback_window_minutes']) && is_numeric((string) $action['rollback_window_minutes'])
+                    ? (int) $action['rollback_window_minutes']
+                    : null,
+                'side_effects' => array_values(array_filter(
+                    isset($action['side_effects']) && is_array($action['side_effects']) ? $action['side_effects'] : [],
+                    static fn ($item): bool => is_string($item) && trim($item) !== ''
+                )),
                 'context_hints' => array_values(array_filter(
                     isset($action['contextHints']) && is_array($action['contextHints']) ? $action['contextHints'] : [],
                     static fn ($item): bool => is_string($item) && trim($item) !== ''

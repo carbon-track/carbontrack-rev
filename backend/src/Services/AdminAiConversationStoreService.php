@@ -205,6 +205,7 @@ class AdminAiConversationStoreService
                 'last_model' => $totals['last_model'] ?? null,
             ],
             'messages' => $messages,
+            'runs' => $this->fetchConversationRuns($conversationId),
             'llm_calls' => $this->fetchConversationLlmCalls($conversationId),
             'pending_actions' => $pendingActions,
         ];
@@ -377,6 +378,147 @@ class AdminAiConversationStoreService
     }
 
     /**
+     * @param array<string,mixed> $logContext
+     * @param array<string,mixed> $meta
+     */
+    public function startRun(string $runId, string $conversationId, array $logContext, string $autonomyMode, array $meta = []): void
+    {
+        try {
+            $this->ensureConversationRecord(
+                $conversationId,
+                isset($logContext['actor_id']) && is_numeric((string) $logContext['actor_id']) ? (int) $logContext['actor_id'] : null,
+                null,
+                'event',
+                null
+            );
+
+            $stmt = $this->db->prepare("INSERT INTO admin_ai_runs (
+                run_id, conversation_id, admin_id, autonomy_mode, status, source, request_id, started_at, meta_json
+            ) VALUES (
+                :run_id, :conversation_id, :admin_id, :autonomy_mode, 'running', :source, :request_id, CURRENT_TIMESTAMP, :meta_json
+            )");
+            $stmt->execute([
+                ':run_id' => $runId,
+                ':conversation_id' => $conversationId,
+                ':admin_id' => isset($logContext['actor_id']) && is_numeric((string) $logContext['actor_id']) ? (int) $logContext['actor_id'] : null,
+                ':autonomy_mode' => $autonomyMode,
+                ':source' => $logContext['source'] ?? '/admin/ai/chat/stream',
+                ':request_id' => $logContext['request_id'] ?? null,
+                ':meta_json' => json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ]);
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Failed to start admin AI run.', [
+                'run_id' => $runId,
+                'conversation_id' => $conversationId,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $meta
+     */
+    public function finishRun(string $runId, string $status, ?string $errorMessage = null, array $meta = []): void
+    {
+        try {
+            $stmt = $this->db->prepare("UPDATE admin_ai_runs
+                SET status = :status,
+                    error_message = :error_message,
+                    finished_at = CURRENT_TIMESTAMP,
+                    meta_json = :meta_json,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE run_id = :run_id");
+            $stmt->execute([
+                ':status' => $status,
+                ':error_message' => $errorMessage,
+                ':meta_json' => json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                ':run_id' => $runId,
+            ]);
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Failed to finish admin AI run.', [
+                'run_id' => $runId,
+                'status' => $status,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $input
+     * @param array<string,mixed>|null $output
+     */
+    public function startRunStep(
+        string $runId,
+        string $stepId,
+        int $sequence,
+        string $type,
+        ?string $toolName,
+        array $input = [],
+        ?string $approvalState = null
+    ): void {
+        try {
+            $stmt = $this->db->prepare("INSERT INTO admin_ai_steps (
+                run_id, step_id, sequence_no, type, tool_name, status, approval_state, input_json, started_at
+            ) VALUES (
+                :run_id, :step_id, :sequence_no, :type, :tool_name, 'running', :approval_state, :input_json, CURRENT_TIMESTAMP
+            )");
+            $stmt->execute([
+                ':run_id' => $runId,
+                ':step_id' => $stepId,
+                ':sequence_no' => $sequence,
+                ':type' => $type,
+                ':tool_name' => $toolName,
+                ':approval_state' => $approvalState,
+                ':input_json' => json_encode($input, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ]);
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Failed to start admin AI run step.', [
+                'run_id' => $runId,
+                'step_id' => $stepId,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * @param array<string,mixed>|null $output
+     */
+    public function finishRunStep(
+        string $stepId,
+        string $status,
+        ?array $output = null,
+        ?string $errorMessage = null,
+        ?string $approvalState = null,
+        ?string $rollbackState = null
+    ): void {
+        try {
+            $stmt = $this->db->prepare("UPDATE admin_ai_steps
+                SET status = :status,
+                    output_json = :output_json,
+                    error_message = :error_message,
+                    approval_state = COALESCE(:approval_state, approval_state),
+                    rollback_state = COALESCE(:rollback_state, rollback_state),
+                    finished_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE step_id = :step_id");
+            $stmt->execute([
+                ':status' => $status,
+                ':output_json' => $output !== null ? json_encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+                ':error_message' => $errorMessage,
+                ':approval_state' => $approvalState,
+                ':rollback_state' => $rollbackState,
+                ':step_id' => $stepId,
+            ]);
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Failed to finish admin AI run step.', [
+                'step_id' => $stepId,
+                'status' => $status,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * @return array<int,array<string,mixed>>
      */
     private function fetchConversationTimeline(string $conversationId): array
@@ -410,6 +552,94 @@ class AdminAiConversationStoreService
         }
 
         return $items;
+    }
+
+    /**
+     * @return array<int,array<string,mixed>>
+     */
+    private function fetchConversationRuns(string $conversationId): array
+    {
+        try {
+            $stmt = $this->db->prepare("SELECT *
+                FROM admin_ai_runs
+                WHERE conversation_id = :conversation_id
+                ORDER BY started_at ASC, id ASC");
+            $stmt->execute([':conversation_id' => $conversationId]);
+
+            $runs = [];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $runId = (string) ($row['run_id'] ?? '');
+                if ($runId === '') {
+                    continue;
+                }
+                $runs[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'run_id' => $runId,
+                    'conversation_id' => $row['conversation_id'] ?? null,
+                    'admin_id' => $row['admin_id'] !== null ? (int) $row['admin_id'] : null,
+                    'autonomy_mode' => $row['autonomy_mode'] ?? null,
+                    'status' => $row['status'] ?? null,
+                    'source' => $row['source'] ?? null,
+                    'request_id' => $row['request_id'] ?? null,
+                    'error_message' => $row['error_message'] ?? null,
+                    'started_at' => $row['started_at'] ?? null,
+                    'finished_at' => $row['finished_at'] ?? null,
+                    'meta' => $this->decodeJson($row['meta_json'] ?? null),
+                    'steps' => $this->fetchRunSteps($runId),
+                ];
+            }
+
+            return $runs;
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Failed to fetch admin AI runs.', [
+                'conversation_id' => $conversationId,
+                'error' => $exception->getMessage(),
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * @return array<int,array<string,mixed>>
+     */
+    private function fetchRunSteps(string $runId): array
+    {
+        try {
+            $stmt = $this->db->prepare("SELECT *
+                FROM admin_ai_steps
+                WHERE run_id = :run_id
+                ORDER BY sequence_no ASC, id ASC");
+            $stmt->execute([':run_id' => $runId]);
+
+            $steps = [];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $steps[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'run_id' => $row['run_id'] ?? null,
+                    'step_id' => $row['step_id'] ?? null,
+                    'sequence' => isset($row['sequence_no']) ? (int) $row['sequence_no'] : null,
+                    'type' => $row['type'] ?? null,
+                    'tool_name' => $row['tool_name'] ?? null,
+                    'status' => $row['status'] ?? null,
+                    'approval_state' => $row['approval_state'] ?? null,
+                    'rollback_state' => $row['rollback_state'] ?? null,
+                    'input' => $this->decodeJson($row['input_json'] ?? null),
+                    'output' => $this->decodeJson($row['output_json'] ?? null),
+                    'error_message' => $row['error_message'] ?? null,
+                    'started_at' => $row['started_at'] ?? null,
+                    'finished_at' => $row['finished_at'] ?? null,
+                    'duration_ms' => $row['duration_ms'] !== null ? (float) $row['duration_ms'] : null,
+                ];
+            }
+
+            return $steps;
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Failed to fetch admin AI run steps.', [
+                'run_id' => $runId,
+                'error' => $exception->getMessage(),
+            ]);
+            return [];
+        }
     }
 
     /**

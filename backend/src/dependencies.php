@@ -56,6 +56,7 @@ use CarbonTrack\Services\AdminAiAgentService;
 use CarbonTrack\Services\AdminAiConversationStoreService;
 use CarbonTrack\Services\AdminAiReadModelService;
 use CarbonTrack\Services\AdminAiResultFormatterService;
+use CarbonTrack\Services\AdminAiRollbackService;
 use CarbonTrack\Services\AdminAiWriteActionService;
 use CarbonTrack\Services\AdminAnnouncementAiService;
 use CarbonTrack\Controllers\BadgeController;
@@ -491,6 +492,10 @@ $__deps_initializer = function (Container $container) {
         return new AdminAiResultFormatterService();
     });
 
+    $container->set(AdminAiRollbackService::class, function () {
+        return new AdminAiRollbackService();
+    });
+
     $container->set(UserAiService::class, function (ContainerInterface $c) {
         /** @var \CarbonTrack\Services\Ai\LlmClientInterface|null $llmClient */
         $llmClient = $c->get('ai.llmClient');
@@ -630,7 +635,8 @@ $__deps_initializer = function (Container $container) {
             $c->get(AdminAiReadModelService::class),
             $c->get(AdminAiWriteActionService::class),
             $c->get(AdminAiConversationStoreService::class),
-            $c->get(AdminAiResultFormatterService::class)
+            $c->get(AdminAiResultFormatterService::class),
+            $c->get(AdminAiRollbackService::class)
         );
     });
 

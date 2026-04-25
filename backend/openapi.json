@@ -2357,8 +2357,8 @@
               }
             }
           },
-          "503": {
-            "description": "头像对象存储服务不可用，无法验证 /avatars/ 路径。",
+          "500": {
+            "description": "创建头像失败。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2367,8 +2367,8 @@
               }
             }
           },
-          "500": {
-            "description": "创建头像失败。",
+          "503": {
+            "description": "头像对象存储服务不可用，无法验证 /avatars/ 路径。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2553,8 +2553,8 @@
               }
             }
           },
-          "503": {
-            "description": "头像对象存储服务不可用，无法验证 /avatars/ 路径。",
+          "500": {
+            "description": "更新头像失败。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2563,8 +2563,8 @@
               }
             }
           },
-          "500": {
-            "description": "更新头像失败。",
+          "503": {
+            "description": "头像对象存储服务不可用，无法验证 /avatars/ 路径。",
             "content": {
               "application/json": {
                 "schema": {
@@ -24505,7 +24505,47 @@
             "type": "string",
             "enum": [
               "confirm",
-              "reject"
+              "reject",
+              "rollback"
+            ]
+          },
+          "rollback": {
+            "$ref": "#/components/schemas/AdminAiRollbackDescriptor"
+          }
+        }
+      },
+      "AdminAiRollbackDescriptor": {
+        "type": "object",
+        "properties": {
+          "source_proposal_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "source_action": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "action_name": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "requires_confirmation": {
+            "type": "boolean"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": [
+              "string",
+              "null"
             ]
           }
         }
@@ -24528,7 +24568,17 @@
           },
           "context": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": true,
+            "properties": {
+              "autonomyMode": {
+                "type": "string",
+                "enum": [
+                  "read_only_auto",
+                  "low_risk_auto",
+                  "full_auto"
+                ]
+              }
+            }
           },
           "decision": {
             "$ref": "#/components/schemas/AdminAiDecision"
@@ -24942,6 +24992,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AdminAiPendingAction"
+            }
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAiRun"
             }
           }
         }
@@ -27505,6 +27561,42 @@
           "requires_confirmation": {
             "type": "boolean"
           },
+          "approval_policy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "autonomy_min_mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "read_only_auto",
+              "low_risk_auto",
+              "full_auto",
+              null
+            ]
+          },
+          "rollback_strategy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rollback_window_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "side_effects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "context_hints": {
             "type": "array",
             "items": {
@@ -29151,19 +29243,19 @@
           "task_name": {
             "type": "string"
           },
-        "description": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "is_registered": {
-          "type": "boolean",
-          "description": "该任务键是否仍由当前调度器注册支持。未注册任务只允许在管理端被禁用。"
-        },
-        "interval_minutes": {
-          "type": "integer"
-        },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_registered": {
+            "type": "boolean",
+            "description": "该任务键是否仍由当前调度器注册支持。未注册任务只允许在管理端被禁用。"
+          },
+          "interval_minutes": {
+            "type": "integer"
+          },
           "enabled": {
             "type": "boolean"
           },
@@ -29468,6 +29560,179 @@
           "settings": {
             "type": "object",
             "additionalProperties": true
+          }
+        }
+      },
+      "AdminAiRunStep": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "run_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "step_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sequence": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tool_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "approval_state": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rollback_state": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "output": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "duration_ms": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      },
+      "AdminAiRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "conversation_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "admin_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "autonomy_mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "read_only_auto",
+              "low_risk_auto",
+              "full_auto",
+              null
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAiRunStep"
+            }
           }
         }
       }
