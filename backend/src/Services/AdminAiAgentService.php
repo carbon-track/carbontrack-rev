@@ -1359,16 +1359,7 @@ class AdminAiAgentService
      */
     private function assistantMessageFallback(array $messageI18n): string
     {
-        return match ($messageI18n['key']) {
-            'admin.aiWorkspace.messages.actionRejected' => 'The pending action was cancelled. Add more details and send a new instruction when ready.',
-            'admin.aiWorkspace.messages.actionExecutionFailed' => 'The action failed while executing. Please try again later.',
-            'admin.aiWorkspace.messages.rollbackConfirmationGenerated' => 'Rollback confirmation card generated. Please confirm to execute the reverse action.',
-            'admin.aiWorkspace.messages.proposalReady' => sprintf(
-                "Draft action prepared: %s\nConfirm when you want to execute it.",
-                (string) ($messageI18n['values']['summary'] ?? '')
-            ),
-            default => $messageI18n['key'],
-        };
+        return $messageI18n['key'];
     }
 
     /**

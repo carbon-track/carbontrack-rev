@@ -25087,7 +25087,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optional i18n key/value payload. Frontend clients should translate this when present and use message as a fallback."
+            "description": "Optional i18n key/value payload. Frontend clients should translate this when present; the message field remains a compatibility string and may contain the same i18n key."
           },
           "metadata": {
             "type": "object",
