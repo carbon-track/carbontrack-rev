@@ -110,17 +110,12 @@ class OpenAiClientAdapter implements LlmClientInterface
         $toolCalls = [];
         $buffer = '';
         $body = $response->getBody();
-        $emptyReadBackoffMicros = 10000;
-        $maxEmptyReadBackoffMicros = 100000;
         while (!$body->eof()) {
             $chunk = $body->read(8192);
             if ($chunk === '') {
-                usleep($emptyReadBackoffMicros);
-                $emptyReadBackoffMicros = min($emptyReadBackoffMicros * 2, $maxEmptyReadBackoffMicros);
                 continue;
             }
 
-            $emptyReadBackoffMicros = 10000;
             $buffer .= $chunk;
             while (preg_match("/\r?\n\r?\n/", $buffer, $separatorMatch, PREG_OFFSET_CAPTURE) === 1) {
                 $separator = $separatorMatch[0][1];

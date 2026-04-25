@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Services;
 
+use CarbonTrack\Support\SyntheticRequestFactory;
 use PDO;
 use Psr\Log\LoggerInterface;
 
@@ -15,7 +16,8 @@ class AdminAiConversationStoreService
     public function __construct(
         private PDO $db,
         private LoggerInterface $logger,
-        private ?AuditLogService $auditLogService = null
+        private ?AuditLogService $auditLogService = null,
+        private ?ErrorLogService $errorLogService = null
     ) {
     }
 
@@ -417,6 +419,13 @@ class AdminAiConversationStoreService
                 'conversation_id' => $conversationId,
                 'error' => $exception->getMessage(),
             ]);
+            $this->logPersistenceError($exception, 'admin_ai_run_start_failed', [
+                'run_id' => $runId,
+                'conversation_id' => $conversationId,
+                'request_id' => $logContext['request_id'] ?? null,
+                'actor_id' => $logContext['actor_id'] ?? null,
+                'source' => $logContext['source'] ?? '/admin/ai/chat/stream',
+            ]);
         }
     }
 
@@ -426,16 +435,18 @@ class AdminAiConversationStoreService
     public function finishRun(string $runId, string $status, ?string $errorMessage = null, array $meta = []): void
     {
         try {
+            $finishedAt = gmdate('Y-m-d H:i:s');
             $stmt = $this->db->prepare("UPDATE admin_ai_runs
                 SET status = :status,
                     error_message = :error_message,
-                    finished_at = CURRENT_TIMESTAMP,
+                    finished_at = :finished_at,
                     meta_json = :meta_json,
-                    updated_at = CURRENT_TIMESTAMP
+                    updated_at = :finished_at
                 WHERE run_id = :run_id");
             $stmt->execute([
                 ':status' => $status,
                 ':error_message' => $errorMessage,
+                ':finished_at' => $finishedAt,
                 ':meta_json' => json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ':run_id' => $runId,
             ]);
@@ -444,6 +455,10 @@ class AdminAiConversationStoreService
                 'run_id' => $runId,
                 'status' => $status,
                 'error' => $exception->getMessage(),
+            ]);
+            $this->logPersistenceError($exception, 'admin_ai_run_finish_failed', [
+                'run_id' => $runId,
+                'status' => $status,
             ]);
         }
     }
@@ -484,6 +499,13 @@ class AdminAiConversationStoreService
                 'run_id' => $runId,
                 'step_id' => $stepId,
                 'error' => $exception->getMessage(),
+            ]);
+            $this->logPersistenceError($exception, 'admin_ai_run_step_start_failed', [
+                'run_id' => $runId,
+                'step_id' => $stepId,
+                'sequence' => $sequence,
+                'type' => $type,
+                'tool_name' => $toolName,
             ]);
         }
     }
@@ -551,6 +573,45 @@ class AdminAiConversationStoreService
                 'step_id' => $stepId,
                 'status' => $status,
                 'error' => $exception->getMessage(),
+            ]);
+            $this->logPersistenceError($exception, 'admin_ai_run_step_finish_failed', [
+                'run_id' => $runId,
+                'step_id' => $stepId,
+                'status' => $status,
+            ]);
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $context
+     */
+    private function logPersistenceError(\Throwable $exception, string $contextMessage, array $context): void
+    {
+        if ($this->errorLogService === null) {
+            return;
+        }
+
+        try {
+            $requestId = isset($context['request_id']) && is_string($context['request_id'])
+                ? $context['request_id']
+                : null;
+            $source = isset($context['source']) && is_string($context['source'])
+                ? $context['source']
+                : '/admin/ai/chat/stream';
+            $request = SyntheticRequestFactory::fromContext(
+                $source,
+                'SYSTEM',
+                $requestId,
+                [],
+                $context,
+                ['PHP_SAPI' => PHP_SAPI]
+            );
+            $this->errorLogService->logException($exception, $request, ['context_message' => $contextMessage] + $context);
+        } catch (\Throwable $loggingError) {
+            $this->logger->warning('Failed to persist admin AI conversation store error log.', [
+                'context_message' => $contextMessage,
+                'error' => $loggingError->getMessage(),
+                'original_error' => $exception->getMessage(),
             ]);
         }
     }

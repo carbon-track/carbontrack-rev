@@ -510,7 +510,8 @@ $__deps_initializer = function (Container $container) {
         return new AdminAiConversationStoreService(
             $c->get(PDO::class),
             $c->get(LoggerInterface::class),
-            $c->get(AuditLogService::class)
+            $c->get(AuditLogService::class),
+            $c->get(ErrorLogService::class)
         );
     });
 
