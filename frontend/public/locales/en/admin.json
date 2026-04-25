@@ -130,7 +130,13 @@
       "capabilityDescription": "This view is synced from the shared workspace configuration used by both frontend and backend.",
       "navigationTitle": "Navigation targets",
       "managementActionsTitle": "Management actions",
-      "requiredFields": "Required: {{fields}}"
+      "requiredFields": "Required: {{fields}}",
+      "messages": {
+        "actionRejected": "The pending action was cancelled. Add more details and send a new instruction when ready.",
+        "actionExecutionFailed": "The action failed while executing. Please try again later.",
+        "rollbackConfirmationGenerated": "Rollback confirmation card generated. Please confirm to execute the reverse action.",
+        "proposalReady": "Draft action prepared: {{summary}}\nConfirm when you want to execute it."
+      }
     },
     "passkeys": {
       "title": "Passkey Overview",
