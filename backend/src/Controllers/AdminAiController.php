@@ -224,6 +224,25 @@ class AdminAiController
                         'source' => $source ?? $request->getUri()->getPath(),
                     ],
                 ]);
+            } catch (\InvalidArgumentException $exception) {
+                $this->logAdminAudit('admin_ai_chat_stream_failed', $user, $request, [
+                    'conversation_id' => $conversationId,
+                    'data' => [
+                        'run_id' => null,
+                        'code' => 'INVALID_INPUT',
+                        'status' => 'validation_error',
+                        'error' => $exception->getMessage(),
+                        'has_decision' => $decision !== null,
+                        'source' => $source ?? $request->getUri()->getPath(),
+                    ],
+                ], 'failed');
+                $emit('run.error', [
+                    'success' => false,
+                    'code' => 'INVALID_INPUT',
+                    'status' => 'validation_error',
+                    'error' => $exception->getMessage(),
+                    'timestamp' => gmdate(DATE_ATOM),
+                ]);
             } catch (\RuntimeException $runtimeException) {
                 $error = $this->mapAdminAiRuntimeException(
                     $runtimeException,

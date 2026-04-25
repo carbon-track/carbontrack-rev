@@ -68,7 +68,11 @@ async function streamAdminAiChat(payload, onEvent) {
     }
     const error = new Error(errorPayload?.error || `AI stream failed with status ${response.status}`);
     error.code = errorPayload?.code || 'AI_STREAM_FAILED';
-    error.response = { status: response.status, data: errorPayload };
+    error.response = {
+      status: response.status,
+      data: errorPayload,
+      headers: { 'content-type': contentType },
+    };
     throw error;
   }
 
@@ -117,12 +121,14 @@ async function streamAdminAiChat(payload, onEvent) {
     if (done) break;
 
     buffer += decoder.decode(value, { stream: true });
-    let separatorIndex = buffer.indexOf('\n\n');
+    let separatorMatch = buffer.match(/\r?\n\r?\n/);
+    let separatorIndex = separatorMatch?.index ?? -1;
     while (separatorIndex !== -1) {
       const frame = buffer.slice(0, separatorIndex);
-      buffer = buffer.slice(separatorIndex + 2);
+      buffer = buffer.slice(separatorIndex + separatorMatch[0].length);
       dispatchFrame(frame);
-      separatorIndex = buffer.indexOf('\n\n');
+      separatorMatch = buffer.match(/\r?\n\r?\n/);
+      separatorIndex = separatorMatch?.index ?? -1;
     }
   }
 
@@ -962,12 +968,14 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback }) {
     );
   }
 
-  if (event === 'assistant.delta') {
+  if (event === 'assistant.delta' || event === 'assistant.message') {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
         <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
           <Bot className="h-3.5 w-3.5" />
-          {isZh ? '正在生成回复' : 'Streaming response'}
+          {event === 'assistant.delta'
+            ? (isZh ? '正在生成回复' : 'Streaming response')
+            : (isZh ? 'AI 回复' : 'Assistant message')}
         </div>
         <div className="whitespace-pre-wrap">{data.content}</div>
       </div>
@@ -1034,6 +1042,7 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback }) {
 
   if (event === 'rollback.available') {
     const rollback = data.rollback || {};
+    const rollbackPrompt = rollback.prompt_i18n?.[isZh ? 'zh' : 'en'] || rollback.prompt;
     return (
       <div className="rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-100">
         <div className="flex items-center gap-2 font-semibold">
@@ -1041,7 +1050,7 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback }) {
           {isZh ? '可回滚操作已准备' : 'Rollback available'}
         </div>
         <div className="mt-2 leading-6">
-          {rollback.prompt || (isZh ? '可生成反向操作提案，执行前仍需管理员确认。' : 'A reverse-action proposal can be created and will still require approval.')}
+          {rollbackPrompt || (isZh ? '可生成反向操作提案，执行前仍需管理员确认。' : 'A reverse-action proposal can be created and will still require approval.')}
         </div>
         {rollback.action_name ? (
           <div className="mt-2 inline-flex rounded-md border border-current/20 px-2 py-1 font-mono text-[11px]">
@@ -1223,6 +1232,7 @@ function EventTimelineRow({ item, locale, isZh, disabled, onConfirmProposal, onR
   const metaData = item?.meta?.data || {};
   const decisionMeta = metaData.decision_meta || {};
   const rollback = decisionMeta.rollback_available || metaData.rollback_available || null;
+  const rollbackPrompt = rollback?.prompt_i18n?.[isZh ? 'zh' : 'en'] || rollback?.prompt;
   const payload = proposal?.payload || metaData.request_payload || metaData.payload || null;
   const result = metaData.new_data || metaData.result || null;
 
@@ -1293,7 +1303,7 @@ function EventTimelineRow({ item, locale, isZh, disabled, onConfirmProposal, onR
             <div className="min-w-0">
               <div className="font-medium">{isZh ? '可回滚' : 'Rollback available'}</div>
               <div className="mt-1 text-xs leading-5 opacity-80">
-                {rollback.prompt || (isZh ? '将生成一张反向操作确认卡。' : 'Creates a reverse-action approval card.')}
+                {rollbackPrompt || (isZh ? '将生成一张反向操作确认卡。' : 'Creates a reverse-action approval card.')}
               </div>
             </div>
             <Button
@@ -1759,13 +1769,32 @@ export default function AdminAiWorkspacePage() {
         outcome,
         ...(rollback ? { rollback } : {}),
       };
-      const payload = await streamAdminAiChat({
+      const requestPayload = {
         conversation_id: conversationId,
         context: aiContext,
         decision: decisionPayload,
         source: 'admin:/admin/ai',
-      }, handleStreamEvent);
-      return { data: payload };
+      };
+      try {
+        const payload = await streamAdminAiChat(requestPayload, handleStreamEvent);
+        return { data: payload };
+      } catch (error) {
+        const status = error?.response?.status;
+        const contentType = error?.response?.headers?.['content-type'] || '';
+        const shouldFallbackToJson =
+          status === 404 ||
+          status === 406 ||
+          status === 415 ||
+          status === 501 ||
+          (!!contentType && !contentType.toLowerCase().includes('text/event-stream'));
+
+        if (!shouldFallbackToJson) {
+          throw error;
+        }
+
+        setStreamEvents([]);
+        return adminAPI.chatWithAdminAi(requestPayload);
+      }
     },
     {
       onSuccess: (response, variables) => {

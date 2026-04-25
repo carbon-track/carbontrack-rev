@@ -366,9 +366,28 @@ $__deps_initializer = function (Container $container) {
                 'connect_timeout' => $connectTimeout,
                 'handler' => $handlerStack,
             ]);
+            $streamHandlerStack = HandlerStack::create();
+            $streamHandlerStack->push(Middleware::mapResponse(function (ResponseInterface $response) {
+                $headers = array_filter(
+                    array_map(static fn (string $value): string => trim($value), $response->getHeader('x-request-id')),
+                    static fn (string $value): bool => $value !== ''
+                );
+                if ($headers !== []) {
+                    return $response;
+                }
+
+                try {
+                    $requestId = 'llm-stream-' . bin2hex(random_bytes(8));
+                } catch (\Throwable) {
+                    $requestId = 'llm-stream-' . bin2hex(openssl_random_pseudo_bytes(8));
+                }
+
+                return $response->withHeader('x-request-id', $requestId);
+            }));
             $streamHttpClient = new GuzzleClient([
                 'timeout' => $timeout,
                 'connect_timeout' => $connectTimeout,
+                'handler' => $streamHandlerStack,
             ]);
 
             $factory = $factory->withHttpClient($httpClient);

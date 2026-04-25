@@ -81,6 +81,9 @@ class AdminAiRollbackService
             return null;
         }
 
+        $promptZh = sprintf('回滚刚才的 %s 操作，原提案 #%d。', $actionName, $proposalId);
+        $promptEn = sprintf('Rollback the previous %s action from proposal #%d.', $actionName, $proposalId);
+
         return [
             'source_proposal_id' => $proposalId,
             'source_action' => $actionName,
@@ -88,13 +91,17 @@ class AdminAiRollbackService
             'payload' => $rollbackPayload,
             'requires_confirmation' => true,
             'mode' => 'approval_proposal',
-            'prompt' => sprintf('回滚刚才的 %s 操作，原提案 #%d。', $actionName, $proposalId),
+            'prompt' => $promptEn,
+            'prompt_i18n' => [
+                'zh' => $promptZh,
+                'en' => $promptEn,
+            ],
         ];
     }
 
     /**
      * @param array<string,mixed> $descriptor
-     * @return array{action_name:string,payload:array<string,mixed>,source_proposal_id:int|null,source_action:string|null,prompt:string|null}|null
+     * @return array{action_name:string,payload:array<string,mixed>,source_proposal_id:int|null,source_action:string|null,prompt:string|null,prompt_i18n:array<string,string>}|null
      */
     public function normalizeDescriptor(array $descriptor): ?array
     {
@@ -117,6 +124,12 @@ class AdminAiRollbackService
             'prompt' => isset($descriptor['prompt']) && is_string($descriptor['prompt'])
                 ? trim($descriptor['prompt'])
                 : null,
+            'prompt_i18n' => isset($descriptor['prompt_i18n']) && is_array($descriptor['prompt_i18n'])
+                ? array_filter(
+                    array_map(static fn ($value): string => is_string($value) ? trim($value) : '', $descriptor['prompt_i18n']),
+                    static fn (string $value): bool => $value !== ''
+                )
+                : [],
         ];
     }
 }

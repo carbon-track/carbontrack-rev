@@ -1228,6 +1228,7 @@ class AdminAiAgentService
             'action_name' => $actionName,
             'label' => $definition['label'] ?? $actionName,
             'summary' => $summary,
+            'prompt_i18n' => $descriptor['prompt_i18n'] ?? [],
             'payload' => $payload,
             'risk_level' => $definition['risk_level'] ?? 'write',
             'approval_policy' => 'rollback_requires_confirmation',
