@@ -353,9 +353,16 @@ $__deps_initializer = function (Container $container) {
                 return $response->withBody(Utils::streamFor($stream))->withoutHeader('Content-Length');
             }));
 
+            $timeout = isset($_ENV['LLM_TIMEOUT_SECONDS']) && is_numeric((string) $_ENV['LLM_TIMEOUT_SECONDS'])
+                ? max(10, (int) $_ENV['LLM_TIMEOUT_SECONDS'])
+                : 90;
+            $connectTimeout = isset($_ENV['LLM_CONNECT_TIMEOUT_SECONDS']) && is_numeric((string) $_ENV['LLM_CONNECT_TIMEOUT_SECONDS'])
+                ? max(1, (int) $_ENV['LLM_CONNECT_TIMEOUT_SECONDS'])
+                : 10;
+
             $httpClient = new GuzzleClient([
-                'timeout' => 15,
-                'connect_timeout' => 5,
+                'timeout' => $timeout,
+                'connect_timeout' => $connectTimeout,
                 'handler' => $handlerStack,
             ]);
 

@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { adminAPI } from '../../lib/api';
+import { API_BASE_URL, adminAPI } from '../../lib/api';
 import { userManager } from '../../lib/auth';
 import { useTranslation } from '../../hooks/useTranslation';
 import { cn } from '../../lib/utils';
@@ -37,6 +37,99 @@ import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 const COMMAND_MIN_LENGTH = 2;
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
+
+async function streamAdminAiChat(payload, onEvent) {
+  const token = localStorage.getItem('auth_token');
+  const response = await fetch(`${API_BASE_URL}/admin/ai/chat/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!response.ok || !response.body || !contentType.includes('text/event-stream')) {
+    let errorPayload = null;
+    try {
+      errorPayload = await response.json();
+    } catch {
+      errorPayload = null;
+    }
+    const error = new Error(errorPayload?.error || `AI stream failed with status ${response.status}`);
+    error.code = errorPayload?.code || 'AI_STREAM_FAILED';
+    error.response = { status: response.status, data: errorPayload };
+    throw error;
+  }
+
+  const decoder = new TextDecoder('utf-8');
+  const reader = response.body.getReader();
+  let buffer = '';
+  let finalPayload = null;
+
+  const dispatchFrame = (frame) => {
+    const lines = frame.split(/\r?\n/);
+    let event = 'message';
+    const dataLines = [];
+
+    for (const line of lines) {
+      if (line.startsWith('event:')) {
+        event = line.slice(6).trim();
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5).trimStart());
+      }
+    }
+
+    if (dataLines.length === 0) return;
+
+    let data = null;
+    try {
+      data = JSON.parse(dataLines.join('\n'));
+    } catch {
+      data = { raw: dataLines.join('\n') };
+    }
+
+    onEvent?.({ event, data });
+    if (event === 'run.finished' && data?.result) {
+      finalPayload = data.result;
+    }
+    if (event === 'run.error') {
+      const error = new Error(data?.error || 'AI stream failed');
+      error.code = data?.code || 'AI_STREAM_FAILED';
+      error.streamEvent = data;
+      throw error;
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    let separatorIndex = buffer.indexOf('\n\n');
+    while (separatorIndex !== -1) {
+      const frame = buffer.slice(0, separatorIndex);
+      buffer = buffer.slice(separatorIndex + 2);
+      dispatchFrame(frame);
+      separatorIndex = buffer.indexOf('\n\n');
+    }
+  }
+
+  const tail = buffer.trim();
+  if (tail) {
+    dispatchFrame(tail);
+  }
+
+  if (!finalPayload) {
+    const error = new Error('AI stream ended before the run finished.');
+    error.code = 'AI_STREAM_DISCONNECTED';
+    throw error;
+  }
+
+  return finalPayload;
+}
 const ROUTE_COPY = {
   dashboard: {
     zh: { label: '管理总览', description: '后台总览、关键指标与快捷处理入口。' },
@@ -844,6 +937,102 @@ function WorkspaceSectionButton({ active, icon, label, count, onClick }) {
   );
 }
 
+function AgentStreamEventCard({ item, isZh }) {
+  const event = item?.event;
+  const data = item?.data || {};
+
+  if (event === 'run.started') {
+    return (
+      <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100">
+        <div className="flex items-center gap-2 font-medium">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {isZh ? 'Agent 已开始处理' : 'Agent run started'}
+        </div>
+        {data.run_id ? <div className="mt-1 font-mono text-[11px] opacity-70">{data.run_id}</div> : null}
+      </div>
+    );
+  }
+
+  if (event === 'assistant.delta') {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
+        <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+          <Bot className="h-3.5 w-3.5" />
+          {isZh ? '正在生成回复' : 'Streaming response'}
+        </div>
+        <div className="whitespace-pre-wrap">{data.content}</div>
+      </div>
+    );
+  }
+
+  if (event?.startsWith('tool.')) {
+    const status = event === 'tool.started' ? 'running' : event === 'tool.error' ? 'error' : data.status || 'success';
+    const tone = status === 'error'
+      ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100'
+      : status === 'running'
+        ? 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100'
+        : 'border-slate-200 bg-slate-50 text-slate-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-100';
+
+    return (
+      <div className={cn('rounded-2xl border px-4 py-3 text-sm', tone)}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 font-medium">
+            {status === 'running' ? <Loader2 className="h-4 w-4 animate-spin" /> : <TerminalSquare className="h-4 w-4" />}
+            {data.tool_name || (isZh ? '工具调用' : 'Tool call')}
+          </div>
+          <Badge variant="outline" className="border-current/30 text-current">{status}</Badge>
+        </div>
+        {data.error ? <div className="mt-2 text-xs opacity-80">{data.error}</div> : null}
+        {data.proposal?.summary ? <div className="mt-2 text-xs opacity-80">{data.proposal.summary}</div> : null}
+        {data.step_id ? <div className="mt-2 font-mono text-[11px] opacity-60">{data.step_id}</div> : null}
+      </div>
+    );
+  }
+
+  if (event === 'approval.required') {
+    return (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
+        <div className="flex items-center gap-2 font-semibold">
+          <ShieldAlert className="h-4 w-4" />
+          {isZh ? '需要在对话中确认' : 'Approval required'}
+        </div>
+        <div className="mt-2 leading-6">{data.proposal?.summary || data.proposal?.label || (isZh ? '等待管理员确认后执行。' : 'Waiting for admin approval before execution.')}</div>
+      </div>
+    );
+  }
+
+  if (event === 'rollback.available') {
+    const rollback = data.rollback || {};
+    return (
+      <div className="rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-100">
+        <div className="flex items-center gap-2 font-semibold">
+          <ShieldCheck className="h-4 w-4" />
+          {isZh ? '可回滚操作已准备' : 'Rollback available'}
+        </div>
+        <div className="mt-2 leading-6">
+          {rollback.prompt || (isZh ? '可生成反向操作提案，执行前仍需管理员确认。' : 'A reverse-action proposal can be created and will still require approval.')}
+        </div>
+        {rollback.action_name ? (
+          <div className="mt-2 inline-flex rounded-md border border-current/20 px-2 py-1 font-mono text-[11px]">
+            {rollback.action_name}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (event === 'run.error') {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100">
+        <div className="font-semibold">{data.code || (isZh ? '运行失败' : 'Run failed')}</div>
+        <div className="mt-1">{data.error}</div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 function JsonPreview({ value, className }) {
   const text = stringifyValue(value);
   if (!text) return null;
@@ -1187,6 +1376,7 @@ export default function AdminAiWorkspacePage() {
   const [conversationFilter, setConversationFilter] = useState('all');
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [workspaceSection, setWorkspaceSection] = useState('actions');
+  const [streamEvents, setStreamEvents] = useState([]);
 
   const aiContext = useMemo(() => ({
     activeRoute: '/admin/ai',
@@ -1315,13 +1505,65 @@ export default function AdminAiWorkspacePage() {
   const hasStaleConversationDetail = Boolean(normalizedSelectedConversationId)
     && activeConversationId !== normalizedSelectedConversationId;
 
+  const handleStreamEvent = useCallback(({ event, data }) => {
+    setStreamEvents((items) => {
+      if (event === 'run.started') {
+        return [{ event, data, id: `${data?.run_id || 'run'}-${data?.sequence || 1}` }];
+      }
+
+      if (event === 'assistant.delta') {
+        const last = items[items.length - 1];
+        if (last?.event === 'assistant.delta') {
+          return [
+            ...items.slice(0, -1),
+            {
+              ...last,
+              data: {
+                ...last.data,
+                content: `${last.data?.content || ''}${data?.content || ''}`,
+                sequence: data?.sequence || last.data?.sequence,
+              },
+            },
+          ];
+        }
+      }
+
+      return [
+        ...items,
+        {
+          event,
+          data,
+          id: `${event}-${data?.run_id || 'run'}-${data?.step_id || data?.sequence || items.length}`,
+        },
+      ];
+    });
+  }, []);
+
   const sendMutation = useMutation(
-    async ({ message, conversationId }) => adminAPI.chatWithAdminAi({
-      conversation_id: conversationId || undefined,
-      message,
-      context: aiContext,
-      source: 'admin:/admin/ai',
-    }),
+    async ({ message, conversationId }) => {
+      setStreamEvents([]);
+      try {
+        const payload = await streamAdminAiChat({
+          conversation_id: conversationId || undefined,
+          message,
+          context: aiContext,
+          source: 'admin:/admin/ai',
+        }, handleStreamEvent);
+        return { data: payload };
+      } catch (error) {
+        if (error?.code && error.code !== 'AI_STREAM_FAILED') {
+          throw error;
+        }
+
+        const fallbackResponse = await adminAPI.chatWithAdminAi({
+          conversation_id: conversationId || undefined,
+          message,
+          context: aiContext,
+          source: 'admin:/admin/ai',
+        });
+        return fallbackResponse;
+      }
+    },
     {
       onSuccess: (response, variables) => {
         const payload = response.data || {};
@@ -1341,24 +1583,57 @@ export default function AdminAiWorkspacePage() {
 
         setIsCreatingConversation(false);
         setDraft('');
+        setStreamEvents([]);
         invalidateWorkspace();
       },
       onError: (error) => {
+        invalidateWorkspace();
+        if (normalizedSelectedConversationId) {
+          queryClient.invalidateQueries(['adminAiConversation', normalizedSelectedConversationId]);
+        }
+        if (error?.code === 'AI_STREAM_DISCONNECTED') {
+          toast.error(isZh ? 'AI 连接中断，正在恢复会话记录。' : 'AI stream disconnected. Restoring the session timeline.');
+          return;
+        }
+        if (error?.code === 'AI_PROVIDER_TIMEOUT' || error?.response?.data?.code === 'AI_PROVIDER_TIMEOUT') {
+          toast.error(isZh ? '模型处理超时，可能请求过复杂，请拆分任务或稍后重试。' : 'The model timed out. Try splitting the task or retry later.');
+          return;
+        }
         toast.error(error?.response?.data?.error || (isZh ? 'AI 请求失败，请稍后重试。' : 'AI request failed. Please try again.'));
       },
     }
   );
 
   const decisionMutation = useMutation(
-    async ({ proposalId, outcome, conversationId }) => adminAPI.chatWithAdminAi({
-      conversation_id: conversationId,
-      context: aiContext,
-      decision: {
-        proposal_id: proposalId,
-        outcome,
-      },
-      source: 'admin:/admin/ai',
-    }),
+    async ({ proposalId, outcome, conversationId }) => {
+      setStreamEvents([]);
+      try {
+        const payload = await streamAdminAiChat({
+          conversation_id: conversationId,
+          context: aiContext,
+          decision: {
+            proposal_id: proposalId,
+            outcome,
+          },
+          source: 'admin:/admin/ai',
+        }, handleStreamEvent);
+        return { data: payload };
+      } catch (error) {
+        if (error?.code && error.code !== 'AI_STREAM_FAILED') {
+          throw error;
+        }
+
+        return adminAPI.chatWithAdminAi({
+          conversation_id: conversationId,
+          context: aiContext,
+          decision: {
+            proposal_id: proposalId,
+            outcome,
+          },
+          source: 'admin:/admin/ai',
+        });
+      }
+    },
     {
       onSuccess: (response, variables) => {
         const payload = response.data || {};
@@ -1379,8 +1654,17 @@ export default function AdminAiWorkspacePage() {
         }
 
         invalidateWorkspace();
+        setStreamEvents([]);
       },
       onError: (error) => {
+        invalidateWorkspace();
+        if (normalizedSelectedConversationId) {
+          queryClient.invalidateQueries(['adminAiConversation', normalizedSelectedConversationId]);
+        }
+        if (error?.code === 'AI_PROVIDER_TIMEOUT' || error?.response?.data?.code === 'AI_PROVIDER_TIMEOUT') {
+          toast.error(isZh ? '模型处理超时，可能请求过复杂，请拆分任务或稍后重试。' : 'The model timed out. Try splitting the task or retry later.');
+          return;
+        }
         toast.error(error?.response?.data?.error || (isZh ? '操作决策失败。' : 'Decision failed.'));
       },
     }
@@ -1798,7 +2082,7 @@ export default function AdminAiWorkspacePage() {
                       <div className="flex h-full items-center justify-center">
                         <Loader2 className="h-5 w-5 animate-spin text-slate-400 dark:text-slate-500" />
                       </div>
-                    ) : conversationTimeline.length === 0 ? (
+                    ) : conversationTimeline.length === 0 && streamEvents.length === 0 ? (
                       <EmptyConversationState
                         isZh={isZh}
                         starterPrompts={starterPrompts}
@@ -1848,6 +2132,9 @@ export default function AdminAiWorkspacePage() {
                                   })}
                                 />
                               )
+                            ))}
+                            {streamEvents.map((item) => (
+                              <AgentStreamEventCard key={item.id} item={item} isZh={isZh} />
                             ))}
                           </AnimatePresence>
                         </div>

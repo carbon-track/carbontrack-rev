@@ -91,6 +91,7 @@ The frontend is a modern SPA.
 
 - The admin AI is a single multi-turn assistant entry. Do not introduce or document a separate long-lived `intent` product flow as the primary path.
 - The primary admin AI UX lives in the dedicated `/admin/ai` workspace. If you change workspace navigation, starter prompts, quick actions, or bootstrap payloads, update the backend catalogue, OpenAPI contract, and frontend workspace together.
+- The admin AI chat surface supports both the legacy JSON endpoint and `/api/v1/admin/ai/chat/stream` SSE. Keep stream event names, OpenAPI, frontend fetch parsing, and conversation timeline persistence aligned when changing agent run behavior.
 - Cron management is part of the admin AI surface. If you add or rename cron read/write actions, sync `backend/config/admin_ai_commands.json`, `AdminAiReadModelService`, `AdminAiWriteActionService`, `/admin/cron`, and the documented admin cron APIs in one change.
 - Keep task-template prompts and action labels in `/admin/ai` operational and locale-aware. Prefer direct admin phrasing that reliably maps to backend `managementActions`, especially for Chinese prompts used by administrators in production.
 - Conversation history is reconstructed from logs. If you change admin AI message/audit semantics, keep `llm_logs`, `audit_logs`, and any conversation aggregation responses compatible.

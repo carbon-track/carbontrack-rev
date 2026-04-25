@@ -1939,6 +1939,84 @@
         "operationId": "adminAiChat"
       }
     },
+    "/api/v1/admin/ai/chat/stream": {
+      "post": {
+        "tags": [
+          "Admin",
+          "AI"
+        ],
+        "summary": "管理员 AI 流式 Agent 会话入口",
+        "description": "以 Server-Sent Events 返回管理员 AI run 生命周期、模型增量、工具调用、审批请求和最终结果。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminAiChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream. Events include run.started, assistant.delta, assistant.message, tool.started, tool.result, tool.error, approval.required, approval.resolved, rollback.available, run.finished, and run.error.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required or the bearer token is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator privileges are required for this operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "请求缺少必要字段或会话参数无效。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "AI 服务未配置或暂时不可用。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "adminAiChatStream"
+      }
+    },
     "/api/v1/admin/ai/conversations": {
       "get": {
         "tags": [
@@ -24437,6 +24515,10 @@
         "properties": {
           "conversation_id": {
             "type": "string"
+          },
+          "run_id": {
+            "type": "string",
+            "description": "Present for streamed agent runs."
           },
           "message": {
             "type": "string"

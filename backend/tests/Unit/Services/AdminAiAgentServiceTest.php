@@ -955,6 +955,112 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertSame(20, (int) $pdo->query("SELECT stock FROM products WHERE id = 5")->fetchColumn());
     }
 
+    public function testStreamChatEmitsRunToolApprovalAndFinishEvents(): void
+    {
+        $pdo = $this->makePdo();
+        $pdo->exec("INSERT INTO users (id, username, email, status, is_admin, uuid, points) VALUES (2, 'stream_user', 'stream@example.com', 'active', 0, '550e8400-e29b-41d4-a716-4466554400c1', 10)");
+
+        $service = new AdminAiAgentService(
+            $pdo,
+            new QueueLlmClient([
+                $this->toolResponse('manage_admin', [
+                    'action' => 'adjust_user_points',
+                    'payload' => [
+                        'user_id' => 2,
+                        'delta' => 5,
+                        'reason' => 'stream test',
+                    ],
+                ]),
+            ]),
+            new NullLogger(),
+            ['model' => 'test-model'],
+            [
+                'agent' => ['max_history_messages' => 12],
+                'managementActions' => [
+                    [
+                        'name' => 'adjust_user_points',
+                        'label' => 'Adjust user points',
+                        'description' => 'Adjust user points.',
+                        'api' => ['payloadTemplate' => []],
+                        'requires' => ['user_id', 'delta', 'reason'],
+                        'contextHints' => [],
+                        'risk_level' => 'write',
+                        'requires_confirmation' => true,
+                    ],
+                ],
+            ]
+        );
+
+        $events = [];
+        $result = $service->streamChat(null, 'prepare points adjustment', [], null, [
+            'request_id' => 'req-stream-1',
+            'actor_type' => 'admin',
+            'actor_id' => 1,
+            'source' => '/admin/ai/chat/stream',
+        ], static function (string $event, array $payload) use (&$events): void {
+            $events[] = [$event, $payload];
+        });
+
+        $this->assertTrue($result['success']);
+        $this->assertNotEmpty($result['run_id']);
+        $eventNames = array_map(static fn (array $item): string => $item[0], $events);
+        $this->assertContains('run.started', $eventNames);
+        $this->assertContains('tool.started', $eventNames);
+        $this->assertContains('tool.result', $eventNames);
+        $this->assertContains('approval.required', $eventNames);
+        $this->assertContains('assistant.message', $eventNames);
+        $this->assertSame('run.finished', end($eventNames));
+        $this->assertSame(1, $result['conversation']['summary']['pending_action_count']);
+
+        $proposalId = $result['conversation']['pending_actions'][0]['proposal_id'];
+        $decisionEvents = [];
+        $decisionResult = $service->streamChat(
+            $result['conversation_id'],
+            null,
+            [],
+            ['proposal_id' => $proposalId, 'outcome' => 'confirm'],
+            [
+                'request_id' => 'req-stream-2',
+                'actor_type' => 'admin',
+                'actor_id' => 1,
+                'source' => '/admin/ai/chat/stream',
+            ],
+            static function (string $event, array $payload) use (&$decisionEvents): void {
+                $decisionEvents[] = [$event, $payload];
+            }
+        );
+
+        $decisionEventNames = array_map(static fn (array $item): string => $item[0], $decisionEvents);
+        $this->assertContains('approval.resolved', $decisionEventNames);
+        $this->assertContains('rollback.available', $decisionEventNames);
+        $this->assertSame('adjust_user_points', $decisionResult['metadata']['rollback_available']['action_name']);
+        $this->assertSame(-5.0, $decisionResult['metadata']['rollback_available']['payload']['delta']);
+        $this->assertSame(15, (int) $pdo->query("SELECT points FROM users WHERE id = 2")->fetchColumn());
+    }
+
+    public function testLlmTimeoutIsMappedSeparatelyFromProviderUnavailable(): void
+    {
+        $service = new AdminAiAgentService(
+            $this->makePdo(),
+            new ThrowingTimeoutLlmClient(),
+            new NullLogger(),
+            ['model' => 'test-model'],
+            [
+                'managementActions' => [],
+            ]
+        );
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('LLM_TIMEOUT');
+
+        $service->chat(null, 'long request', [], null, [
+            'request_id' => 'req-timeout-1',
+            'actor_type' => 'admin',
+            'actor_id' => 1,
+            'source' => '/admin/ai/chat',
+        ]);
+    }
+
     /**
      * @param array<string,mixed> $arguments
      * @return array<string,mixed>
@@ -1020,5 +1126,13 @@ class QueueLlmClient implements LlmClientInterface
         }
 
         return array_shift($this->responses);
+    }
+}
+
+class ThrowingTimeoutLlmClient implements LlmClientInterface
+{
+    public function createChatCompletion(array $payload): array
+    {
+        throw new \RuntimeException('cURL error 28: Operation timed out after 15000 milliseconds');
     }
 }

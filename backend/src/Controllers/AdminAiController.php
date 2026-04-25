@@ -95,12 +95,21 @@ class AdminAiController
                 'code' => 'INVALID_INPUT',
             ], 422);
         } catch (\RuntimeException $runtimeException) {
+            if ($runtimeException->getMessage() === 'LLM_TIMEOUT') {
+                $this->logException($runtimeException, $request, 'AdminAI chat provider timeout');
+                return $this->json($response, [
+                    'success' => false,
+                    'error' => 'AI provider timed out while processing the request. Please split the task or try again later.',
+                    'code' => 'AI_PROVIDER_TIMEOUT',
+                ], 504);
+            }
+
             if ($runtimeException->getMessage() === 'LLM_UNAVAILABLE') {
                 $this->logException($runtimeException, $request, 'AdminAI chat unavailable');
                 return $this->json($response, [
                     'success' => false,
                     'error' => 'AI provider is temporarily unavailable. Please try again later.',
-                    'code' => 'AI_UNAVAILABLE',
+                    'code' => 'AI_PROVIDER_UNAVAILABLE',
                 ], 503);
             }
 
@@ -124,6 +133,129 @@ class AdminAiController
                 'success' => false,
                 'error' => 'Unexpected server error',
                 'code' => 'AI_CHAT_SERVER_ERROR',
+            ], 500);
+        }
+    }
+
+    public function chatStream(Request $request, Response $response): Response
+    {
+        try {
+            $user = $this->authService->getCurrentUser($request);
+            if (!$user || !$this->authService->isAdminUser($user)) {
+                return $this->json($response, [
+                    'success' => false,
+                    'error' => 'Admin access required',
+                ], 403);
+            }
+
+            if ($this->agentService === null || !$this->agentService->isEnabled()) {
+                return $this->json($response, [
+                    'success' => false,
+                    'error' => 'AI assistant is not configured. Please set LLM_API_KEY on the server.',
+                    'code' => 'AI_DISABLED',
+                ], 503);
+            }
+
+            $data = $request->getParsedBody();
+            if (!is_array($data)) {
+                $data = [];
+            }
+
+            $message = isset($data['message']) ? trim((string) $data['message']) : null;
+            $conversationId = isset($data['conversation_id']) ? trim((string) $data['conversation_id']) : null;
+            $context = isset($data['context']) && is_array($data['context']) ? $data['context'] : [];
+            $decision = isset($data['decision']) && is_array($data['decision']) ? $data['decision'] : null;
+            $source = isset($data['source']) && is_string($data['source']) ? trim($data['source']) : null;
+            if (($source === null || $source === '') && isset($context['activeRoute']) && is_string($context['activeRoute'])) {
+                $source = trim($context['activeRoute']);
+            }
+
+            if (($message === null || $message === '') && $decision === null) {
+                return $this->json($response, [
+                    'success' => false,
+                    'error' => 'Either message or decision is required.',
+                    'code' => 'INVALID_INPUT',
+                ], 422);
+            }
+
+            @ini_set('zlib.output_compression', '0');
+            @ini_set('implicit_flush', '1');
+            while (ob_get_level() > 0) {
+                @ob_end_flush();
+            }
+            ob_implicit_flush(true);
+
+            $streamResponse = new \Slim\Psr7\Response(200, null, new \Slim\Psr7\NonBufferedBody());
+            $streamResponse = $streamResponse
+                ->withHeader('Content-Type', 'text/event-stream; charset=utf-8')
+                ->withHeader('Cache-Control', 'no-cache, no-transform')
+                ->withHeader('Connection', 'keep-alive')
+                ->withHeader('X-Accel-Buffering', 'no');
+            $body = $streamResponse->getBody();
+
+            $emit = static function (string $event, array $payload) use ($body): void {
+                $body->write('event: ' . $event . "\n");
+                $body->write('data: ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n");
+            };
+
+            try {
+                $result = $this->agentService->streamChat($conversationId, $message, $context, $decision, [
+                    'request_id' => $request->getAttribute('request_id'),
+                    'actor_type' => 'admin',
+                    'actor_id' => $user['id'] ?? null,
+                    'source' => $source ?? $request->getUri()->getPath(),
+                ], $emit);
+
+                $this->logAdminAudit('admin_ai_chat_stream_completed', $user, $request, [
+                    'conversation_id' => $result['conversation_id'] ?? null,
+                    'data' => [
+                        'run_id' => $result['run_id'] ?? null,
+                        'has_decision' => $decision !== null,
+                        'source' => $source ?? $request->getUri()->getPath(),
+                    ],
+                ]);
+            } catch (\RuntimeException $runtimeException) {
+                $code = match ($runtimeException->getMessage()) {
+                    'LLM_TIMEOUT' => 'AI_PROVIDER_TIMEOUT',
+                    'LLM_UNAVAILABLE' => 'AI_PROVIDER_UNAVAILABLE',
+                    'PROPOSAL_NOT_FOUND' => 'PROPOSAL_NOT_FOUND',
+                    default => 'AI_AGENT_ERROR',
+                };
+                $status = $runtimeException->getMessage() === 'LLM_TIMEOUT' ? 'provider_timeout' : 'failed';
+                $this->logException($runtimeException, $request, 'AdminAI stream runtime error');
+                $emit('run.error', [
+                    'success' => false,
+                    'code' => $code,
+                    'status' => $status,
+                    'error' => $code === 'AI_PROVIDER_TIMEOUT'
+                        ? 'AI provider timed out while processing the request.'
+                        : $runtimeException->getMessage(),
+                    'timestamp' => gmdate(DATE_ATOM),
+                ]);
+            } catch (\Throwable $throwable) {
+                $this->logException($throwable, $request, 'AdminAI stream unexpected error');
+                $emit('run.error', [
+                    'success' => false,
+                    'code' => 'AI_AGENT_SERVER_ERROR',
+                    'status' => 'failed',
+                    'error' => 'Unexpected server error',
+                    'timestamp' => gmdate(DATE_ATOM),
+                ]);
+            }
+
+            return $streamResponse;
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json($response, [
+                'success' => false,
+                'error' => $exception->getMessage(),
+                'code' => 'INVALID_INPUT',
+            ], 422);
+        } catch (\Throwable $throwable) {
+            $this->logException($throwable, $request, 'AdminAI stream setup error');
+            return $this->json($response, [
+                'success' => false,
+                'error' => 'Failed to start the admin AI stream',
+                'code' => 'AI_STREAM_SETUP_ERROR',
             ], 500);
         }
     }
