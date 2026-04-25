@@ -153,63 +153,63 @@ class AdminAiControllerTest extends TestCase
         $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] = 'Bearer should-not-leak';
 
         try {
-        $authService = $this->createMock(AuthService::class);
-        $authService->method('getCurrentUser')->willReturn(['id' => 1, 'role' => 'admin']);
-        $authService->method('isAdminUser')->willReturn(true);
+            $authService = $this->createMock(AuthService::class);
+            $authService->method('getCurrentUser')->willReturn(['id' => 1, 'role' => 'admin']);
+            $authService->method('isAdminUser')->willReturn(true);
 
-        $intentService = $this->createMock(AdminAiIntentService::class);
-        $announcementAiService = $this->createMock(AdminAnnouncementAiService::class);
-        $commandRepo = $this->createMock(AdminAiCommandRepository::class);
-        $auditLogService = $this->createMock(AuditLogService::class);
-        $auditLogService->expects($this->once())->method('logAdminOperation')->willReturn(true);
+            $intentService = $this->createMock(AdminAiIntentService::class);
+            $announcementAiService = $this->createMock(AdminAnnouncementAiService::class);
+            $commandRepo = $this->createMock(AdminAiCommandRepository::class);
+            $auditLogService = $this->createMock(AuditLogService::class);
+            $auditLogService->expects($this->once())->method('logAdminOperation')->willReturn(true);
 
-        $agentService = $this->createMock(AdminAiAgentService::class);
-        $agentService->method('isEnabled')->willReturn(true);
-        $agentService->expects($this->once())
-            ->method('streamChat')
-            ->with(
-                $this->isNull(),
-                $this->equalTo('帮我总结最近 7 天后台运营'),
-                $this->callback(static fn ($context): bool => is_array($context) && ($context['activeRoute'] ?? null) === '/admin/ai'),
-                $this->isNull(),
-                $this->callback(static fn ($metadata): bool => is_array($metadata)
-                    && ($metadata['request_id'] ?? null) === 'req-stream-controller-test'
-                    && ($metadata['actor_type'] ?? null) === 'admin'
-                    && ($metadata['actor_id'] ?? null) === 1
-                    && ($metadata['source'] ?? null) === '/admin/ai'),
-                $this->callback('is_callable')
-            )
-            ->willReturnCallback(static function (...$args): array {
-                return [
-                    'success' => true,
-                    'conversation_id' => 'admin-ai-stream-1',
-                    'run_id' => 'run-test-1',
-                    'message' => 'ok',
-                ];
-            });
+            $agentService = $this->createMock(AdminAiAgentService::class);
+            $agentService->method('isEnabled')->willReturn(true);
+            $agentService->expects($this->once())
+                ->method('streamChat')
+                ->with(
+                    $this->isNull(),
+                    $this->equalTo('帮我总结最近 7 天后台运营'),
+                    $this->callback(static fn ($context): bool => is_array($context) && ($context['activeRoute'] ?? null) === '/admin/ai'),
+                    $this->isNull(),
+                    $this->callback(static fn ($metadata): bool => is_array($metadata)
+                        && ($metadata['request_id'] ?? null) === 'req-stream-controller-test'
+                        && ($metadata['actor_type'] ?? null) === 'admin'
+                        && ($metadata['actor_id'] ?? null) === 1
+                        && ($metadata['source'] ?? null) === '/admin/ai'),
+                    $this->callback('is_callable')
+                )
+                ->willReturnCallback(static function (...$args): array {
+                    return [
+                        'success' => true,
+                        'conversation_id' => 'admin-ai-stream-1',
+                        'run_id' => 'run-test-1',
+                        'message' => 'ok',
+                    ];
+                });
 
-        $controller = new AdminAiController(
-            $authService,
-            $intentService,
-            $announcementAiService,
-            $commandRepo,
-            $auditLogService,
-            $this->createMock(ErrorLogService::class),
-            new NullLogger(),
-            $agentService
-        );
+            $controller = new AdminAiController(
+                $authService,
+                $intentService,
+                $announcementAiService,
+                $commandRepo,
+                $auditLogService,
+                $this->createMock(ErrorLogService::class),
+                new NullLogger(),
+                $agentService
+            );
 
-        $request = makeRequest('POST', self::CHAT_ROUTE . '/stream', [
-            'message' => '帮我总结最近 7 天后台运营',
-            'context' => ['activeRoute' => '/admin/ai'],
-        ])->withAttribute('request_id', 'req-stream-controller-test');
+            $request = makeRequest('POST', self::CHAT_ROUTE . '/stream', [
+                'message' => '帮我总结最近 7 天后台运营',
+                'context' => ['activeRoute' => '/admin/ai'],
+            ])->withAttribute('request_id', 'req-stream-controller-test');
 
-        $response = $controller->chatStream($request, new Response());
+            $response = $controller->chatStream($request, new Response());
 
-        $this->assertSame(200, $response->getStatusCode());
-        $this->assertStringContainsString('text/event-stream', $response->getHeaderLine('Content-Type'));
-        $this->assertSame('no-cache, no-transform', $response->getHeaderLine('Cache-Control'));
-        $this->assertSame('', $response->getHeaderLine('Authorization'));
+            $this->assertSame(200, $response->getStatusCode());
+            $this->assertStringContainsString('text/event-stream', $response->getHeaderLine('Content-Type'));
+            $this->assertSame('no-cache, no-transform', $response->getHeaderLine('Cache-Control'));
+            $this->assertSame('', $response->getHeaderLine('Authorization'));
         } finally {
             if ($hadHttpAuthorization) {
                 $_SERVER['HTTP_AUTHORIZATION'] = $previousHttpAuthorization;
