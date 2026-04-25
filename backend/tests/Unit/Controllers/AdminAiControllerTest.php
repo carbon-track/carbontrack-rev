@@ -142,6 +142,54 @@ class AdminAiControllerTest extends TestCase
         $this->assertSame('admin-ai-12345678', $payload['conversation_id']);
     }
 
+    public function testChatStreamReturnsSseResponseWithoutSlimHeaderTypeError(): void
+    {
+        $authService = $this->createMock(AuthService::class);
+        $authService->method('getCurrentUser')->willReturn(['id' => 1, 'role' => 'admin']);
+        $authService->method('isAdminUser')->willReturn(true);
+
+        $intentService = $this->createMock(AdminAiIntentService::class);
+        $announcementAiService = $this->createMock(AdminAnnouncementAiService::class);
+        $commandRepo = $this->createMock(AdminAiCommandRepository::class);
+        $auditLogService = $this->createMock(AuditLogService::class);
+        $auditLogService->expects($this->once())->method('logAdminOperation')->willReturn(true);
+
+        $agentService = $this->createMock(AdminAiAgentService::class);
+        $agentService->method('isEnabled')->willReturn(true);
+        $agentService->expects($this->once())
+            ->method('streamChat')
+            ->willReturnCallback(static function (...$args): array {
+                return [
+                    'success' => true,
+                    'conversation_id' => 'admin-ai-stream-1',
+                    'run_id' => 'run-test-1',
+                    'message' => 'ok',
+                ];
+            });
+
+        $controller = new AdminAiController(
+            $authService,
+            $intentService,
+            $announcementAiService,
+            $commandRepo,
+            $auditLogService,
+            $this->createMock(ErrorLogService::class),
+            new NullLogger(),
+            $agentService
+        );
+
+        $request = makeRequest('POST', self::CHAT_ROUTE . '/stream', [
+            'message' => '帮我总结最近 7 天后台运营',
+            'context' => ['activeRoute' => '/admin/ai'],
+        ])->withAttribute('request_id', 'req-stream-controller-test');
+
+        $response = $controller->chatStream($request, new Response());
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertStringContainsString('text/event-stream', $response->getHeaderLine('Content-Type'));
+        $this->assertSame('no-cache, no-transform', $response->getHeaderLine('Cache-Control'));
+    }
+
     public function testWorkspaceReturnsBootstrapPayload(): void
     {
         $authService = $this->createMock(AuthService::class);
