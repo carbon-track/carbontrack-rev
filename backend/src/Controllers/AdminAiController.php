@@ -211,8 +211,8 @@ class AdminAiController
                 new \Slim\Psr7\NonBufferedBody()
             );
             if (PHP_SAPI !== 'cli' && !headers_sent()) {
-                foreach ($streamHeaders as $name => $value) {
-                    header($name . ': ' . $value, true);
+                foreach ($streamResponse->getHeaders() as $name => $values) {
+                    header($name . ': ' . implode(', ', $values), true);
                 }
             }
             $body = $streamResponse->getBody();
