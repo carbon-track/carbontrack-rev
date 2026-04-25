@@ -24,8 +24,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { adminAPI } from '../../lib/api';
-import { userManager } from '../../lib/auth';
+import { API_BASE_URL, adminAPI } from '../../lib/api';
+import { tokenManager, userManager } from '../../lib/auth';
 import { useTranslation } from '../../hooks/useTranslation';
 import { cn } from '../../lib/utils';
 import { Button } from '../../components/ui/Button';
@@ -37,6 +37,131 @@ import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 const COMMAND_MIN_LENGTH = 2;
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
+
+async function streamAdminAiChat(payload, onEvent) {
+  const token = tokenManager.getToken();
+  const response = await fetch(`${API_BASE_URL}/admin/ai/chat/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  if (response.status === 401) {
+    tokenManager.removeToken();
+    userManager.removeUser();
+    if (window.location.pathname !== '/auth/login') {
+      window.location.href = '/auth/login';
+    }
+    const error = new Error('Unauthorized');
+    error.code = 'UNAUTHORIZED';
+    error.response = {
+      status: response.status,
+      data: null,
+      headers: { 'content-type': contentType },
+    };
+    throw error;
+  }
+
+  if (!response.ok || !response.body || !contentType.includes('text/event-stream')) {
+    let errorPayload = null;
+    try {
+      errorPayload = await response.json();
+    } catch {
+      errorPayload = null;
+    }
+    const error = new Error(errorPayload?.error || `AI stream failed with status ${response.status}`);
+    error.code = errorPayload?.code || 'AI_STREAM_FAILED';
+    error.response = {
+      status: response.status,
+      data: errorPayload,
+      headers: { 'content-type': contentType },
+    };
+    throw error;
+  }
+
+  const decoder = new TextDecoder('utf-8');
+  const reader = response.body.getReader();
+  let buffer = '';
+  let finalPayload = null;
+
+  const dispatchFrame = (frame) => {
+    const lines = frame.split(/\r?\n/);
+    let event = 'message';
+    const dataLines = [];
+
+    for (const line of lines) {
+      if (line.startsWith('event:')) {
+        event = line.slice(6).trim();
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5).trimStart());
+      }
+    }
+
+    if (dataLines.length === 0) return;
+
+    let data = null;
+    try {
+      data = JSON.parse(dataLines.join('\n'));
+    } catch {
+      data = { raw: dataLines.join('\n') };
+    }
+
+    onEvent?.({ event, data });
+    if (event === 'run.finished' && data?.result) {
+      finalPayload = data.result;
+    }
+    if (event === 'run.error') {
+      const error = new Error(data?.error || 'AI stream failed');
+      error.code = data?.code || 'AI_STREAM_FAILED';
+      error.response = { data };
+      error.streamEvent = data;
+      throw error;
+    }
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      let separatorMatch = buffer.match(/\r?\n\r?\n/);
+      let separatorIndex = separatorMatch?.index ?? -1;
+      while (separatorIndex !== -1) {
+        const frame = buffer.slice(0, separatorIndex);
+        buffer = buffer.slice(separatorIndex + separatorMatch[0].length);
+        dispatchFrame(frame);
+        separatorMatch = buffer.match(/\r?\n\r?\n/);
+        separatorIndex = separatorMatch?.index ?? -1;
+      }
+    }
+
+    buffer += decoder.decode();
+    const tail = buffer.trim();
+    if (tail) {
+      dispatchFrame(tail);
+    }
+
+    if (!finalPayload) {
+      const error = new Error('AI stream ended before the run finished.');
+      error.code = 'AI_STREAM_DISCONNECTED';
+      throw error;
+    }
+
+    return finalPayload;
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      // Ignore cleanup failures so the original stream result is preserved.
+    }
+  }
+}
 const ROUTE_COPY = {
   dashboard: {
     zh: { label: '管理总览', description: '后台总览、关键指标与快捷处理入口。' },
@@ -223,7 +348,36 @@ function hasRenderableMessages(conversation) {
   return Array.isArray(conversation?.messages) && conversation.messages.some((item) => item?.kind === 'message');
 }
 
-function buildFallbackConversation(conversation, conversationId, previousConversation, userMessage, assistantMessage) {
+function normalizeI18nMessagePayload(payload) {
+  if (!payload || typeof payload !== 'object' || typeof payload.key !== 'string' || payload.key.trim() === '') {
+    return null;
+  }
+
+  return {
+    key: payload.key,
+    values: payload.values && typeof payload.values === 'object' && !Array.isArray(payload.values) ? payload.values : {},
+  };
+}
+
+function getMessageI18nPayload(message) {
+  return normalizeI18nMessagePayload(message?.message_i18n)
+    || normalizeI18nMessagePayload(message?.meta?.data?.message_i18n)
+    || normalizeI18nMessagePayload(message?.meta?.data?.metadata?.message_i18n)
+    || normalizeI18nMessagePayload(message?.meta?.data?.meta?.message_i18n);
+}
+
+function translateI18nMessage(t, messageI18n, fallback) {
+  if (!messageI18n || typeof t !== 'function') {
+    return fallback;
+  }
+
+  return t(messageI18n.key, {
+    ...messageI18n.values,
+    defaultValue: fallback || messageI18n.key,
+  });
+}
+
+function buildFallbackConversation(conversation, conversationId, previousConversation, userMessage, assistantMessage, assistantMessageI18n = null) {
   if (hasRenderableMessages(conversation)) {
     return conversation;
   }
@@ -251,7 +405,12 @@ function buildFallbackConversation(conversation, conversationId, previousConvers
       role: 'assistant',
       content: assistantMessage,
       created_at: new Date().toISOString(),
-      meta: { data: { source: 'client_fallback' } },
+      meta: {
+        data: {
+          source: 'client_fallback',
+          ...(assistantMessageI18n ? { message_i18n: assistantMessageI18n } : {}),
+        },
+      },
     });
   }
 
@@ -844,6 +1003,150 @@ function WorkspaceSectionButton({ active, icon, label, count, onClick }) {
   );
 }
 
+function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
+  const event = item?.event;
+  const data = item?.data || {};
+
+  if (event === 'run.started') {
+    return (
+      <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100">
+        <div className="flex items-center gap-2 font-medium">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {isZh ? 'Agent 已开始处理' : 'Agent run started'}
+        </div>
+        {data.run_id ? <div className="mt-1 font-mono text-[11px] opacity-70">{data.run_id}</div> : null}
+      </div>
+    );
+  }
+
+  if (event === 'assistant.delta' || event === 'assistant.message') {
+    const content = event === 'assistant.message'
+      ? translateI18nMessage(
+          t,
+          normalizeI18nMessagePayload(data.message_i18n)
+            || normalizeI18nMessagePayload(data.metadata?.message_i18n)
+            || normalizeI18nMessagePayload(data.meta?.message_i18n),
+          data.content
+        )
+      : data.content;
+
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
+        <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+          <Bot className="h-3.5 w-3.5" />
+          {event === 'assistant.delta'
+            ? (isZh ? '正在生成回复' : 'Streaming response')
+            : (isZh ? 'AI 回复' : 'Assistant message')}
+        </div>
+        <div className="whitespace-pre-wrap">{content}</div>
+      </div>
+    );
+  }
+
+  if (event?.startsWith('tool.')) {
+    const status = event === 'tool.started' ? 'running' : event === 'tool.error' ? 'error' : data.status || 'success';
+    const tone = status === 'error'
+      ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100'
+      : status === 'running'
+        ? 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100'
+        : 'border-slate-200 bg-slate-50 text-slate-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-100';
+
+    return (
+      <div className={cn('rounded-2xl border px-4 py-3 text-sm', tone)}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 font-medium">
+            {status === 'running' ? <Loader2 className="h-4 w-4 animate-spin" /> : <TerminalSquare className="h-4 w-4" />}
+            {data.tool_name || (isZh ? '工具调用' : 'Tool call')}
+          </div>
+          <Badge variant="outline" className="border-current/30 text-current">{status}</Badge>
+        </div>
+        {data.error ? <div className="mt-2 text-xs opacity-80">{data.error}</div> : null}
+        {data.proposal?.summary ? <div className="mt-2 text-xs opacity-80">{data.proposal.summary}</div> : null}
+        {data.step_id ? <div className="mt-2 font-mono text-[11px] opacity-60">{data.step_id}</div> : null}
+      </div>
+    );
+  }
+
+  if (event === 'approval.required') {
+    return (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
+        <div className="flex items-center gap-2 font-semibold">
+          <ShieldAlert className="h-4 w-4" />
+          {isZh ? '需要在对话中确认' : 'Approval required'}
+        </div>
+        <div className="mt-2 leading-6">{data.proposal?.summary || data.proposal?.label || (isZh ? '等待管理员确认后执行。' : 'Waiting for admin approval before execution.')}</div>
+      </div>
+    );
+  }
+
+  if (event === 'missing.input') {
+    const missing = Array.isArray(data.missing) ? data.missing : [];
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
+        <div className="flex items-center gap-2 font-semibold">
+          <Command className="h-4 w-4" />
+          {isZh ? '需要补充信息' : 'Missing input'}
+        </div>
+        <div className="mt-2 leading-6">{data.message || (isZh ? '请补充必要字段后继续。' : 'Add the required fields to continue.')}</div>
+        {missing.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {missing.map((item, index) => (
+              <Badge key={`${item?.field || 'field'}-${index}`} variant="outline" className="border-current/20 text-current">
+                {item?.field || item}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (event === 'rollback.available') {
+    const rollback = data.rollback || {};
+    const rollbackPrompt = rollback.prompt_i18n?.[isZh ? 'zh' : 'en'] || rollback.prompt;
+    return (
+      <div className="rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-100">
+        <div className="flex items-center gap-2 font-semibold">
+          <ShieldCheck className="h-4 w-4" />
+          {isZh ? '可回滚操作已准备' : 'Rollback available'}
+        </div>
+        <div className="mt-2 leading-6">
+          {rollbackPrompt || (isZh ? '可生成反向操作提案，执行前仍需管理员确认。' : 'A reverse-action proposal can be created and will still require approval.')}
+        </div>
+        {rollback.action_name ? (
+          <div className="mt-2 inline-flex rounded-md border border-current/20 px-2 py-1 font-mono text-[11px]">
+            {rollback.action_name}
+          </div>
+        ) : null}
+        {rollback.action_name && rollback.payload ? (
+          <div className="mt-3">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={disabled}
+              className="rounded-full border-current/30 text-current hover:bg-current/10"
+              onClick={() => onRollback?.(rollback)}
+            >
+              {isZh ? '生成回滚确认卡' : 'Create rollback card'}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (event === 'run.error') {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100">
+        <div className="font-semibold">{data.code || (isZh ? '运行失败' : 'Run failed')}</div>
+        <div className="mt-1">{data.error}</div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 function JsonPreview({ value, className }) {
   const text = stringifyValue(value);
   if (!text) return null;
@@ -911,10 +1214,86 @@ function ResultSnapshot({ title, value, isZh }) {
   );
 }
 
-function EventTimelineRow({ item, locale, isZh, disabled, onConfirmProposal, onRejectProposal }) {
+function RunStepCard({ step, isZh }) {
+  const status = step?.status || 'unknown';
+  const tone = status === 'error'
+    ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100'
+    : status === 'running'
+      ? 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100'
+      : status === 'waiting_approval' || status === 'waiting_input'
+        ? 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100'
+        : 'border-slate-200 bg-slate-50 text-slate-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-100';
+
+  return (
+    <div className={cn('rounded-[18px] border px-3 py-3 text-xs', tone)}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0 font-medium">
+          <span className="font-mono text-[11px] opacity-70">#{step?.sequence ?? '-'}</span>
+          <span className="ml-2">{step?.tool_name || step?.type || (isZh ? '步骤' : 'Step')}</span>
+        </div>
+        <Badge variant="outline" className="border-current/30 text-current">{status}</Badge>
+      </div>
+      {step?.approval_state || step?.rollback_state ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {step.approval_state ? <Badge variant="outline" className="border-current/20 text-current">{step.approval_state}</Badge> : null}
+          {step.rollback_state ? <Badge variant="outline" className="border-current/20 text-current">{step.rollback_state}</Badge> : null}
+        </div>
+      ) : null}
+      {step?.error_message ? <div className="mt-2 leading-5 opacity-80">{step.error_message}</div> : null}
+    </div>
+  );
+}
+
+function RunInspector({ runs, currentRun, isZh, locale }) {
+  if (!currentRun) {
+    return (
+      <div className="rounded-[22px] border border-dashed border-slate-300/80 px-4 py-6 text-sm leading-6 text-slate-500 dark:border-white/10 dark:text-slate-400">
+        {isZh ? '这条会话还没有 agent run。' : 'No agent run recorded for this session yet.'}
+      </div>
+    );
+  }
+
+  const steps = Array.isArray(currentRun.steps) ? currentRun.steps : [];
+  return (
+    <div className="space-y-3">
+      <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4 dark:border-white/10 dark:bg-black/20">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className={cn(`font-mono text-[11px] ${TEXT_TERTIARY_CLASS}`)}>{currentRun.run_id}</div>
+            <div className={cn(`mt-1 text-sm font-semibold ${TEXT_PRIMARY_CLASS}`)}>
+              {isZh ? '当前 Agent Run' : 'Current agent run'}
+            </div>
+          </div>
+          <Badge variant="outline" className="border-slate-300 text-slate-700 dark:border-white/15 dark:text-slate-200">
+            {currentRun.status || 'unknown'}
+          </Badge>
+        </div>
+        <div className={cn(`mt-3 grid gap-2 text-xs ${TEXT_SECONDARY_CLASS} sm:grid-cols-2`)}>
+          <div>{isZh ? '自主度' : 'Autonomy'}: {currentRun.autonomy_mode || 'read_only_auto'}</div>
+          <div>{isZh ? '步骤' : 'Steps'}: {steps.length}</div>
+          <div>{isZh ? '请求' : 'Request'}: {currentRun.request_id || '-'}</div>
+          <div>{formatAbsoluteTime(currentRun.started_at, locale)}</div>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {steps.map((step) => <RunStepCard key={step.step_id || step.id} step={step} isZh={isZh} />)}
+      </div>
+      {runs.length > 1 ? (
+        <div className={cn(`text-[11px] ${TEXT_TERTIARY_CLASS}`)}>
+          {isZh ? `本会话共 ${runs.length} 个 run。` : `${runs.length} runs in this session.`}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function EventTimelineRow({ item, locale, isZh, disabled, onConfirmProposal, onRejectProposal, onRollback }) {
   const event = buildEventCopy(item, isZh);
   const proposal = item?.proposal;
   const metaData = item?.meta?.data || {};
+  const decisionMeta = metaData.decision_meta || {};
+  const rollback = decisionMeta.rollback_available || metaData.rollback_available || null;
+  const rollbackPrompt = rollback?.prompt_i18n?.[isZh ? 'zh' : 'en'] || rollback?.prompt;
   const payload = proposal?.payload || metaData.request_payload || metaData.payload || null;
   const result = metaData.new_data || metaData.result || null;
 
@@ -979,6 +1358,27 @@ function EventTimelineRow({ item, locale, isZh, disabled, onConfirmProposal, onR
           </Button>
         </div>
       ) : null}
+      {rollback?.action_name && rollback?.payload ? (
+        <div className="mt-4 rounded-[18px] border border-teal-200 bg-teal-50 px-3 py-3 text-sm text-teal-950 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-100">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <div className="font-medium">{isZh ? '可回滚' : 'Rollback available'}</div>
+              <div className="mt-1 text-xs leading-5 opacity-80">
+                {rollbackPrompt || (isZh ? '将生成一张反向操作确认卡。' : 'Creates a reverse-action approval card.')}
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={disabled}
+              className="shrink-0 rounded-full border-current/30 text-current hover:bg-current/10"
+              onClick={() => onRollback?.(rollback)}
+            >
+              {isZh ? '生成回滚卡' : 'Rollback'}
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </MotionDiv>
   );
 }
@@ -1025,6 +1425,7 @@ function MessageBubble({
   message,
   locale,
   isZh,
+  t,
   disabled,
   onNavigateSuggestion,
   onConfirmProposal,
@@ -1037,6 +1438,9 @@ function MessageBubble({
   const actionName = message?.meta?.data?.meta?.action_name || null;
   const missing = Array.isArray(message?.meta?.data?.meta?.missing) ? message.meta.data.meta.missing : [];
   const messageWidthClass = 'w-full max-w-[min(100%,36rem)]';
+  const messageContent = !isUser
+    ? translateI18nMessage(t, getMessageI18nPayload(message), message?.content)
+    : message?.content;
 
   return (
     <MotionDiv
@@ -1068,7 +1472,7 @@ function MessageBubble({
             ? 'rounded-tr-lg border-slate-200 bg-white text-slate-900 dark:border-white/12 dark:bg-white/[0.08] dark:text-white'
             : 'rounded-tl-lg border-emerald-200 bg-emerald-50/85 text-slate-800 dark:border-emerald-400/14 dark:bg-emerald-400/[0.08] dark:text-slate-100'
         )}>
-          {message?.content || (isZh ? 'AI 未返回文本。' : 'No assistant text returned.')}
+          {messageContent || (isZh ? 'AI 未返回文本。' : 'No assistant text returned.')}
         </div>
 
         {!isUser && (actionName || result || missing.length > 0) ? (
@@ -1170,7 +1574,7 @@ export default function AdminAiWorkspacePage() {
   const queryClient = useQueryClient();
   const composerRef = useRef(null);
   const [searchParams] = useSearchParams();
-  const { currentLanguage } = useTranslation();
+  const { currentLanguage, t } = useTranslation('admin');
 
   const currentAdminId = useMemo(() => {
     const user = userManager.getUser();
@@ -1187,12 +1591,15 @@ export default function AdminAiWorkspacePage() {
   const [conversationFilter, setConversationFilter] = useState('all');
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [workspaceSection, setWorkspaceSection] = useState('actions');
+  const [streamEvents, setStreamEvents] = useState([]);
+  const [autonomyMode, setAutonomyMode] = useState('read_only_auto');
 
   const aiContext = useMemo(() => ({
     activeRoute: '/admin/ai',
     locale,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai',
-  }), [locale]);
+    autonomyMode,
+  }), [autonomyMode, locale]);
 
   const workspaceQuery = useQuery(
     ['adminAiWorkspace'],
@@ -1306,6 +1713,11 @@ export default function AdminAiWorkspacePage() {
     () => (Array.isArray(activeConversation?.llm_calls) ? activeConversation.llm_calls : []),
     [activeConversation]
   );
+  const conversationRuns = useMemo(
+    () => (Array.isArray(activeConversation?.runs) ? activeConversation.runs : []),
+    [activeConversation]
+  );
+  const currentRun = conversationRuns.length > 0 ? conversationRuns[conversationRuns.length - 1] : null;
 
   const invalidateWorkspace = useCallback(() => {
     queryClient.invalidateQueries(['adminAiWorkspace']);
@@ -1315,13 +1727,74 @@ export default function AdminAiWorkspacePage() {
   const hasStaleConversationDetail = Boolean(normalizedSelectedConversationId)
     && activeConversationId !== normalizedSelectedConversationId;
 
+  const handleStreamEvent = useCallback(({ event, data }) => {
+    setStreamEvents((items) => {
+      if (event === 'run.started') {
+        return [{ event, data, id: `${data?.run_id || 'run'}-${data?.sequence || 1}` }];
+      }
+
+      if (event === 'assistant.delta') {
+        const last = items[items.length - 1];
+        if (last?.event === 'assistant.delta') {
+          return [
+            ...items.slice(0, -1),
+            {
+              ...last,
+              data: {
+                ...last.data,
+                content: `${last.data?.content || ''}${data?.content || ''}`,
+                sequence: data?.sequence || last.data?.sequence,
+              },
+            },
+          ];
+        }
+      }
+
+      return [
+        ...items,
+        {
+          event,
+          data,
+          id: `${event}-${data?.run_id || 'run'}-${data?.step_id || data?.sequence || items.length}`,
+        },
+      ];
+    });
+  }, []);
+
   const sendMutation = useMutation(
-    async ({ message, conversationId }) => adminAPI.chatWithAdminAi({
-      conversation_id: conversationId || undefined,
-      message,
-      context: aiContext,
-      source: 'admin:/admin/ai',
-    }),
+    async ({ message, conversationId }) => {
+      setStreamEvents([]);
+      try {
+        const payload = await streamAdminAiChat({
+          conversation_id: conversationId || undefined,
+          message,
+          context: aiContext,
+          source: 'admin:/admin/ai',
+        }, handleStreamEvent);
+        return { data: payload };
+      } catch (error) {
+        const status = error?.response?.status;
+        const contentType = error?.response?.headers?.['content-type'] || '';
+        const shouldFallbackToJson =
+          status === 404 ||
+          status === 406 ||
+          status === 415 ||
+          status === 501 ||
+          (!!contentType && !contentType.toLowerCase().includes('text/event-stream'));
+
+        if (!shouldFallbackToJson) {
+          throw error;
+        }
+
+        const fallbackResponse = await adminAPI.chatWithAdminAi({
+          conversation_id: conversationId || undefined,
+          message,
+          context: aiContext,
+          source: 'admin:/admin/ai',
+        });
+        return fallbackResponse;
+      }
+    },
     {
       onSuccess: (response, variables) => {
         const payload = response.data || {};
@@ -1330,7 +1803,8 @@ export default function AdminAiWorkspacePage() {
           payload.conversation_id || variables.conversationId || null,
           activeConversation,
           variables.message,
-          payload.message || null
+          payload.message || null,
+          normalizeI18nMessagePayload(payload.message_i18n || payload.metadata?.message_i18n)
         );
         const nextConversationId = payload.conversation_id || nextConversation?.conversation_id || null;
 
@@ -1341,24 +1815,62 @@ export default function AdminAiWorkspacePage() {
 
         setIsCreatingConversation(false);
         setDraft('');
+        setStreamEvents([]);
         invalidateWorkspace();
       },
       onError: (error) => {
-        toast.error(error?.response?.data?.error || (isZh ? 'AI 请求失败，请稍后重试。' : 'AI request failed. Please try again.'));
+        invalidateWorkspace();
+        if (normalizedSelectedConversationId) {
+          queryClient.invalidateQueries(['adminAiConversation', normalizedSelectedConversationId]);
+        }
+        if (error?.code === 'AI_STREAM_DISCONNECTED') {
+          toast.error(isZh ? 'AI 连接中断，正在恢复会话记录。' : 'AI stream disconnected. Restoring the session timeline.');
+          return;
+        }
+        if (error?.code === 'AI_PROVIDER_TIMEOUT' || error?.response?.data?.code === 'AI_PROVIDER_TIMEOUT') {
+          toast.error(isZh ? '模型处理超时，可能请求过复杂，请拆分任务或稍后重试。' : 'The model timed out. Try splitting the task or retry later.');
+          return;
+        }
+        toast.error(error?.response?.data?.error || error?.message || (isZh ? 'AI 请求失败，请稍后重试。' : 'AI request failed. Please try again.'));
       },
     }
   );
 
   const decisionMutation = useMutation(
-    async ({ proposalId, outcome, conversationId }) => adminAPI.chatWithAdminAi({
-      conversation_id: conversationId,
-      context: aiContext,
-      decision: {
+    async ({ proposalId, outcome, conversationId, rollback }) => {
+      setStreamEvents([]);
+      const decisionPayload = {
         proposal_id: proposalId,
         outcome,
-      },
-      source: 'admin:/admin/ai',
-    }),
+        ...(rollback ? { rollback } : {}),
+      };
+      const requestPayload = {
+        conversation_id: conversationId,
+        context: aiContext,
+        decision: decisionPayload,
+        source: 'admin:/admin/ai',
+      };
+      try {
+        const payload = await streamAdminAiChat(requestPayload, handleStreamEvent);
+        return { data: payload };
+      } catch (error) {
+        const status = error?.response?.status;
+        const contentType = error?.response?.headers?.['content-type'] || '';
+        const shouldFallbackToJson =
+          status === 404 ||
+          status === 406 ||
+          status === 415 ||
+          status === 501 ||
+          (!!contentType && !contentType.toLowerCase().includes('text/event-stream'));
+
+        if (!shouldFallbackToJson) {
+          throw error;
+        }
+
+        setStreamEvents([]);
+        return adminAPI.chatWithAdminAi(requestPayload);
+      }
+    },
     {
       onSuccess: (response, variables) => {
         const payload = response.data || {};
@@ -1370,7 +1882,8 @@ export default function AdminAiWorkspacePage() {
           payload.conversation_id || variables?.conversationId || null,
           previousConversation,
           null,
-          payload.message || null
+          payload.message || null,
+          normalizeI18nMessagePayload(payload.message_i18n || payload.metadata?.message_i18n)
         );
         const nextConversationId = payload.conversation_id || variables?.conversationId || null;
 
@@ -1379,9 +1892,18 @@ export default function AdminAiWorkspacePage() {
         }
 
         invalidateWorkspace();
+        setStreamEvents([]);
       },
       onError: (error) => {
-        toast.error(error?.response?.data?.error || (isZh ? '操作决策失败。' : 'Decision failed.'));
+        invalidateWorkspace();
+        if (normalizedSelectedConversationId) {
+          queryClient.invalidateQueries(['adminAiConversation', normalizedSelectedConversationId]);
+        }
+        if (error?.code === 'AI_PROVIDER_TIMEOUT' || error?.response?.data?.code === 'AI_PROVIDER_TIMEOUT') {
+          toast.error(isZh ? '模型处理超时，可能请求过复杂，请拆分任务或稍后重试。' : 'The model timed out. Try splitting the task or retry later.');
+          return;
+        }
+        toast.error(error?.response?.data?.error || error?.message || (isZh ? '操作决策失败。' : 'Decision failed.'));
       },
     }
   );
@@ -1412,6 +1934,23 @@ export default function AdminAiWorkspacePage() {
   const canSend = draft.trim().length >= COMMAND_MIN_LENGTH && !sendMutation.isLoading && assistant.chat_enabled !== false;
   const canCreateConversation = !sendMutation.isLoading && !decisionMutation.isLoading;
   const disableProposalActions = decisionMutation.isLoading || hasStaleConversationDetail;
+  const autonomyOptions = useMemo(() => ([
+    {
+      id: 'read_only_auto',
+      label: isZh ? '只读自动' : 'Read only',
+      description: isZh ? '写操作全部确认' : 'Confirm all writes',
+    },
+    {
+      id: 'low_risk_auto',
+      label: isZh ? '低风险自动' : 'Low risk',
+      description: isZh ? '仅自动执行可回滚低风险动作' : 'Auto-run reversible low-risk writes',
+    },
+    {
+      id: 'full_auto',
+      label: isZh ? '全自动' : 'Full auto',
+      description: isZh ? '按后台策略自动执行' : 'Follow backend policy',
+    },
+  ]), [isZh]);
 
   const capabilitySummary = useMemo(() => ({
     readCount: managementActions.filter((item) => item.risk_level === 'read').length,
@@ -1476,6 +2015,7 @@ export default function AdminAiWorkspacePage() {
   const inspectorSummary = useMemo(() => {
     const messageCount = currentSummary.message_count || 0;
     const llmCount = currentSummary.llm_calls || 0;
+    const stepCount = conversationRuns.reduce((sum, run) => sum + (Array.isArray(run?.steps) ? run.steps.length : 0), 0);
     const pendingLabel = pendingActions.length > 0
       ? `${pendingActions.length}${isZh ? ' 个待确认动作' : ' pending actions'}`
       : (isZh ? '无挂起动作' : 'No pending action');
@@ -1487,9 +2027,9 @@ export default function AdminAiWorkspacePage() {
       title: isZh
         ? `${messageCount} 条消息，${llmCount} 次模型调用`
         : `${messageCount} messages, ${llmCount} model turns`,
-      detail: latestScope ? `${pendingLabel} · ${latestScope}` : pendingLabel,
+      detail: latestScope ? `${pendingLabel} · ${stepCount} steps · ${latestScope}` : `${pendingLabel} · ${stepCount} steps`,
     };
-  }, [currentSummary.llm_calls, currentSummary.message_count, isZh, latestAssistantResult?.scope, pendingActions.length]);
+  }, [conversationRuns, currentSummary.llm_calls, currentSummary.message_count, isZh, latestAssistantResult?.scope, pendingActions.length]);
   const secondarySections = useMemo(() => ([
     {
       id: 'actions',
@@ -1509,7 +2049,7 @@ export default function AdminAiWorkspacePage() {
       id: 'inspector',
       label: isZh ? '会话检查' : 'Inspector',
       icon: Cpu,
-      count: llmCalls.length,
+      count: llmCalls.length + conversationRuns.length,
       description: isZh ? '查看模型回合、结果快照与会话强度。' : 'Inspect model turns, snapshots, and session density.',
     },
     {
@@ -1519,7 +2059,7 @@ export default function AdminAiWorkspacePage() {
       count: capabilityPreview.length + Math.min(taskTemplates.length, 5),
       description: isZh ? '查看能力边界与更稳的任务模板。' : 'Review guardrails and reliable task templates.',
     },
-  ]), [capabilityPreview.length, isZh, llmCalls.length, localizedSideRoutes.length, localizedSpotlightRoutes.length, pendingActions.length, resultFollowUps.length, taskTemplates.length]);
+  ]), [capabilityPreview.length, conversationRuns.length, isZh, llmCalls.length, localizedSideRoutes.length, localizedSpotlightRoutes.length, pendingActions.length, resultFollowUps.length, taskTemplates.length]);
   const currentSection = secondarySections.find((item) => item.id === workspaceSection) || secondarySections[0];
 
   const handleSelectConversation = useCallback((conversationId) => {
@@ -1581,6 +2121,20 @@ export default function AdminAiWorkspacePage() {
   const handleNavigateAudit = useCallback(() => {
     navigate('/admin/llm-usage');
   }, [navigate]);
+
+  const handleCreateRollback = useCallback((rollback) => {
+    if (!normalizedSelectedConversationId || !rollback?.action_name || !rollback?.payload) {
+      toast.error(isZh ? '缺少可回滚的操作数据。' : 'Missing rollback data.');
+      return;
+    }
+
+    decisionMutation.mutate({
+      proposalId: rollback.source_proposal_id || 0,
+      outcome: 'rollback',
+      conversationId: normalizedSelectedConversationId,
+      rollback,
+    });
+  }, [decisionMutation, isZh, normalizedSelectedConversationId]);
 
   const busyLabel = sendMutation.isLoading
     ? (isZh ? '正在请求模型...' : 'Sending to model...')
@@ -1798,7 +2352,7 @@ export default function AdminAiWorkspacePage() {
                       <div className="flex h-full items-center justify-center">
                         <Loader2 className="h-5 w-5 animate-spin text-slate-400 dark:text-slate-500" />
                       </div>
-                    ) : conversationTimeline.length === 0 ? (
+                    ) : conversationTimeline.length === 0 && streamEvents.length === 0 ? (
                       <EmptyConversationState
                         isZh={isZh}
                         starterPrompts={starterPrompts}
@@ -1816,6 +2370,7 @@ export default function AdminAiWorkspacePage() {
                                   message={item}
                                   locale={locale}
                                   isZh={isZh}
+                                  t={t}
                                   disabled={disableProposalActions}
                                   onNavigateSuggestion={handleNavigateSuggestion}
                                   onConfirmProposal={(proposalId) => normalizedSelectedConversationId && decisionMutation.mutate({
@@ -1846,8 +2401,19 @@ export default function AdminAiWorkspacePage() {
                                     outcome: 'reject',
                                     conversationId: normalizedSelectedConversationId,
                                   })}
+                                  onRollback={handleCreateRollback}
                                 />
                               )
+                            ))}
+                            {streamEvents.map((item) => (
+                              <AgentStreamEventCard
+                                key={item.id}
+                                item={item}
+                                isZh={isZh}
+                                t={t}
+                                disabled={disableProposalActions}
+                                onRollback={handleCreateRollback}
+                              />
                             ))}
                           </AnimatePresence>
                         </div>
@@ -1856,6 +2422,39 @@ export default function AdminAiWorkspacePage() {
                   </div>
 
                   <div className={`border-t bg-slate-50/80 px-5 py-5 dark:bg-black/20 ${PANEL_DIVIDER_CLASS}`}>
+                    <div
+                      className="mb-3 grid gap-2 md:grid-cols-3"
+                      role="radiogroup"
+                      aria-label={isZh ? '自治模式' : 'Autonomy mode'}
+                    >
+                      {autonomyOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={autonomyMode === option.id}
+                          tabIndex={autonomyMode === option.id ? 0 : -1}
+                          onClick={() => setAutonomyMode(option.id)}
+                          onKeyDown={(event) => {
+                            if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) return;
+                            event.preventDefault();
+                            const currentIndex = autonomyOptions.findIndex((item) => item.id === autonomyMode);
+                            const direction = ['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1;
+                            const nextIndex = (currentIndex + direction + autonomyOptions.length) % autonomyOptions.length;
+                            setAutonomyMode(autonomyOptions[nextIndex].id);
+                          }}
+                          className={cn(
+                            'rounded-[18px] border px-3 py-3 text-left transition',
+                            autonomyMode === option.id
+                              ? 'border-emerald-300 bg-emerald-50 text-emerald-950 shadow-sm dark:border-emerald-400/40 dark:bg-emerald-400/10 dark:text-emerald-100'
+                              : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300'
+                          )}
+                        >
+                          <div className="text-xs font-semibold">{option.label}</div>
+                          <div className="mt-1 text-[11px] leading-4 opacity-70">{option.description}</div>
+                        </button>
+                      ))}
+                    </div>
                     <div className={cn(`mb-3 flex flex-wrap items-center justify-between gap-3 text-xs ${TEXT_SECONDARY_CLASS}`)}>
                       <span>
                         {isZh
@@ -2070,6 +2669,10 @@ export default function AdminAiWorkspacePage() {
                               <ResultSnapshot title={isZh ? '最新结果快照' : 'Latest result snapshot'} value={latestAssistantResult} isZh={isZh} />
                             </div>
                           ) : null}
+
+                          <div className="mt-4">
+                            <RunInspector runs={conversationRuns} currentRun={currentRun} isZh={isZh} locale={locale} />
+                          </div>
 
                           <div className="mt-4 space-y-3">
                             {(llmCalls.length > 0 ? llmCalls.slice(-3).reverse() : []).map((item) => (

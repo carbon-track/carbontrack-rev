@@ -130,7 +130,13 @@
       "capabilityDescription": "从工作区配置同步的能力视图，前后端使用同一份定义。",
       "navigationTitle": "导航目标",
       "managementActionsTitle": "管理动作",
-      "requiredFields": "必填：{{fields}}"
+      "requiredFields": "必填：{{fields}}",
+      "messages": {
+        "actionRejected": "已取消该待执行操作。你可以补充条件后重新下达指令。",
+        "actionExecutionFailed": "执行该操作时出现错误，请稍后重试。",
+        "rollbackConfirmationGenerated": "已生成回滚确认卡。请确认后执行反向操作。",
+        "proposalReady": "已整理待执行操作：{{summary}}\n如需执行，请确认。"
+      }
     },
     "passkeys": {
       "title": "通行密钥概览",
