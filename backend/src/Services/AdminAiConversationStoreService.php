@@ -387,6 +387,7 @@ class AdminAiConversationStoreService
     public function startRun(string $runId, string $conversationId, array $logContext, string $autonomyMode, array $meta = []): void
     {
         try {
+            $startedAt = gmdate('Y-m-d H:i:s');
             $this->ensureConversationRecord(
                 $conversationId,
                 isset($logContext['actor_id']) && is_numeric((string) $logContext['actor_id']) ? (int) $logContext['actor_id'] : null,
@@ -398,7 +399,7 @@ class AdminAiConversationStoreService
             $stmt = $this->db->prepare("INSERT INTO admin_ai_runs (
                 run_id, conversation_id, admin_id, autonomy_mode, status, source, request_id, started_at, meta_json
             ) VALUES (
-                :run_id, :conversation_id, :admin_id, :autonomy_mode, 'running', :source, :request_id, CURRENT_TIMESTAMP, :meta_json
+                :run_id, :conversation_id, :admin_id, :autonomy_mode, 'running', :source, :request_id, :started_at, :meta_json
             )");
             $stmt->execute([
                 ':run_id' => $runId,
@@ -407,6 +408,7 @@ class AdminAiConversationStoreService
                 ':autonomy_mode' => $autonomyMode,
                 ':source' => $logContext['source'] ?? '/admin/ai/chat/stream',
                 ':request_id' => $logContext['request_id'] ?? null,
+                ':started_at' => $startedAt,
                 ':meta_json' => json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             ]);
         } catch (\Throwable $exception) {

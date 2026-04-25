@@ -426,7 +426,7 @@ class AdminAiAgentServiceTest extends TestCase
         $rollbackResult = $service->chat(
             $proposalResult['conversation_id'],
             null,
-            [],
+            ['locale' => 'zh'],
             ['proposal_id' => $proposalId, 'outcome' => 'rollback', 'rollback' => $rollback],
             [
                 'request_id' => 'req-rollback-3',
@@ -441,6 +441,12 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertSame('adjust_user_points', $rollbackResult['proposal']['action_name']);
         $this->assertSame('pending', $rollbackResult['proposal']['status']);
         $this->assertSame(-5.0, $rollbackResult['proposal']['payload']['delta']);
+        $rollbackEvents = array_values(array_filter(
+            $rollbackResult['conversation']['messages'],
+            static fn (array $message): bool => ($message['action'] ?? null) === 'admin_ai_rollback_proposed'
+        ));
+        $this->assertNotEmpty($rollbackEvents);
+        $this->assertStringContainsString('回滚刚才的 adjust_user_points 操作', (string) $rollbackEvents[0]['content']);
     }
 
     public function testListConversationsSupportsStatusModelDateAndPendingFilters(): void

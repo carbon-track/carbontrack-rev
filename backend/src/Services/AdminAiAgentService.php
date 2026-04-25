@@ -610,7 +610,7 @@ class AdminAiAgentService
         string $autonomyMode
     ): array {
         $maxSteps = max(1, min(12, (int) ($this->agentConfig['max_run_steps'] ?? $this->agentConfig['max_auto_read_steps'] ?? 6)));
-        $maxToolExecutions = max(1, min(24, (int) ($this->agentConfig['max_run_tool_executions'] ?? $maxSteps)));
+        $maxToolExecutions = max(1, min(24, (int) ($this->agentConfig['max_run_tool_executions'] ?? ($maxSteps * 2))));
         $assistantParts = [];
         $lastOutcome = [
             'assistant_text' => '',
@@ -1100,7 +1100,7 @@ class AdminAiAgentService
         $outcome = strtolower(trim((string) ($decision['outcome'] ?? '')));
 
         if ($outcome === 'rollback') {
-            return $this->handleRollbackDecision($conversationId, $decision, $logContext);
+            return $this->handleRollbackDecision($conversationId, $decision, $context, $logContext);
         }
 
         if ($proposalId <= 0 || !in_array($outcome, ['confirm', 'reject'], true)) {
@@ -1235,7 +1235,7 @@ class AdminAiAgentService
      * @param array<string,mixed> $logContext
      * @return array<string,mixed>
      */
-    private function handleRollbackDecision(string $conversationId, array $decision, array $logContext): array
+    private function handleRollbackDecision(string $conversationId, array $decision, array $context, array $logContext): array
     {
         $descriptor = isset($decision['rollback']) && is_array($decision['rollback'])
             ? $this->rollbackService->normalizeDescriptor($decision['rollback'])
@@ -1260,6 +1260,7 @@ class AdminAiAgentService
         $summary = $descriptor['prompt'] !== null && $descriptor['prompt'] !== ''
             ? $descriptor['prompt']
             : '回滚操作：' . $this->resultFormatterService->buildProposalSummary($definition, $payload);
+        $visibleText = $this->localizedRollbackPrompt($descriptor, $context, $summary);
         $proposalData = [
             'conversation_id' => $conversationId,
             'action_name' => $actionName,
@@ -1280,13 +1281,13 @@ class AdminAiAgentService
 
         $proposalId = $this->conversationStoreService->logConversationEvent('admin_ai_action_proposed', $logContext, [
             'conversation_id' => $conversationId,
-            'visible_text' => $summary,
+            'visible_text' => $visibleText,
             'request_data' => $proposalData,
             'status' => 'pending',
         ]);
         $this->conversationStoreService->logConversationEvent('admin_ai_rollback_proposed', $logContext, [
             'conversation_id' => $conversationId,
-            'visible_text' => $summary,
+            'visible_text' => $visibleText,
             'action_name' => $actionName,
             'request_data' => $proposalData + ['proposal_id' => $proposalId],
             'status' => 'pending',
@@ -1311,6 +1312,25 @@ class AdminAiAgentService
             'metadata' => ['decision' => 'rollback', 'proposal_id' => $proposalId, 'timestamp' => gmdate(DATE_ATOM)],
             'conversation' => $this->getConversationDetail($conversationId),
         ];
+    }
+
+    /**
+     * @param array{prompt_i18n:array<string,string>} $descriptor
+     * @param array<string,mixed> $context
+     */
+    private function localizedRollbackPrompt(array $descriptor, array $context, string $fallback): string
+    {
+        $locale = isset($context['locale']) && is_string($context['locale'])
+            ? strtolower(substr(trim($context['locale']), 0, 2))
+            : 'en';
+        $prompts = is_array($descriptor['prompt_i18n'] ?? null) ? $descriptor['prompt_i18n'] : [];
+        $localized = isset($prompts[$locale]) && is_string($prompts[$locale]) ? trim($prompts[$locale]) : '';
+        if ($localized !== '') {
+            return $localized;
+        }
+
+        $english = isset($prompts['en']) && is_string($prompts['en']) ? trim($prompts['en']) : '';
+        return $english !== '' ? $english : $fallback;
     }
 
     /**
