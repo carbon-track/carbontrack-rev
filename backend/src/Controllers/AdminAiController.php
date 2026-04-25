@@ -205,6 +205,9 @@ class AdminAiController
             $body = $streamResponse->getBody();
 
             $emit = static function (string $event, array $payload) use ($body): void {
+                if (connection_aborted() !== 0) {
+                    throw new \RuntimeException('STREAM_CLIENT_DISCONNECTED');
+                }
                 $body->write('event: ' . $event . "\n");
                 $body->write('data: ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n");
             };
@@ -245,6 +248,18 @@ class AdminAiController
                     'timestamp' => gmdate(DATE_ATOM),
                 ]);
             } catch (\RuntimeException $runtimeException) {
+                if ($runtimeException->getMessage() === 'STREAM_CLIENT_DISCONNECTED') {
+                    $this->logAdminAudit('admin_ai_chat_stream_disconnected', $user, $request, [
+                        'conversation_id' => $conversationId,
+                        'data' => [
+                            'run_id' => null,
+                            'status' => 'client_disconnected',
+                            'has_decision' => $decision !== null,
+                            'source' => $source ?? $request->getUri()->getPath(),
+                        ],
+                    ], 'failed');
+                    return $streamResponse;
+                }
                 $error = $this->mapAdminAiRuntimeException(
                     $runtimeException,
                     'AI_AGENT_ERROR',

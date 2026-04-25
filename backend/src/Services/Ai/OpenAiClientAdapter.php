@@ -12,7 +12,7 @@ use Psr\Http\Message\ResponseInterface;
 /**
  * Adapter that wraps the official openai-php client and exposes a minimal interface.
  */
-class OpenAiClientAdapter implements LlmClientInterface
+class OpenAiClientAdapter implements StreamCapableLlmClientInterface
 {
     public function __construct(
         private Client $client,

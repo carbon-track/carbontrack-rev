@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CarbonTrack\Services;
 
 use CarbonTrack\Services\Ai\LlmClientInterface;
+use CarbonTrack\Services\Ai\StreamCapableLlmClientInterface;
 use CarbonTrack\Support\SyntheticRequestFactory;
 use PDO;
 use Psr\Log\LoggerInterface;
@@ -66,7 +67,12 @@ class AdminAiAgentService
         $this->temperature = isset($config['temperature']) ? (float) $config['temperature'] : 0.2;
         $this->maxTokens = isset($config['max_tokens']) ? (int) $config['max_tokens'] : 900;
         $this->enabled = $client !== null;
-        $this->conversationStoreService = $conversationStoreService ?? new AdminAiConversationStoreService($db, $logger, $this->auditLogService);
+        $this->conversationStoreService = $conversationStoreService ?? new AdminAiConversationStoreService(
+            $db,
+            $logger,
+            $this->auditLogService,
+            $this->errorLogService
+        );
         $this->readModelService = $readModelService ?? new AdminAiReadModelService($db, $this->statisticsService);
         $this->writeActionService = $writeActionService ?? new AdminAiWriteActionService($db, $this->auditLogService, $this->messageService, $this->badgeService);
         $this->resultFormatterService = $resultFormatterService ?? new AdminAiResultFormatterService();
@@ -631,7 +637,7 @@ class AdminAiAgentService
             $startedAt = microtime(true);
             $llmLogId = null;
             try {
-                if (method_exists($this->client, 'streamChatCompletion')) {
+                if ($this->client instanceof StreamCapableLlmClientInterface) {
                     $rawResponse = $this->client->streamChatCompletion($payload, function (array $event) use ($emitEvent): void {
                         if (($event['type'] ?? null) === 'content.delta') {
                             $content = (string) ($event['content'] ?? '');
@@ -645,6 +651,9 @@ class AdminAiAgentService
                 }
                 $llmLogId = $this->logLlmCall($payload['messages'], $rawResponse, $logContext, $context, $conversationId, $turnNo + $stepIndex, $startedAt);
             } catch (\Throwable $exception) {
+                if ($exception->getMessage() === 'STREAM_CLIENT_DISCONNECTED') {
+                    throw $exception;
+                }
                 $this->logLlmFailure($payload['messages'], $logContext, $context, $conversationId, $turnNo + $stepIndex, $startedAt, $exception);
                 $this->logError($exception, $logContext, [
                     'conversation_id' => $conversationId,
