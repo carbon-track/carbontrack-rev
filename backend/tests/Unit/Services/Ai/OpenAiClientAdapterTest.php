@@ -176,6 +176,9 @@ class OpenAiClientAdapterTest extends TestCase
 
         $this->assertSame('Hello world', $result['choices'][0]['message']['content']);
         $this->assertSame('stop', $result['choices'][0]['finish_reason']);
+        $this->assertSame('chatcmpl-crlf', $result['id']);
+        $this->assertSame('req-crlf', $result['metadata']['request_id']);
+        $this->assertSame('chatcmpl-crlf', $result['metadata']['completion_id']);
         $this->assertSame(['Hello', ' world'], array_column($events, 'content'));
     }
 }

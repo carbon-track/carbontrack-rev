@@ -86,8 +86,9 @@ class OpenAiClientAdapter implements LlmClientInterface
             throw new \RuntimeException($this->extractErrorMessage($decoded, $response));
         }
 
+        $requestId = $this->extractStreamRequestId($response);
         $aggregate = [
-            'id' => $this->extractStreamRequestId($response),
+            'id' => $requestId,
             'object' => 'chat.completion',
             'created' => time(),
             'model' => $payload['model'] ?? null,
@@ -101,7 +102,7 @@ class OpenAiClientAdapter implements LlmClientInterface
             ]],
             'usage' => null,
             'metadata' => [
-                'request_id' => $this->extractStreamRequestId($response),
+                'request_id' => $requestId,
                 'streamed' => true,
             ],
         ];
@@ -248,7 +249,7 @@ class OpenAiClientAdapter implements LlmClientInterface
 
             if (isset($decoded['id']) && is_string($decoded['id']) && $decoded['id'] !== '') {
                 $aggregate['id'] = $decoded['id'];
-                $aggregate['metadata']['request_id'] = $decoded['id'];
+                $aggregate['metadata']['completion_id'] = $decoded['id'];
             }
             if (isset($decoded['model']) && is_string($decoded['model'])) {
                 $aggregate['model'] = $decoded['model'];

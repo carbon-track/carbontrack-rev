@@ -154,6 +154,7 @@ class AdminAiController
                 return $this->json($response, [
                     'success' => false,
                     'error' => 'Admin access required',
+                    'code' => 'ADMIN_REQUIRED',
                 ], 403);
             }
 

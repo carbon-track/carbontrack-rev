@@ -39,7 +39,7 @@ const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
 
 async function streamAdminAiChat(payload, onEvent) {
-  const token = localStorage.getItem('auth_token');
+  const token = tokenManager.getToken();
   const response = await fetch(`${API_BASE_URL}/admin/ai/chat/stream`, {
     method: 'POST',
     headers: {
@@ -2370,12 +2370,27 @@ export default function AdminAiWorkspacePage() {
                   </div>
 
                   <div className={`border-t bg-slate-50/80 px-5 py-5 dark:bg-black/20 ${PANEL_DIVIDER_CLASS}`}>
-                    <div className="mb-3 grid gap-2 md:grid-cols-3">
+                    <div
+                      className="mb-3 grid gap-2 md:grid-cols-3"
+                      role="radiogroup"
+                      aria-label={isZh ? '自治模式' : 'Autonomy mode'}
+                    >
                       {autonomyOptions.map((option) => (
                         <button
                           key={option.id}
                           type="button"
+                          role="radio"
+                          aria-checked={autonomyMode === option.id}
+                          tabIndex={autonomyMode === option.id ? 0 : -1}
                           onClick={() => setAutonomyMode(option.id)}
+                          onKeyDown={(event) => {
+                            if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) return;
+                            event.preventDefault();
+                            const currentIndex = autonomyOptions.findIndex((item) => item.id === autonomyMode);
+                            const direction = ['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1;
+                            const nextIndex = (currentIndex + direction + autonomyOptions.length) % autonomyOptions.length;
+                            setAutonomyMode(autonomyOptions[nextIndex].id);
+                          }}
                           className={cn(
                             'rounded-[18px] border px-3 py-3 text-left transition',
                             autonomyMode === option.id

@@ -376,11 +376,23 @@ $__deps_initializer = function (Container $container) {
                     return $response;
                 }
 
+                $requestIdBytes = null;
                 try {
-                    $requestId = 'llm-stream-' . bin2hex(random_bytes(8));
+                    $requestIdBytes = random_bytes(8);
                 } catch (\Throwable) {
-                    $requestId = 'llm-stream-' . bin2hex(openssl_random_pseudo_bytes(8));
+                    $requestIdBytes = null;
                 }
+                if ($requestIdBytes === null && function_exists('openssl_random_pseudo_bytes')) {
+                    try {
+                        $opensslBytes = openssl_random_pseudo_bytes(8);
+                        $requestIdBytes = is_string($opensslBytes) && $opensslBytes !== '' ? $opensslBytes : null;
+                    } catch (\Throwable) {
+                        $requestIdBytes = null;
+                    }
+                }
+                $requestId = $requestIdBytes !== null
+                    ? 'llm-stream-' . bin2hex($requestIdBytes)
+                    : 'llm-stream-' . str_replace('.', '', uniqid('', true));
 
                 return $response->withHeader('x-request-id', $requestId);
             }));

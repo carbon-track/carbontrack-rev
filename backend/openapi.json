@@ -24587,6 +24587,12 @@
               "string",
               "null"
             ]
+          },
+          "prompt_i18n": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       },
