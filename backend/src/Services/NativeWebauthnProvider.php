@@ -516,10 +516,6 @@ class NativeWebauthnProvider implements WebauthnProviderInterface
             throw new PasskeyOperationException('Only P-256 passkeys are currently supported.', 'UNSUPPORTED_PUBLIC_KEY', 400);
         }
 
-        $coordinateLength = $this->getEcCoordinateLength($curve);
-        $x = $this->normalizeEcCoordinate($x, $coordinateLength);
-        $y = $this->normalizeEcCoordinate($y, $coordinateLength);
-
         $algorithm = $this->derSequence(
             $this->derOid('1.2.840.10045.2.1'),
             $this->derOid('1.2.840.10045.3.1.7')
@@ -537,6 +533,14 @@ class NativeWebauthnProvider implements WebauthnProviderInterface
     {
         if ($curve === 1) {
             return 32;
+        }
+
+        if ($curve === 2) {
+            return 48;
+        }
+
+        if ($curve === 3) {
+            return 66;
         }
 
         throw new PasskeyOperationException('Unsupported EC public key curve.', 'UNSUPPORTED_PUBLIC_KEY', 400);
