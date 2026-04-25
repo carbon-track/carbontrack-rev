@@ -377,6 +377,9 @@ class NativeWebauthnProvider implements WebauthnProviderInterface
             if (!is_string($x) || !is_string($y)) {
                 throw new \InvalidArgumentException('EC2 credential public key is incomplete.');
             }
+            $coordinateLength = $this->getEcCoordinateLength($curve);
+            $x = $this->normalizeEcCoordinate($x, $coordinateLength);
+            $y = $this->normalizeEcCoordinate($y, $coordinateLength);
 
             return [
                 'alg' => $alg,
@@ -513,6 +516,10 @@ class NativeWebauthnProvider implements WebauthnProviderInterface
             throw new PasskeyOperationException('Only P-256 passkeys are currently supported.', 'UNSUPPORTED_PUBLIC_KEY', 400);
         }
 
+        $coordinateLength = $this->getEcCoordinateLength($curve);
+        $x = $this->normalizeEcCoordinate($x, $coordinateLength);
+        $y = $this->normalizeEcCoordinate($y, $coordinateLength);
+
         $algorithm = $this->derSequence(
             $this->derOid('1.2.840.10045.2.1'),
             $this->derOid('1.2.840.10045.3.1.7')
@@ -524,6 +531,24 @@ class NativeWebauthnProvider implements WebauthnProviderInterface
         );
 
         return $this->derToPemPublicKey($spki);
+    }
+
+    private function getEcCoordinateLength(int $curve): int
+    {
+        if ($curve === 1) {
+            return 32;
+        }
+
+        throw new PasskeyOperationException('Unsupported EC public key curve.', 'UNSUPPORTED_PUBLIC_KEY', 400);
+    }
+
+    private function normalizeEcCoordinate(string $coordinate, int $length): string
+    {
+        if (strlen($coordinate) > $length) {
+            throw new PasskeyOperationException('EC public key coordinate is too long.', 'INVALID_PUBLIC_KEY', 400);
+        }
+
+        return str_pad($coordinate, $length, "\x00", STR_PAD_LEFT);
     }
 
     private function buildRsaPublicKeyPem(string $modulus, string $exponent): string
