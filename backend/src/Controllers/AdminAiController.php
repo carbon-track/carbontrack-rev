@@ -211,6 +211,7 @@ class AdminAiController
                 new \Slim\Psr7\NonBufferedBody()
             );
             if (PHP_SAPI !== 'cli' && !headers_sent()) {
+                // streamChat writes before Slim's emitter runs, so SSE headers must be sent first.
                 foreach ($streamResponse->getHeaders() as $name => $values) {
                     header($name . ': ' . implode(', ', $values), true);
                 }
