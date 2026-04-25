@@ -9,6 +9,9 @@ use Psr\Log\LoggerInterface;
 
 class AdminAiConversationStoreService
 {
+    /** @var array<string,float> */
+    private array $stepStartedAtMonotonic = [];
+
     public function __construct(
         private PDO $db,
         private LoggerInterface $logger,
@@ -457,10 +460,12 @@ class AdminAiConversationStoreService
         ?string $approvalState = null
     ): void {
         try {
+            $startedAt = gmdate('Y-m-d H:i:s');
+            $this->stepStartedAtMonotonic[$runId . ':' . $stepId] = microtime(true);
             $stmt = $this->db->prepare("INSERT INTO admin_ai_steps (
                 run_id, step_id, sequence_no, type, tool_name, status, approval_state, input_json, started_at
             ) VALUES (
-                :run_id, :step_id, :sequence_no, :type, :tool_name, 'running', :approval_state, :input_json, CURRENT_TIMESTAMP
+                :run_id, :step_id, :sequence_no, :type, :tool_name, 'running', :approval_state, :input_json, :started_at
             )");
             $stmt->execute([
                 ':run_id' => $runId,
@@ -470,6 +475,7 @@ class AdminAiConversationStoreService
                 ':tool_name' => $toolName,
                 ':approval_state' => $approvalState,
                 ':input_json' => json_encode($input, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                ':started_at' => $startedAt,
             ]);
         } catch (\Throwable $exception) {
             $this->logger->warning('Failed to start admin AI run step.', [
@@ -494,20 +500,27 @@ class AdminAiConversationStoreService
     ): void {
         try {
             $finishedAt = gmdate('Y-m-d H:i:s');
-            $startedAt = null;
-            $startedStmt = $this->db->prepare("SELECT started_at FROM admin_ai_steps WHERE run_id = :run_id AND step_id = :step_id LIMIT 1");
-            $startedStmt->execute([
-                ':run_id' => $runId,
-                ':step_id' => $stepId,
-            ]);
-            $startedAtValue = $startedStmt->fetchColumn();
-            if (is_string($startedAtValue) && trim($startedAtValue) !== '') {
-                $startedAt = strtotime($startedAtValue);
-            }
-            $finishedTimestamp = strtotime($finishedAt);
-            $durationMs = $startedAt !== null && $finishedTimestamp !== false
-                ? max(0, ($finishedTimestamp - $startedAt) * 1000)
+            $stepKey = $runId . ':' . $stepId;
+            $durationMs = isset($this->stepStartedAtMonotonic[$stepKey])
+                ? round(max(0, microtime(true) - $this->stepStartedAtMonotonic[$stepKey]) * 1000, 2)
                 : null;
+            unset($this->stepStartedAtMonotonic[$stepKey]);
+            $startedAt = null;
+            if ($durationMs === null) {
+                $startedStmt = $this->db->prepare("SELECT started_at FROM admin_ai_steps WHERE run_id = :run_id AND step_id = :step_id LIMIT 1");
+                $startedStmt->execute([
+                    ':run_id' => $runId,
+                    ':step_id' => $stepId,
+                ]);
+                $startedAtValue = $startedStmt->fetchColumn();
+                if (is_string($startedAtValue) && trim($startedAtValue) !== '') {
+                    $startedAt = strtotime($startedAtValue);
+                }
+                $finishedTimestamp = strtotime($finishedAt);
+                $durationMs = $startedAt !== null && $finishedTimestamp !== false
+                    ? max(0, ($finishedTimestamp - $startedAt) * 1000)
+                    : null;
+            }
 
             $stmt = $this->db->prepare("UPDATE admin_ai_steps
                 SET status = :status,

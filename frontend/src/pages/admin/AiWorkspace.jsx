@@ -57,6 +57,14 @@ async function streamAdminAiChat(payload, onEvent) {
     if (window.location.pathname !== '/auth/login') {
       window.location.href = '/auth/login';
     }
+    const error = new Error('Unauthorized');
+    error.code = 'UNAUTHORIZED';
+    error.response = {
+      status: response.status,
+      data: null,
+      headers: { 'content-type': contentType },
+    };
+    throw error;
   }
 
   if (!response.ok || !response.body || !contentType.includes('text/event-stream')) {
@@ -116,35 +124,43 @@ async function streamAdminAiChat(payload, onEvent) {
     }
   };
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    let separatorMatch = buffer.match(/\r?\n\r?\n/);
-    let separatorIndex = separatorMatch?.index ?? -1;
-    while (separatorIndex !== -1) {
-      const frame = buffer.slice(0, separatorIndex);
-      buffer = buffer.slice(separatorIndex + separatorMatch[0].length);
-      dispatchFrame(frame);
-      separatorMatch = buffer.match(/\r?\n\r?\n/);
-      separatorIndex = separatorMatch?.index ?? -1;
+      buffer += decoder.decode(value, { stream: true });
+      let separatorMatch = buffer.match(/\r?\n\r?\n/);
+      let separatorIndex = separatorMatch?.index ?? -1;
+      while (separatorIndex !== -1) {
+        const frame = buffer.slice(0, separatorIndex);
+        buffer = buffer.slice(separatorIndex + separatorMatch[0].length);
+        dispatchFrame(frame);
+        separatorMatch = buffer.match(/\r?\n\r?\n/);
+        separatorIndex = separatorMatch?.index ?? -1;
+      }
+    }
+
+    buffer += decoder.decode();
+    const tail = buffer.trim();
+    if (tail) {
+      dispatchFrame(tail);
+    }
+
+    if (!finalPayload) {
+      const error = new Error('AI stream ended before the run finished.');
+      error.code = 'AI_STREAM_DISCONNECTED';
+      throw error;
+    }
+
+    return finalPayload;
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      // Ignore cleanup failures so the original stream result is preserved.
     }
   }
-
-  buffer += decoder.decode();
-  const tail = buffer.trim();
-  if (tail) {
-    dispatchFrame(tail);
-  }
-
-  if (!finalPayload) {
-    const error = new Error('AI stream ended before the run finished.');
-    error.code = 'AI_STREAM_DISCONNECTED';
-    throw error;
-  }
-
-  return finalPayload;
 }
 const ROUTE_COPY = {
   dashboard: {

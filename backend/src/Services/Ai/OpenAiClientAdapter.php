@@ -121,9 +121,11 @@ class OpenAiClientAdapter implements LlmClientInterface
 
             $emptyReadBackoffMicros = 10000;
             $buffer .= $chunk;
-            while (($separator = strpos($buffer, "\n\n")) !== false) {
+            while (preg_match("/\r?\n\r?\n/", $buffer, $separatorMatch, PREG_OFFSET_CAPTURE) === 1) {
+                $separator = $separatorMatch[0][1];
+                $separatorLength = strlen($separatorMatch[0][0]);
                 $frame = substr($buffer, 0, $separator);
-                $buffer = substr($buffer, $separator + 2);
+                $buffer = substr($buffer, $separator + $separatorLength);
                 $this->consumeStreamFrame($frame, $aggregate, $toolCalls, $onEvent);
             }
         }

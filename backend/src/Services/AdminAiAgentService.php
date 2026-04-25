@@ -212,6 +212,10 @@ class AdminAiAgentService
             throw new \InvalidArgumentException('Either message or decision is required.');
         }
 
+        if ($decision !== null) {
+            $this->assertDecisionCanStart($conversationId, $decision);
+        }
+
         $this->conversationStoreService->startRun($runId, $conversationId, $logContext, $autonomyMode, [
             'has_decision' => $decision !== null,
         ]);
@@ -251,6 +255,8 @@ class AdminAiAgentService
                 'decision' => $decision,
                 'result' => $result['metadata'] ?? [],
             ]);
+            $result['conversation'] = $this->getConversationDetail($conversationId);
+            $result['run_id'] = $runId;
             $emitEvent('run.finished', ['result' => $result]);
             return $result;
         }
@@ -1198,6 +1204,33 @@ class AdminAiAgentService
 
     /**
      * @param array<string,mixed> $decision
+     */
+    private function assertDecisionCanStart(string $conversationId, array $decision): void
+    {
+        $outcome = strtolower(trim((string) ($decision['outcome'] ?? '')));
+        if ($outcome === 'rollback') {
+            $descriptor = isset($decision['rollback']) && is_array($decision['rollback'])
+                ? $this->rollbackService->normalizeDescriptor($decision['rollback'])
+                : null;
+            if ($descriptor === null || !isset($this->actionDefinitions[$descriptor['action_name']])) {
+                throw new \InvalidArgumentException('Invalid rollback payload.');
+            }
+            return;
+        }
+
+        $proposalId = isset($decision['proposal_id']) && is_numeric((string) $decision['proposal_id'])
+            ? (int) $decision['proposal_id']
+            : 0;
+        if ($proposalId <= 0 || !in_array($outcome, ['confirm', 'reject'], true)) {
+            throw new \InvalidArgumentException('Invalid decision payload.');
+        }
+        if ($this->conversationStoreService->findProposal($conversationId, $proposalId) === null) {
+            throw new \RuntimeException('PROPOSAL_NOT_FOUND');
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $decision
      * @param array<string,mixed> $logContext
      * @return array<string,mixed>
      */
@@ -1311,13 +1344,15 @@ class AdminAiAgentService
         $riskLevel = (string) ($definition['risk_level'] ?? 'write');
         $rollbackStrategy = (string) ($definition['rollback_strategy'] ?? 'none');
         $isRollbackCapable = !in_array($rollbackStrategy, ['none', 'manual_only', 'advice_only'], true);
+        $minMode = (string) ($definition['autonomy_min_mode'] ?? 'full_auto');
 
         if ($autonomyMode === 'low_risk_auto') {
-            return in_array($riskLevel, ['low', 'low_write'], true) && $isRollbackCapable;
+            return in_array($minMode, ['read_only_auto', 'low_risk_auto'], true)
+                && in_array($riskLevel, ['low', 'low_write'], true)
+                && $isRollbackCapable;
         }
 
-        $minMode = (string) ($definition['autonomy_min_mode'] ?? 'full_auto');
-        return $autonomyMode === 'full_auto' && in_array($minMode, ['low_risk_auto', 'full_auto'], true);
+        return $autonomyMode === 'full_auto' && in_array($minMode, ['read_only_auto', 'low_risk_auto', 'full_auto'], true);
     }
 
     private function applyPayloadTemplate(array $definition, array $payload, array $context): array

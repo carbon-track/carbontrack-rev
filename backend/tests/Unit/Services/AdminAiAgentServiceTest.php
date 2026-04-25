@@ -1130,6 +1130,44 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertSame('adjust_user_points', $decisionResult['metadata']['rollback_available']['action_name']);
         $this->assertSame(-5.0, $decisionResult['metadata']['rollback_available']['payload']['delta']);
         $this->assertSame(15, (int) $pdo->query("SELECT points FROM users WHERE id = 2")->fetchColumn());
+        $decisionRuns = $decisionResult['conversation']['runs'];
+        $decisionRun = end($decisionRuns);
+        $this->assertIsArray($decisionRun);
+        $this->assertSame('finished', $decisionRun['status']);
+    }
+
+    public function testStreamChatRejectsInvalidDecisionBeforePersistingRun(): void
+    {
+        $pdo = $this->makePdo();
+        $service = new AdminAiAgentService(
+            $pdo,
+            new QueueLlmClient([]),
+            new NullLogger(),
+            ['model' => 'test-model'],
+            ['agent' => ['max_history_messages' => 12]]
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid decision payload.');
+
+        try {
+            $service->streamChat(
+                'admin-ai-invalid-decision-1',
+                null,
+                [],
+                ['proposal_id' => 0, 'outcome' => 'confirm'],
+                [
+                    'request_id' => 'req-invalid-decision',
+                    'actor_type' => 'admin',
+                    'actor_id' => 1,
+                    'source' => '/admin/ai/chat/stream',
+                ],
+                static function (string $event, array $payload): void {
+                }
+            );
+        } finally {
+            $this->assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM admin_ai_runs')->fetchColumn());
+        }
     }
 
     public function testStreamChatPersistsRunStepsAndContinuesAfterReadTool(): void

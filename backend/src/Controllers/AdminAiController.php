@@ -193,7 +193,7 @@ class AdminAiController
                 @ob_end_flush();
             }
             ob_implicit_flush(true);
-            @set_time_limit(0);
+            @set_time_limit(300);
 
             $streamResponse = new \Slim\Psr7\Response(200, [], new \Slim\Psr7\NonBufferedBody());
             $streamResponse = $streamResponse
