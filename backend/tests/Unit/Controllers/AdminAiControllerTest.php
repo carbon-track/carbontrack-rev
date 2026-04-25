@@ -144,6 +144,9 @@ class AdminAiControllerTest extends TestCase
 
     public function testChatStreamReturnsSseResponseWithoutSlimHeaderTypeError(): void
     {
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer should-not-leak';
+        $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] = 'Bearer should-not-leak';
+
         $authService = $this->createMock(AuthService::class);
         $authService->method('getCurrentUser')->willReturn(['id' => 1, 'role' => 'admin']);
         $authService->method('isAdminUser')->willReturn(true);
@@ -188,6 +191,8 @@ class AdminAiControllerTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $this->assertStringContainsString('text/event-stream', $response->getHeaderLine('Content-Type'));
         $this->assertSame('no-cache, no-transform', $response->getHeaderLine('Cache-Control'));
+        $this->assertSame('', $response->getHeaderLine('Authorization'));
+        unset($_SERVER['HTTP_AUTHORIZATION'], $_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
     }
 
     public function testWorkspaceReturnsBootstrapPayload(): void

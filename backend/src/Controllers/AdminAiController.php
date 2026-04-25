@@ -207,7 +207,7 @@ class AdminAiController
             ];
             $streamResponse = new \Slim\Psr7\Response(
                 200,
-                new \Slim\Psr7\Headers($streamHeaders),
+                new \Slim\Psr7\Headers($streamHeaders, []),
                 new \Slim\Psr7\NonBufferedBody()
             );
             if (PHP_SAPI !== 'cli' && !headers_sent()) {
