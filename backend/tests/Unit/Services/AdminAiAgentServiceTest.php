@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CarbonTrack\Tests\Unit\Services;
 
 use CarbonTrack\Services\AdminAiAgentService;
+use CarbonTrack\Services\AdminAiConversationStoreService;
 use CarbonTrack\Services\Ai\LlmClientInterface;
 use CarbonTrack\Services\AuditLogService;
 use CarbonTrack\Services\BadgeService;
@@ -1158,6 +1159,78 @@ class AdminAiAgentServiceTest extends TestCase
                 ['proposal_id' => 0, 'outcome' => 'confirm'],
                 [
                     'request_id' => 'req-invalid-decision',
+                    'actor_type' => 'admin',
+                    'actor_id' => 1,
+                    'source' => '/admin/ai/chat/stream',
+                ],
+                static function (string $event, array $payload): void {
+                }
+            );
+        } finally {
+            $this->assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM admin_ai_runs')->fetchColumn());
+        }
+    }
+
+    public function testStreamChatRejectsCrossConversationRollbackBeforePersistingRun(): void
+    {
+        $pdo = $this->makePdo();
+        $store = new AdminAiConversationStoreService($pdo, new NullLogger());
+        $proposalId = $store->logConversationEvent('admin_ai_action_proposed', [
+            'request_id' => 'req-source-proposal',
+            'actor_id' => 1,
+            'source' => '/admin/ai/chat',
+        ], [
+            'conversation_id' => 'admin-ai-source-conversation',
+            'visible_text' => 'Adjust user points',
+            'status' => 'success',
+            'action_name' => 'adjust_user_points',
+            'request_data' => [
+                'action_name' => 'adjust_user_points',
+                'payload' => ['user_id' => 2, 'delta' => 5, 'reason' => 'test'],
+            ],
+        ]);
+        $service = new AdminAiAgentService(
+            $pdo,
+            new QueueLlmClient([]),
+            new NullLogger(),
+            ['model' => 'test-model'],
+            [
+                'agent' => ['max_history_messages' => 12],
+                'managementActions' => [
+                    [
+                        'name' => 'adjust_user_points',
+                        'label' => 'Adjust user points',
+                        'description' => 'Adjust user points.',
+                        'api' => ['payloadTemplate' => []],
+                        'requires' => ['user_id', 'delta', 'reason'],
+                        'contextHints' => [],
+                        'risk_level' => 'low_write',
+                        'rollback_strategy' => 'explicit_compensation',
+                        'requires_confirmation' => true,
+                    ],
+                ],
+            ]
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid rollback source proposal.');
+
+        try {
+            $service->streamChat(
+                'admin-ai-other-conversation',
+                null,
+                [],
+                [
+                    'outcome' => 'rollback',
+                    'rollback' => [
+                        'source_proposal_id' => $proposalId,
+                        'source_action' => 'adjust_user_points',
+                        'action_name' => 'adjust_user_points',
+                        'payload' => ['user_id' => 2, 'delta' => -5, 'reason' => 'rollback'],
+                    ],
+                ],
+                [
+                    'request_id' => 'req-cross-conversation-rollback',
                     'actor_type' => 'admin',
                     'actor_id' => 1,
                     'source' => '/admin/ai/chat/stream',

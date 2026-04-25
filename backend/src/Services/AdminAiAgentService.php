@@ -1215,6 +1215,7 @@ class AdminAiAgentService
             if ($descriptor === null || !isset($this->actionDefinitions[$descriptor['action_name']])) {
                 throw new \InvalidArgumentException('Invalid rollback payload.');
             }
+            $this->assertRollbackDescriptorBelongsToConversation($conversationId, $descriptor);
             return;
         }
 
@@ -1242,6 +1243,7 @@ class AdminAiAgentService
         if ($descriptor === null) {
             throw new \InvalidArgumentException('Invalid rollback payload.');
         }
+        $this->assertRollbackDescriptorBelongsToConversation($conversationId, $descriptor);
 
         $actionName = $descriptor['action_name'];
         if (!isset($this->actionDefinitions[$actionName])) {
@@ -1309,6 +1311,21 @@ class AdminAiAgentService
             'metadata' => ['decision' => 'rollback', 'proposal_id' => $proposalId, 'timestamp' => gmdate(DATE_ATOM)],
             'conversation' => $this->getConversationDetail($conversationId),
         ];
+    }
+
+    /**
+     * @param array{source_proposal_id:int|null} $descriptor
+     */
+    private function assertRollbackDescriptorBelongsToConversation(string $conversationId, array $descriptor): void
+    {
+        $sourceProposalId = $descriptor['source_proposal_id'] ?? null;
+        if (!is_int($sourceProposalId) || $sourceProposalId <= 0) {
+            return;
+        }
+
+        if ($this->conversationStoreService->findProposal($conversationId, $sourceProposalId) === null) {
+            throw new \InvalidArgumentException('Invalid rollback source proposal.');
+        }
     }
 
     /**
