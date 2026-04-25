@@ -15932,7 +15932,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateSupportTicketMessageRequest"
+                "$ref": "#/components/schemas/CreateMySupportTicketMessageRequest"
               }
             }
           }
@@ -28341,6 +28341,19 @@
             "description": "Cloudflare Turnstile 验证令牌。"
           }
         }
+      },
+      "CreateMySupportTicketMessageRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CreateSupportTicketMessageRequest"
+          },
+          {
+            "type": "object",
+            "required": [
+              "cf_turnstile_response"
+            ]
+          }
+        ]
       },
       "CreateSupportTicketMessageRequest": {
         "type": "object",
