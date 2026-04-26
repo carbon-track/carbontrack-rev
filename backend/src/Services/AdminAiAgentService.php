@@ -779,9 +779,9 @@ class AdminAiAgentService
      */
     private function buildRecoveredToolOutcome(array $lastOutcome, array $assistantParts, string $runId): ?array
     {
-        $assistantText = trim((string) ($lastOutcome['assistant_text'] ?? ''));
+        $assistantText = trim(implode("\n\n", array_filter($assistantParts, static fn ($part): bool => trim($part) !== '')));
         if ($assistantText === '') {
-            $assistantText = trim(implode("\n\n", array_values(array_unique(array_filter($assistantParts)))));
+            $assistantText = trim((string) ($lastOutcome['assistant_text'] ?? ''));
         }
 
         if ($assistantText === '') {
