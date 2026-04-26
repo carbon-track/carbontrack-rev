@@ -793,10 +793,10 @@ class AdminAiAgentService
 
         $toolNames = array_values(array_unique($toolNames));
         if ($toolNames === []) {
-            return '我将调用后台工具获取需要的数据。';
+            return 'I will call admin tools to fetch the required data.';
         }
 
-        return '我将调用后台工具：' . implode(', ', $toolNames) . '。';
+        return 'I will call admin tools: ' . implode(', ', $toolNames) . '.';
     }
 
     /**
@@ -829,7 +829,7 @@ class AdminAiAgentService
         $label = $toolName !== '' ? $toolName : 'admin_tool';
         $messages[] = [
             'role' => 'user',
-            'content' => "后台工具 {$label} 已执行完成。请基于这个真实结果继续回答，不要重复调用同一个工具，除非确有必要。\n\n{$content}",
+            'content' => "Admin tool {$label} completed. Continue from this real result, and do not call the same tool again unless it is necessary.\n\n{$content}",
         ];
     }
 
