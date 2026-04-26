@@ -127,7 +127,7 @@ export default function SystemLogsPage() {
 
   const visibleServerMeta = useMemo(() => {
     const serverMeta = detailData?.data?.server_meta;
-    return showServerMetaSecrets ? serverMeta : maskSensitiveJson(serverMeta);
+    return showServerMetaSecrets ? serverMeta : maskServerMeta(serverMeta);
   }, [detailData?.data?.server_meta, showServerMetaSecrets]);
 
   useEffect(() => {
@@ -1286,24 +1286,27 @@ function isSensitiveKey(key) {
   return SENSITIVE_KEY_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
-function maskSensitiveJson(value, parentKey = '', isRoot = true) {
+function maskServerMeta(value) {
   const parsed = safeParse(value);
-  if (parentKey && isSensitiveKey(parentKey)) {
+  if (typeof parsed === 'string' && parsed.trim() !== '') {
     return MASKED_VALUE;
   }
+
+  return maskSensitiveJson(parsed);
+}
+
+function maskSensitiveJson(value) {
+  const parsed = safeParse(value);
   if (Array.isArray(parsed)) {
-    return parsed.map((item) => maskSensitiveJson(item, '', false));
+    return parsed.map((item) => maskSensitiveJson(item));
   }
   if (parsed && typeof parsed === 'object') {
     return Object.fromEntries(
       Object.entries(parsed).map(([key, child]) => [
         key,
-        isSensitiveKey(key) ? MASKED_VALUE : maskSensitiveJson(child, key, false)
+        isSensitiveKey(key) ? MASKED_VALUE : maskSensitiveJson(child)
       ])
     );
-  }
-  if (isRoot && typeof parsed === 'string' && parsed.trim() !== '') {
-    return MASKED_VALUE;
   }
   return parsed;
 }
