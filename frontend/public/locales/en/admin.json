@@ -1240,6 +1240,11 @@
       "requestBody": "Request Body",
       "responseBody": "Response Body",
       "serverMeta": "Server Meta",
+      "privacy": {
+        "masked": "Sensitive fields masked",
+        "showingSecrets": "Sensitive fields visible",
+        "toggle": "Show or hide sensitive fields in server metadata"
+      },
       "requestId": "Request ID",
       "method": "Method",
       "path": "Path",
