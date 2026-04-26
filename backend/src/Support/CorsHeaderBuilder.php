@@ -43,12 +43,14 @@ final class CorsHeaderBuilder
             $headers['Access-Control-Allow-Headers'] = $allowedHeadersDefault;
         }
 
-        if (self::isOriginAllowed($origin, $allowedOrigins)) {
+        $allowAnyOriginWithoutCredentials = !$allowCredentials && in_array('*', $allowedOrigins, true);
+
+        if (self::isExplicitOriginAllowed($origin, $allowedOrigins)) {
             $headers['Access-Control-Allow-Origin'] = $origin;
             if ($allowCredentials) {
                 $headers['Access-Control-Allow-Credentials'] = 'true';
             }
-        } elseif (in_array('*', $allowedOrigins, true) && !$allowCredentials) {
+        } elseif ($allowAnyOriginWithoutCredentials) {
             $headers['Access-Control-Allow-Origin'] = '*';
         }
 
@@ -57,7 +59,7 @@ final class CorsHeaderBuilder
         return array_filter($headers, static fn ($value): bool => $value !== null && $value !== '');
     }
 
-    private static function isOriginAllowed(?string $origin, array $allowedOrigins): bool
+    private static function isExplicitOriginAllowed(?string $origin, array $allowedOrigins): bool
     {
         if (!$origin) {
             return false;
