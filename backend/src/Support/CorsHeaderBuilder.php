@@ -10,7 +10,7 @@ final class CorsHeaderBuilder
 {
     public static function forRequest(ServerRequestInterface $request): array
     {
-        $allowedOriginsEnv = $_ENV['CORS_ALLOWED_ORIGINS'] ?? '*';
+        $allowedOriginsEnv = $_ENV['CORS_ALLOWED_ORIGINS'] ?? ($_ENV['FRONTEND_URL'] ?? '');
         $allowedMethods = $_ENV['CORS_ALLOWED_METHODS'] ?? 'GET,POST,PUT,DELETE,OPTIONS';
         $allowedHeadersDefault = $_ENV['CORS_ALLOWED_HEADERS'] ?? 'Content-Type,Authorization,X-Request-ID,X-Requested-With,X-Turnstile-Token';
         $exposeHeaders = $_ENV['CORS_EXPOSE_HEADERS'] ?? 'Content-Type,Authorization,X-Request-ID';
@@ -65,7 +65,7 @@ final class CorsHeaderBuilder
 
         if ($origin === 'null') {
             foreach ($allowedOrigins as $allowed) {
-                if ($allowed === '*' || strcasecmp($allowed, 'null') === 0) {
+                if (strcasecmp($allowed, 'null') === 0) {
                     return true;
                 }
             }
@@ -73,7 +73,11 @@ final class CorsHeaderBuilder
         }
 
         foreach ($allowedOrigins as $allowed) {
-            if ($allowed === '*' || strcasecmp($allowed, $origin) === 0) {
+            if ($allowed === '*') {
+                continue;
+            }
+
+            if (strcasecmp($allowed, $origin) === 0) {
                 return true;
             }
 
