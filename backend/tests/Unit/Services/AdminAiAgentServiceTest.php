@@ -1353,6 +1353,69 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertSame('success', $secondResult['conversation']['runs'][1]['steps'][0]['status']);
     }
 
+    public function testStreamChatReplaysToolResultsAsTextForProviderCompatibility(): void
+    {
+        $pdo = $this->makePdo();
+        $pdo->exec("INSERT INTO users (id, username, email, status, is_admin, uuid, points) VALUES (5, 'compat_user', 'compat@example.com', 'active', 0, '550e8400-e29b-41d4-a716-4466554400c5', 33)");
+
+        $client = new QueueLlmClient([
+            $this->toolResponse('manage_admin', [
+                'action' => 'get_user_overview',
+                'payload' => [
+                    'user_id' => 5,
+                ],
+            ]),
+            $this->plainTextResponse('用户 compat_user 的概览已整理。'),
+        ]);
+
+        $service = new AdminAiAgentService(
+            $pdo,
+            $client,
+            new NullLogger(),
+            ['model' => 'test-model'],
+            [
+                'agent' => ['max_history_messages' => 12, 'max_run_steps' => 4],
+                'managementActions' => [
+                    [
+                        'name' => 'get_user_overview',
+                        'label' => 'Get user overview',
+                        'description' => 'Read user overview.',
+                        'api' => ['payloadTemplate' => []],
+                        'requires' => ['user_id'],
+                        'contextHints' => [],
+                        'risk_level' => 'read',
+                        'requires_confirmation' => false,
+                    ],
+                ],
+            ],
+            new LlmLogService($pdo, new Logger('test'))
+        );
+
+        $result = $service->streamChat(null, '查用户并总结', [], null, [
+            'request_id' => 'req-stream-tool-text-replay',
+            'actor_type' => 'admin',
+            'actor_id' => 1,
+            'source' => '/admin/ai/chat/stream',
+        ]);
+
+        $this->assertTrue($result['success']);
+        $payloads = $client->payloads();
+        $this->assertCount(2, $payloads);
+
+        $followupMessages = $payloads[1]['messages'] ?? [];
+        $this->assertIsArray($followupMessages);
+        foreach ($followupMessages as $message) {
+            $this->assertIsArray($message);
+            $this->assertNotSame('tool', $message['role'] ?? null);
+            $this->assertArrayNotHasKey('tool_calls', $message);
+        }
+
+        $encodedMessages = json_encode($followupMessages, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $this->assertIsString($encodedMessages);
+        $this->assertStringContainsString('后台工具 manage_admin 已执行完成', $encodedMessages);
+        $this->assertStringContainsString('compat_user', $encodedMessages);
+    }
+
     public function testStreamChatReturnsToolSummaryWhenFollowupLlmFailsAfterReadTool(): void
     {
         $pdo = $this->makePdo();
@@ -1544,6 +1607,9 @@ class QueueLlmClient implements LlmClientInterface
     /** @var array<int,array<string,mixed>|\Throwable> */
     private array $responses;
 
+    /** @var array<int,array<string,mixed>> */
+    private array $payloads = [];
+
     /**
      * @param array<int,array<string,mixed>|\Throwable> $responses
      */
@@ -1554,6 +1620,7 @@ class QueueLlmClient implements LlmClientInterface
 
     public function createChatCompletion(array $payload): array
     {
+        $this->payloads[] = $payload;
         if ($this->responses === []) {
             throw new \RuntimeException('No queued LLM responses left.');
         }
@@ -1564,6 +1631,14 @@ class QueueLlmClient implements LlmClientInterface
         }
 
         return $next;
+    }
+
+    /**
+     * @return array<int,array<string,mixed>>
+     */
+    public function payloads(): array
+    {
+        return $this->payloads;
     }
 }
 
