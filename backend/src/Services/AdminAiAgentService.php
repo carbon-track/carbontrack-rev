@@ -414,6 +414,7 @@ class AdminAiAgentService
                 'max_history_messages' => 12,
                 'max_run_steps' => 6,
                 'default_confirmation_policy' => 'write_requires_confirmation',
+                'tool_result_message_mode' => 'text',
             ],
             'navigationTargets' => [],
             'quickActions' => [],
@@ -701,12 +702,18 @@ class AdminAiAgentService
                 }
             }
 
-            $assistantMessage = [
-                'role' => 'assistant',
-                'content' => $content,
-                'tool_calls' => $toolCalls,
-            ];
-            $messages[] = $assistantMessage;
+            if ($this->usesOpenAiToolResultReplay()) {
+                $messages[] = [
+                    'role' => 'assistant',
+                    'content' => $content,
+                    'tool_calls' => $toolCalls,
+                ];
+            } else {
+                $messages[] = [
+                    'role' => 'assistant',
+                    'content' => $content !== '' ? $content : $this->buildToolPlanMessageContent($toolCalls),
+                ];
+            }
             if ($content !== '') {
                 $assistantParts[] = $content;
             }
@@ -747,17 +754,7 @@ class AdminAiAgentService
                     continue;
                 }
 
-                $toolCallId = (string) ($toolCall['id'] ?? $this->generateStepId());
-                $messages[] = [
-                    'role' => 'tool',
-                    'tool_call_id' => $toolCallId,
-                    'name' => (string) ($toolCall['function']['name'] ?? ''),
-                    'content' => json_encode([
-                        'result' => $outcome['result'] ?? null,
-                        'suggestion' => $outcome['suggestion'] ?? null,
-                        'assistant_text' => $outcome['assistant_text'] ?? null,
-                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                ];
+                $this->appendToolOutcomeMessage($messages, $toolCall, $outcome);
             }
 
             if ($blockingOutcomes !== []) {
@@ -770,6 +767,70 @@ class AdminAiAgentService
         }
 
         return $this->buildAgentLimitOutcome($assistantParts, $runId, 'max_steps', $lastOutcome);
+    }
+
+    private function usesOpenAiToolResultReplay(): bool
+    {
+        $mode = strtolower(trim((string) ($this->agentConfig['tool_result_message_mode'] ?? 'text')));
+        return in_array($mode, ['openai_tool', 'tool'], true);
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $toolCalls
+     */
+    private function buildToolPlanMessageContent(array $toolCalls): string
+    {
+        $toolNames = [];
+        foreach ($toolCalls as $toolCall) {
+            if (!is_array($toolCall)) {
+                continue;
+            }
+            $name = trim((string) ($toolCall['function']['name'] ?? ''));
+            if ($name !== '') {
+                $toolNames[] = $name;
+            }
+        }
+
+        $toolNames = array_values(array_unique($toolNames));
+        if ($toolNames === []) {
+            return '我将调用后台工具获取需要的数据。';
+        }
+
+        return '我将调用后台工具：' . implode(', ', $toolNames) . '。';
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $messages
+     * @param array<string,mixed> $toolCall
+     * @param array<string,mixed> $outcome
+     */
+    private function appendToolOutcomeMessage(array &$messages, array $toolCall, array $outcome): void
+    {
+        $toolName = (string) ($toolCall['function']['name'] ?? '');
+        $content = json_encode([
+            'result' => $outcome['result'] ?? null,
+            'suggestion' => $outcome['suggestion'] ?? null,
+            'assistant_text' => $outcome['assistant_text'] ?? null,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (!is_string($content) || $content === '') {
+            $content = '{}';
+        }
+
+        if ($this->usesOpenAiToolResultReplay()) {
+            $messages[] = [
+                'role' => 'tool',
+                'tool_call_id' => (string) ($toolCall['id'] ?? $this->generateStepId()),
+                'name' => $toolName,
+                'content' => $content,
+            ];
+            return;
+        }
+
+        $label = $toolName !== '' ? $toolName : 'admin_tool';
+        $messages[] = [
+            'role' => 'user',
+            'content' => "后台工具 {$label} 已执行完成。请基于这个真实结果继续回答，不要重复调用同一个工具，除非确有必要。\n\n{$content}",
+        ];
     }
 
     /**
