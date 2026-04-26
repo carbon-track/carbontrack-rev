@@ -1412,7 +1412,7 @@ class AdminAiAgentServiceTest extends TestCase
 
         $encodedMessages = json_encode($followupMessages, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $this->assertIsString($encodedMessages);
-        $this->assertStringContainsString('后台工具 manage_admin 已执行完成', $encodedMessages);
+        $this->assertStringContainsString('Admin tool manage_admin completed', $encodedMessages);
         $this->assertStringContainsString('compat_user', $encodedMessages);
     }
 
