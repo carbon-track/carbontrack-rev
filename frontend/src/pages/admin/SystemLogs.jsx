@@ -30,16 +30,13 @@ const ERROR_COLUMNS = ['id', 'request_id', 'error_type', 'error_message', 'error
 const LLM_COLUMNS = ['id', 'conversation_id', 'turn_no', 'actor_type', 'actor_id', 'source', 'model', 'llm_status', 'total_tokens', 'latency_ms', 'created_at', 'ops'];
 const TABLE_RENDER_LIMIT = 120;
 const MASKED_VALUE = '[REDACTED]';
-const SENSITIVE_KEY_PARTS = [
-  'password',
-  'pass',
-  'token',
-  'authorization',
-  'auth',
-  'secret',
-  'key',
-  'credential',
-  'jwt'
+const SENSITIVE_KEY_PATTERNS = [
+  /(^|[_-])(password|passwd|passphrase|pwd|pass)([_-]|$)/i,
+  /(^|[_-])(token|secret|credential|credentials)([_-]|$)/i,
+  /authorization/i,
+  /(^|[_-])auth([_-]|$)/i,
+  /(^|[_-])jwt([_-].*(secret|token)|$)/i,
+  /(^|[_-])(api|access|private|secret|signing|encryption|webhook|client|r2|s3|aws|cloudflare)[_-]?key([_-]|$)/i
 ];
 
 const COLUMN_STORAGE_KEYS = {
@@ -1284,7 +1281,7 @@ function safeParse(value) {
 
 function isSensitiveKey(key) {
   const normalized = String(key).toLowerCase();
-  return SENSITIVE_KEY_PARTS.some((part) => normalized.includes(part));
+  return SENSITIVE_KEY_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
 function maskSensitiveJson(value, parentKey = '') {
