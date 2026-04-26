@@ -1282,7 +1282,9 @@ function safeParse(value) {
 }
 
 function isSensitiveKey(key) {
-  const normalized = String(key).toLowerCase();
+  const normalized = String(key)
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .toLowerCase();
   return SENSITIVE_KEY_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
