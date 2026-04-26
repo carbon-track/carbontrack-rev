@@ -10,13 +10,23 @@ final class CorsHeaderBuilder
 {
     public static function forRequest(ServerRequestInterface $request): array
     {
-        $allowedOriginsEnv = $_ENV['CORS_ALLOWED_ORIGINS'] ?? ($_ENV['FRONTEND_URL'] ?? '');
+        $allowedOriginsEnv = $_ENV['CORS_ALLOWED_ORIGINS'] ?? '*';
         $allowedMethods = $_ENV['CORS_ALLOWED_METHODS'] ?? 'GET,POST,PUT,DELETE,OPTIONS';
         $allowedHeadersDefault = $_ENV['CORS_ALLOWED_HEADERS'] ?? 'Content-Type,Authorization,X-Request-ID,X-Requested-With,X-Turnstile-Token';
         $exposeHeaders = $_ENV['CORS_EXPOSE_HEADERS'] ?? 'Content-Type,Authorization,X-Request-ID';
-        $allowCredentials = filter_var($_ENV['CORS_ALLOW_CREDENTIALS'] ?? 'true', FILTER_VALIDATE_BOOLEAN);
+        $allowCredentials = filter_var($_ENV['CORS_ALLOW_CREDENTIALS'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
 
-        $allowedOrigins = array_values(array_filter(array_map('trim', explode(',', $allowedOriginsEnv))));
+        $allowedOrigins = array_values(array_filter(array_map(
+            static fn (string $origin): string => self::normalizeOrigin($origin),
+            explode(',', $allowedOriginsEnv)
+        )));
+        if (!isset($_ENV['CORS_ALLOWED_ORIGINS'])) {
+            $frontendOrigin = self::normalizeOrigin((string) ($_ENV['FRONTEND_URL'] ?? ''));
+            if ($frontendOrigin !== '') {
+                $allowedOrigins[] = $frontendOrigin;
+            }
+        }
+
         if (($_ENV['APP_ENV'] ?? 'production') !== 'production') {
             $allowedOrigins = array_values(array_unique(array_merge($allowedOrigins, [
                 'http://localhost:5173',
@@ -74,6 +84,8 @@ final class CorsHeaderBuilder
             return false;
         }
 
+        $origin = self::normalizeOrigin($origin);
+
         foreach ($allowedOrigins as $allowed) {
             if ($allowed === '*') {
                 continue;
@@ -94,5 +106,25 @@ final class CorsHeaderBuilder
         }
 
         return false;
+    }
+
+    private static function normalizeOrigin(string $origin): string
+    {
+        $origin = trim($origin);
+        if ($origin === '' || $origin === '*' || strcasecmp($origin, 'null') === 0) {
+            return $origin;
+        }
+
+        $parts = parse_url($origin);
+        if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+            return rtrim($origin, '/');
+        }
+
+        $normalized = strtolower((string) $parts['scheme']) . '://' . strtolower((string) $parts['host']);
+        if (isset($parts['port'])) {
+            $normalized .= ':' . (int) $parts['port'];
+        }
+
+        return $normalized;
     }
 }

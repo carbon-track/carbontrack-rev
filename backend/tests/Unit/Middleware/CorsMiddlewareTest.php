@@ -135,6 +135,54 @@ class CorsMiddlewareTest extends TestCase
         $this->assertSame('', $resp->getHeaderLine('Access-Control-Allow-Credentials'));
     }
 
+    public function testMissingAllowedOriginsKeepsWildcardWithoutCredentials(): void
+    {
+        $_ENV['APP_ENV'] = 'production';
+        unset($_ENV['CORS_ALLOWED_ORIGINS']);
+        unset($_ENV['CORS_ALLOW_CREDENTIALS']);
+        unset($_ENV['FRONTEND_URL']);
+
+        $mw = new CorsMiddleware();
+        $request = makeRequest('GET', '/api/v1/ping', null, null, [
+            'Origin' => ['https://any.example']
+        ]);
+        $handler = new class implements \Psr\Http\Server\RequestHandlerInterface {
+            public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
+                return new \Slim\Psr7\Response(204);
+            }
+        };
+
+        $resp = $mw->process($request, $handler);
+
+        $this->assertEquals(204, $resp->getStatusCode());
+        $this->assertSame('*', $resp->getHeaderLine('Access-Control-Allow-Origin'));
+        $this->assertSame('', $resp->getHeaderLine('Access-Control-Allow-Credentials'));
+    }
+
+    public function testFrontendUrlFallbackIsNormalizedForCredentialedOrigin(): void
+    {
+        $_ENV['APP_ENV'] = 'production';
+        unset($_ENV['CORS_ALLOWED_ORIGINS']);
+        $_ENV['FRONTEND_URL'] = 'https://app.example.com/admin/';
+        $_ENV['CORS_ALLOW_CREDENTIALS'] = 'true';
+
+        $mw = new CorsMiddleware();
+        $request = makeRequest('GET', '/api/v1/ping', null, null, [
+            'Origin' => ['https://app.example.com']
+        ]);
+        $handler = new class implements \Psr\Http\Server\RequestHandlerInterface {
+            public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
+                return new \Slim\Psr7\Response(204);
+            }
+        };
+
+        $resp = $mw->process($request, $handler);
+
+        $this->assertEquals(204, $resp->getStatusCode());
+        $this->assertSame('https://app.example.com', $resp->getHeaderLine('Access-Control-Allow-Origin'));
+        $this->assertSame('true', $resp->getHeaderLine('Access-Control-Allow-Credentials'));
+    }
+
     public function testExistingVaryHeaderIsPreserved(): void
     {
         $_ENV['CORS_ALLOWED_ORIGINS'] = 'https://a.com';
