@@ -204,7 +204,7 @@ class AdminAiController
                 'Connection' => 'keep-alive',
                 'X-Accel-Buffering' => 'no',
                 'X-Content-Type-Options' => 'nosniff',
-            ];
+            ] + $this->buildCorsHeadersForEarlyStream($request);
             $streamResponse = new \Slim\Psr7\Response(
                 200,
                 new \Slim\Psr7\Headers($streamHeaders, []),
@@ -1152,6 +1152,86 @@ class AdminAiController
         } catch (\Throwable $ignore) {
             // 审计日志失败不阻断主流程
         }
+    }
+
+    private function buildCorsHeadersForEarlyStream(Request $request): array
+    {
+        $allowedOriginsEnv = $_ENV['CORS_ALLOWED_ORIGINS'] ?? '*';
+        $allowedMethods = $_ENV['CORS_ALLOWED_METHODS'] ?? 'GET,POST,PUT,DELETE,OPTIONS';
+        $allowedHeadersDefault = $_ENV['CORS_ALLOWED_HEADERS'] ?? 'Content-Type,Authorization,X-Request-ID,X-Requested-With,X-Turnstile-Token';
+        $exposeHeaders = $_ENV['CORS_EXPOSE_HEADERS'] ?? 'Content-Type,Authorization,X-Request-ID';
+        $allowCredentials = filter_var($_ENV['CORS_ALLOW_CREDENTIALS'] ?? 'true', FILTER_VALIDATE_BOOLEAN);
+
+        $allowedOrigins = array_values(array_filter(array_map('trim', explode(',', $allowedOriginsEnv))));
+        if (($_ENV['APP_ENV'] ?? 'production') !== 'production') {
+            $allowedOrigins = array_values(array_unique(array_merge($allowedOrigins, [
+                'http://localhost:5173',
+                'http://localhost:3000',
+                'http://127.0.0.1:5173',
+                'http://127.0.0.1:3000',
+            ])));
+        }
+
+        $origin = $request->getHeaderLine('Origin');
+        $varyValues = ['Origin'];
+        $headers = [
+            'Access-Control-Allow-Methods' => $allowedMethods,
+            'Access-Control-Expose-Headers' => $exposeHeaders,
+            'Access-Control-Max-Age' => '86400',
+            'X-CORS-Middleware' => 'active',
+        ];
+
+        $requestHeaders = $request->getHeaderLine('Access-Control-Request-Headers');
+        if ($requestHeaders !== '') {
+            $headers['Access-Control-Allow-Headers'] = $requestHeaders;
+            $varyValues[] = 'Access-Control-Request-Headers';
+        } else {
+            $headers['Access-Control-Allow-Headers'] = $allowedHeadersDefault;
+        }
+
+        if ($this->isCorsOriginAllowedForEarlyStream($origin, $allowedOrigins)) {
+            $headers['Access-Control-Allow-Origin'] = $origin;
+            if ($allowCredentials) {
+                $headers['Access-Control-Allow-Credentials'] = 'true';
+            }
+        } elseif (in_array('*', $allowedOrigins, true) && !$allowCredentials) {
+            $headers['Access-Control-Allow-Origin'] = '*';
+        }
+
+        $headers['Vary'] = implode(', ', array_unique($varyValues));
+
+        return array_filter($headers, static fn ($value): bool => $value !== null && $value !== '');
+    }
+
+    private function isCorsOriginAllowedForEarlyStream(?string $origin, array $allowedOrigins): bool
+    {
+        if (!$origin) {
+            return false;
+        }
+
+        if ($origin === 'null') {
+            foreach ($allowedOrigins as $allowed) {
+                if ($allowed === '*' || strcasecmp($allowed, 'null') === 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        foreach ($allowedOrigins as $allowed) {
+            if ($allowed === '*' || strcasecmp($allowed, $origin) === 0) {
+                return true;
+            }
+
+            if (strpos($allowed, '*.') !== false) {
+                $pattern = '/^' . str_replace(['*.', '.', '/'], ['([^.]+)\.', '\\.', '\/'], preg_quote($allowed, '/')) . '$/i';
+                if (preg_match($pattern, $origin)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function logException(\Throwable $exception, Request $request, string $context): void
