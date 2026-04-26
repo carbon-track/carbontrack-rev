@@ -34,7 +34,9 @@ const SENSITIVE_KEY_PATTERNS = [
   /(^|[_-])(password|passwd|passphrase|pwd|pass)([_-]|$)/i,
   /(^|[_-])(token|secret|credential|credentials)([_-]|$)/i,
   /authorization/i,
+  /cookie/i,
   /(^|[_-])auth([_-]|$)/i,
+  /(^|[_-])(session|sess)([_-]|$)/i,
   /(^|[_-])jwt([_-].*(secret|token)|$)/i,
   /(^|[_-])(api|access|private|secret|signing|encryption|webhook|client|r2|s3|aws|cloudflare)[_-]?key([_-]|$)/i
 ];
@@ -1284,21 +1286,24 @@ function isSensitiveKey(key) {
   return SENSITIVE_KEY_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
-function maskSensitiveJson(value, parentKey = '') {
+function maskSensitiveJson(value, parentKey = '', isRoot = true) {
   const parsed = safeParse(value);
   if (parentKey && isSensitiveKey(parentKey)) {
     return MASKED_VALUE;
   }
   if (Array.isArray(parsed)) {
-    return parsed.map((item) => maskSensitiveJson(item));
+    return parsed.map((item) => maskSensitiveJson(item, '', false));
   }
   if (parsed && typeof parsed === 'object') {
     return Object.fromEntries(
       Object.entries(parsed).map(([key, child]) => [
         key,
-        isSensitiveKey(key) ? MASKED_VALUE : maskSensitiveJson(child, key)
+        isSensitiveKey(key) ? MASKED_VALUE : maskSensitiveJson(child, key, false)
       ])
     );
+  }
+  if (isRoot && typeof parsed === 'string' && parsed.trim() !== '') {
+    return MASKED_VALUE;
   }
   return parsed;
 }
