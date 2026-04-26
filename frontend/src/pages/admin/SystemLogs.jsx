@@ -31,7 +31,7 @@ const LLM_COLUMNS = ['id', 'conversation_id', 'turn_no', 'actor_type', 'actor_id
 const TABLE_RENDER_LIMIT = 120;
 const MASKED_VALUE = '[REDACTED]';
 const SENSITIVE_KEY_PATTERNS = [
-  /(^|[_-])(password|passwd|passphrase|pwd|pass)([_-]|$)/i,
+  /(^|[_-])(password|passwd|passphrase|pwd|pass|pw)([_-]|$)/i,
   /(^|[_-])(token|secret|credential|credentials)([_-]|$)/i,
   /authorization/i,
   /cookie/i,
@@ -1291,24 +1291,26 @@ function maskServerMeta(value) {
   if (typeof parsed === 'string' && parsed.trim() !== '') {
     return MASKED_VALUE;
   }
+  if (!parsed || typeof parsed !== 'object') {
+    return parsed;
+  }
 
   return maskSensitiveJson(parsed);
 }
 
 function maskSensitiveJson(value) {
-  const parsed = safeParse(value);
-  if (Array.isArray(parsed)) {
-    return parsed.map((item) => maskSensitiveJson(item));
+  if (Array.isArray(value)) {
+    return value.map((item) => maskSensitiveJson(item));
   }
-  if (parsed && typeof parsed === 'object') {
+  if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(parsed).map(([key, child]) => [
+      Object.entries(value).map(([key, child]) => [
         key,
         isSensitiveKey(key) ? MASKED_VALUE : maskSensitiveJson(child)
       ])
     );
   }
-  return parsed;
+  return value;
 }
 
 function llmCell(log, column) {
