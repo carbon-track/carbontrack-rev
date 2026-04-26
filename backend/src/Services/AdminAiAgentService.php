@@ -781,10 +781,6 @@ class AdminAiAgentService
     {
         $assistantText = trim(implode("\n\n", array_filter($assistantParts, static fn ($part): bool => trim($part) !== '')));
         if ($assistantText === '') {
-            $assistantText = trim((string) ($lastOutcome['assistant_text'] ?? ''));
-        }
-
-        if ($assistantText === '') {
             return null;
         }
 
