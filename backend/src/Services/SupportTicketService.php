@@ -478,7 +478,11 @@ class SupportTicketService
                 $updates['closed_at'] = $now;
                 $updates['sla_status'] = 'resolved';
             }
-            if (in_array($status, [self::STATUS_OPEN, self::STATUS_IN_PROGRESS, self::STATUS_WAITING_USER], true) && ($ticket['sla_status'] ?? null) === 'resolved') {
+            $reopenedTicket = in_array((string) ($ticket['status'] ?? ''), [self::STATUS_RESOLVED, self::STATUS_CLOSED], true)
+                || (string) ($ticket['sla_status'] ?? 'pending') === 'resolved'
+                || !empty($ticket['resolved_at'])
+                || !empty($ticket['closed_at']);
+            if (in_array($status, [self::STATUS_OPEN, self::STATUS_IN_PROGRESS, self::STATUS_WAITING_USER], true) && $reopenedTicket) {
                 $updates['sla_status'] = 'pending';
                 $updates['resolved_at'] = null;
                 $updates['closed_at'] = null;
