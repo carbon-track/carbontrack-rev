@@ -37,10 +37,28 @@ class CorsMiddleware implements MiddlewareInterface
         $response = $handler->handle($request);
         foreach ($headersToSet as $name => $value) {
             if ($value !== null && $value !== '') {
-                $response = $response->withHeader($name, $value);
+                $response = $this->withCorsHeader($response, $name, $value);
             }
         }
 
         return $response;
+    }
+
+    private function withCorsHeader(ResponseInterface $response, string $name, string $value): ResponseInterface
+    {
+        if (strtolower($name) !== 'vary') {
+            return $response->withHeader($name, $value);
+        }
+
+        $varyValues = [];
+        foreach (array_merge($response->getHeader($name), [$value]) as $headerValue) {
+            foreach (array_map('trim', explode(',', $headerValue)) as $part) {
+                if ($part !== '') {
+                    $varyValues[strtolower($part)] = $part;
+                }
+            }
+        }
+
+        return $response->withHeader($name, implode(', ', array_values($varyValues)));
     }
 }
