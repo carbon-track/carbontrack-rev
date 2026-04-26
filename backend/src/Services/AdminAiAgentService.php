@@ -662,6 +662,16 @@ class AdminAiAgentService
                     'message' => $userMessage,
                     'context' => $context,
                 ]);
+                $recoveredOutcome = $this->buildRecoveredToolOutcome($lastOutcome, $assistantParts, $runId);
+                if ($recoveredOutcome !== null) {
+                    $this->logger->warning('Admin AI follow-up LLM call failed after tool output; returning persisted tool result.', [
+                        'conversation_id' => $conversationId,
+                        'run_id' => $runId,
+                        'step_index' => $stepIndex,
+                        'error' => $exception->getMessage(),
+                    ]);
+                    return $recoveredOutcome;
+                }
                 throw $this->buildLlmRuntimeException($exception);
             }
 
@@ -760,6 +770,34 @@ class AdminAiAgentService
         }
 
         return $this->buildAgentLimitOutcome($assistantParts, $runId, 'max_steps', $lastOutcome);
+    }
+
+    /**
+     * @param array<int,string> $assistantParts
+     * @param array<string,mixed> $lastOutcome
+     * @return array<string,mixed>|null
+     */
+    private function buildRecoveredToolOutcome(array $lastOutcome, array $assistantParts, string $runId): ?array
+    {
+        $assistantText = trim((string) ($lastOutcome['assistant_text'] ?? ''));
+        if ($assistantText === '') {
+            $assistantText = trim(implode("\n\n", array_values(array_unique(array_filter($assistantParts)))));
+        }
+
+        if ($assistantText === '') {
+            return null;
+        }
+
+        $lastOutcome['assistant_text'] = $assistantText;
+        $lastOutcome['metadata'] = array_merge($lastOutcome['metadata'] ?? [], [
+            'run_id' => $runId,
+            'followup_llm_failed' => true,
+        ]);
+        $lastOutcome['meta'] = array_merge($lastOutcome['meta'] ?? [], [
+            'followup_llm_status' => 'failed',
+        ]);
+
+        return $lastOutcome;
     }
 
     /**

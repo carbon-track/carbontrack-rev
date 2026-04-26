@@ -1240,6 +1240,11 @@
       "requestBody": "请求体",
       "responseBody": "响应体",
       "serverMeta": "服务器元数据",
+      "privacy": {
+        "masked": "敏感字段已打码",
+        "showingSecrets": "正在显示敏感字段",
+        "toggle": "显示或隐藏服务器元数据中的敏感字段"
+      },
       "requestId": "请求ID",
       "method": "方法",
       "path": "路径",
