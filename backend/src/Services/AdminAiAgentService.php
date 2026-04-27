@@ -12,7 +12,7 @@ use Psr\Log\LoggerInterface;
 
 class AdminAiAgentService
 {
-    private const DEFAULT_TEXT_TOOL_RESULT_REPLAY_MAX_BYTES = 0;
+    private const DEFAULT_TEXT_TOOL_RESULT_REPLAY_MAX_BYTES = 7000;
     private const MAX_TEXT_TOOL_RESULT_STRING_BYTES = 1200;
     private const MAX_TEXT_TOOL_RESULT_FALLBACK_FIELD_BYTES = 300;
     private const MAX_TEXT_TOOL_RESULT_SUMMARY_STRING_BYTES = 600;
@@ -73,7 +73,7 @@ class AdminAiAgentService
     ) {
         $this->model = (string) ($config['model'] ?? 'google/gemini-2.5-flash-lite');
         $this->temperature = isset($config['temperature']) ? (float) $config['temperature'] : 0.2;
-        $this->maxTokens = isset($config['max_tokens']) ? max(1, (int) $config['max_tokens']) : 4096;
+        $this->maxTokens = $this->resolveMaxTokens($config['max_tokens'] ?? null);
         $this->enabled = $client !== null;
         $this->conversationStoreService = $conversationStoreService ?? new AdminAiConversationStoreService(
             $db,
@@ -86,6 +86,15 @@ class AdminAiAgentService
         $this->resultFormatterService = $resultFormatterService ?? new AdminAiResultFormatterService();
         $this->rollbackService = $rollbackService ?? new AdminAiRollbackService();
         $this->loadCommandConfig($commandConfig ?? []);
+    }
+
+    private function resolveMaxTokens(mixed $configured): int
+    {
+        if (is_numeric($configured) && (int) $configured > 0) {
+            return (int) $configured;
+        }
+
+        return 4096;
     }
 
     public function isEnabled(): bool

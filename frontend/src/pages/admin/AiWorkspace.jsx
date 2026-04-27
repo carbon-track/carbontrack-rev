@@ -437,6 +437,23 @@ function getConversationMessageStepId(message) {
   return data?.meta?.step_id || data?.step_id || null;
 }
 
+function normalizeTimestampValue(value) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(trimmed)) {
+    return trimmed.replace(' ', 'T');
+  }
+  return trimmed;
+}
+
+function parseTimelineTime(value) {
+  const normalized = normalizeTimestampValue(value);
+  const timestamp = normalized ? new Date(normalized).getTime() : 0;
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
 function buildConversationTimeline(conversation) {
   const messages = Array.isArray(conversation?.messages) ? conversation.messages : [];
   const runs = Array.isArray(conversation?.runs) ? conversation.runs : [];
@@ -487,8 +504,8 @@ function buildConversationTimeline(conversation) {
   });
 
   return timeline.sort((left, right) => {
-    const leftTime = Date.parse(left?.created_at || left?.step?.started_at || left?.run?.started_at || '') || 0;
-    const rightTime = Date.parse(right?.created_at || right?.step?.started_at || right?.run?.started_at || '') || 0;
+    const leftTime = parseTimelineTime(left?.created_at || left?.step?.started_at || left?.run?.started_at || '');
+    const rightTime = parseTimelineTime(right?.created_at || right?.step?.started_at || right?.run?.started_at || '');
     return leftTime - rightTime;
   });
 }
@@ -502,7 +519,7 @@ function formatAbsoluteTime(value, locale = 'zh-CN') {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    }).format(new Date(value));
+    }).format(new Date(normalizeTimestampValue(value)));
   } catch {
     return String(value);
   }
@@ -1320,6 +1337,7 @@ function AgentStepTimelineCard({ item, locale, isZh, disabled, onRollback }) {
   const suggestion = output?.suggestion ?? null;
   const rollback = output?.meta?.rollback_available || output?.rollback_available || null;
   const status = step?.status || 'unknown';
+  const toolName = step.tool_name || step.type || (isZh ? '管理工具' : 'Admin tool');
   const statusTone = status === 'error'
     ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100'
     : status === 'running'
@@ -1346,7 +1364,7 @@ function AgentStepTimelineCard({ item, locale, isZh, disabled, onRollback }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <div className={cn(`text-sm font-semibold ${TEXT_PRIMARY_CLASS}`)}>
-                {isZh ? '工具步骤' : 'Tool step'} #{step.sequence ?? '-'} · {step.tool_name || 'manage_admin'}
+                {isZh ? '工具步骤' : 'Tool step'} #{step.sequence ?? '-'} · {toolName}
               </div>
               <Badge variant="outline" className="border-current/30 text-current">{status}</Badge>
               {step.approval_state ? <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-300/40 dark:text-amber-100">{step.approval_state}</Badge> : null}

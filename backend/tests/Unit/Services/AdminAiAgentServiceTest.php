@@ -28,6 +28,22 @@ class AdminAiAgentServiceTest extends TestCase
         return $pdo;
     }
 
+    public function testEmptyMaxTokensFallsBackToAgentDefault(): void
+    {
+        $service = new AdminAiAgentService(
+            $this->makePdo(),
+            new QueueLlmClient([]),
+            new NullLogger(),
+            ['model' => 'test-model', 'max_tokens' => ''],
+            ['managementActions' => []]
+        );
+
+        $property = new \ReflectionProperty($service, 'maxTokens');
+        $property->setAccessible(true);
+
+        $this->assertSame(4096, $property->getValue($service));
+    }
+
     public function testChatCreatesConversationAndRestoresHistoryFromLogs(): void
     {
         $pdo = $this->makePdo();
@@ -1586,14 +1602,14 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertLessThan(8000, strlen(substr($content, $jsonStart)));
     }
 
-    public function testTextReplayToolOutcomeIsNotTruncatedByDefault(): void
+    public function testTextReplayToolOutcomeIsNotTruncatedWhenConfiguredUnlimited(): void
     {
         $service = new AdminAiAgentService(
             $this->makePdo(),
             new QueueLlmClient([]),
             new NullLogger(),
             ['model' => 'test-model'],
-            ['managementActions' => []]
+            ['agent' => ['tool_result_replay_max_bytes' => 0], 'managementActions' => []]
         );
 
         $method = new \ReflectionMethod($service, 'appendToolOutcomeMessage');
