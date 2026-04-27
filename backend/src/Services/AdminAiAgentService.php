@@ -12,6 +12,8 @@ use Psr\Log\LoggerInterface;
 
 class AdminAiAgentService
 {
+    public const DEFAULT_MAX_TOKENS = 4096;
+
     private const DEFAULT_TEXT_TOOL_RESULT_REPLAY_MAX_BYTES = 7000;
     private const MAX_TEXT_TOOL_RESULT_STRING_BYTES = 1200;
     private const MAX_TEXT_TOOL_RESULT_FALLBACK_FIELD_BYTES = 300;
@@ -94,7 +96,7 @@ class AdminAiAgentService
             return (int) $configured;
         }
 
-        return 4096;
+        return self::DEFAULT_MAX_TOKENS;
     }
 
     public function isEnabled(): bool
@@ -907,7 +909,8 @@ class AdminAiAgentService
     private function truncateToolOutcomePayloadForTextReplay(array $payload, string $locale): array
     {
         $maxReplayBytes = $this->getTextToolResultReplayMaxBytes();
-        if ($maxReplayBytes <= 0 || strlen($this->encodeToolOutcomePayload($payload)) <= $maxReplayBytes) {
+        $encodedPayload = $this->encodeToolOutcomePayload($payload);
+        if ($maxReplayBytes <= 0 || strlen($encodedPayload) <= $maxReplayBytes) {
             return $payload;
         }
 
