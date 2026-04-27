@@ -453,8 +453,8 @@ function normalizeTimestampValue(value) {
     return value;
   }
   const trimmed = value.trim();
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?/.test(trimmed)) {
-    return trimmed.replace(' ', 'T');
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(\.\d+)?/.test(trimmed)) {
+    return trimmed.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}(?:\.\d+)?)/, '$1T$2');
   }
   return trimmed;
 }
