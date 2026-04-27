@@ -569,7 +569,7 @@ function formatAbsoluteTime(value, locale = 'zh-CN') {
 function formatRelativeTime(value, locale = 'zh-CN', isZh = true) {
   if (!value) return isZh ? '刚刚' : 'just now';
 
-  const time = new Date(value).getTime();
+  const time = new Date(normalizeTimestampValue(value)).getTime();
   if (Number.isNaN(time)) {
     return formatAbsoluteTime(value, locale);
   }
