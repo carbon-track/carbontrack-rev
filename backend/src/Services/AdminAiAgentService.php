@@ -908,8 +908,8 @@ class AdminAiAgentService
 
         return [
             'result_summary' => $this->summarizeToolOutcomeValue($payload['result'] ?? null),
-            'suggestion' => $this->truncateToolOutcomeString((string) ($payload['suggestion'] ?? ''), 300),
-            'assistant_text' => $this->truncateToolOutcomeString((string) ($payload['assistant_text'] ?? ''), 300),
+            'suggestion' => $this->truncateToolOutcomeReplayField($payload['suggestion'] ?? null, 300),
+            'assistant_text' => $this->truncateToolOutcomeReplayField($payload['assistant_text'] ?? null, 300),
             '_truncated' => true,
             '_truncation_note' => $this->toolOutcomeTruncationNotice($locale),
         ];
@@ -969,17 +969,44 @@ class AdminAiAgentService
         return $value;
     }
 
+    private function truncateToolOutcomeReplayField(mixed $value, int $maxStringBytes): mixed
+    {
+        if (is_string($value)) {
+            return $this->truncateToolOutcomeString($value, $maxStringBytes);
+        }
+
+        if (is_array($value)) {
+            $wasTruncated = false;
+            return $this->truncateToolOutcomeValue($value, 0, $wasTruncated);
+        }
+
+        return $value;
+    }
+
     private function truncateToolOutcomeString(string $value, int $maxBytes): string
     {
         if (strlen($value) <= $maxBytes) {
             return $value;
         }
 
-        $truncated = function_exists('mb_strcut')
-            ? mb_strcut($value, 0, $maxBytes, 'UTF-8')
-            : substr($value, 0, $maxBytes);
+        $truncated = $this->truncateUtf8Bytes($value, $maxBytes);
 
         return rtrim((string) $truncated) . '...[truncated]';
+    }
+
+    private function truncateUtf8Bytes(string $value, int $maxBytes): string
+    {
+        if (function_exists('mb_strcut')) {
+            $truncated = mb_strcut($value, 0, $maxBytes, 'UTF-8');
+            return is_string($truncated) ? $truncated : '';
+        }
+
+        $truncated = substr($value, 0, $maxBytes);
+        while ($truncated !== '' && preg_match('//u', $truncated) !== 1) {
+            $truncated = substr($truncated, 0, -1);
+        }
+
+        return $truncated;
     }
 
     private function toolOutcomeTruncationNotice(string $locale): string

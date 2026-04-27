@@ -1586,6 +1586,50 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertLessThan(8000, strlen(substr($content, $jsonStart)));
     }
 
+    public function testTextReplayOversizeFallbackKeepsArraySuggestionStructured(): void
+    {
+        $service = new AdminAiAgentService(
+            $this->makePdo(),
+            new QueueLlmClient([]),
+            new NullLogger(),
+            ['model' => 'test-model'],
+            ['managementActions' => []]
+        );
+
+        $method = new \ReflectionMethod($service, 'appendToolOutcomeMessage');
+        $method->setAccessible(true);
+
+        $messages = [
+            [
+                'role' => 'assistant',
+                'content' => 'I will call admin tools: manage_admin.',
+            ],
+        ];
+        $method->invokeArgs($service, [
+            &$messages,
+            0,
+            [
+                'id' => 'tool-call-large-array',
+                'function' => ['name' => 'manage_admin'],
+            ],
+            [
+                'result' => array_fill(0, 25, str_repeat('x', 1500)),
+                'suggestion' => ['route' => '/admin/users', 'label' => str_repeat('用户', 400)],
+                'assistant_text' => null,
+            ],
+            ['locale' => 'zh'],
+        ]);
+
+        $content = (string) ($messages[0]['content'] ?? '');
+        $jsonStart = strpos($content, '{"result_summary"');
+        $this->assertIsInt($jsonStart);
+        $decoded = json_decode(substr($content, $jsonStart), true);
+        $this->assertIsArray($decoded);
+        $this->assertIsArray($decoded['suggestion'] ?? null);
+        $this->assertSame('/admin/users', $decoded['suggestion']['route'] ?? null);
+        $this->assertLessThan(8000, strlen(substr($content, $jsonStart)));
+    }
+
     public function testStreamChatConsolidatesTextReplayContinuationForMultiToolCalls(): void
     {
         $pdo = $this->makePdo();
