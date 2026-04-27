@@ -1482,6 +1482,61 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertSame('run.finished', end($eventNames));
     }
 
+    public function testStreamChatLocalizesTextReplayPrompts(): void
+    {
+        $pdo = $this->makePdo();
+        $pdo->exec("INSERT INTO users (id, username, email, status, is_admin, uuid, points) VALUES (8, 'locale_user', 'locale@example.com', 'active', 0, '550e8400-e29b-41d4-a716-4466554400c8', 12)");
+
+        $client = new QueueLlmClient([
+            $this->toolResponse('manage_admin', [
+                'action' => 'get_user_overview',
+                'payload' => [
+                    'user_id' => 8,
+                ],
+            ]),
+            $this->plainTextResponse('用户 locale_user 的概览已整理。'),
+        ]);
+
+        $service = new AdminAiAgentService(
+            $pdo,
+            $client,
+            new NullLogger(),
+            ['model' => 'test-model'],
+            [
+                'agent' => ['max_history_messages' => 12, 'max_run_steps' => 4],
+                'managementActions' => [
+                    [
+                        'name' => 'get_user_overview',
+                        'label' => 'Get user overview',
+                        'description' => 'Read user overview.',
+                        'api' => ['payloadTemplate' => []],
+                        'requires' => ['user_id'],
+                        'contextHints' => [],
+                        'risk_level' => 'read',
+                        'requires_confirmation' => false,
+                    ],
+                ],
+            ],
+            new LlmLogService($pdo, new Logger('test'))
+        );
+
+        $result = $service->streamChat(null, '查用户并总结', ['locale' => 'zh'], null, [
+            'request_id' => 'req-stream-tool-zh-replay',
+            'actor_type' => 'admin',
+            'actor_id' => 1,
+            'source' => '/admin/ai/chat/stream',
+        ]);
+
+        $this->assertTrue($result['success']);
+        $payloads = $client->payloads();
+        $this->assertCount(2, $payloads);
+        $encodedMessages = json_encode($payloads[1]['messages'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $this->assertIsString($encodedMessages);
+        $this->assertStringContainsString('我将调用后台工具：manage_admin。', $encodedMessages);
+        $this->assertStringContainsString('后台工具 manage_admin 已执行完成', $encodedMessages);
+        $this->assertStringContainsString('请基于上面的工具结果继续回答', $encodedMessages);
+    }
+
     public function testRecoveredToolOutcomePreservesRepeatedAssistantParts(): void
     {
         $service = new AdminAiAgentService(
