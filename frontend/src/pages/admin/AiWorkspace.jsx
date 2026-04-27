@@ -464,16 +464,20 @@ function parseTimelineTime(value) {
 }
 
 function getTimelineSortOrdinal(item) {
-  if (Number.isFinite(Number(item?.message?.id))) {
-    return Number(item.message.id);
+  const messageId = Number(item?.message?.id || item?.id);
+  if (Number.isFinite(messageId)) {
+    return messageId;
   }
-  if (Number.isFinite(Number(item?.id))) {
-    return Number(item.id);
-  }
-  if (Number.isFinite(Number(item?.step?.sequence))) {
-    return 1000000 + Number(item.step.sequence);
-  }
-  return 2000000;
+  const sequence = Number(item?.step?.sequence);
+  return Number.isFinite(sequence) ? sequence : 0;
+}
+
+function getTimelineSortRank(item) {
+  if (item?.role === 'user') return 0;
+  if (item?.kind === 'agent_step') return 1;
+  if (item?.kind === 'tool') return 1;
+  if (item?.role === 'assistant') return 2;
+  return 3;
 }
 
 function buildConversationTimeline(conversation) {
@@ -495,6 +499,10 @@ function buildConversationTimeline(conversation) {
   });
 
   const timeline = messages.map((message) => {
+    if (message?.kind !== 'tool') {
+      return message;
+    }
+
     const stepId = getConversationMessageStepId(message);
     const actionName = getConversationMessageActionName(message);
     const match = stepId
@@ -546,6 +554,11 @@ function buildConversationTimeline(conversation) {
     const rightTime = parseTimelineTime(right?.created_at || right?.step?.started_at || right?.run?.started_at || '');
     if (leftTime !== rightTime) {
       return leftTime - rightTime;
+    }
+    const leftRank = getTimelineSortRank(left);
+    const rightRank = getTimelineSortRank(right);
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
     }
     return getTimelineSortOrdinal(left) - getTimelineSortOrdinal(right);
   });
@@ -1125,8 +1138,8 @@ function WorkspaceSectionButton({ active, icon, label, count, onClick }) {
 function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
   const event = item?.event;
   const data = item?.data || {};
-  const hasToolInput = data.arguments !== undefined && data.arguments !== null;
-  const hasToolResult = data.result !== undefined && data.result !== null;
+  const hasToolInput = data.arguments !== undefined && data.arguments !== null && data.arguments !== '';
+  const hasToolResult = data.result !== undefined && data.result !== null && data.result !== '';
 
   if (event === 'run.started') {
     return (
@@ -1285,31 +1298,49 @@ function JsonPreview({ value, className }) {
   );
 }
 
+const SENSITIVE_FIELD_PATTERN = /(?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential)/i;
+
+function maskSensitiveValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => maskSensitiveValue(item));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        SENSITIVE_FIELD_PATTERN.test(key) ? '***' : maskSensitiveValue(item),
+      ])
+    );
+  }
+  return value;
+}
+
 function ResultSnapshot({ title, value, isZh }) {
   const hasValue = value != null && value !== '';
+  const displayValue = useMemo(() => (hasValue ? maskSensitiveValue(value) : value), [hasValue, value]);
   const [open, setOpen] = useState(false);
   const summary = useMemo(() => {
     if (!hasValue) {
       return isZh ? '无结果' : 'No result';
     }
 
-    if (Array.isArray(value)) {
-      return isZh ? `数组 · ${value.length} 项` : `Array · ${value.length} items`;
+    if (Array.isArray(displayValue)) {
+      return isZh ? `数组 · ${displayValue.length} 项` : `Array · ${displayValue.length} items`;
     }
 
-    if (typeof value === 'object') {
-      const size = Object.keys(value).length;
+    if (typeof displayValue === 'object') {
+      const size = Object.keys(displayValue).length;
       return isZh ? `对象 · ${size} 个字段` : `Object · ${size} fields`;
     }
 
-    const text = String(value);
+    const text = String(displayValue);
     if (!text) {
       return isZh ? '无结果' : 'No result';
     }
 
     const compact = text.replace(/\s+/g, ' ').trim();
     return compact.length > 56 ? `${compact.slice(0, 56)}...` : compact;
-  }, [hasValue, isZh, value]);
+  }, [displayValue, hasValue, isZh]);
 
   if (!hasValue) return null;
 
@@ -1333,9 +1364,9 @@ function ResultSnapshot({ title, value, isZh }) {
         </span>
       </button>
       {open ? (
-        typeof value === 'object'
-          ? <JsonPreview value={value} className="mt-3" />
-          : <div className={cn(`mt-3 text-xs leading-6 ${TEXT_SECONDARY_CLASS}`)}>{String(value) || (isZh ? '无结果。' : 'No result.')}</div>
+        typeof displayValue === 'object'
+          ? <JsonPreview value={displayValue} className="mt-3" />
+          : <div className={cn(`mt-3 text-xs leading-6 ${TEXT_SECONDARY_CLASS}`)}>{String(displayValue) || (isZh ? '无结果。' : 'No result.')}</div>
       ) : null}
     </div>
   );
