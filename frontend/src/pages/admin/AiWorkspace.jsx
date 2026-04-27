@@ -437,6 +437,15 @@ function getConversationMessageStepId(message) {
   return data?.meta?.step_id || data?.step_id || null;
 }
 
+function getConversationMessageActionName(message) {
+  const data = message?.meta?.data || {};
+  return data?.action_name
+    || data?.request_payload?.action_name
+    || data?.payload?.action
+    || data?.tool_name
+    || null;
+}
+
 function normalizeTimestampValue(value) {
   if (typeof value !== 'string') {
     return value;
@@ -454,28 +463,57 @@ function parseTimelineTime(value) {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
+function getTimelineSortOrdinal(item) {
+  if (Number.isFinite(Number(item?.message?.id))) {
+    return Number(item.message.id);
+  }
+  if (Number.isFinite(Number(item?.id))) {
+    return Number(item.id);
+  }
+  if (Number.isFinite(Number(item?.step?.sequence))) {
+    return Number(item.step.sequence);
+  }
+  return 0;
+}
+
 function buildConversationTimeline(conversation) {
   const messages = Array.isArray(conversation?.messages) ? conversation.messages : [];
   const runs = Array.isArray(conversation?.runs) ? conversation.runs : [];
   const stepsById = new Map();
+  const stepMatches = [];
   const usedStepIds = new Set();
 
   runs.forEach((run) => {
     const steps = Array.isArray(run?.steps) ? run.steps : [];
     steps.forEach((step) => {
       if (step?.step_id) {
-        stepsById.set(step.step_id, { step, run });
+        const match = { step, run };
+        stepsById.set(step.step_id, match);
+        stepMatches.push(match);
       }
     });
   });
 
   const timeline = messages.map((message) => {
     const stepId = getConversationMessageStepId(message);
-    const match = stepId ? stepsById.get(stepId) : null;
+    const actionName = getConversationMessageActionName(message);
+    const match = stepId
+      ? stepsById.get(stepId)
+      : stepMatches.find(({ step }) => {
+        if (!step?.step_id || usedStepIds.has(step.step_id)) {
+          return false;
+        }
+        return actionName
+          && [
+            step?.input?.action,
+            step?.output?.meta?.action_name,
+            step?.tool_name,
+          ].includes(actionName);
+      });
     if (message?.kind === 'tool' && match) {
-      usedStepIds.add(stepId);
+      usedStepIds.add(match.step.step_id);
       return {
-        id: `agent-step-${stepId}`,
+        id: `agent-step-${match.step.step_id}`,
         kind: 'agent_step',
         created_at: message.created_at || match.step.started_at,
         message,
@@ -506,7 +544,10 @@ function buildConversationTimeline(conversation) {
   return timeline.sort((left, right) => {
     const leftTime = parseTimelineTime(left?.created_at || left?.step?.started_at || left?.run?.started_at || '');
     const rightTime = parseTimelineTime(right?.created_at || right?.step?.started_at || right?.run?.started_at || '');
-    return leftTime - rightTime;
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime;
+    }
+    return getTimelineSortOrdinal(left) - getTimelineSortOrdinal(right);
   });
 }
 
@@ -1084,6 +1125,8 @@ function WorkspaceSectionButton({ active, icon, label, count, onClick }) {
 function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
   const event = item?.event;
   const data = item?.data || {};
+  const hasToolInput = data.arguments !== undefined && data.arguments !== null;
+  const hasToolResult = data.result !== undefined && data.result !== null;
 
   if (event === 'run.started') {
     return (
@@ -1141,7 +1184,7 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         {data.error ? <div className="mt-2 text-xs opacity-80">{data.error}</div> : null}
         {data.proposal?.summary ? <div className="mt-2 text-xs opacity-80">{data.proposal.summary}</div> : null}
         {data.step_id ? <div className="mt-2 font-mono text-[11px] opacity-60">{data.step_id}</div> : null}
-        {data.arguments || data.result ? (
+        {hasToolInput || hasToolResult ? (
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <ResultSnapshot title={isZh ? '工具输入' : 'Tool input'} value={data.arguments} isZh={isZh} />
             <ResultSnapshot title={isZh ? '工具结果' : 'Tool result'} value={data.result} isZh={isZh} />
