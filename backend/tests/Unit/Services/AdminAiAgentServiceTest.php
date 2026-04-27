@@ -41,7 +41,7 @@ class AdminAiAgentServiceTest extends TestCase
         $property = new \ReflectionProperty($service, 'maxTokens');
         $property->setAccessible(true);
 
-        $this->assertSame(4096, $property->getValue($service));
+        $this->assertSame(AdminAiAgentService::DEFAULT_MAX_TOKENS, $property->getValue($service));
     }
 
     public function testChatCreatesConversationAndRestoresHistoryFromLogs(): void
