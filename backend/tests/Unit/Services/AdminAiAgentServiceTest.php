@@ -1605,6 +1605,11 @@ class AdminAiAgentServiceTest extends TestCase
                 'content' => 'I will call admin tools: manage_admin.',
             ],
         ];
+        $largeResult = [];
+        for ($i = 0; $i < 25; $i++) {
+            $largeResult[str_repeat('long_key_' . $i, 20)] = str_repeat('x', 1500);
+        }
+
         $method->invokeArgs($service, [
             &$messages,
             0,
@@ -1613,7 +1618,7 @@ class AdminAiAgentServiceTest extends TestCase
                 'function' => ['name' => 'manage_admin'],
             ],
             [
-                'result' => array_fill(0, 25, str_repeat('x', 1500)),
+                'result' => $largeResult,
                 'suggestion' => ['route' => '/admin/users', 'label' => str_repeat('用户', 400)],
                 'assistant_text' => null,
             ],
@@ -1627,6 +1632,8 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertIsArray($decoded);
         $this->assertIsArray($decoded['suggestion'] ?? null);
         $this->assertSame('/admin/users', $decoded['suggestion']['route'] ?? null);
+        $this->assertLessThanOrEqual(320, strlen((string) ($decoded['suggestion']['label'] ?? '')));
+        $this->assertLessThanOrEqual(140, strlen((string) (($decoded['result_summary']['keys'] ?? [])[0] ?? '')));
         $this->assertLessThan(8000, strlen(substr($content, $jsonStart)));
     }
 

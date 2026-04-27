@@ -906,26 +906,44 @@ class AdminAiAgentService
             return $structured;
         }
 
-        return [
+        $fallback = [
             'result_summary' => $this->summarizeToolOutcomeValue($payload['result'] ?? null),
             'suggestion' => $this->truncateToolOutcomeReplayField($payload['suggestion'] ?? null, 300),
             'assistant_text' => $this->truncateToolOutcomeReplayField($payload['assistant_text'] ?? null, 300),
             '_truncated' => true,
             '_truncation_note' => $this->toolOutcomeTruncationNotice($locale),
         ];
+
+        if (strlen($this->encodeToolOutcomePayload($fallback)) > self::MAX_TEXT_TOOL_RESULT_JSON_BYTES) {
+            unset($fallback['suggestion'], $fallback['assistant_text']);
+            $fallback['_dropped_fields'] = ['suggestion', 'assistant_text'];
+        }
+
+        if (strlen($this->encodeToolOutcomePayload($fallback)) > self::MAX_TEXT_TOOL_RESULT_JSON_BYTES) {
+            $fallback['result_summary'] = [
+                'type' => get_debug_type($payload['result'] ?? null),
+                'omitted' => true,
+            ];
+        }
+
+        return $fallback;
     }
 
     /**
      * @return mixed
      */
-    private function truncateToolOutcomeValue(mixed $value, int $depth, bool &$wasTruncated): mixed
-    {
+    private function truncateToolOutcomeValue(
+        mixed $value,
+        int $depth,
+        bool &$wasTruncated,
+        int $maxStringBytes = self::MAX_TEXT_TOOL_RESULT_STRING_BYTES
+    ): mixed {
         if (is_string($value)) {
-            if (strlen($value) <= self::MAX_TEXT_TOOL_RESULT_STRING_BYTES) {
+            if (strlen($value) <= $maxStringBytes) {
                 return $value;
             }
             $wasTruncated = true;
-            return $this->truncateToolOutcomeString($value, self::MAX_TEXT_TOOL_RESULT_STRING_BYTES);
+            return $this->truncateToolOutcomeString($value, $maxStringBytes);
         }
 
         if (!is_array($value)) {
@@ -945,7 +963,7 @@ class AdminAiAgentService
                 $result['_truncated_items'] = count($value) - self::MAX_TEXT_TOOL_RESULT_ARRAY_ITEMS;
                 break;
             }
-            $result[$key] = $this->truncateToolOutcomeValue($item, $depth + 1, $wasTruncated);
+            $result[$key] = $this->truncateToolOutcomeValue($item, $depth + 1, $wasTruncated, $maxStringBytes);
             $index++;
         }
 
@@ -958,7 +976,7 @@ class AdminAiAgentService
             return [
                 'type' => 'array',
                 'item_count' => count($value),
-                'keys' => array_slice(array_map('strval', array_keys($value)), 0, 20),
+                'keys' => $this->summarizeArrayKeys($value),
             ];
         }
 
@@ -977,10 +995,27 @@ class AdminAiAgentService
 
         if (is_array($value)) {
             $wasTruncated = false;
-            return $this->truncateToolOutcomeValue($value, 0, $wasTruncated);
+            return $this->truncateToolOutcomeValue($value, 0, $wasTruncated, $maxStringBytes);
         }
 
         return $value;
+    }
+
+    /**
+     * @param array<mixed> $value
+     * @return array<int,string>
+     */
+    private function summarizeArrayKeys(array $value): array
+    {
+        $keys = [];
+        foreach ($value as $key => $_) {
+            $keys[] = $this->truncateToolOutcomeString((string) $key, 120);
+            if (count($keys) >= 20) {
+                break;
+            }
+        }
+
+        return $keys;
     }
 
     private function truncateToolOutcomeString(string $value, int $maxBytes): string
