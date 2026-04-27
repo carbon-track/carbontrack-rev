@@ -440,7 +440,9 @@ function getConversationMessageStepId(message) {
 function getConversationMessageActionName(message) {
   const data = message?.meta?.data || {};
   return data?.action_name
+    || message?.action
     || data?.request_payload?.action_name
+    || data?.request_payload?.payload?.action
     || data?.payload?.action
     || data?.tool_name
     || null;
@@ -463,13 +465,9 @@ function parseTimelineTime(value) {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-function getTimelineSortOrdinal(item) {
-  const messageId = Number(item?.message?.id || item?.id);
-  if (Number.isFinite(messageId)) {
-    return messageId;
-  }
-  const sequence = Number(item?.step?.sequence);
-  return Number.isFinite(sequence) ? sequence : 0;
+function getTimelineSortOrder(item) {
+  const order = Number(item?.timeline_order);
+  return Number.isFinite(order) ? order : 0;
 }
 
 function getTimelineSortRank(item) {
@@ -486,6 +484,7 @@ function buildConversationTimeline(conversation) {
   const stepsById = new Map();
   const stepMatches = [];
   const usedStepIds = new Set();
+  let timelineOrder = 0;
 
   runs.forEach((run) => {
     const steps = Array.isArray(run?.steps) ? run.steps : [];
@@ -499,8 +498,11 @@ function buildConversationTimeline(conversation) {
   });
 
   const timeline = messages.map((message) => {
+    const nextOrder = timelineOrder;
+    timelineOrder += 1;
+
     if (message?.kind !== 'tool') {
-      return message;
+      return { ...message, timeline_order: nextOrder };
     }
 
     const stepId = getConversationMessageStepId(message);
@@ -524,12 +526,13 @@ function buildConversationTimeline(conversation) {
         id: `agent-step-${match.step.step_id}`,
         kind: 'agent_step',
         created_at: message.created_at || match.step.started_at,
+        timeline_order: nextOrder,
         message,
         step: match.step,
         run: match.run,
       };
     }
-    return message;
+    return { ...message, timeline_order: nextOrder };
   });
 
   runs.forEach((run) => {
@@ -543,9 +546,11 @@ function buildConversationTimeline(conversation) {
         id: `agent-step-${step.step_id}`,
         kind: 'agent_step',
         created_at: step.started_at || run.started_at,
+        timeline_order: timelineOrder,
         step,
         run,
       });
+      timelineOrder += 1;
     });
   });
 
@@ -560,7 +565,7 @@ function buildConversationTimeline(conversation) {
     if (leftRank !== rightRank) {
       return leftRank - rightRank;
     }
-    return getTimelineSortOrdinal(left) - getTimelineSortOrdinal(right);
+    return getTimelineSortOrder(left) - getTimelineSortOrder(right);
   });
 }
 
