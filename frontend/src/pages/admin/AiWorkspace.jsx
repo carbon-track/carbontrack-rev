@@ -1393,7 +1393,7 @@ function AgentStepTimelineCard({ item, locale, isZh, disabled, onRollback }) {
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         <ResultSnapshot title={isZh ? '工具输入' : 'Tool input'} value={step.input} isZh={isZh} />
-        <ResultSnapshot title={isZh ? '工具结果' : 'Tool result'} value={result ?? output} isZh={isZh} />
+        <ResultSnapshot title={isZh ? '工具结果' : 'Tool result'} value={result} isZh={isZh} />
       </div>
       {proposal ? <ResultSnapshot title={isZh ? '确认提案' : 'Approval proposal'} value={proposal} isZh={isZh} /> : null}
       {suggestion ? <ResultSnapshot title={isZh ? '下一步建议' : 'Suggestion'} value={suggestion} isZh={isZh} /> : null}
