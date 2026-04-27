@@ -1010,7 +1010,7 @@ class AdminAiAgentService
         $keys = [];
         foreach ($value as $key => $_) {
             $keys[] = $this->truncateToolOutcomeString((string) $key, 120);
-            if (count($keys) >= 20) {
+            if (count($keys) >= self::MAX_TEXT_TOOL_RESULT_ARRAY_ITEMS) {
                 break;
             }
         }
