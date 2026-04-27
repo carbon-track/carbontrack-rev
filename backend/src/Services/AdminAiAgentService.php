@@ -909,8 +909,12 @@ class AdminAiAgentService
     private function truncateToolOutcomePayloadForTextReplay(array $payload, string $locale): array
     {
         $maxReplayBytes = $this->getTextToolResultReplayMaxBytes();
+        if ($maxReplayBytes <= 0) {
+            return $payload;
+        }
+
         $encodedPayload = $this->encodeToolOutcomePayload($payload);
-        if ($maxReplayBytes <= 0 || strlen($encodedPayload) <= $maxReplayBytes) {
+        if (strlen($encodedPayload) <= $maxReplayBytes) {
             return $payload;
         }
 
