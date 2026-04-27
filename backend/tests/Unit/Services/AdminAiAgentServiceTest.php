@@ -1540,7 +1540,7 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertStringContainsString('请基于上面的工具结果继续回答', $encodedMessages);
     }
 
-    public function testTextReplayToolOutcomeIsTruncatedBeforeModelFollowup(): void
+    public function testTextReplayToolOutcomeIsStructurallyTruncatedBeforeModelFollowup(): void
     {
         $service = new AdminAiAgentService(
             $this->makePdo(),
@@ -1577,8 +1577,13 @@ class AdminAiAgentServiceTest extends TestCase
 
         $this->assertCount(1, $messages);
         $content = (string) ($messages[0]['content'] ?? '');
-        $this->assertStringContainsString('Tool result truncated to avoid exceeding the model context window.', $content);
-        $this->assertLessThan(25000, strlen($content));
+        $this->assertStringContainsString('Tool result was structurally truncated to avoid exceeding the model context window.', $content);
+        $jsonStart = strpos($content, '{"result"');
+        $this->assertIsInt($jsonStart);
+        $decoded = json_decode(substr($content, $jsonStart), true);
+        $this->assertIsArray($decoded);
+        $this->assertTrue($decoded['_truncated'] ?? false);
+        $this->assertLessThan(8000, strlen(substr($content, $jsonStart)));
     }
 
     public function testStreamChatConsolidatesTextReplayContinuationForMultiToolCalls(): void
