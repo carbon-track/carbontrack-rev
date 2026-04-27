@@ -14,6 +14,9 @@ class AdminAiAgentService
 {
     private const MAX_TEXT_TOOL_RESULT_JSON_BYTES = 7000;
     private const MAX_TEXT_TOOL_RESULT_STRING_BYTES = 1200;
+    private const MAX_TEXT_TOOL_RESULT_FALLBACK_FIELD_BYTES = 300;
+    private const MAX_TEXT_TOOL_RESULT_SUMMARY_STRING_BYTES = 600;
+    private const MAX_TEXT_TOOL_RESULT_SUMMARY_KEY_BYTES = 120;
     private const MAX_TEXT_TOOL_RESULT_ARRAY_ITEMS = 20;
     private const MAX_TEXT_TOOL_RESULT_DEPTH = 4;
 
@@ -908,8 +911,14 @@ class AdminAiAgentService
 
         $fallback = [
             'result_summary' => $this->summarizeToolOutcomeValue($payload['result'] ?? null),
-            'suggestion' => $this->truncateToolOutcomeReplayField($payload['suggestion'] ?? null, 300),
-            'assistant_text' => $this->truncateToolOutcomeReplayField($payload['assistant_text'] ?? null, 300),
+            'suggestion' => $this->truncateToolOutcomeReplayField(
+                $payload['suggestion'] ?? null,
+                self::MAX_TEXT_TOOL_RESULT_FALLBACK_FIELD_BYTES
+            ),
+            'assistant_text' => $this->truncateToolOutcomeReplayField(
+                $payload['assistant_text'] ?? null,
+                self::MAX_TEXT_TOOL_RESULT_FALLBACK_FIELD_BYTES
+            ),
             '_truncated' => true,
             '_truncation_note' => $this->toolOutcomeTruncationNotice($locale),
         ];
@@ -981,7 +990,7 @@ class AdminAiAgentService
         }
 
         if (is_string($value)) {
-            return $this->truncateToolOutcomeString($value, 600);
+            return $this->truncateToolOutcomeString($value, self::MAX_TEXT_TOOL_RESULT_SUMMARY_STRING_BYTES);
         }
 
         return $value;
@@ -1009,7 +1018,7 @@ class AdminAiAgentService
     {
         $keys = [];
         foreach ($value as $key => $_) {
-            $keys[] = $this->truncateToolOutcomeString((string) $key, 120);
+            $keys[] = $this->truncateToolOutcomeString((string) $key, self::MAX_TEXT_TOOL_RESULT_SUMMARY_KEY_BYTES);
             if (count($keys) >= self::MAX_TEXT_TOOL_RESULT_ARRAY_ITEMS) {
                 break;
             }
