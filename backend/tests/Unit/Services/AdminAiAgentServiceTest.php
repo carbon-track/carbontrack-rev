@@ -1547,7 +1547,7 @@ class AdminAiAgentServiceTest extends TestCase
             new QueueLlmClient([]),
             new NullLogger(),
             ['model' => 'test-model'],
-            ['managementActions' => []]
+            ['agent' => ['tool_result_replay_max_bytes' => 7000], 'managementActions' => []]
         );
 
         $method = new \ReflectionMethod($service, 'appendToolOutcomeMessage');
@@ -1586,7 +1586,7 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertLessThan(8000, strlen(substr($content, $jsonStart)));
     }
 
-    public function testTextReplayOversizeFallbackKeepsArraySuggestionStructured(): void
+    public function testTextReplayToolOutcomeIsNotTruncatedByDefault(): void
     {
         $service = new AdminAiAgentService(
             $this->makePdo(),
@@ -1594,6 +1594,46 @@ class AdminAiAgentServiceTest extends TestCase
             new NullLogger(),
             ['model' => 'test-model'],
             ['managementActions' => []]
+        );
+
+        $method = new \ReflectionMethod($service, 'appendToolOutcomeMessage');
+        $method->setAccessible(true);
+
+        $messages = [
+            [
+                'role' => 'assistant',
+                'content' => 'I will call admin tools: manage_admin.',
+            ],
+        ];
+        $largeValue = str_repeat('x', 30000);
+        $method->invokeArgs($service, [
+            &$messages,
+            0,
+            [
+                'id' => 'tool-call-large-default',
+                'function' => ['name' => 'manage_admin'],
+            ],
+            [
+                'result' => ['large' => $largeValue],
+                'suggestion' => null,
+                'assistant_text' => null,
+            ],
+            ['locale' => 'en'],
+        ]);
+
+        $content = (string) ($messages[0]['content'] ?? '');
+        $this->assertStringContainsString($largeValue, $content);
+        $this->assertStringNotContainsString('_truncated', $content);
+    }
+
+    public function testTextReplayOversizeFallbackKeepsArraySuggestionStructured(): void
+    {
+        $service = new AdminAiAgentService(
+            $this->makePdo(),
+            new QueueLlmClient([]),
+            new NullLogger(),
+            ['model' => 'test-model'],
+            ['agent' => ['tool_result_replay_max_bytes' => 7000], 'managementActions' => []]
         );
 
         $method = new \ReflectionMethod($service, 'appendToolOutcomeMessage');

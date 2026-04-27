@@ -432,6 +432,67 @@ function buildFallbackConversation(conversation, conversationId, previousConvers
   };
 }
 
+function getConversationMessageStepId(message) {
+  const data = message?.meta?.data || {};
+  return data?.meta?.step_id || data?.step_id || null;
+}
+
+function buildConversationTimeline(conversation) {
+  const messages = Array.isArray(conversation?.messages) ? conversation.messages : [];
+  const runs = Array.isArray(conversation?.runs) ? conversation.runs : [];
+  const stepsById = new Map();
+  const usedStepIds = new Set();
+
+  runs.forEach((run) => {
+    const steps = Array.isArray(run?.steps) ? run.steps : [];
+    steps.forEach((step) => {
+      if (step?.step_id) {
+        stepsById.set(step.step_id, { step, run });
+      }
+    });
+  });
+
+  const timeline = messages.map((message) => {
+    const stepId = getConversationMessageStepId(message);
+    const match = stepId ? stepsById.get(stepId) : null;
+    if (message?.kind === 'tool' && match) {
+      usedStepIds.add(stepId);
+      return {
+        id: `agent-step-${stepId}`,
+        kind: 'agent_step',
+        created_at: message.created_at || match.step.started_at,
+        message,
+        step: match.step,
+        run: match.run,
+      };
+    }
+    return message;
+  });
+
+  runs.forEach((run) => {
+    const steps = Array.isArray(run?.steps) ? run.steps : [];
+    steps.forEach((step) => {
+      if (!step?.step_id || usedStepIds.has(step.step_id)) {
+        return;
+      }
+      usedStepIds.add(step.step_id);
+      timeline.push({
+        id: `agent-step-${step.step_id}`,
+        kind: 'agent_step',
+        created_at: step.started_at || run.started_at,
+        step,
+        run,
+      });
+    });
+  });
+
+  return timeline.sort((left, right) => {
+    const leftTime = Date.parse(left?.created_at || left?.step?.started_at || left?.run?.started_at || '') || 0;
+    const rightTime = Date.parse(right?.created_at || right?.step?.started_at || right?.run?.started_at || '') || 0;
+    return leftTime - rightTime;
+  });
+}
+
 function formatAbsoluteTime(value, locale = 'zh-CN') {
   if (!value) return '--';
 
@@ -1063,6 +1124,12 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         {data.error ? <div className="mt-2 text-xs opacity-80">{data.error}</div> : null}
         {data.proposal?.summary ? <div className="mt-2 text-xs opacity-80">{data.proposal.summary}</div> : null}
         {data.step_id ? <div className="mt-2 font-mono text-[11px] opacity-60">{data.step_id}</div> : null}
+        {data.arguments || data.result ? (
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <ResultSnapshot title={isZh ? '工具输入' : 'Tool input'} value={data.arguments} isZh={isZh} />
+            <ResultSnapshot title={isZh ? '工具结果' : 'Tool result'} value={data.result} isZh={isZh} />
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -1241,6 +1308,96 @@ function RunStepCard({ step, isZh }) {
       ) : null}
       {step?.error_message ? <div className="mt-2 leading-5 opacity-80">{step.error_message}</div> : null}
     </div>
+  );
+}
+
+function AgentStepTimelineCard({ item, locale, isZh, disabled, onRollback }) {
+  const step = item?.step || {};
+  const run = item?.run || {};
+  const output = step?.output || {};
+  const result = output?.result ?? null;
+  const proposal = output?.proposal ?? null;
+  const suggestion = output?.suggestion ?? null;
+  const rollback = output?.meta?.rollback_available || output?.rollback_available || null;
+  const status = step?.status || 'unknown';
+  const statusTone = status === 'error'
+    ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100'
+    : status === 'running'
+      ? 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100'
+      : status === 'waiting_approval' || status === 'waiting_input'
+        ? 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100'
+        : 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100';
+  const resultSummary = result?.scope
+    ? `${result.scope}${Number.isFinite(Number(result.total)) ? ` · ${result.total}` : ''}`
+    : null;
+
+  return (
+    <MotionDiv
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-[24px] border border-slate-200/80 bg-white/90 p-5 shadow-sm dark:border-white/8 dark:bg-white/[0.04]"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex items-start gap-3">
+          <span className={cn('mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border', statusTone)}>
+            {status === 'running' ? <Loader2 className="h-4 w-4 animate-spin" /> : <TerminalSquare className="h-4 w-4" />}
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className={cn(`text-sm font-semibold ${TEXT_PRIMARY_CLASS}`)}>
+                {isZh ? '工具步骤' : 'Tool step'} #{step.sequence ?? '-'} · {step.tool_name || 'manage_admin'}
+              </div>
+              <Badge variant="outline" className="border-current/30 text-current">{status}</Badge>
+              {step.approval_state ? <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-300/40 dark:text-amber-100">{step.approval_state}</Badge> : null}
+              {step.rollback_state ? <Badge variant="outline" className="border-teal-300 text-teal-700 dark:border-teal-300/40 dark:text-teal-100">{step.rollback_state}</Badge> : null}
+            </div>
+            <div className={cn(`mt-2 text-xs leading-5 ${TEXT_SECONDARY_CLASS}`)}>
+              {resultSummary || output?.assistant_text || item?.message?.content || (isZh ? '已记录工具输入、输出和运行状态。' : 'Tool input, output, and run state are recorded.')}
+            </div>
+            <div className={cn(`mt-2 flex flex-wrap gap-2 text-[11px] ${TEXT_TERTIARY_CLASS}`)}>
+              {step.step_id ? <span className="font-mono">{step.step_id}</span> : null}
+              {run.run_id ? <span className="font-mono">{run.run_id}</span> : null}
+              {step.duration_ms != null ? <span>{formatLatency(step.duration_ms, isZh)}</span> : null}
+            </div>
+          </div>
+        </div>
+        <div className={cn(`shrink-0 pt-1 text-[11px] ${TEXT_TERTIARY_CLASS}`)}>
+          {formatAbsoluteTime(step.started_at || item?.created_at, locale)}
+        </div>
+      </div>
+
+      {step.error_message ? (
+        <div className="mt-4 rounded-[18px] border border-rose-200 bg-rose-50 px-3 py-3 text-sm text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100">
+          {step.error_message}
+        </div>
+      ) : null}
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <ResultSnapshot title={isZh ? '工具输入' : 'Tool input'} value={step.input} isZh={isZh} />
+        <ResultSnapshot title={isZh ? '工具结果' : 'Tool result'} value={result ?? output} isZh={isZh} />
+      </div>
+      {proposal ? <ResultSnapshot title={isZh ? '确认提案' : 'Approval proposal'} value={proposal} isZh={isZh} /> : null}
+      {suggestion ? <ResultSnapshot title={isZh ? '下一步建议' : 'Suggestion'} value={suggestion} isZh={isZh} /> : null}
+
+      {rollback?.action_name && rollback?.payload ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-teal-200 bg-teal-50 px-3 py-3 text-sm text-teal-950 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-100">
+          <div>
+            <div className="font-medium">{isZh ? '可回滚' : 'Rollback available'}</div>
+            <div className="mt-1 text-xs opacity-80">{rollback?.prompt_i18n?.[isZh ? 'zh' : 'en'] || rollback?.prompt}</div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={disabled}
+            className="rounded-full border-current/30 text-current hover:bg-current/10"
+            onClick={() => onRollback?.(rollback)}
+          >
+            {isZh ? '生成回滚卡' : 'Rollback'}
+          </Button>
+        </div>
+      ) : null}
+    </MotionDiv>
   );
 }
 
@@ -1698,7 +1855,7 @@ export default function AdminAiWorkspacePage() {
   const normalizedSelectedConversationId = selectedConversationId == null ? null : String(selectedConversationId);
 
   const conversationTimeline = useMemo(
-    () => (Array.isArray(activeConversation?.messages) ? activeConversation.messages : []),
+    () => buildConversationTimeline(activeConversation),
     [activeConversation]
   );
   const visibleMessages = useMemo(
@@ -2383,6 +2540,15 @@ export default function AdminAiWorkspacePage() {
                                     outcome: 'reject',
                                     conversationId: normalizedSelectedConversationId,
                                   })}
+                                />
+                              ) : item?.kind === 'agent_step' ? (
+                                <AgentStepTimelineCard
+                                  key={item.id}
+                                  item={item}
+                                  locale={locale}
+                                  isZh={isZh}
+                                  disabled={disableProposalActions}
+                                  onRollback={handleCreateRollback}
                                 />
                               ) : (
                                 <EventTimelineRow

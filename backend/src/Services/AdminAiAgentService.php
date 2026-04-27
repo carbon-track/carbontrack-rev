@@ -12,7 +12,7 @@ use Psr\Log\LoggerInterface;
 
 class AdminAiAgentService
 {
-    private const MAX_TEXT_TOOL_RESULT_JSON_BYTES = 7000;
+    private const DEFAULT_TEXT_TOOL_RESULT_REPLAY_MAX_BYTES = 0;
     private const MAX_TEXT_TOOL_RESULT_STRING_BYTES = 1200;
     private const MAX_TEXT_TOOL_RESULT_FALLBACK_FIELD_BYTES = 300;
     private const MAX_TEXT_TOOL_RESULT_SUMMARY_STRING_BYTES = 600;
@@ -73,7 +73,7 @@ class AdminAiAgentService
     ) {
         $this->model = (string) ($config['model'] ?? 'google/gemini-2.5-flash-lite');
         $this->temperature = isset($config['temperature']) ? (float) $config['temperature'] : 0.2;
-        $this->maxTokens = isset($config['max_tokens']) ? (int) $config['max_tokens'] : 900;
+        $this->maxTokens = isset($config['max_tokens']) ? max(1, (int) $config['max_tokens']) : 4096;
         $this->enabled = $client !== null;
         $this->conversationStoreService = $conversationStoreService ?? new AdminAiConversationStoreService(
             $db,
@@ -897,6 +897,11 @@ class AdminAiAgentService
      */
     private function truncateToolOutcomePayloadForTextReplay(array $payload, string $locale): array
     {
+        $maxReplayBytes = $this->getTextToolResultReplayMaxBytes();
+        if ($maxReplayBytes <= 0 || strlen($this->encodeToolOutcomePayload($payload)) <= $maxReplayBytes) {
+            return $payload;
+        }
+
         $wasTruncated = false;
         $truncated = $this->truncateToolOutcomeValue($payload, 0, $wasTruncated);
         $structured = is_array($truncated) ? $truncated : ['result' => $truncated];
@@ -905,7 +910,7 @@ class AdminAiAgentService
             $structured['_truncation_note'] = $this->toolOutcomeTruncationNotice($locale);
         }
 
-        if (strlen($this->encodeToolOutcomePayload($structured)) <= self::MAX_TEXT_TOOL_RESULT_JSON_BYTES) {
+        if (strlen($this->encodeToolOutcomePayload($structured)) <= $maxReplayBytes) {
             return $structured;
         }
 
@@ -923,12 +928,12 @@ class AdminAiAgentService
             '_truncation_note' => $this->toolOutcomeTruncationNotice($locale),
         ];
 
-        if (strlen($this->encodeToolOutcomePayload($fallback)) > self::MAX_TEXT_TOOL_RESULT_JSON_BYTES) {
+        if (strlen($this->encodeToolOutcomePayload($fallback)) > $maxReplayBytes) {
             unset($fallback['suggestion'], $fallback['assistant_text']);
             $fallback['_dropped_fields'] = ['suggestion', 'assistant_text'];
         }
 
-        if (strlen($this->encodeToolOutcomePayload($fallback)) > self::MAX_TEXT_TOOL_RESULT_JSON_BYTES) {
+        if (strlen($this->encodeToolOutcomePayload($fallback)) > $maxReplayBytes) {
             $fallback['result_summary'] = [
                 'type' => get_debug_type($payload['result'] ?? null),
                 'omitted' => true,
@@ -936,6 +941,14 @@ class AdminAiAgentService
         }
 
         return $fallback;
+    }
+
+    private function getTextToolResultReplayMaxBytes(): int
+    {
+        $configured = $this->agentConfig['tool_result_replay_max_bytes']
+            ?? self::DEFAULT_TEXT_TOOL_RESULT_REPLAY_MAX_BYTES;
+
+        return max(0, (int) $configured);
     }
 
     /**
