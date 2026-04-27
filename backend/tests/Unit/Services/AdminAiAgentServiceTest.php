@@ -1540,6 +1540,47 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertStringContainsString('请基于上面的工具结果继续回答', $encodedMessages);
     }
 
+    public function testTextReplayToolOutcomeIsTruncatedBeforeModelFollowup(): void
+    {
+        $service = new AdminAiAgentService(
+            $this->makePdo(),
+            new QueueLlmClient([]),
+            new NullLogger(),
+            ['model' => 'test-model'],
+            ['managementActions' => []]
+        );
+
+        $method = new \ReflectionMethod($service, 'appendToolOutcomeMessage');
+        $method->setAccessible(true);
+
+        $messages = [
+            [
+                'role' => 'assistant',
+                'content' => 'I will call admin tools: manage_admin.',
+            ],
+        ];
+        $largeValue = str_repeat('x', 30000);
+        $method->invokeArgs($service, [
+            &$messages,
+            0,
+            [
+                'id' => 'tool-call-large',
+                'function' => ['name' => 'manage_admin'],
+            ],
+            [
+                'result' => ['large' => $largeValue],
+                'suggestion' => null,
+                'assistant_text' => null,
+            ],
+            ['locale' => 'en'],
+        ]);
+
+        $this->assertCount(1, $messages);
+        $content = (string) ($messages[0]['content'] ?? '');
+        $this->assertStringContainsString('Tool result truncated to avoid exceeding the model context window.', $content);
+        $this->assertLessThan(25000, strlen($content));
+    }
+
     public function testStreamChatConsolidatesTextReplayContinuationForMultiToolCalls(): void
     {
         $pdo = $this->makePdo();
