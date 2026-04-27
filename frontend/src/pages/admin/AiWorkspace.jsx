@@ -451,7 +451,7 @@ function normalizeTimestampValue(value) {
     return value;
   }
   const trimmed = value.trim();
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(trimmed)) {
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?/.test(trimmed)) {
     return trimmed.replace(' ', 'T');
   }
   return trimmed;
@@ -471,9 +471,9 @@ function getTimelineSortOrdinal(item) {
     return Number(item.id);
   }
   if (Number.isFinite(Number(item?.step?.sequence))) {
-    return Number(item.step.sequence);
+    return 1000000 + Number(item.step.sequence);
   }
-  return 0;
+  return 2000000;
 }
 
 function buildConversationTimeline(conversation) {
@@ -1391,6 +1391,9 @@ function AgentStepTimelineCard({ item, locale, isZh, disabled, onRollback }) {
   const resultSummary = result?.scope
     ? `${result.scope}${Number.isFinite(Number(result.total)) ? ` · ${result.total}` : ''}`
     : null;
+  const messageSummary = item?.message?.kind === 'tool'
+    ? item.message.content?.split('\n\n')[0] || (isZh ? '工具执行完成。' : 'Tool completed.')
+    : item?.message?.content;
 
   return (
     <MotionDiv
@@ -1414,7 +1417,7 @@ function AgentStepTimelineCard({ item, locale, isZh, disabled, onRollback }) {
               {step.rollback_state ? <Badge variant="outline" className="border-teal-300 text-teal-700 dark:border-teal-300/40 dark:text-teal-100">{step.rollback_state}</Badge> : null}
             </div>
             <div className={cn(`mt-2 text-xs leading-5 ${TEXT_SECONDARY_CLASS}`)}>
-              {resultSummary || output?.assistant_text || item?.message?.content || (isZh ? '已记录工具输入、输出和运行状态。' : 'Tool input, output, and run state are recorded.')}
+              {resultSummary || output?.assistant_text || messageSummary || (isZh ? '已记录工具输入、输出和运行状态。' : 'Tool input, output, and run state are recorded.')}
             </div>
             <div className={cn(`mt-2 flex flex-wrap gap-2 text-[11px] ${TEXT_TERTIARY_CLASS}`)}>
               {step.step_id ? <span className="font-mono">{step.step_id}</span> : null}
