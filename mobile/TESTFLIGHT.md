@@ -1,0 +1,104 @@
+# TestFlight 发布说明
+
+本文说明如何发布 iOS TestFlight 包，并启用 iOS 26 Liquid Glass 与 Passkey 登录。不要用 Expo Go 验证这两项功能；它们依赖原生模块，必须重新构建 iOS binary。
+
+## 应用标识
+
+- Expo project: `mobile`
+- iOS bundle identifier: `com.carbontrack.mobile`
+- Android package: `com.carbontrack.mobile`
+- Associated Domain: `webcredentials:carbontrackapp.com`
+- 默认 API: `https://dev-api.carbontrackapp.com/api/v1`
+- Turnstile base URL: `https://dev.carbontrackapp.com`
+
+## 关键原生包
+
+- Liquid Glass: `@callstack/liquid-glass`
+- Liquid Glass TurboModule: `NativeLiquidGlassModule`
+- Liquid Glass native views: `LiquidGlassView`, `LiquidGlassContainerView`
+- Native tabs: `react-native-screens`
+- Native tab host/view names: `RNSTabsHost`, `RNSTabsScreen`
+- Navigation entry: `@react-navigation/bottom-tabs/unstable`
+- Passkey: `react-native-passkeys`
+- Secure token storage: `expo-secure-store`
+- Expo SDK: `expo`
+
+## 发布前配置
+
+TestFlight 构建前，确认 `mobile/.env` 或构建环境包含：
+
+```env
+EXPO_PUBLIC_API_URL=https://dev-api.carbontrackapp.com/api/v1
+EXPO_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAAA0wcgSIUML5Ocs3
+EXPO_PUBLIC_TURNSTILE_BASE_URL=https://dev.carbontrackapp.com
+EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS=true
+EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS=true
+```
+
+默认仓库配置把两个 native 开关设为 `false`，是为了让 Expo Go 和未重建的旧 dev client 不因为缺少 `NativeLiquidGlassModule` 或 native tabs 新签名而崩溃。只有 TestFlight 或重新构建后的自定义 dev client 才应设为 `true`。
+
+## 构建步骤
+
+1. 安装依赖：
+
+```powershell
+pnpm install --frozen-lockfile
+```
+
+2. 检查 Expo 配置：
+
+```powershell
+pnpm exec expo config --type public
+```
+
+3. 确认 Apple Developer 配置：
+
+- App ID 启用 Associated Domains。
+- Bundle ID 为 `com.carbontrack.mobile`。
+- Provisioning profile 包含 `com.apple.developer.associated-domains`。
+- `app.json` 内保留 `ios.associatedDomains=["webcredentials:carbontrackapp.com"]`。
+- `https://carbontrackapp.com/.well-known/apple-app-site-association` 包含 `webcredentials` 配置，并覆盖 `com.carbontrack.mobile` 所属 Team ID 与 bundle identifier。
+
+4. 构建 iOS 原生包。仓库当前没有固定 `eas.json`，可在 CI 或本机使用等价的 production profile；核心要求是重新执行 prebuild/native build，让 CocoaPods 安装上面列出的 native packages。
+
+```powershell
+npx eas-cli build --platform ios --profile production
+```
+
+5. 上传 TestFlight：
+
+```powershell
+npx eas-cli submit --platform ios --latest
+```
+
+## 验证 Liquid Glass
+
+- 在 iOS 26 设备或模拟器上打开 TestFlight 包。
+- `EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS=true` 时，`@callstack/liquid-glass` 应注册 `NativeLiquidGlassModule`。
+- `EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS=true` 时，底部导航走 `RNSTabsHost` / `RNSTabsScreen`，并使用 SF Symbols。
+- 如果日志出现 `NativeLiquidGlassModule could not be found`，说明运行的是 Expo Go、旧 dev client，或 TestFlight 包没有重新构建进 `@callstack/liquid-glass`。
+- 如果日志出现 `expected dynamic type 'boolean', but had type 'string'`，优先检查是否旧 binary 加载了新 JS bundle；重新安装最新 TestFlight 包，或临时把 `EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS=false` 回退到 JS tabs。
+
+## 验证 Passkey 登录
+
+- iOS 设备必须登录 iCloud Keychain，且系统允许 Passkeys。
+- `com.carbontrack.mobile` 的 Associated Domains 必须在签名后的 entitlements 中可见。
+- 后端接口必须可用：
+  - `POST /api/v1/auth/passkey/login/options`
+  - `POST /api/v1/auth/passkey/login/verify`
+- 先在网页或移动端完成 passkey 注册，再在登录页点击 Passkey 登录。
+- 如果 `react-native-passkeys` 返回不可用，检查 TestFlight 包是否包含原生模块、Associated Domains 是否生效、AASA 文件是否可被 Apple CDN 拉取。
+
+## Debug 清单
+
+- JS 包名：`mobile`
+- iOS bundle identifier：`com.carbontrack.mobile`
+- Native module：`NativeLiquidGlassModule`
+- Native package：`@callstack/liquid-glass`
+- Native tabs package：`react-native-screens`
+- Tabs host：`RNSTabsHost`
+- Tabs screen：`RNSTabsScreen`
+- Passkey package：`react-native-passkeys`
+- Associated Domain：`webcredentials:carbontrackapp.com`
+- AASA URL：`https://carbontrackapp.com/.well-known/apple-app-site-association`
+- API base URL：`https://dev-api.carbontrackapp.com/api/v1`

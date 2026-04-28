@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
@@ -22,13 +24,26 @@ enableScreens();
 
 const Stack = createNativeStackNavigator();
 const RecordStack = createNativeStackNavigator();
-const Tab = createNativeBottomTabNavigator();
+const nativeTabsEnabled = Platform.OS === 'ios' && process.env.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS === 'true';
+const Tab = nativeTabsEnabled ? createNativeBottomTabNavigator() : createBottomTabNavigator();
 
 const tabIcons = {
-  Home: ['house.fill', 'house'],
-  Record: ['plus.circle.fill', 'plus.circle'],
-  Store: ['bag.fill', 'bag'],
-  Profile: ['person.crop.circle.fill', 'person.crop.circle'],
+  Home: {
+    native: ['house.fill', 'house'],
+    fallback: ['home', 'home-outline'],
+  },
+  Record: {
+    native: ['plus.circle.fill', 'plus.circle'],
+    fallback: ['add-circle', 'add-circle-outline'],
+  },
+  Store: {
+    native: ['bag.fill', 'bag'],
+    fallback: ['bag', 'bag-outline'],
+  },
+  Profile: {
+    native: ['person.crop.circle.fill', 'person.crop.circle'],
+    fallback: ['person-circle', 'person-circle-outline'],
+  },
 };
 
 function RecordStackNavigator() {
@@ -43,30 +58,52 @@ function RecordStackNavigator() {
 function MainTabs() {
   const { t } = useI18n();
   const { colors, isDark } = useTheme();
+  const sharedTabOptions = {
+    tabBarActiveTintColor: colors.primary,
+    tabBarInactiveTintColor: colors.textMuted,
+    tabBarStyle: { backgroundColor: colors.tab },
+    tabBarLabelStyle: {
+      fontSize: 12,
+      fontWeight: '800',
+    },
+  };
+
+  const nativeTabOptions = {
+    headerLargeTitleEnabled: true,
+    headerShadowVisible: false,
+    headerStyle: { backgroundColor: 'transparent' },
+    headerTransparent: true,
+    headerBlurEffect: isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight',
+    headerTintColor: colors.primary,
+    headerTitleStyle: { color: colors.text, fontWeight: '900' },
+    headerLargeTitleStyle: { color: colors.text, fontWeight: '900' },
+    tabBarBlurEffect: isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight',
+    tabBarControllerMode: 'tabBar',
+    tabBarMinimizeBehavior: 'onScrollDown',
+  };
+
+  const fallbackTabOptions = {
+    headerShown: false,
+    tabBarHideOnKeyboard: true,
+    tabBarStyle: [
+      sharedTabOptions.tabBarStyle,
+      { borderTopColor: colors.borderStrong, elevation: 0, height: 64, paddingBottom: 8, paddingTop: 8 },
+    ],
+  };
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerLargeTitleEnabled: true,
-        headerShadowVisible: false,
-        headerStyle: { backgroundColor: 'transparent' },
-        headerTransparent: Platform.OS === 'ios',
-        headerBlurEffect: isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight',
-        headerTintColor: colors.primary,
-        headerTitleStyle: { color: colors.text, fontWeight: '900' },
-        headerLargeTitleStyle: { color: colors.text, fontWeight: '900' },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarBlurEffect: isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight',
-        tabBarControllerMode: 'tabBar',
-        tabBarMinimizeBehavior: 'onScrollDown',
-        tabBarStyle: { backgroundColor: colors.tab },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '800',
-        },
-        tabBarIcon: ({ focused }) => {
-          const [active, inactive] = tabIcons[route.name] || tabIcons.Home;
-          return Platform.OS === 'ios' ? { type: 'sfSymbol', name: focused ? active : inactive } : undefined;
+        ...sharedTabOptions,
+        ...(nativeTabsEnabled ? nativeTabOptions : fallbackTabOptions),
+        tabBarIcon: ({ focused, color, size }) => {
+          const icons = tabIcons[route.name] || tabIcons.Home;
+          if (nativeTabsEnabled) {
+            const [active, inactive] = icons.native;
+            return { type: 'sfSymbol', name: focused ? active : inactive };
+          }
+          const [active, inactive] = icons.fallback;
+          return <Ionicons color={color} name={focused ? active : inactive} size={size ?? 22} />;
         },
       })}
     >

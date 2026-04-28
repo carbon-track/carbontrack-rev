@@ -3,7 +3,17 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { makeShadow, useTheme } from '../theme';
 
+const nativeLiquidGlassEnabled = process.env.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS === 'true';
+
 const loadLiquidGlass = () => {
+  if (!nativeLiquidGlassEnabled) {
+    return {
+      Container: View,
+      Surface: View,
+      isAvailable: false,
+    };
+  }
+
   try {
     const module = require('@callstack/liquid-glass');
     const supportedFlag = module?.isLiquidGlassSupported;
