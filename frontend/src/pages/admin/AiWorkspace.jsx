@@ -1345,7 +1345,7 @@ function maskSensitiveValue(value) {
   if (Array.isArray(value)) {
     return value.map((item) => maskSensitiveValue(item));
   }
-  if (value && typeof value === 'object') {
+  if (value && typeof value === 'object' && value.constructor === Object) {
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [
         key,
