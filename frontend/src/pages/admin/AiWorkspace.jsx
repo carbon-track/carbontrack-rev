@@ -2653,7 +2653,7 @@ export default function AdminAiWorkspacePage() {
                             {conversationTimeline.map((item) => (
                               item?.kind === 'message' ? (
                                 <MessageBubble
-                                  key={`message-${item.id}-${item.timeline_order ?? 0}`}
+                                  key={`message-${item.id}`}
                                   message={item}
                                   locale={locale}
                                   isZh={isZh}
@@ -2673,7 +2673,7 @@ export default function AdminAiWorkspacePage() {
                                 />
                               ) : item?.kind === 'agent_step' ? (
                                 <AgentStepTimelineCard
-                                  key={`${item.id}-${item.timeline_order ?? 0}`}
+                                  key={item.id}
                                   item={item}
                                   locale={locale}
                                   isZh={isZh}
@@ -2682,7 +2682,7 @@ export default function AdminAiWorkspacePage() {
                                 />
                               ) : (
                                 <EventTimelineRow
-                                  key={`event-${item.id}-${item.timeline_order ?? 0}`}
+                                  key={`event-${item.id}`}
                                   item={item}
                                   locale={locale}
                                   isZh={isZh}
