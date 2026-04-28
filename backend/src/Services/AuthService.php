@@ -370,21 +370,25 @@ class AuthService
             return null;
         }
 
-        // 如果令牌在30分钟内过期，则刷新
-        if ($decoded['exp'] - time() < 1800) {
-            try {
-                $payload = $this->validateToken($token);
-            } catch (\Throwable $e) {
-                return null;
-            }
-            $user = (array)($payload['user'] ?? []);
-            if ($user === []) {
-                return null;
-            }
-            return $this->generateToken($user);
+        if (!isset($decoded['exp']) || ((int)$decoded['exp'] - time()) >= 1800) {
+            return $token;
         }
 
-        return $token;
+        $user = isset($decoded['user']) ? (array)$decoded['user'] : [];
+        $subject = isset($decoded['sub']) ? trim((string)$decoded['sub']) : '';
+        if ($user === [] && $subject !== '') {
+            if (Uuid::isValid($subject)) {
+                $user = ['uuid' => strtolower($subject)];
+            } elseif (ctype_digit($subject)) {
+                $user = ['id' => (int)$subject];
+            }
+        }
+
+        if ($user === []) {
+            return null;
+        }
+
+        return $this->generateToken($user);
     }
 
     /**

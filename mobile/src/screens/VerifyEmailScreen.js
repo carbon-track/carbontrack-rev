@@ -7,7 +7,7 @@ import { authApi } from '../api/auth';
 import useAuthStore from '../store/authStore';
 import { useI18n } from '../i18n';
 
-export default function VerifyEmailScreen({ navigation, route }) {
+export default function VerifyEmailScreen({ route }) {
   const { t } = useI18n();
   const initialEmail = route.params?.email || '';
   const [email, setEmail] = useState(initialEmail);
@@ -76,7 +76,6 @@ export default function VerifyEmailScreen({ navigation, route }) {
         await setSession(result.data);
       }
       await clearEmailVerificationRequired();
-      navigation.replace(useAuthStore.getState().isAuthenticated ? 'Main' : 'Login');
     } catch (err) {
       resetTurnstile();
       Alert.alert(t('auth.verifyFailed'), err.response?.data?.message || err.message || t('auth.retryLater'));

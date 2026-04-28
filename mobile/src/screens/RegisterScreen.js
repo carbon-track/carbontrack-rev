@@ -151,6 +151,7 @@ export default function RegisterScreen({ navigation }) {
                 <View style={[styles.pickerBox, { backgroundColor: colors.input, borderColor: colors.borderStrong }]}>
                   <Picker
                     dropdownIconColor={colors.text}
+                    enabled={!schoolsQuery.isLoading}
                     selectedValue={schoolId}
                     onValueChange={setSchoolId}
                     style={{ color: colors.text }}

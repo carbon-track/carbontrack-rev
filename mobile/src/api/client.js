@@ -69,7 +69,8 @@ apiClient.interceptors.request.use(async (config) => {
     if (shouldRefreshToken(token)) {
       try {
         nextToken = await refreshToken(token);
-      } catch {
+      } catch (error) {
+        console.warn('Token refresh failed; continuing with current token.', error);
         nextToken = token;
       }
     }
