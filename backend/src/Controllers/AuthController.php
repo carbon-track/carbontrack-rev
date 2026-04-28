@@ -408,6 +408,9 @@ class AuthController
 
             $decodedUser = (array)($payload['user'] ?? []);
             $userId = isset($decodedUser['id']) ? (int) $decodedUser['id'] : 0;
+            if ($userId <= 0 && isset($payload['sub']) && ctype_digit((string)$payload['sub'])) {
+                $userId = (int)$payload['sub'];
+            }
             $userDetail = $userId > 0 ? $this->findUserDetailed($userId) : null;
             if ($userDetail === null) {
                 return $this->jsonResponse($response, [
