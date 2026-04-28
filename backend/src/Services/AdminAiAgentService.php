@@ -926,7 +926,8 @@ class AdminAiAgentService
             $structured['_truncation_note'] = $this->toolOutcomeTruncationNotice($locale);
         }
 
-        if (strlen($this->encodeToolOutcomePayload($structured)) <= $maxReplayBytes) {
+        $encodedStructured = $this->encodeToolOutcomePayload($structured);
+        if (strlen($encodedStructured) <= $maxReplayBytes) {
             return $structured;
         }
 
@@ -944,12 +945,14 @@ class AdminAiAgentService
             '_truncation_note' => $this->toolOutcomeTruncationNotice($locale),
         ];
 
-        if (strlen($this->encodeToolOutcomePayload($fallback)) > $maxReplayBytes) {
+        $encodedFallback = $this->encodeToolOutcomePayload($fallback);
+        if (strlen($encodedFallback) > $maxReplayBytes) {
             unset($fallback['suggestion'], $fallback['assistant_text']);
             $fallback['_dropped_fields'] = ['suggestion', 'assistant_text'];
+            $encodedFallback = $this->encodeToolOutcomePayload($fallback);
         }
 
-        if (strlen($this->encodeToolOutcomePayload($fallback)) > $maxReplayBytes) {
+        if (strlen($encodedFallback) > $maxReplayBytes) {
             $fallback['result_summary'] = [
                 'type' => get_debug_type($payload['result'] ?? null),
                 'omitted' => true,
