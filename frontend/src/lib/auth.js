@@ -230,37 +230,47 @@ export const bootstrapDevAuthFromEnv = () => {
 };
 
 export const refreshAuthToken = async () => {
-  if (tokenRefreshPromise) {
-    return tokenRefreshPromise;
+  const token = tokenManager.getToken();
+  if (!token || !tokenManager.isTokenValid()) {
+    throw new Error('Cannot refresh a missing or expired token');
   }
 
-  tokenRefreshPromise = (async () => {
-    const token = tokenManager.getToken();
-    if (!token || !tokenManager.isTokenValid()) {
-      throw new Error('Cannot refresh a missing or expired token');
-    }
+  if (tokenRefreshPromise?.token === token) {
+    return tokenRefreshPromise.promise;
+  }
 
-    const api = await getApi();
-    const response = await api.post('/auth/refresh');
-    const responseData = response.data;
-    const { token: nextToken, user } = responseData?.data || {};
+  const refreshEntry = {
+    token,
+    promise: (async () => {
+      const api = await getApi();
+      const response = await api.post('/auth/refresh');
+      const responseData = response.data;
+      const { token: nextToken, user } = responseData?.data || {};
 
-    if (!responseData?.success || !nextToken) {
-      throw new Error(responseData?.message || 'Token refresh failed');
-    }
+      if (!responseData?.success || !nextToken) {
+        throw new Error(responseData?.message || 'Token refresh failed');
+      }
 
-    tokenManager.setToken(nextToken);
-    if (user) {
-      userManager.setUser(user);
-    }
+      if (tokenManager.getToken() !== token) {
+        return responseData;
+      }
 
-    return responseData;
-  })();
+      tokenManager.setToken(nextToken);
+      if (user) {
+        userManager.setUser(user);
+      }
+
+      return responseData;
+    })(),
+  };
+  tokenRefreshPromise = refreshEntry;
 
   try {
-    return await tokenRefreshPromise;
+    return await refreshEntry.promise;
   } finally {
-    tokenRefreshPromise = null;
+    if (tokenRefreshPromise === refreshEntry) {
+      tokenRefreshPromise = null;
+    }
   }
 };
 
