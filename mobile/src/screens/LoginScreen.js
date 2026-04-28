@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import TurnstileWidget from '../components/Turnstile';
+import TurnstileWidget, { isTurnstileConfigured } from '../components/Turnstile';
 import { Field, LinkButton, PrimaryButton } from '../components/FormControls';
 import { authApi } from '../api/auth';
 import useAuthStore from '../store/authStore';
@@ -23,18 +23,21 @@ export default function LoginScreen({ navigation }) {
       Alert.alert('登录失败', '请输入账号和密码');
       return;
     }
-    if (!turnstileToken) {
+    if (isTurnstileConfigured && !turnstileToken) {
       Alert.alert('登录失败', '请先完成人机验证');
       return;
     }
 
     setLoading(true);
     try {
-      const result = await authApi.login({
+      const payload = {
         identifier: identifier.trim(),
         password,
-        cf_turnstile_response: turnstileToken,
-      });
+      };
+      if (turnstileToken) {
+        payload.cf_turnstile_response = turnstileToken;
+      }
+      const result = await authApi.login(payload);
       if (!result.success) {
         throw new Error(result.message || '登录失败');
       }
@@ -68,12 +71,14 @@ export default function LoginScreen({ navigation }) {
             value={password}
             onChangeText={setPassword}
           />
-          <TurnstileWidget
-            resetKey={turnstileResetKey}
-            onVerify={setTurnstileToken}
-            onExpire={resetTurnstile}
-            onError={resetTurnstile}
-          />
+          {isTurnstileConfigured ? (
+            <TurnstileWidget
+              resetKey={turnstileResetKey}
+              onVerify={setTurnstileToken}
+              onExpire={resetTurnstile}
+              onError={resetTurnstile}
+            />
+          ) : null}
           <PrimaryButton title="登录" loading={loading} onPress={handleLogin} />
           <LinkButton title="还没有账号？注册" onPress={() => navigation.navigate('Register')} />
         </View>

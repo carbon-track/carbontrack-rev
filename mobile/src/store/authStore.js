@@ -53,8 +53,12 @@ const useAuthStore = create((set, get) => ({
   },
 
   setSession: async ({ token, user, email_verification_required: emailVerificationRequired }) => {
-    const requiresEmailVerification = Boolean(emailVerificationRequired);
-    const verificationEmail = requiresEmailVerification ? user?.email || null : null;
+    const hasVerificationFlag = emailVerificationRequired !== undefined && emailVerificationRequired !== null;
+    const current = get();
+    const requiresEmailVerification = hasVerificationFlag
+      ? Boolean(emailVerificationRequired)
+      : current.requiresEmailVerification;
+    const verificationEmail = requiresEmailVerification ? user?.email || current.verificationEmail || null : null;
     await Promise.all([
       writeSecureItem(TOKEN_KEY, token),
       writeSecureItem(USER_KEY, user ? JSON.stringify(user) : null),

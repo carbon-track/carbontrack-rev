@@ -5,6 +5,8 @@ import { WebView } from 'react-native-webview';
 const SITE_KEY = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '';
 const TURNSTILE_BASE_URL = process.env.EXPO_PUBLIC_TURNSTILE_BASE_URL || 'https://dev.carbontrackapp.com';
 
+export const isTurnstileConfigured = Boolean(SITE_KEY);
+
 const buildTurnstileHtml = (siteKey) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -41,7 +43,7 @@ const buildTurnstileHtml = (siteKey) => `
 export default function TurnstileWidget({ onVerify, onExpire, onError, resetKey }) {
   const html = useMemo(() => buildTurnstileHtml(SITE_KEY), []);
 
-  if (!SITE_KEY) {
+  if (!isTurnstileConfigured) {
     return (
       <View style={[styles.container, styles.missing]}>
         <Text style={styles.missingText}>未配置 Turnstile site key</Text>

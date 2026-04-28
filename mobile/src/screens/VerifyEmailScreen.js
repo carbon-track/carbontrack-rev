@@ -60,7 +60,7 @@ export default function VerifyEmailScreen({ navigation, route }) {
       if (result.data?.token && result.data?.user) {
         await setSession(result.data);
       }
-      clearEmailVerificationRequired();
+      await clearEmailVerificationRequired();
       navigation.replace(useAuthStore.getState().isAuthenticated ? 'Main' : 'Login');
     } catch (err) {
       resetTurnstile();
