@@ -18261,6 +18261,64 @@
           }
         }
       }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Refresh JWT Token",
+        "description": "Refresh the current Bearer JWT when it is still valid. Tokens that are invalid or already expired cannot be refreshed.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refresh succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenRefreshSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication token is missing, invalid, or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Token refresh failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "authRefresh"
+      }
     }
   },
   "components": {
@@ -29820,6 +29878,38 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AdminAiRunStep"
+            }
+          }
+        }
+      },
+      "TokenRefreshSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Token refreshed successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string",
+                "description": "Refreshed or still-valid JWT token"
+              },
+              "user": {
+                "$ref": "#/components/schemas/UserResponse"
+              },
+              "expires_in": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Seconds remaining before token expiration"
+              }
             }
           }
         }

@@ -375,6 +375,73 @@ class AuthController
         }
     }
 
+    public function refresh(Request $request, Response $response): Response
+    {
+        try {
+            $token = $this->extractBearerToken($request);
+            if ($token === null) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'message' => 'Authentication token is required',
+                    'code' => 'AUTH_REQUIRED'
+                ], 401);
+            }
+
+            $decoded = $this->authService->verifyToken($token);
+            if (!$decoded || !isset($decoded['user'])) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'message' => 'Authentication token is invalid or expired',
+                    'code' => 'INVALID_TOKEN'
+                ], 401);
+            }
+
+            $refreshedToken = $this->authService->refreshToken($token);
+            if ($refreshedToken === null) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'message' => 'Authentication token is invalid or expired',
+                    'code' => 'INVALID_TOKEN'
+                ], 401);
+            }
+
+            $decodedUser = (array) $decoded['user'];
+            $userId = isset($decodedUser['id']) ? (int) $decodedUser['id'] : 0;
+            $userDetail = $userId > 0 ? $this->findUserDetailed($userId) : null;
+            if ($userDetail === null) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'message' => 'User not found',
+                    'code' => 'USER_NOT_FOUND'
+                ], 401);
+            }
+
+            $this->auditLogService->logAuthOperation('token_refresh', $userId, true, [
+                'ip_address' => $this->getClientIP($request),
+                'user_agent' => $request->getHeaderLine('User-Agent'),
+                'refreshed' => $refreshedToken !== $token
+            ]);
+
+            return $this->jsonResponse($response, [
+                'success' => true,
+                'message' => 'Token refreshed successfully',
+                'data' => [
+                    'token' => $refreshedToken,
+                    'user' => $this->formatUserPayload($userDetail),
+                    'expires_in' => $this->authService->getTokenRemainingTime($refreshedToken)
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Token refresh failed', ['error' => $e->getMessage()]);
+            try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'message' => 'Token refresh failed',
+                'code' => 'TOKEN_REFRESH_FAILED'
+            ], 500);
+        }
+    }
+
     public function sendVerificationCode(Request $request, Response $response): Response
     {
         try {
@@ -1282,6 +1349,17 @@ class AuthController
     {
         $response->getBody()->write(json_encode($data, JSON_UNESCAPED_UNICODE));
         return $response->withHeader('Content-Type', 'application/json')->withStatus($status);
+    }
+
+    private function extractBearerToken(Request $request): ?string
+    {
+        $authHeader = $request->getHeaderLine('Authorization');
+        if (!preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+            return null;
+        }
+
+        $token = trim($matches[1]);
+        return $token !== '' ? $token : null;
     }
 
     private function getClientIP(Request $request): string

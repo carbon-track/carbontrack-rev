@@ -1,17 +1,16 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import useAuthStore from '../store/authStore';
 
-export default function HomeScreen() {
-  const user = useAuthStore((state) => state.user);
+export default function RecordScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.eyebrow}>首页</Text>
-      <Text style={styles.title}>欢迎，{user?.username || 'CarbonTracker'}</Text>
-      <Text style={styles.body}>阶段 1 已建立认证和导航骨架，统计数据将在阶段 2 接入。</Text>
+      <Text style={styles.eyebrow}>记录</Text>
+      <Text style={styles.title}>碳记录功能待接入</Text>
+      <Text style={styles.body}>阶段 2 将接入活动因子、图片上传和记录提交流程。</Text>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -25,7 +24,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#14532d',
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
     marginTop: 8,
   },

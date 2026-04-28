@@ -51,6 +51,7 @@ class AuthControllerTest extends TestCase
     {
         $this->assertTrue(method_exists(AuthController::class, 'register'));
         $this->assertTrue(method_exists(AuthController::class, 'login'));
+        $this->assertTrue(method_exists(AuthController::class, 'refresh'));
         $this->assertTrue(method_exists(AuthController::class, 'logout'));
         $this->assertTrue(method_exists(AuthController::class, 'sendVerificationCode'));
         $this->assertTrue(method_exists(AuthController::class, 'verifyEmail'));
@@ -72,6 +73,9 @@ class AuthControllerTest extends TestCase
         
         $logoutMethod = $reflection->getMethod('logout');
         $this->assertTrue($logoutMethod->isPublic());
+
+        $refreshMethod = $reflection->getMethod('refresh');
+        $this->assertTrue($refreshMethod->isPublic());
         
         $meMethod = $reflection->getMethod('me');
         $this->assertTrue($meMethod->isPublic());

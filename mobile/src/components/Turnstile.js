@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { Text, View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-const TURNSTILE_HTML = \`
+const SITE_KEY = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '';
+
+const buildTurnstileHtml = (siteKey) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,22 +15,58 @@ const TURNSTILE_HTML = \`
   </style>
 </head>
 <body>
-  <div class="cf-turnstile" data-sitekey="0x4AAAAAAAMmPZbIuI1n_5sF" data-callback="onToken"></div>
+  <div
+    class="cf-turnstile"
+    data-sitekey="${siteKey}"
+    data-callback="onToken"
+    data-expired-callback="onExpired"
+    data-error-callback="onError"
+  ></div>
   <script>
     function onToken(token) {
-      window.ReactNativeWebView.postMessage(token);
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'verify', token: token }));
+    }
+    function onExpired() {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'expire' }));
+    }
+    function onError() {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error' }));
     }
   </script>
 </body>
 </html>
-\`;
+`;
 
-export default function TurnstileWidget({ onVerify }) {
+export default function TurnstileWidget({ onVerify, onExpire, onError, resetKey }) {
+  const html = useMemo(() => buildTurnstileHtml(SITE_KEY), []);
+
+  if (!SITE_KEY) {
+    return (
+      <View style={[styles.container, styles.missing]}>
+        <Text style={styles.missingText}>未配置 Turnstile site key</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <WebView
-        source={{ html: TURNSTILE_HTML }}
-        onMessage={(event) => onVerify(event.nativeEvent.data)}
+        key={resetKey}
+        source={{ html }}
+        onMessage={(event) => {
+          try {
+            const payload = JSON.parse(event.nativeEvent.data);
+            if (payload.type === 'verify') {
+              onVerify?.(payload.token);
+            } else if (payload.type === 'expire') {
+              onExpire?.();
+            } else if (payload.type === 'error') {
+              onError?.();
+            }
+          } catch {
+            onVerify?.(event.nativeEvent.data);
+          }
+        }}
         style={{ backgroundColor: 'transparent' }}
       />
     </View>
@@ -40,5 +78,15 @@ const styles = StyleSheet.create({
     height: 100,
     width: '100%',
     overflow: 'hidden',
+  },
+  missing: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderColor: '#f59e0b',
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  missingText: {
+    color: '#92400e',
   },
 });

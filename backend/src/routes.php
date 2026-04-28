@@ -102,6 +102,7 @@ return function (App $app) {
         $group->group(PATH_AUTH, function (RouteCollectorProxy $auth) {
             $auth->post('/register', [AuthController::class, 'register']);
             $auth->post('/login', [AuthController::class, 'login']);
+            $auth->post('/refresh', [AuthController::class, 'refresh']);
             $auth->post('/passkey/login/options', [PasskeyController::class, 'beginAuthentication']);
             $auth->post('/passkey/login/verify', [PasskeyController::class, 'completeAuthentication']);
             $auth->post('/logout', [AuthController::class, 'logout']);
