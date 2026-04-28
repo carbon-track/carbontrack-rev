@@ -5,7 +5,7 @@ import useAuthStore from '../store/authStore';
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dev-api.carbontrackapp.com/api/v1';
 const REFRESH_THRESHOLD_SECONDS = 30 * 60;
 
-let refreshPromise = null;
+const refreshPromises = new Map();
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -30,19 +30,24 @@ const shouldRefreshToken = (token) => {
 };
 
 const refreshToken = async (token) => {
-  if (!refreshPromise) {
-    refreshPromise = axios.post(
+  if (!refreshPromises.has(token)) {
+    const promise = axios.post(
       `${API_URL}/auth/refresh`,
       {},
       { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } },
     ).finally(() => {
-      refreshPromise = null;
+      refreshPromises.delete(token);
     });
+    refreshPromises.set(token, promise);
   }
 
-  const response = await refreshPromise;
+  const response = await refreshPromises.get(token);
   const data = response.data?.data || {};
   if (data.token) {
+    const currentToken = useAuthStore.getState().token;
+    if (currentToken !== token) {
+      return currentToken || token;
+    }
     await useAuthStore.getState().setSession({
       token: data.token,
       user: data.user || useAuthStore.getState().user,
