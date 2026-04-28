@@ -70,13 +70,13 @@ xcode-select -p
 
 1. 安装依赖：
 
-```powershell
+```bash
 pnpm install --frozen-lockfile
 ```
 
 2. 检查 Expo 配置：
 
-```powershell
+```bash
 pnpm exec expo config --type public
 ```
 
@@ -90,13 +90,13 @@ pnpm exec expo config --type public
 
 4. 构建 iOS 原生包。仓库当前没有固定 `eas.json`，可在 CI 或本机使用等价的 production profile；核心要求是使用上面指定的 macOS / Xcode 环境重新执行 prebuild/native build，让 CocoaPods 安装上面列出的 native packages。
 
-```powershell
+```bash
 npx eas-cli build --platform ios --profile production
 ```
 
 5. 上传 TestFlight：
 
-```powershell
+```bash
 npx eas-cli submit --platform ios --latest
 ```
 
