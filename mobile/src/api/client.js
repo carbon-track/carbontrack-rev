@@ -12,6 +12,11 @@ const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+const refreshClient = axios.create({
+  baseURL: API_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
+
 const decodeJwtPayload = (token) => {
   try {
     return jwtDecode(token);
@@ -31,10 +36,10 @@ const shouldRefreshToken = (token) => {
 
 const refreshToken = async (token) => {
   if (!refreshPromises.has(token)) {
-    const promise = axios.post(
-      `${API_URL}/auth/refresh`,
+    const promise = refreshClient.post(
+      '/auth/refresh',
       {},
-      { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } },
+      { headers: { Authorization: `Bearer ${token}` } },
     ).finally(() => {
       refreshPromises.delete(token);
     });

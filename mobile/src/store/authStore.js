@@ -5,6 +5,12 @@ const TOKEN_KEY = 'carbontrack.auth.token';
 const USER_KEY = 'carbontrack.auth.user';
 const EMAIL_VERIFICATION_REQUIRED_KEY = 'carbontrack.auth.emailVerificationRequired';
 const VERIFICATION_EMAIL_KEY = 'carbontrack.auth.verificationEmail';
+const SESSION_KEYS = [
+  TOKEN_KEY,
+  USER_KEY,
+  EMAIL_VERIFICATION_REQUIRED_KEY,
+  VERIFICATION_EMAIL_KEY,
+];
 
 const writeSecureItem = async (key, value) => {
   if (value == null) {
@@ -93,12 +99,7 @@ const useAuthStore = create((set, get) => ({
   },
 
   logout: async () => {
-    await Promise.all([
-      SecureStore.deleteItemAsync(TOKEN_KEY),
-      SecureStore.deleteItemAsync(USER_KEY),
-      SecureStore.deleteItemAsync(EMAIL_VERIFICATION_REQUIRED_KEY),
-      SecureStore.deleteItemAsync(VERIFICATION_EMAIL_KEY),
-    ]);
+    await Promise.all(SESSION_KEYS.map((key) => SecureStore.deleteItemAsync(key)));
     set({
       token: null,
       user: null,
