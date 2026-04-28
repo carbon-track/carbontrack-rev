@@ -33,6 +33,14 @@
     "plugins": [
       "expo-localization",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow CarbonTrack to select activity proof images.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "ios": {

@@ -14,12 +14,14 @@ import RegisterScreen from '../screens/RegisterScreen';
 import VerifyEmailScreen from '../screens/VerifyEmailScreen';
 import HomeScreen from '../screens/HomeScreen';
 import RecordScreen from '../screens/RecordScreen';
+import RecordDetailScreen from '../screens/RecordDetailScreen';
 import StoreScreen from '../screens/StoreScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 enableScreens();
 
 const Stack = createNativeStackNavigator();
+const RecordStack = createNativeStackNavigator();
 const Tab = createNativeBottomTabNavigator();
 
 const tabIcons = {
@@ -28,6 +30,15 @@ const tabIcons = {
   Store: ['bag.fill', 'bag'],
   Profile: ['person.crop.circle.fill', 'person.crop.circle'],
 };
+
+function RecordStackNavigator() {
+  return (
+    <RecordStack.Navigator screenOptions={{ headerShown: false }}>
+      <RecordStack.Screen name="RecordHome" component={RecordScreen} />
+      <RecordStack.Screen name="RecordDetail" component={RecordDetailScreen} />
+    </RecordStack.Navigator>
+  );
+}
 
 function MainTabs() {
   const { t } = useI18n();
@@ -60,7 +71,7 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: t('tabs.home') }} />
-      <Tab.Screen name="Record" component={RecordScreen} options={{ title: t('tabs.record') }} />
+      <Tab.Screen name="Record" component={RecordStackNavigator} options={{ title: t('tabs.record') }} />
       <Tab.Screen name="Store" component={StoreScreen} options={{ title: t('tabs.store') }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t('tabs.profile') }} />
     </Tab.Navigator>

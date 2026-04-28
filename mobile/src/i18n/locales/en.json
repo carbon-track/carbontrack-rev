@@ -1,7 +1,8 @@
 {
   "app": {
     "name": "CarbonTrack",
-    "fallbackUser": "CarbonTracker"
+    "fallbackUser": "CarbonTracker",
+    "emptyValue": "None"
   },
   "auth": {
     "loginTitle": "Sign in to CarbonTrack",
@@ -78,12 +79,69 @@
   "home": {
     "eyebrow": "Home",
     "title": "Welcome, {{name}}",
-    "body": "Phase 1 has authentication and navigation ready. Dashboard data lands in phase 2."
+    "subtitle": "Review points, carbon savings, and recent low-carbon activity.",
+    "currentPoints": "Current points",
+    "carbonSaved": "Carbon saved",
+    "totalActivities": "Total records",
+    "pendingActivities": "Pending",
+    "overview": "Overview",
+    "carbonChart": "Carbon trend",
+    "pointsChart": "Points trend",
+    "emptyChart": "No trend data yet.",
+    "recentActivities": "Recent activity",
+    "emptyActivities": "No recent records yet."
   },
   "record": {
     "eyebrow": "Record",
-    "title": "Carbon records are coming",
-    "body": "Phase 2 will add activity factors, image uploads, and record submission."
+    "title": "Record low-carbon action",
+    "subtitle": "Choose an activity, upload proof, and submit it for review.",
+    "newRecord": "New record",
+    "activityType": "Activity type",
+    "loadingFactors": "Loading activity factors...",
+    "activityPlaceholder": "Select activity type",
+    "activityFallback": "Low-carbon activity",
+    "unitFallback": "unit",
+    "amount": "Amount",
+    "amountPlaceholder": "Enter activity amount",
+    "amountPlaceholderWithUnit": "Enter amount ({{unit}})",
+    "date": "Activity date",
+    "datePlaceholder": "YYYY-MM-DD",
+    "description": "Description",
+    "descriptionPlaceholder": "Add optional notes",
+    "pickImage": "Choose activity image",
+    "pickImageHint": "Used as proof for review",
+    "photoPermissionTitle": "Photo access needed",
+    "photoPermissionMessage": "Allow photo access to upload activity proof.",
+    "calculate": "Calculate",
+    "submit": "Submit record",
+    "calculateFailed": "Calculation failed",
+    "submitFailed": "Submit failed",
+    "retryLater": "Please try again later.",
+    "missingCalculationFields": "Select an activity type and enter a valid amount.",
+    "missingSubmitFields": "Select an activity, enter a valid amount, add a date, and upload an image.",
+    "calculatedCarbon": "Estimated carbon saved: {{value}} {{unit}}",
+    "calculatedPoints": "Estimated points: {{value}}",
+    "submitSuccessTitle": "Submitted",
+    "submitSuccessMessage": "Your record was submitted for review.",
+    "history": "Record history",
+    "emptyHistory": "No carbon record history yet.",
+    "detailEyebrow": "Record detail",
+    "back": "Back",
+    "carbonSaved": "Carbon saved",
+    "pointsEarned": "Points earned",
+    "category": "Category",
+    "createdAt": "Submitted at",
+    "reviewNote": "Review note",
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "unknown": "Unknown"
+    }
+  },
+  "units": {
+    "points": "pts",
+    "kgCo2e": "kg CO2e"
   },
   "store": {
     "eyebrow": "Store",

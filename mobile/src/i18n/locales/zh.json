@@ -1,7 +1,8 @@
 {
   "app": {
     "name": "CarbonTrack",
-    "fallbackUser": "CarbonTracker"
+    "fallbackUser": "CarbonTracker",
+    "emptyValue": "无"
   },
   "auth": {
     "loginTitle": "CarbonTrack 登录",
@@ -78,12 +79,69 @@
   "home": {
     "eyebrow": "首页",
     "title": "欢迎，{{name}}",
-    "body": "阶段 1 已建立认证和导航骨架，统计数据将在阶段 2 接入。"
+    "subtitle": "查看积分、减碳趋势和最近低碳行动。",
+    "currentPoints": "当前积分",
+    "carbonSaved": "累计减碳",
+    "totalActivities": "全部记录",
+    "pendingActivities": "待审核",
+    "overview": "趋势总览",
+    "carbonChart": "减碳趋势",
+    "pointsChart": "积分趋势",
+    "emptyChart": "暂无可展示的趋势数据。",
+    "recentActivities": "近期动态",
+    "emptyActivities": "还没有近期记录。"
   },
   "record": {
     "eyebrow": "记录",
-    "title": "碳记录功能待接入",
-    "body": "阶段 2 将接入活动因子、图片上传和记录提交流程。"
+    "title": "记录低碳行动",
+    "subtitle": "选择活动类型、上传凭证并提交审核。",
+    "newRecord": "新增记录",
+    "activityType": "活动类型",
+    "loadingFactors": "加载活动因子中...",
+    "activityPlaceholder": "请选择活动类型",
+    "activityFallback": "低碳活动",
+    "unitFallback": "单位",
+    "amount": "数量",
+    "amountPlaceholder": "请输入活动数量",
+    "amountPlaceholderWithUnit": "请输入数量（{{unit}}）",
+    "date": "活动日期",
+    "datePlaceholder": "YYYY-MM-DD",
+    "description": "说明",
+    "descriptionPlaceholder": "补充说明（可选）",
+    "pickImage": "选择活动图片",
+    "pickImageHint": "用于审核低碳行动凭证",
+    "photoPermissionTitle": "需要照片权限",
+    "photoPermissionMessage": "请允许访问照片以上传活动图片。",
+    "calculate": "计算",
+    "submit": "提交记录",
+    "calculateFailed": "计算失败",
+    "submitFailed": "提交失败",
+    "retryLater": "请稍后重试。",
+    "missingCalculationFields": "请选择活动类型并输入有效数量。",
+    "missingSubmitFields": "请选择活动类型、输入有效数量、填写日期并上传图片。",
+    "calculatedCarbon": "预计减碳 {{value}} {{unit}}",
+    "calculatedPoints": "预计获得 {{value}} 积分",
+    "submitSuccessTitle": "已提交",
+    "submitSuccessMessage": "记录已提交，等待审核。",
+    "history": "记录历史",
+    "emptyHistory": "暂无碳记录历史。",
+    "detailEyebrow": "记录详情",
+    "back": "返回",
+    "carbonSaved": "减碳量",
+    "pointsEarned": "获得积分",
+    "category": "分类",
+    "createdAt": "提交时间",
+    "reviewNote": "审核备注",
+    "status": {
+      "pending": "待审核",
+      "approved": "已通过",
+      "rejected": "已拒绝",
+      "unknown": "未知状态"
+    }
+  },
+  "units": {
+    "points": "积分",
+    "kgCo2e": "kg CO2e"
   },
   "store": {
     "eyebrow": "商城",
