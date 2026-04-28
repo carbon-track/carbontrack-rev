@@ -460,8 +460,14 @@ function normalizeTimestampValue(value) {
 }
 
 function parseTimelineTime(value) {
+  if (!value) {
+    return Number.POSITIVE_INFINITY;
+  }
   const normalized = normalizeTimestampValue(value);
-  const timestamp = normalized ? new Date(normalized).getTime() : 0;
+  if (!normalized) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const timestamp = new Date(normalized).getTime();
   return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
 }
 
