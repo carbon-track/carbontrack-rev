@@ -64,7 +64,8 @@ const shouldRefreshToken = (token) => {
   if (!payload?.exp) {
     return false;
   }
-  return payload.exp - Math.floor(Date.now() / 1000) < REFRESH_THRESHOLD_SECONDS;
+  const remainingSeconds = payload.exp - Math.floor(Date.now() / 1000);
+  return remainingSeconds > 0 && remainingSeconds < REFRESH_THRESHOLD_SECONDS;
 };
 
 const refreshToken = async (token) => {

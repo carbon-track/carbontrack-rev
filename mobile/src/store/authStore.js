@@ -17,6 +17,8 @@ const useAuthStore = create((set, get) => ({
   user: null,
   isHydrated: false,
   isAuthenticated: false,
+  requiresEmailVerification: false,
+  verificationEmail: null,
 
   hydrate: async () => {
     try {
@@ -30,18 +32,33 @@ const useAuthStore = create((set, get) => ({
         user,
         isHydrated: true,
         isAuthenticated: Boolean(token && user),
+        requiresEmailVerification: false,
+        verificationEmail: null,
       });
     } catch {
-      set({ token: null, user: null, isHydrated: true, isAuthenticated: false });
+      set({
+        token: null,
+        user: null,
+        isHydrated: true,
+        isAuthenticated: false,
+        requiresEmailVerification: false,
+        verificationEmail: null,
+      });
     }
   },
 
-  setSession: async ({ token, user }) => {
+  setSession: async ({ token, user, email_verification_required: emailVerificationRequired }) => {
     await Promise.all([
       writeSecureItem(TOKEN_KEY, token),
       writeSecureItem(USER_KEY, user ? JSON.stringify(user) : null),
     ]);
-    set({ token, user, isAuthenticated: Boolean(token && user) });
+    set({
+      token,
+      user,
+      isAuthenticated: Boolean(token && user),
+      requiresEmailVerification: Boolean(emailVerificationRequired),
+      verificationEmail: emailVerificationRequired ? user?.email || null : null,
+    });
   },
 
   setToken: async (token) => {
@@ -54,12 +71,22 @@ const useAuthStore = create((set, get) => ({
     set({ user, isAuthenticated: Boolean(get().token && user) });
   },
 
+  clearEmailVerificationRequired: () => {
+    set({ requiresEmailVerification: false, verificationEmail: null });
+  },
+
   logout: async () => {
     await Promise.all([
       SecureStore.deleteItemAsync(TOKEN_KEY),
       SecureStore.deleteItemAsync(USER_KEY),
     ]);
-    set({ token: null, user: null, isAuthenticated: false });
+    set({
+      token: null,
+      user: null,
+      isAuthenticated: false,
+      requiresEmailVerification: false,
+      verificationEmail: null,
+    });
   },
 }));
 

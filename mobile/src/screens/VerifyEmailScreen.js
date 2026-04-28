@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Field, LinkButton, PrimaryButton } from '../components/FormControls';
+import { Field, PrimaryButton } from '../components/FormControls';
 import TurnstileWidget from '../components/Turnstile';
 import { authApi } from '../api/auth';
 import useAuthStore from '../store/authStore';
@@ -14,6 +14,7 @@ export default function VerifyEmailScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const setSession = useAuthStore((state) => state.setSession);
+  const clearEmailVerificationRequired = useAuthStore((state) => state.clearEmailVerificationRequired);
 
   const resetTurnstile = () => {
     setTurnstileToken('');
@@ -31,6 +32,7 @@ export default function VerifyEmailScreen({ navigation, route }) {
         email: email.trim(),
         cf_turnstile_response: turnstileToken,
       });
+      resetTurnstile();
       Alert.alert('已发送', '验证码已发送至邮箱');
     } catch (err) {
       resetTurnstile();
@@ -58,6 +60,7 @@ export default function VerifyEmailScreen({ navigation, route }) {
       if (result.data?.token && result.data?.user) {
         await setSession(result.data);
       }
+      clearEmailVerificationRequired();
       navigation.replace(useAuthStore.getState().isAuthenticated ? 'Main' : 'Login');
     } catch (err) {
       resetTurnstile();
@@ -83,7 +86,6 @@ export default function VerifyEmailScreen({ navigation, route }) {
           />
           <PrimaryButton title="验证邮箱" loading={loading} onPress={handleVerify} />
           <PrimaryButton title="重新发送验证码" loading={sending} onPress={handleSendCode} />
-          <LinkButton title="稍后验证，进入应用" onPress={() => navigation.replace('Main')} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

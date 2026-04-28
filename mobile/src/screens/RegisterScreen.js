@@ -97,7 +97,6 @@ export default function RegisterScreen({ navigation }) {
       }
 
       await setSession(result.data);
-      navigation.replace('VerifyEmail', { email: email.trim() });
     } catch (err) {
       resetTurnstile();
       Alert.alert('注册失败', err.response?.data?.message || err.message || '请稍后重试');

@@ -39,9 +39,6 @@ export default function LoginScreen({ navigation }) {
         throw new Error(result.message || '登录失败');
       }
       await setSession(result.data);
-      if (result.data?.email_verification_required) {
-        navigation.navigate('VerifyEmail', { email: result.data.user?.email || identifier.trim() });
-      }
     } catch (err) {
       resetTurnstile();
       Alert.alert('登录失败', err.response?.data?.message || err.message || '请稍后重试');

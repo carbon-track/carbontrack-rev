@@ -53,6 +53,8 @@ export default function AppNavigator() {
   const hydrate = useAuthStore((state) => state.hydrate);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const requiresEmailVerification = useAuthStore((state) => state.requiresEmailVerification);
+  const verificationEmail = useAuthStore((state) => state.verificationEmail);
 
   useEffect(() => {
     hydrate();
@@ -70,14 +72,22 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <Stack.Screen name="Main" component={MainTabs} />
+          requiresEmailVerification ? (
+            <Stack.Screen
+              name="VerifyEmail"
+              component={VerifyEmailScreen}
+              initialParams={{ email: verificationEmail || '' }}
+            />
+          ) : (
+            <Stack.Screen name="Main" component={MainTabs} />
+          )
         ) : (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
           </>
         )}
-        <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
