@@ -462,7 +462,7 @@ function normalizeTimestampValue(value) {
 function parseTimelineTime(value) {
   const normalized = normalizeTimestampValue(value);
   const timestamp = normalized ? new Date(normalized).getTime() : 0;
-  return Number.isFinite(timestamp) ? timestamp : 0;
+  return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
 }
 
 function getTimelineSortOrder(item) {
@@ -478,11 +478,19 @@ function getTimelineSortRank(item) {
   return 3;
 }
 
+function getStepActionKeys(step) {
+  return [
+    step?.input?.action,
+    step?.output?.meta?.action_name,
+    step?.tool_name,
+  ].filter(Boolean);
+}
+
 function buildConversationTimeline(conversation) {
   const messages = Array.isArray(conversation?.messages) ? conversation.messages : [];
   const runs = Array.isArray(conversation?.runs) ? conversation.runs : [];
   const stepsById = new Map();
-  const stepMatches = [];
+  const stepMatchesByAction = new Map();
   const usedStepIds = new Set();
   let timelineOrder = 0;
 
@@ -492,7 +500,11 @@ function buildConversationTimeline(conversation) {
       if (step?.step_id) {
         const match = { step, run };
         stepsById.set(step.step_id, match);
-        stepMatches.push(match);
+        getStepActionKeys(step).forEach((actionKey) => {
+          const matches = stepMatchesByAction.get(actionKey) || [];
+          matches.push(match);
+          stepMatchesByAction.set(actionKey, matches);
+        });
       }
     });
   });
@@ -507,18 +519,14 @@ function buildConversationTimeline(conversation) {
 
     const stepId = getConversationMessageStepId(message);
     const actionName = getConversationMessageActionName(message);
+    const actionMatches = actionName ? stepMatchesByAction.get(actionName) || [] : [];
     const match = stepId
       ? stepsById.get(stepId)
-      : stepMatches.find(({ step }) => {
+      : actionMatches.find(({ step }) => {
         if (!step?.step_id || usedStepIds.has(step.step_id)) {
           return false;
         }
-        return actionName
-          && [
-            step?.input?.action,
-            step?.output?.meta?.action_name,
-            step?.tool_name,
-          ].includes(actionName);
+        return true;
       });
     if (message?.kind === 'tool' && match) {
       usedStepIds.add(match.step.step_id);
@@ -1304,6 +1312,17 @@ function JsonPreview({ value, className }) {
 }
 
 const SENSITIVE_FIELD_PATTERN = /(?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential)/i;
+const SENSITIVE_STRING_PATTERNS = [
+  [/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, '$1***'],
+  [/((?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential)\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,;]+)/gi, '$1***'],
+];
+
+function maskSensitiveString(value) {
+  return SENSITIVE_STRING_PATTERNS.reduce(
+    (masked, [pattern, replacement]) => masked.replace(pattern, replacement),
+    value
+  );
+}
 
 function maskSensitiveValue(value) {
   if (Array.isArray(value)) {
@@ -1316,6 +1335,9 @@ function maskSensitiveValue(value) {
         SENSITIVE_FIELD_PATTERN.test(key) ? '***' : maskSensitiveValue(item),
       ])
     );
+  }
+  if (typeof value === 'string') {
+    return maskSensitiveString(value);
   }
   return value;
 }
