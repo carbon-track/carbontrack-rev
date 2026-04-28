@@ -55,7 +55,10 @@ export default function VerifyEmailScreen({ navigation, route }) {
       if (!result.success) {
         throw new Error(result.message || '验证失败');
       }
-      await setSession(result.data);
+      if (result.data?.token && result.data?.user) {
+        await setSession(result.data);
+      }
+      navigation.replace(useAuthStore.getState().isAuthenticated ? 'Main' : 'Login');
     } catch (err) {
       resetTurnstile();
       Alert.alert('验证失败', err.response?.data?.message || err.message || '请稍后重试');

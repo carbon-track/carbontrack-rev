@@ -530,7 +530,11 @@ export const initAuth = async () => {
     const token = tokenManager.getToken();
     if (token) {
       if (!isRefreshRequest(config.url) && shouldRefreshToken(token)) {
-        await refreshAuthToken();
+        try {
+          await refreshAuthToken();
+        } catch (error) {
+          console.warn('Token refresh failed; continuing with the current valid token:', error);
+        }
       }
 
       const currentToken = tokenManager.getToken();

@@ -39,8 +39,8 @@ Do not perform normal feature development in the split repositories. Any manual 
 
 Two workflows support this model:
 
-- [`.github/workflows/monorepo-ci.yml`](/E:/Coding/carbontrack_rev/.github/workflows/monorepo-ci.yml): runs the required PR gates in the monorepo for frontend CI, backend CI, mobile CI, and split-repo deployment readiness
-- [`.github/workflows/sync-repositories.yml`](/E:/Coding/carbontrack_rev/.github/workflows/sync-repositories.yml): mirrors `frontend/`, `backend/`, and `mobile/` to the corresponding split-repo branch after a push to `dev` or `main`
+- [`.github/workflows/monorepo-ci.yml`](.github/workflows/monorepo-ci.yml): runs the required PR gates in the monorepo for frontend CI, backend CI, mobile CI, and split-repo deployment readiness
+- [`.github/workflows/sync-repositories.yml`](.github/workflows/sync-repositories.yml): mirrors `frontend/`, `backend/`, and `mobile/` to the corresponding split-repo branch after a push to `dev` or `main`
 
 The sync workflow pushes directly to the target branch instead of opening PRs in the split repositories. That keeps the child repositories deployable while preserving a single human review surface in the monorepo.
 
