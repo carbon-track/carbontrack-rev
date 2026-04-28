@@ -44,6 +44,32 @@ class AdminAiAgentServiceTest extends TestCase
         $this->assertSame(AdminAiAgentService::DEFAULT_MAX_TOKENS, $property->getValue($service));
     }
 
+    public function testZeroMaxTokensOmitsProviderLimit(): void
+    {
+        $client = new QueueLlmClient([
+            $this->plainTextResponse('ok'),
+        ]);
+        $service = new AdminAiAgentService(
+            $this->makePdo(),
+            $client,
+            new NullLogger(),
+            ['model' => 'test-model', 'max_tokens' => 0],
+            ['managementActions' => []]
+        );
+
+        $result = $service->chat(null, 'hello', [], null, [
+            'request_id' => 'req-zero-max-tokens',
+            'actor_type' => 'admin',
+            'actor_id' => 1,
+            'source' => '/admin/ai/chat',
+        ]);
+
+        $payloads = $client->payloads();
+        $this->assertTrue($result['success']);
+        $this->assertCount(1, $payloads);
+        $this->assertArrayNotHasKey('max_tokens', $payloads[0]);
+    }
+
     public function testChatCreatesConversationAndRestoresHistoryFromLogs(): void
     {
         $pdo = $this->makePdo();
