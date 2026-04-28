@@ -34,7 +34,7 @@ class AdminAiAgentService
 
     private string $model;
     private float $temperature;
-    private int $maxTokens;
+    private ?int $maxTokens;
     private bool $enabled;
 
     /** @var array<string,mixed> */
@@ -90,13 +90,41 @@ class AdminAiAgentService
         $this->loadCommandConfig($commandConfig ?? []);
     }
 
-    private function resolveMaxTokens(mixed $configured): int
+    private function resolveMaxTokens(mixed $configured): ?int
     {
-        if (is_numeric($configured) && (int) $configured > 0) {
-            return (int) $configured;
+        if (is_numeric($configured)) {
+            $maxTokens = (int) $configured;
+            if ($maxTokens === 0) {
+                return null;
+            }
+
+            if ($maxTokens > 0) {
+                return $maxTokens;
+            }
         }
 
         return self::DEFAULT_MAX_TOKENS;
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $messages
+     * @return array<string,mixed>
+     */
+    private function buildChatCompletionPayload(array $messages): array
+    {
+        $payload = [
+            'model' => $this->model,
+            'temperature' => $this->temperature,
+            'messages' => $messages,
+            'tools' => $this->buildTools(),
+            'tool_choice' => 'auto',
+        ];
+
+        if ($this->maxTokens !== null) {
+            $payload['max_tokens'] = $this->maxTokens;
+        }
+
+        return $payload;
     }
 
     public function isEnabled(): bool
@@ -145,14 +173,9 @@ class AdminAiAgentService
             $conversationId,
             max(2, (int) ($this->agentConfig['max_history_messages'] ?? 12))
         );
-        $payload = [
-            'model' => $this->model,
-            'temperature' => $this->temperature,
-            'max_tokens' => $this->maxTokens,
-            'messages' => $this->buildMessages($history, $normalizedMessage, $normalizedContext),
-            'tools' => $this->buildTools(),
-            'tool_choice' => 'auto',
-        ];
+        $payload = $this->buildChatCompletionPayload(
+            $this->buildMessages($history, $normalizedMessage, $normalizedContext)
+        );
 
         $startedAt = microtime(true);
         $llmLogId = null;
@@ -646,14 +669,7 @@ class AdminAiAgentService
         $runStepSequence = 0;
 
         for ($stepIndex = 0; $stepIndex < $maxSteps; $stepIndex++) {
-            $payload = [
-                'model' => $this->model,
-                'temperature' => $this->temperature,
-                'max_tokens' => $this->maxTokens,
-                'messages' => $messages,
-                'tools' => $this->buildTools(),
-                'tool_choice' => 'auto',
-            ];
+            $payload = $this->buildChatCompletionPayload($messages);
 
             $startedAt = microtime(true);
             $llmLogId = null;
