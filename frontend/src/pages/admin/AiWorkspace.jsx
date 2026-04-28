@@ -491,6 +491,7 @@ function buildConversationTimeline(conversation) {
   const runs = Array.isArray(conversation?.runs) ? conversation.runs : [];
   const stepsById = new Map();
   const stepMatchesByAction = new Map();
+  const stepMatchCursorsByAction = new Map();
   const usedStepIds = new Set();
   let timelineOrder = 0;
 
@@ -520,14 +521,18 @@ function buildConversationTimeline(conversation) {
     const stepId = getConversationMessageStepId(message);
     const actionName = getConversationMessageActionName(message);
     const actionMatches = actionName ? stepMatchesByAction.get(actionName) || [] : [];
-    const match = stepId
-      ? stepsById.get(stepId)
-      : actionMatches.find(({ step }) => {
-        if (!step?.step_id || usedStepIds.has(step.step_id)) {
-          return false;
+    let match = stepId ? stepsById.get(stepId) : null;
+    if (!match && actionName && actionMatches.length > 0) {
+      const cursor = stepMatchCursorsByAction.get(actionName) || 0;
+      for (let index = cursor; index < actionMatches.length; index += 1) {
+        const candidate = actionMatches[index];
+        stepMatchCursorsByAction.set(actionName, index + 1);
+        if (candidate?.step?.step_id && !usedStepIds.has(candidate.step.step_id)) {
+          match = candidate;
+          break;
         }
-        return true;
-      });
+      }
+    }
     if (message?.kind === 'tool' && match) {
       usedStepIds.add(match.step.step_id);
       return {
@@ -1344,30 +1349,33 @@ function maskSensitiveValue(value) {
 
 function ResultSnapshot({ title, value, isZh }) {
   const hasValue = value != null && value !== '';
-  const displayValue = useMemo(() => (hasValue ? maskSensitiveValue(value) : value), [hasValue, value]);
   const [open, setOpen] = useState(false);
+  const displayValue = useMemo(
+    () => (open && hasValue ? maskSensitiveValue(value) : value),
+    [hasValue, open, value]
+  );
   const summary = useMemo(() => {
     if (!hasValue) {
       return isZh ? '无结果' : 'No result';
     }
 
-    if (Array.isArray(displayValue)) {
-      return isZh ? `数组 · ${displayValue.length} 项` : `Array · ${displayValue.length} items`;
+    if (Array.isArray(value)) {
+      return isZh ? `数组 · ${value.length} 项` : `Array · ${value.length} items`;
     }
 
-    if (typeof displayValue === 'object') {
-      const size = Object.keys(displayValue).length;
+    if (typeof value === 'object') {
+      const size = Object.keys(value).length;
       return isZh ? `对象 · ${size} 个字段` : `Object · ${size} fields`;
     }
 
-    const text = String(displayValue);
+    const text = typeof value === 'string' ? maskSensitiveString(value) : String(value);
     if (!text) {
       return isZh ? '无结果' : 'No result';
     }
 
     const compact = text.replace(/\s+/g, ' ').trim();
     return compact.length > 56 ? `${compact.slice(0, 56)}...` : compact;
-  }, [displayValue, hasValue, isZh]);
+  }, [hasValue, isZh, value]);
 
   if (!hasValue) return null;
 
@@ -2645,7 +2653,7 @@ export default function AdminAiWorkspacePage() {
                             {conversationTimeline.map((item) => (
                               item?.kind === 'message' ? (
                                 <MessageBubble
-                                  key={item.id}
+                                  key={`message-${item.id}-${item.timeline_order ?? 0}`}
                                   message={item}
                                   locale={locale}
                                   isZh={isZh}
@@ -2665,7 +2673,7 @@ export default function AdminAiWorkspacePage() {
                                 />
                               ) : item?.kind === 'agent_step' ? (
                                 <AgentStepTimelineCard
-                                  key={item.id}
+                                  key={`${item.id}-${item.timeline_order ?? 0}`}
                                   item={item}
                                   locale={locale}
                                   isZh={isZh}
@@ -2674,7 +2682,7 @@ export default function AdminAiWorkspacePage() {
                                 />
                               ) : (
                                 <EventTimelineRow
-                                  key={item.id}
+                                  key={`event-${item.id}-${item.timeline_order ?? 0}`}
                                   item={item}
                                   locale={locale}
                                   isZh={isZh}
