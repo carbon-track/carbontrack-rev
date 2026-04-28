@@ -23,7 +23,7 @@ import { carbonApi } from '../api/carbon';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
 
-const todayString = () => new Date().toISOString().slice(0, 10);
+const todayString = () => new Date().toLocaleDateString('en-CA');
 const formatNumber = (value) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(Number(value || 0));
 
 const getActivityName = (item, language) => {

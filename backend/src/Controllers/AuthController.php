@@ -408,10 +408,19 @@ class AuthController
 
             $decodedUser = (array)($payload['user'] ?? []);
             $userId = isset($decodedUser['id']) ? (int) $decodedUser['id'] : 0;
+            $userUuid = isset($decodedUser['uuid']) && Uuid::isValid((string)$decodedUser['uuid'])
+                ? strtolower((string)$decodedUser['uuid'])
+                : null;
             if ($userId <= 0 && isset($payload['sub']) && ctype_digit((string)$payload['sub'])) {
                 $userId = (int)$payload['sub'];
+            } elseif ($userUuid === null && isset($payload['sub']) && Uuid::isValid((string)$payload['sub'])) {
+                $userUuid = strtolower((string)$payload['sub']);
             }
             $userDetail = $userId > 0 ? $this->findUserDetailed($userId) : null;
+            if ($userDetail === null && $userUuid !== null) {
+                $userDetail = $this->findUserDetailedByUuid($userUuid);
+                $userId = (int)($userDetail['id'] ?? 0);
+            }
             if ($userDetail === null) {
                 return $this->jsonResponse($response, [
                     'success' => false,
@@ -1293,6 +1302,25 @@ class AuthController
             LIMIT 1
         ");
         $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+
+        return $row;
+    }
+
+    private function findUserDetailedByUuid(string $userUuid): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT u.*, s.name AS school_name, a.file_path AS avatar_path
+            FROM users u
+            LEFT JOIN schools s ON u.school_id = s.id
+            LEFT JOIN avatars a ON u.avatar_id = a.id
+            WHERE u.uuid = ? AND u.deleted_at IS NULL
+            LIMIT 1
+        ");
+        $stmt->execute([$userUuid]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) {
             return null;

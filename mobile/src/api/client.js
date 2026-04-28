@@ -51,7 +51,7 @@ const refreshToken = async (token) => {
   if (data.token) {
     const currentToken = useAuthStore.getState().token;
     if (currentToken !== token) {
-      return currentToken || token;
+      return currentToken;
     }
     await useAuthStore.getState().setSession({
       token: data.token,
@@ -74,7 +74,9 @@ apiClient.interceptors.request.use(async (config) => {
         nextToken = token;
       }
     }
-    config.headers.Authorization = `Bearer ${nextToken}`;
+    if (nextToken) {
+      config.headers.Authorization = `Bearer ${nextToken}`;
+    }
   }
   return config;
 });
