@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useI18n } from '../i18n';
+import { useTheme } from '../theme';
 
 const SITE_KEY = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '';
 const TURNSTILE_BASE_URL = process.env.EXPO_PUBLIC_TURNSTILE_BASE_URL || '';
@@ -41,12 +43,14 @@ const buildTurnstileHtml = (siteKey) => `
 `;
 
 export default function TurnstileWidget({ onVerify, onExpire, onError, resetKey }) {
+  const { t } = useI18n();
+  const { colors } = useTheme();
   const html = useMemo(() => buildTurnstileHtml(SITE_KEY), []);
 
   if (!isTurnstileConfigured) {
     return (
-      <View style={[styles.container, styles.missing]}>
-        <Text style={styles.missingText}>未配置 Turnstile site key 或 base URL</Text>
+      <View style={[styles.container, styles.missing, { borderColor: colors.warning, backgroundColor: colors.surfaceMuted }]}>
+        <Text style={[styles.missingText, { color: colors.warning }]}>{t('turnstile.missingConfig')}</Text>
       </View>
     );
   }
@@ -90,11 +94,11 @@ const styles = StyleSheet.create({
   missing: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderColor: '#f59e0b',
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 16,
   },
   missingText: {
-    color: '#92400e',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

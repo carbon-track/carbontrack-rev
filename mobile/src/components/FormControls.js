@@ -1,40 +1,83 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../theme';
 
 export function Field({ label, error, ...inputProps }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       <TextInput
         {...inputProps}
-        placeholderTextColor="#94a3b8"
-        style={[styles.input, error ? styles.inputError : null, inputProps.style]}
+        placeholderTextColor={colors.textMuted}
+        style={[
+          styles.input,
+          { backgroundColor: colors.input, borderColor: colors.borderStrong, color: colors.text },
+          error ? { borderColor: colors.danger } : null,
+          inputProps.style,
+        ]}
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
     </View>
   );
 }
 
-export function PrimaryButton({ title, loading, disabled, onPress }) {
+export function PrimaryButton({ title, loading, disabled, onPress, icon }) {
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.button,
-        pressed ? styles.buttonPressed : null,
-        disabled || loading ? styles.buttonDisabled : null,
+        { backgroundColor: colors.primary },
+        pressed ? { backgroundColor: colors.primaryPressed } : null,
+        disabled || loading ? { opacity: 0.55 } : null,
       ]}
     >
-      {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{title}</Text>}
+      {loading ? (
+        <ActivityIndicator color={colors.dark ? '#07130f' : '#ffffff'} />
+      ) : (
+        <View style={styles.buttonContent}>
+          {icon ? <Ionicons color={colors.dark ? '#07130f' : '#ffffff'} name={icon} size={18} /> : null}
+          <Text style={[styles.buttonText, { color: colors.dark ? '#07130f' : '#ffffff' }]}>{title}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
 
 export function LinkButton({ title, onPress }) {
+  const { colors } = useTheme();
   return (
     <Pressable onPress={onPress} style={styles.linkButton}>
-      <Text style={styles.linkText}>{title}</Text>
+      <Text style={[styles.linkText, { color: colors.primary }]}>{title}</Text>
+    </Pressable>
+  );
+}
+
+export function SecondaryButton({ title, loading, disabled, onPress, icon }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled || loading}
+      style={({ pressed }) => [
+        styles.secondaryButton,
+        { backgroundColor: colors.surfaceStrong, borderColor: colors.borderStrong },
+        pressed ? { opacity: 0.78 } : null,
+        disabled || loading ? { opacity: 0.55 } : null,
+      ]}
+    >
+      {loading ? (
+        <ActivityIndicator color={colors.primary} />
+      ) : (
+        <View style={styles.buttonContent}>
+          {icon ? <Ionicons color={colors.primary} name={icon} size={18} /> : null}
+          <Text style={[styles.secondaryText, { color: colors.text }]}>{title}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -44,44 +87,46 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    color: '#14532d',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   input: {
-    backgroundColor: '#fff',
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
+    borderRadius: 16,
     borderWidth: 1,
-    color: '#0f172a',
-    minHeight: 46,
-    paddingHorizontal: 12,
-  },
-  inputError: {
-    borderColor: '#dc2626',
+    fontSize: 15,
+    minHeight: 50,
+    paddingHorizontal: 14,
   },
   error: {
-    color: '#dc2626',
     fontSize: 12,
   },
   button: {
     alignItems: 'center',
-    backgroundColor: '#16a34a',
-    borderRadius: 8,
+    borderRadius: 18,
     minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
-  buttonPressed: {
-    backgroundColor: '#15803d',
-  },
-  buttonDisabled: {
-    backgroundColor: '#86efac',
+  buttonContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
   buttonText: {
-    color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+  secondaryButton: {
+    alignItems: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  secondaryText: {
+    fontSize: 15,
+    fontWeight: '800',
   },
   linkButton: {
     alignItems: 'center',
@@ -89,8 +134,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   linkText: {
-    color: '#15803d',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

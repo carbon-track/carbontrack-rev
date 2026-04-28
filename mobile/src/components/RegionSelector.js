@@ -2,10 +2,16 @@ import React, { useMemo } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import countries from '../data/states.json';
+import { useI18n } from '../i18n';
+import { useTheme } from '../theme';
 
-const getCountryLabel = (country) => country.translations?.cn || country.name;
+const getCountryLabel = (country, language) => (
+  language === 'zh' ? country.translations?.cn || country.name : country.name
+);
 
 export default function RegionSelector({ countryCode, stateCode, onCountryChange, onStateChange }) {
+  const { resolvedLanguage, t } = useI18n();
+  const { colors } = useTheme();
   const states = useMemo(() => {
     const selected = countries.find((country) => country.iso2 === countryCode);
     return selected?.states || [];
@@ -13,34 +19,48 @@ export default function RegionSelector({ countryCode, stateCode, onCountryChange
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>国家 / 地区</Text>
-      <View style={styles.pickerBox}>
+      <Text style={[styles.label, { color: colors.text }]}>{t('region.country')}</Text>
+      <View style={[styles.pickerBox, { backgroundColor: colors.input, borderColor: colors.borderStrong }]}>
         <Picker
+          dropdownIconColor={colors.text}
+          style={{ color: colors.text }}
           selectedValue={countryCode}
           onValueChange={(value) => {
             onCountryChange(value);
             onStateChange('');
           }}
         >
-          <Picker.Item label="请选择国家 / 地区" value="" />
+          <Picker.Item label={t('region.countryPlaceholder')} value="" />
           {countries.map((country) => (
-            <Picker.Item key={country.iso2} label={getCountryLabel(country)} value={country.iso2} />
+            <Picker.Item key={country.iso2} label={getCountryLabel(country, resolvedLanguage)} value={country.iso2} />
           ))}
         </Picker>
       </View>
 
-      <Text style={styles.label}>省 / 州</Text>
-      <View style={styles.pickerBox}>
+      <Text style={[styles.label, { color: colors.text }]}>{t('region.state')}</Text>
+      <View style={[styles.pickerBox, { backgroundColor: colors.input, borderColor: colors.borderStrong }]}>
         {states.length > 0 ? (
-          <Picker selectedValue={stateCode} enabled={Boolean(countryCode)} onValueChange={onStateChange}>
-            <Picker.Item label="请选择省 / 州" value="" />
+          <Picker
+            dropdownIconColor={colors.text}
+            selectedValue={stateCode}
+            enabled={Boolean(countryCode)}
+            onValueChange={onStateChange}
+            style={{ color: colors.text }}
+          >
+            <Picker.Item label={t('region.statePlaceholder')} value="" />
             {states.map((state) => (
               <Picker.Item key={state.id || state.state_code} label={state.name} value={state.state_code} />
             ))}
           </Picker>
         ) : (
-          <Picker selectedValue={stateCode} enabled={false} onValueChange={onStateChange}>
-            <Picker.Item label={countryCode ? '暂无地区数据' : '请先选择国家 / 地区'} value="" />
+          <Picker
+            dropdownIconColor={colors.textMuted}
+            selectedValue={stateCode}
+            enabled={false}
+            onValueChange={onStateChange}
+            style={{ color: colors.textMuted }}
+          >
+            <Picker.Item label={countryCode ? t('region.stateMissing') : t('region.countryFirst')} value="" />
           </Picker>
         )}
       </View>
@@ -53,13 +73,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: '#14532d',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   pickerBox: {
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
   },

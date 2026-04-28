@@ -1,38 +1,34 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import { GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
 import useAuthStore from '../store/authStore';
+import { useI18n } from '../i18n';
+import { useTheme } from '../theme';
 
 export default function HomeScreen() {
+  const { t } = useI18n();
+  const { colors } = useTheme();
   const user = useAuthStore((state) => state.user);
+  const name = user?.username || t('app.fallbackUser');
   return (
-    <View style={styles.container}>
-      <Text style={styles.eyebrow}>首页</Text>
-      <Text style={styles.title}>欢迎，{user?.username || 'CarbonTracker'}</Text>
-      <Text style={styles.body}>阶段 1 已建立认证和导航骨架，统计数据将在阶段 2 接入。</Text>
-    </View>
+    <ScreenBackground centered style={styles.container}>
+      <GlassSurface contentStyle={styles.content}>
+        <PageHeader eyebrow={t('home.eyebrow')} title={t('home.title', { name })} />
+        <Text style={[styles.body, { color: colors.textMuted }]}>{t('home.body')}</Text>
+      </GlassSurface>
+    </ScreenBackground>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
+    padding: 22,
   },
-  eyebrow: {
-    color: '#16a34a',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  title: {
-    color: '#14532d',
-    fontSize: 28,
-    fontWeight: '800',
-    marginTop: 8,
+  content: {
+    gap: 12,
   },
   body: {
-    color: '#64748b',
     fontSize: 16,
     lineHeight: 24,
-    marginTop: 12,
   },
 });

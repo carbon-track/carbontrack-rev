@@ -1,0 +1,113 @@
+{
+  "app": {
+    "name": "CarbonTrack",
+    "fallbackUser": "CarbonTracker"
+  },
+  "auth": {
+    "loginTitle": "Sign in to CarbonTrack",
+    "loginSubtitle": "Continue tracking low-carbon actions with your email or username.",
+    "identifier": "Username or email",
+    "identifierPlaceholder": "Enter username or email",
+    "password": "Password",
+    "passwordPlaceholder": "Enter password",
+    "login": "Sign in",
+    "passkeyLogin": "Sign in with passkey",
+    "passkeyUnavailable": "Passkeys are not available on this device or build.",
+    "passkeyCancelled": "Passkey sign-in was cancelled.",
+    "passkeyFailed": "Passkey sign-in failed.",
+    "needAccount": "No account yet? Create one",
+    "hasAccount": "Already have an account? Sign in",
+    "loginFailed": "Sign-in failed",
+    "loginMissingFields": "Enter account and password.",
+    "turnstileRequired": "Complete the human check first.",
+    "retryLater": "Please try again later.",
+    "registerTitle": "Create account",
+    "registerSubtitle": "Join CarbonTrack and start recording low-carbon actions.",
+    "username": "Username",
+    "usernamePlaceholder": "3-50 letters, numbers, or underscores",
+    "email": "Email",
+    "emailPlaceholder": "name@example.com",
+    "passwordMinPlaceholder": "At least 8 characters",
+    "confirmPassword": "Confirm password",
+    "confirmPasswordPlaceholder": "Enter password again",
+    "createNewSchool": "Create a new school if it is missing",
+    "schoolName": "School name",
+    "schoolNamePlaceholder": "Enter school name",
+    "school": "School",
+    "schoolLoading": "Loading schools...",
+    "schoolOptional": "Select school (optional)",
+    "register": "Create account",
+    "registerFailed": "Registration failed",
+    "registerMissingFields": "Enter username, email, and password.",
+    "passwordTooShort": "Password must be at least 8 characters.",
+    "passwordMismatch": "Passwords do not match.",
+    "regionRequired": "Select country and state or province.",
+    "schoolNameRequired": "Enter the school name.",
+    "verifyTitle": "Verify email",
+    "verifySubtitle": "Enter the code from your email to finish account verification.",
+    "code": "Verification code",
+    "codePlaceholder": "Enter verification code",
+    "verifyEmail": "Verify email",
+    "resendCode": "Resend code",
+    "sendFailed": "Send failed",
+    "sentTitle": "Sent",
+    "sentMessage": "The verification code was sent to your email.",
+    "sendEmailRequired": "Enter email.",
+    "sendEmailTurnstileRequired": "Enter email and complete the human check.",
+    "verifyFailed": "Verification failed",
+    "verifyMissing": "Enter email and verification code.",
+    "verifyTurnstileMissing": "Enter email, verification code, and complete the human check."
+  },
+  "region": {
+    "country": "Country or region",
+    "countryPlaceholder": "Select country or region",
+    "state": "State or province",
+    "statePlaceholder": "Select state or province",
+    "stateMissing": "No region data",
+    "countryFirst": "Select country or region first"
+  },
+  "turnstile": {
+    "missingConfig": "Turnstile site key or base URL is not configured."
+  },
+  "tabs": {
+    "home": "Home",
+    "record": "Record",
+    "store": "Store",
+    "profile": "Profile"
+  },
+  "home": {
+    "eyebrow": "Home",
+    "title": "Welcome, {{name}}",
+    "body": "Phase 1 has authentication and navigation ready. Dashboard data lands in phase 2."
+  },
+  "record": {
+    "eyebrow": "Record",
+    "title": "Carbon records are coming",
+    "body": "Phase 2 will add activity factors, image uploads, and record submission."
+  },
+  "store": {
+    "eyebrow": "Store",
+    "title": "Point redemption is coming",
+    "body": "Phase 3 will add products, categories, redemptions, and history."
+  },
+  "profile": {
+    "eyebrow": "Profile",
+    "emailMissing": "No email provided",
+    "points": "Points: {{points}}",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "language": "Language",
+    "logout": "Sign out",
+    "logoutTitle": "Sign out",
+    "logoutMessage": "Sign out of the current account?",
+    "cancel": "Cancel",
+    "confirmLogout": "Sign out"
+  },
+  "appearance": {
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark",
+    "english": "English",
+    "chinese": "中文"
+  }
+}

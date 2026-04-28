@@ -3,13 +3,18 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, 
 import { Picker } from '@react-native-picker/picker';
 import { useQuery } from '@tanstack/react-query';
 import { Field, LinkButton, PrimaryButton } from '../components/FormControls';
+import { GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
 import RegionSelector from '../components/RegionSelector';
 import TurnstileWidget, { isTurnstileConfigured } from '../components/Turnstile';
 import { authApi } from '../api/auth';
 import { schoolApi } from '../api/schools';
 import useAuthStore from '../store/authStore';
+import { useI18n } from '../i18n';
+import { useTheme } from '../theme';
 
 export default function RegisterScreen({ navigation }) {
+  const { t } = useI18n();
+  const { colors } = useTheme();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,22 +52,22 @@ export default function RegisterScreen({ navigation }) {
 
   const validate = () => {
     if (!username.trim() || !email.trim() || !password || !confirmPassword) {
-      return '请填写用户名、邮箱和密码';
+      return t('auth.registerMissingFields');
     }
     if (password.length < 8) {
-      return '密码至少需要 8 位';
+      return t('auth.passwordTooShort');
     }
     if (password !== confirmPassword) {
-      return '两次输入的密码不一致';
+      return t('auth.passwordMismatch');
     }
     if (!countryCode || !stateCode) {
-      return '请选择国家和省 / 州';
+      return t('auth.regionRequired');
     }
     if (useNewSchool && !newSchoolName.trim()) {
-      return '请输入学校名称';
+      return t('auth.schoolNameRequired');
     }
     if (isTurnstileConfigured && !turnstileToken) {
-      return '请先完成人机验证';
+      return t('auth.turnstileRequired');
     }
     return '';
   };
@@ -70,7 +75,7 @@ export default function RegisterScreen({ navigation }) {
   const handleRegister = async () => {
     const error = validate();
     if (error) {
-      Alert.alert('注册失败', error);
+      Alert.alert(t('auth.registerFailed'), error);
       return;
     }
 
@@ -95,13 +100,13 @@ export default function RegisterScreen({ navigation }) {
 
       const result = await authApi.register(payload);
       if (!result.success) {
-        throw new Error(result.message || '注册失败');
+        throw new Error(result.message || t('auth.registerFailed'));
       }
 
       await setSession(result.data);
     } catch (err) {
       resetTurnstile();
-      Alert.alert('注册失败', err.response?.data?.message || err.message || '请稍后重试');
+      Alert.alert(t('auth.registerFailed'), err.response?.data?.message || err.message || t('auth.retryLater'));
     } finally {
       setLoading(false);
     }
@@ -110,81 +115,83 @@ export default function RegisterScreen({ navigation }) {
   const schools = schoolsQuery.data || [];
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>创建账号</Text>
-        <Text style={styles.subtitle}>加入 CarbonTrack，开始记录低碳行动</Text>
+    <ScreenBackground>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          <PageHeader title={t('auth.registerTitle')} subtitle={t('auth.registerSubtitle')} style={styles.header} />
 
-        <View style={styles.form}>
-          <Field label="用户名" placeholder="3-50 位字母、数字或下划线" value={username} onChangeText={setUsername} autoCapitalize="none" />
-          <Field label="邮箱" placeholder="name@example.com" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-          <Field label="密码" placeholder="至少 8 位" value={password} onChangeText={setPassword} secureTextEntry />
-          <Field label="确认密码" placeholder="再次输入密码" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+          <GlassSurface contentStyle={styles.form}>
+            <Field label={t('auth.username')} placeholder={t('auth.usernamePlaceholder')} value={username} onChangeText={setUsername} autoCapitalize="none" />
+            <Field label={t('auth.email')} placeholder={t('auth.emailPlaceholder')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+            <Field label={t('auth.password')} placeholder={t('auth.passwordMinPlaceholder')} value={password} onChangeText={setPassword} secureTextEntry />
+            <Field label={t('auth.confirmPassword')} placeholder={t('auth.confirmPasswordPlaceholder')} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
 
-          <RegionSelector
-            countryCode={countryCode}
-            stateCode={stateCode}
-            onCountryChange={setCountryCode}
-            onStateChange={setStateCode}
-          />
-
-          <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>找不到学校，创建新学校</Text>
-            <Switch value={useNewSchool} onValueChange={setUseNewSchool} />
-          </View>
-
-          {useNewSchool ? (
-            <Field label="学校名称" placeholder="请输入学校名称" value={newSchoolName} onChangeText={setNewSchoolName} />
-          ) : (
-            <View style={styles.field}>
-              <Text style={styles.label}>学校</Text>
-              <View style={styles.pickerBox}>
-                <Picker selectedValue={schoolId} onValueChange={setSchoolId}>
-                  <Picker.Item label={schoolsQuery.isLoading ? '加载学校中...' : '请选择学校（可选）'} value="" />
-                  {schools.map((school) => (
-                    <Picker.Item key={school.id} label={school.name} value={String(school.id)} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-          )}
-
-          {isTurnstileConfigured ? (
-            <TurnstileWidget
-              resetKey={turnstileResetKey}
-              onVerify={setTurnstileToken}
-              onExpire={resetTurnstile}
-              onError={resetTurnstile}
+            <RegionSelector
+              countryCode={countryCode}
+              stateCode={stateCode}
+              onCountryChange={setCountryCode}
+              onStateChange={setStateCode}
             />
-          ) : null}
-          <PrimaryButton title="注册" loading={loading} onPress={handleRegister} />
-          <LinkButton title="已有账号？登录" onPress={() => navigation.navigate('Login')} />
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+            <View style={styles.switchRow}>
+              <Text style={[styles.switchLabel, { color: colors.text }]}>{t('auth.createNewSchool')}</Text>
+              <Switch
+                value={useNewSchool}
+                onValueChange={setUseNewSchool}
+                trackColor={{ false: colors.borderStrong, true: colors.primarySoft }}
+                thumbColor={useNewSchool ? colors.primary : colors.surfaceStrong}
+              />
+            </View>
+
+            {useNewSchool ? (
+              <Field label={t('auth.schoolName')} placeholder={t('auth.schoolNamePlaceholder')} value={newSchoolName} onChangeText={setNewSchoolName} />
+            ) : (
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: colors.text }]}>{t('auth.school')}</Text>
+                <View style={[styles.pickerBox, { backgroundColor: colors.input, borderColor: colors.borderStrong }]}>
+                  <Picker
+                    dropdownIconColor={colors.text}
+                    selectedValue={schoolId}
+                    onValueChange={setSchoolId}
+                    style={{ color: colors.text }}
+                  >
+                    <Picker.Item label={schoolsQuery.isLoading ? t('auth.schoolLoading') : t('auth.schoolOptional')} value="" />
+                    {schools.map((school) => (
+                      <Picker.Item key={school.id} label={school.name} value={String(school.id)} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            )}
+
+            {isTurnstileConfigured ? (
+              <TurnstileWidget
+                resetKey={turnstileResetKey}
+                onVerify={setTurnstileToken}
+                onExpire={resetTurnstile}
+                onError={resetTurnstile}
+              />
+            ) : null}
+            <PrimaryButton title={t('auth.register')} loading={loading} onPress={handleRegister} icon="person-add-outline" />
+            <LinkButton title={t('auth.hasAccount')} onPress={() => navigation.navigate('Login')} />
+          </GlassSurface>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   container: {
-    padding: 24,
+    padding: 22,
+    paddingBottom: 36,
   },
-  title: {
-    color: '#14532d',
-    fontSize: 30,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: '#64748b',
-    fontSize: 15,
-    marginBottom: 24,
-    marginTop: 8,
-    textAlign: 'center',
+  header: {
+    marginBottom: 18,
+    marginTop: 18,
   },
   form: {
     gap: 14,
@@ -193,24 +200,23 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    color: '#14532d',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   pickerBox: {
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
   },
   switchRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    gap: 12,
     justifyContent: 'space-between',
   },
   switchLabel: {
-    color: '#334155',
+    flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

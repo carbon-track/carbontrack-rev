@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Field, PrimaryButton } from '../components/FormControls';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
+import { Field, PrimaryButton, SecondaryButton } from '../components/FormControls';
+import { GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
 import TurnstileWidget, { isTurnstileConfigured } from '../components/Turnstile';
 import { authApi } from '../api/auth';
 import useAuthStore from '../store/authStore';
+import { useI18n } from '../i18n';
 
 export default function VerifyEmailScreen({ navigation, route }) {
+  const { t } = useI18n();
   const initialEmail = route.params?.email || '';
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState('');
@@ -23,7 +26,10 @@ export default function VerifyEmailScreen({ navigation, route }) {
 
   const handleSendCode = async () => {
     if (!email.trim() || (isTurnstileConfigured && !turnstileToken)) {
-      Alert.alert('发送失败', isTurnstileConfigured ? '请输入邮箱并完成人机验证' : '请输入邮箱');
+      Alert.alert(
+        t('auth.sendFailed'),
+        isTurnstileConfigured ? t('auth.sendEmailTurnstileRequired') : t('auth.sendEmailRequired'),
+      );
       return;
     }
     setSending(true);
@@ -36,10 +42,10 @@ export default function VerifyEmailScreen({ navigation, route }) {
       }
       await authApi.sendVerificationCode(payload);
       resetTurnstile();
-      Alert.alert('已发送', '验证码已发送至邮箱');
+      Alert.alert(t('auth.sentTitle'), t('auth.sentMessage'));
     } catch (err) {
       resetTurnstile();
-      Alert.alert('发送失败', err.response?.data?.message || err.message || '请稍后重试');
+      Alert.alert(t('auth.sendFailed'), err.response?.data?.message || err.message || t('auth.retryLater'));
     } finally {
       setSending(false);
     }
@@ -47,7 +53,10 @@ export default function VerifyEmailScreen({ navigation, route }) {
 
   const handleVerify = async () => {
     if (!email.trim() || !code.trim() || (isTurnstileConfigured && !turnstileToken)) {
-      Alert.alert('验证失败', isTurnstileConfigured ? '请输入邮箱、验证码并完成人机验证' : '请输入邮箱和验证码');
+      Alert.alert(
+        t('auth.verifyFailed'),
+        isTurnstileConfigured ? t('auth.verifyTurnstileMissing') : t('auth.verifyMissing'),
+      );
       return;
     }
     setLoading(true);
@@ -61,7 +70,7 @@ export default function VerifyEmailScreen({ navigation, route }) {
       }
       const result = await authApi.verifyEmail(payload);
       if (!result.success) {
-        throw new Error(result.message || '验证失败');
+        throw new Error(result.message || t('auth.verifyFailed'));
       }
       if (result.data?.token && result.data?.user) {
         await setSession(result.data);
@@ -70,58 +79,48 @@ export default function VerifyEmailScreen({ navigation, route }) {
       navigation.replace(useAuthStore.getState().isAuthenticated ? 'Main' : 'Login');
     } catch (err) {
       resetTurnstile();
-      Alert.alert('验证失败', err.response?.data?.message || err.message || '请稍后重试');
+      Alert.alert(t('auth.verifyFailed'), err.response?.data?.message || err.message || t('auth.retryLater'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>验证邮箱</Text>
-        <Text style={styles.subtitle}>输入邮件中的验证码完成账号验证</Text>
-        <View style={styles.form}>
-          <Field label="邮箱" placeholder="name@example.com" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-          <Field label="验证码" placeholder="请输入验证码" value={code} onChangeText={setCode} autoCapitalize="none" />
-          {isTurnstileConfigured ? (
-            <TurnstileWidget
-              resetKey={turnstileResetKey}
-              onVerify={setTurnstileToken}
-              onExpire={resetTurnstile}
-              onError={resetTurnstile}
-            />
-          ) : null}
-          <PrimaryButton title="验证邮箱" loading={loading} onPress={handleVerify} />
-          <PrimaryButton title="重新发送验证码" loading={sending} onPress={handleSendCode} />
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    <ScreenBackground>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          <PageHeader title={t('auth.verifyTitle')} subtitle={t('auth.verifySubtitle')} style={styles.header} />
+          <GlassSurface contentStyle={styles.form}>
+            <Field label={t('auth.email')} placeholder={t('auth.emailPlaceholder')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+            <Field label={t('auth.code')} placeholder={t('auth.codePlaceholder')} value={code} onChangeText={setCode} autoCapitalize="none" />
+            {isTurnstileConfigured ? (
+              <TurnstileWidget
+                resetKey={turnstileResetKey}
+                onVerify={setTurnstileToken}
+                onExpire={resetTurnstile}
+                onError={resetTurnstile}
+              />
+            ) : null}
+            <PrimaryButton title={t('auth.verifyEmail')} loading={loading} onPress={handleVerify} icon="mail-open-outline" />
+            <SecondaryButton title={t('auth.resendCode')} loading={sending} onPress={handleSendCode} icon="refresh-outline" />
+          </GlassSurface>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   container: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    padding: 22,
   },
-  title: {
-    color: '#14532d',
-    fontSize: 30,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: '#64748b',
-    fontSize: 15,
-    marginBottom: 24,
-    marginTop: 8,
-    textAlign: 'center',
+  header: {
+    marginBottom: 18,
   },
   form: {
     gap: 14,

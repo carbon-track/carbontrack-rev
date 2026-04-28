@@ -1,0 +1,113 @@
+{
+  "app": {
+    "name": "CarbonTrack",
+    "fallbackUser": "CarbonTracker"
+  },
+  "auth": {
+    "loginTitle": "CarbonTrack 登录",
+    "loginSubtitle": "使用邮箱或用户名继续低碳行动记录。",
+    "identifier": "用户名或邮箱",
+    "identifierPlaceholder": "请输入用户名或邮箱",
+    "password": "密码",
+    "passwordPlaceholder": "请输入密码",
+    "login": "登录",
+    "passkeyLogin": "使用 Passkey 登录",
+    "passkeyUnavailable": "当前设备或构建暂不支持 Passkey。",
+    "passkeyCancelled": "已取消 Passkey 登录。",
+    "passkeyFailed": "Passkey 登录失败。",
+    "needAccount": "还没有账号？注册",
+    "hasAccount": "已有账号？登录",
+    "loginFailed": "登录失败",
+    "loginMissingFields": "请输入账号和密码。",
+    "turnstileRequired": "请先完成人机验证。",
+    "retryLater": "请稍后重试。",
+    "registerTitle": "创建账号",
+    "registerSubtitle": "加入 CarbonTrack，开始记录低碳行动。",
+    "username": "用户名",
+    "usernamePlaceholder": "3-50 位字母、数字或下划线",
+    "email": "邮箱",
+    "emailPlaceholder": "name@example.com",
+    "passwordMinPlaceholder": "至少 8 位",
+    "confirmPassword": "确认密码",
+    "confirmPasswordPlaceholder": "再次输入密码",
+    "createNewSchool": "找不到学校，创建新学校",
+    "schoolName": "学校名称",
+    "schoolNamePlaceholder": "请输入学校名称",
+    "school": "学校",
+    "schoolLoading": "加载学校中...",
+    "schoolOptional": "请选择学校（可选）",
+    "register": "注册",
+    "registerFailed": "注册失败",
+    "registerMissingFields": "请填写用户名、邮箱和密码。",
+    "passwordTooShort": "密码至少需要 8 位。",
+    "passwordMismatch": "两次输入的密码不一致。",
+    "regionRequired": "请选择国家和省 / 州。",
+    "schoolNameRequired": "请输入学校名称。",
+    "verifyTitle": "验证邮箱",
+    "verifySubtitle": "输入邮件中的验证码完成账号验证。",
+    "code": "验证码",
+    "codePlaceholder": "请输入验证码",
+    "verifyEmail": "验证邮箱",
+    "resendCode": "重新发送验证码",
+    "sendFailed": "发送失败",
+    "sentTitle": "已发送",
+    "sentMessage": "验证码已发送至邮箱。",
+    "sendEmailRequired": "请输入邮箱。",
+    "sendEmailTurnstileRequired": "请输入邮箱并完成人机验证。",
+    "verifyFailed": "验证失败",
+    "verifyMissing": "请输入邮箱和验证码。",
+    "verifyTurnstileMissing": "请输入邮箱、验证码并完成人机验证。"
+  },
+  "region": {
+    "country": "国家 / 地区",
+    "countryPlaceholder": "请选择国家 / 地区",
+    "state": "省 / 州",
+    "statePlaceholder": "请选择省 / 州",
+    "stateMissing": "暂无地区数据",
+    "countryFirst": "请先选择国家 / 地区"
+  },
+  "turnstile": {
+    "missingConfig": "未配置 Turnstile site key 或 base URL。"
+  },
+  "tabs": {
+    "home": "首页",
+    "record": "记录",
+    "store": "商城",
+    "profile": "我的"
+  },
+  "home": {
+    "eyebrow": "首页",
+    "title": "欢迎，{{name}}",
+    "body": "阶段 1 已建立认证和导航骨架，统计数据将在阶段 2 接入。"
+  },
+  "record": {
+    "eyebrow": "记录",
+    "title": "碳记录功能待接入",
+    "body": "阶段 2 将接入活动因子、图片上传和记录提交流程。"
+  },
+  "store": {
+    "eyebrow": "商城",
+    "title": "积分兑换功能待接入",
+    "body": "阶段 3 将接入商品列表、分类、兑换和兑换记录。"
+  },
+  "profile": {
+    "eyebrow": "我的",
+    "emailMissing": "未提供邮箱",
+    "points": "积分：{{points}}",
+    "appearance": "外观",
+    "theme": "主题",
+    "language": "语言",
+    "logout": "退出登录",
+    "logoutTitle": "退出登录",
+    "logoutMessage": "确认退出当前账号？",
+    "cancel": "取消",
+    "confirmLogout": "退出"
+  },
+  "appearance": {
+    "system": "跟随系统",
+    "light": "浅色",
+    "dark": "深色",
+    "english": "English",
+    "chinese": "中文"
+  }
+}

@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 import TurnstileWidget, { isTurnstileConfigured } from '../components/Turnstile';
-import { Field, LinkButton, PrimaryButton } from '../components/FormControls';
+import { Field, LinkButton, PrimaryButton, SecondaryButton } from '../components/FormControls';
+import { GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
 import { authApi } from '../api/auth';
+import { passkeyApi } from '../api/passkey';
+import { authenticateWithPasskey } from '../lib/passkey';
 import useAuthStore from '../store/authStore';
+import { useI18n } from '../i18n';
 
 export default function LoginScreen({ navigation }) {
+  const { t } = useI18n();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const setSession = useAuthStore((state) => state.setSession);
 
   const resetTurnstile = () => {
@@ -18,13 +24,15 @@ export default function LoginScreen({ navigation }) {
     setTurnstileResetKey((value) => value + 1);
   };
 
+  const resolveError = (err, fallbackKey) => err.response?.data?.message || err.message || t(fallbackKey);
+
   const handleLogin = async () => {
     if (!identifier.trim() || !password) {
-      Alert.alert('登录失败', '请输入账号和密码');
+      Alert.alert(t('auth.loginFailed'), t('auth.loginMissingFields'));
       return;
     }
     if (isTurnstileConfigured && !turnstileToken) {
-      Alert.alert('登录失败', '请先完成人机验证');
+      Alert.alert(t('auth.loginFailed'), t('auth.turnstileRequired'));
       return;
     }
 
@@ -39,76 +47,100 @@ export default function LoginScreen({ navigation }) {
       }
       const result = await authApi.login(payload);
       if (!result.success) {
-        throw new Error(result.message || '登录失败');
+        throw new Error(result.message || t('auth.loginFailed'));
       }
       await setSession(result.data);
     } catch (err) {
       resetTurnstile();
-      Alert.alert('登录失败', err.response?.data?.message || err.message || '请稍后重试');
+      Alert.alert(t('auth.loginFailed'), resolveError(err, 'auth.retryLater'));
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>CarbonTrack 登录</Text>
-        <Text style={styles.subtitle}>使用邮箱或用户名继续低碳行动记录</Text>
+  const handlePasskeyLogin = async () => {
+    setPasskeyLoading(true);
+    try {
+      const optionsResult = await passkeyApi.getAuthenticationOptions(identifier.trim());
+      const optionsData = optionsResult.data || {};
+      const publicKey = optionsData.public_key || optionsData;
+      const credential = await authenticateWithPasskey(publicKey);
+      const result = await passkeyApi.login({
+        challenge_id: optionsData.challenge_id,
+        credential,
+      });
+      if (!result.success) {
+        throw new Error(result.message || t('auth.passkeyFailed'));
+      }
+      await setSession(result.data);
+    } catch (err) {
+      if (err.message === 'PASSKEY_CANCELLED') {
+        Alert.alert(t('auth.passkeyFailed'), t('auth.passkeyCancelled'));
+      } else if (err.message === 'PASSKEY_UNAVAILABLE') {
+        Alert.alert(t('auth.passkeyFailed'), t('auth.passkeyUnavailable'));
+      } else {
+        Alert.alert(t('auth.passkeyFailed'), resolveError(err, 'auth.retryLater'));
+      }
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
 
-        <View style={styles.form}>
-          <Field
-            label="用户名或邮箱"
-            placeholder="请输入用户名或邮箱"
-            value={identifier}
-            onChangeText={setIdentifier}
-            autoCapitalize="none"
-          />
-          <Field
-            label="密码"
-            placeholder="请输入密码"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-          {isTurnstileConfigured ? (
-            <TurnstileWidget
-              resetKey={turnstileResetKey}
-              onVerify={setTurnstileToken}
-              onExpire={resetTurnstile}
-              onError={resetTurnstile}
+  return (
+    <ScreenBackground>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          <PageHeader title={t('auth.loginTitle')} subtitle={t('auth.loginSubtitle')} style={styles.header} />
+
+          <GlassSurface contentStyle={styles.form}>
+            <Field
+              label={t('auth.identifier')}
+              placeholder={t('auth.identifierPlaceholder')}
+              value={identifier}
+              onChangeText={setIdentifier}
+              autoCapitalize="none"
             />
-          ) : null}
-          <PrimaryButton title="登录" loading={loading} onPress={handleLogin} />
-          <LinkButton title="还没有账号？注册" onPress={() => navigation.navigate('Register')} />
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Field
+              label={t('auth.password')}
+              placeholder={t('auth.passwordPlaceholder')}
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+            {isTurnstileConfigured ? (
+              <TurnstileWidget
+                resetKey={turnstileResetKey}
+                onVerify={setTurnstileToken}
+                onExpire={resetTurnstile}
+                onError={resetTurnstile}
+              />
+            ) : null}
+            <PrimaryButton title={t('auth.login')} loading={loading} onPress={handleLogin} icon="log-in-outline" />
+            <SecondaryButton
+              title={t('auth.passkeyLogin')}
+              loading={passkeyLoading}
+              onPress={handlePasskeyLogin}
+              icon="key-outline"
+            />
+            <LinkButton title={t('auth.needAccount')} onPress={() => navigation.navigate('Register')} />
+          </GlassSurface>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   container: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    padding: 22,
   },
-  title: {
-    color: '#14532d',
-    fontSize: 30,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: '#64748b',
-    fontSize: 15,
-    marginBottom: 28,
-    marginTop: 8,
-    textAlign: 'center',
+  header: {
+    marginBottom: 18,
   },
   form: {
     gap: 14,
