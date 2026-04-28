@@ -3,6 +3,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 const SITE_KEY = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '';
+const TURNSTILE_BASE_URL = process.env.EXPO_PUBLIC_TURNSTILE_BASE_URL || 'https://dev.carbontrackapp.com';
 
 const buildTurnstileHtml = (siteKey) => `
 <!DOCTYPE html>
@@ -52,7 +53,12 @@ export default function TurnstileWidget({ onVerify, onExpire, onError, resetKey 
     <View style={styles.container}>
       <WebView
         key={resetKey}
-        source={{ html }}
+        source={{ html, baseUrl: TURNSTILE_BASE_URL }}
+        javaScriptEnabled
+        domStorageEnabled
+        sharedCookiesEnabled
+        thirdPartyCookiesEnabled
+        originWhitelist={['https://*', 'http://*', 'about:blank', 'about:srcdoc']}
         onMessage={(event) => {
           try {
             const payload = JSON.parse(event.nativeEvent.data);

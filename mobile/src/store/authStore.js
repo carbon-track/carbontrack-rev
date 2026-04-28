@@ -3,6 +3,8 @@ import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'carbontrack.auth.token';
 const USER_KEY = 'carbontrack.auth.user';
+const EMAIL_VERIFICATION_REQUIRED_KEY = 'carbontrack.auth.emailVerificationRequired';
+const VERIFICATION_EMAIL_KEY = 'carbontrack.auth.verificationEmail';
 
 const writeSecureItem = async (key, value) => {
   if (value == null) {
@@ -22,18 +24,21 @@ const useAuthStore = create((set, get) => ({
 
   hydrate: async () => {
     try {
-      const [token, userJson] = await Promise.all([
+      const [token, userJson, emailVerificationRequired, verificationEmail] = await Promise.all([
         SecureStore.getItemAsync(TOKEN_KEY),
         SecureStore.getItemAsync(USER_KEY),
+        SecureStore.getItemAsync(EMAIL_VERIFICATION_REQUIRED_KEY),
+        SecureStore.getItemAsync(VERIFICATION_EMAIL_KEY),
       ]);
       const user = userJson ? JSON.parse(userJson) : null;
+      const requiresEmailVerification = token && user && emailVerificationRequired === 'true';
       set({
         token,
         user,
         isHydrated: true,
         isAuthenticated: Boolean(token && user),
-        requiresEmailVerification: false,
-        verificationEmail: null,
+        requiresEmailVerification,
+        verificationEmail: requiresEmailVerification ? verificationEmail || user?.email || null : null,
       });
     } catch {
       set({
@@ -48,16 +53,20 @@ const useAuthStore = create((set, get) => ({
   },
 
   setSession: async ({ token, user, email_verification_required: emailVerificationRequired }) => {
+    const requiresEmailVerification = Boolean(emailVerificationRequired);
+    const verificationEmail = requiresEmailVerification ? user?.email || null : null;
     await Promise.all([
       writeSecureItem(TOKEN_KEY, token),
       writeSecureItem(USER_KEY, user ? JSON.stringify(user) : null),
+      writeSecureItem(EMAIL_VERIFICATION_REQUIRED_KEY, requiresEmailVerification ? 'true' : null),
+      writeSecureItem(VERIFICATION_EMAIL_KEY, verificationEmail),
     ]);
     set({
       token,
       user,
       isAuthenticated: Boolean(token && user),
-      requiresEmailVerification: Boolean(emailVerificationRequired),
-      verificationEmail: emailVerificationRequired ? user?.email || null : null,
+      requiresEmailVerification,
+      verificationEmail,
     });
   },
 
@@ -71,7 +80,11 @@ const useAuthStore = create((set, get) => ({
     set({ user, isAuthenticated: Boolean(get().token && user) });
   },
 
-  clearEmailVerificationRequired: () => {
+  clearEmailVerificationRequired: async () => {
+    await Promise.all([
+      SecureStore.deleteItemAsync(EMAIL_VERIFICATION_REQUIRED_KEY),
+      SecureStore.deleteItemAsync(VERIFICATION_EMAIL_KEY),
+    ]);
     set({ requiresEmailVerification: false, verificationEmail: null });
   },
 
@@ -79,6 +92,8 @@ const useAuthStore = create((set, get) => ({
     await Promise.all([
       SecureStore.deleteItemAsync(TOKEN_KEY),
       SecureStore.deleteItemAsync(USER_KEY),
+      SecureStore.deleteItemAsync(EMAIL_VERIFICATION_REQUIRED_KEY),
+      SecureStore.deleteItemAsync(VERIFICATION_EMAIL_KEY),
     ]);
     set({
       token: null,

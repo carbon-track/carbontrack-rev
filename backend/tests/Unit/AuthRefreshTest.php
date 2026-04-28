@@ -11,6 +11,7 @@ use CarbonTrack\Services\ErrorLogService;
 use CarbonTrack\Services\MessageService;
 use CarbonTrack\Services\RegionService;
 use CarbonTrack\Services\TurnstileService;
+use Firebase\JWT\JWT;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
@@ -126,6 +127,27 @@ final class AuthRefreshTest extends TestCase
         $this->assertNotEmpty($payload['data']['token']);
         $this->assertSame('refresh_user', $payload['data']['user']['username']);
         $this->assertIsInt($payload['data']['expires_in']);
+    }
+
+    public function testRefreshAcceptsLegacySubjectOnlyToken(): void
+    {
+        $user = $this->seedUser();
+        $now = time();
+        $token = JWT::encode([
+            'iss' => 'carbontrack',
+            'aud' => 'carbontrack-users',
+            'iat' => $now,
+            'exp' => $now + 60,
+            'sub' => (string) $user['id'],
+        ], 'test-refresh-secret-with-enough-length', 'HS256');
+
+        $response = $this->makeController()->refresh($this->makeRequest($token), new Response());
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode((string) $response->getBody(), true);
+        $this->assertTrue($payload['success']);
+        $this->assertNotSame($token, $payload['data']['token']);
+        $this->assertSame('refresh_user', $payload['data']['user']['username']);
     }
 
     public function testRefreshRequiresAuthorizationHeader(): void

@@ -372,7 +372,15 @@ class AuthService
 
         // 如果令牌在30分钟内过期，则刷新
         if ($decoded['exp'] - time() < 1800) {
-            $user = (array)$decoded['user'];
+            try {
+                $payload = $this->validateToken($token);
+            } catch (\Throwable $e) {
+                return null;
+            }
+            $user = (array)($payload['user'] ?? []);
+            if ($user === []) {
+                return null;
+            }
             return $this->generateToken($user);
         }
 

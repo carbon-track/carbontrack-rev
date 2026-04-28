@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 import useAuthStore from '../store/authStore';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dev-api.carbontrackapp.com/api/v1';
@@ -11,49 +12,9 @@ const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-const decodeBase64 = (value) => {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-  let buffer = 0;
-  let bits = 0;
-  let output = '';
-
-  for (const char of value.replace(/=+$/g, '')) {
-    const index = alphabet.indexOf(char);
-    if (index < 0) {
-      continue;
-    }
-
-    buffer = (buffer << 6) | index;
-    bits += 6;
-
-    if (bits >= 8) {
-      bits -= 8;
-      output += String.fromCharCode((buffer >> bits) & 0xff);
-    }
-  }
-
-  try {
-    return decodeURIComponent(
-      output
-        .split('')
-        .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
-        .join(''),
-    );
-  } catch {
-    return output;
-  }
-};
-
 const decodeJwtPayload = (token) => {
   try {
-    const [, payload] = token.split('.');
-    if (!payload) {
-      return null;
-    }
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=');
-    const decoded = decodeBase64(padded);
-    return JSON.parse(decoded);
+    return jwtDecode(token);
   } catch {
     return null;
   }
@@ -99,8 +60,7 @@ apiClient.interceptors.request.use(async (config) => {
       try {
         nextToken = await refreshToken(token);
       } catch {
-        await useAuthStore.getState().logout();
-        throw new axios.CanceledError('Unable to refresh authentication token');
+        nextToken = token;
       }
     }
     config.headers.Authorization = `Bearer ${nextToken}`;

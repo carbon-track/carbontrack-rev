@@ -387,8 +387,9 @@ class AuthController
                 ], 401);
             }
 
-            $decoded = $this->authService->verifyToken($token);
-            if (!$decoded || !isset($decoded['user'])) {
+            try {
+                $payload = $this->authService->validateToken($token);
+            } catch (\Throwable $e) {
                 return $this->jsonResponse($response, [
                     'success' => false,
                     'message' => 'Authentication token is invalid or expired',
@@ -405,7 +406,7 @@ class AuthController
                 ], 401);
             }
 
-            $decodedUser = (array) $decoded['user'];
+            $decodedUser = (array)($payload['user'] ?? []);
             $userId = isset($decodedUser['id']) ? (int) $decodedUser['id'] : 0;
             $userDetail = $userId > 0 ? $this->findUserDetailed($userId) : null;
             if ($userDetail === null) {
