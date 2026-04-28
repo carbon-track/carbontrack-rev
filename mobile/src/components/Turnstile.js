@@ -3,9 +3,9 @@ import { Text, View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 const SITE_KEY = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '';
-const TURNSTILE_BASE_URL = process.env.EXPO_PUBLIC_TURNSTILE_BASE_URL || 'https://dev.carbontrackapp.com';
+const TURNSTILE_BASE_URL = process.env.EXPO_PUBLIC_TURNSTILE_BASE_URL || '';
 
-export const isTurnstileConfigured = Boolean(SITE_KEY);
+export const isTurnstileConfigured = Boolean(SITE_KEY && TURNSTILE_BASE_URL);
 
 const buildTurnstileHtml = (siteKey) => `
 <!DOCTYPE html>
@@ -46,7 +46,7 @@ export default function TurnstileWidget({ onVerify, onExpire, onError, resetKey 
   if (!isTurnstileConfigured) {
     return (
       <View style={[styles.container, styles.missing]}>
-        <Text style={styles.missingText}>未配置 Turnstile site key</Text>
+        <Text style={styles.missingText}>未配置 Turnstile site key 或 base URL</Text>
       </View>
     );
   }
