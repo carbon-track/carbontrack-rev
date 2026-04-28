@@ -470,11 +470,6 @@ function getTimelineSortOrder(item) {
   return Number.isFinite(order) ? order : 0;
 }
 
-function getTimelineStepSequence(item) {
-  const sequence = Number(item?.step?.sequence);
-  return Number.isFinite(sequence) ? sequence : null;
-}
-
 function getTimelineSortRank(item) {
   if (item?.role === 'user') return 0;
   if (item?.kind === 'agent_step') return 1;
@@ -586,13 +581,6 @@ function buildConversationTimeline(conversation) {
     const rightRank = getTimelineSortRank(right);
     if (leftRank !== rightRank) {
       return leftRank - rightRank;
-    }
-    if (left?.kind === 'agent_step' && right?.kind === 'agent_step') {
-      const leftSequence = getTimelineStepSequence(left);
-      const rightSequence = getTimelineStepSequence(right);
-      if (leftSequence != null && rightSequence != null && leftSequence !== rightSequence) {
-        return leftSequence - rightSequence;
-      }
     }
     return 0;
   });
@@ -1332,6 +1320,10 @@ function JsonPreview({ value, className }) {
   );
 }
 
+function isPlainObject(value) {
+  return value && Object.prototype.toString.call(value) === '[object Object]';
+}
+
 const SENSITIVE_FIELD_PATTERN = /(?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential)/i;
 const SENSITIVE_STRING_PATTERNS = [
   [/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, '$1***'],
@@ -1349,7 +1341,7 @@ function maskSensitiveValue(value) {
   if (Array.isArray(value)) {
     return value.map((item) => maskSensitiveValue(item));
   }
-  if (value && Object.prototype.toString.call(value) === '[object Object]') {
+  if (isPlainObject(value)) {
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [
         key,
@@ -1361,6 +1353,180 @@ function maskSensitiveValue(value) {
     return maskSensitiveString(value);
   }
   return value;
+}
+
+function formatSnapshotLabel(value) {
+  return String(value || '')
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function isSimpleSnapshotValue(value) {
+  return value == null || ['string', 'number', 'boolean'].includes(typeof value);
+}
+
+function formatSnapshotValue(value, isZh) {
+  if (value == null || value === '') {
+    return isZh ? '无' : 'None';
+  }
+  if (typeof value === 'boolean') {
+    return value ? (isZh ? '是' : 'Yes') : (isZh ? '否' : 'No');
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? String(value) : '--';
+  }
+  return maskSensitiveString(String(value));
+}
+
+function getTableColumns(rows) {
+  const priority = ['id', 'status', 'username', 'email', 'name', 'activity_name', 'date', 'carbon_saved', 'points_earned', 'total'];
+  const keys = [];
+  rows.forEach((row) => {
+    if (!isPlainObject(row)) return;
+    Object.entries(row).forEach(([key, value]) => {
+      if (isSimpleSnapshotValue(value) && !keys.includes(key)) {
+        keys.push(key);
+      }
+    });
+  });
+
+  return keys
+    .sort((left, right) => {
+      const leftPriority = priority.indexOf(left);
+      const rightPriority = priority.indexOf(right);
+      if (leftPriority !== -1 || rightPriority !== -1) {
+        return (leftPriority === -1 ? 999 : leftPriority) - (rightPriority === -1 ? 999 : rightPriority);
+      }
+      return left.localeCompare(right);
+    })
+    .slice(0, 6);
+}
+
+function RawJsonToggle({ value, isZh }) {
+  const [open, setOpen] = useState(false);
+
+  if (!Array.isArray(value) && !isPlainObject(value)) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 border-t border-slate-200/80 pt-3 dark:border-white/8">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className={cn(`inline-flex items-center gap-1 text-[11px] font-medium ${TEXT_TERTIARY_CLASS} hover:text-slate-700 dark:hover:text-slate-300`)}
+      >
+        <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-90')} />
+        {open ? (isZh ? '隐藏原始 JSON' : 'Hide raw JSON') : (isZh ? '查看原始 JSON' : 'View raw JSON')}
+      </button>
+      {open ? <JsonPreview value={value} className="mt-2" /> : null}
+    </div>
+  );
+}
+
+function SnapshotArrayTable({ value, isZh }) {
+  if (!value.length) {
+    return <div className={cn(`text-xs ${TEXT_TERTIARY_CLASS}`)}>{isZh ? '空列表' : 'Empty list'}</div>;
+  }
+
+  const objectRows = value.filter((item) => isPlainObject(item));
+  const columns = getTableColumns(objectRows);
+
+  if (objectRows.length === 0 || columns.length === 0) {
+    return (
+      <div className="space-y-1.5">
+        {value.slice(0, 6).map((item, index) => (
+          <div key={index} className={cn(`rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs ${TEXT_SECONDARY_CLASS} dark:border-white/8 dark:bg-white/[0.03]`)}>
+            {formatSnapshotValue(item, isZh)}
+          </div>
+        ))}
+        {value.length > 6 ? <div className={cn(`text-[11px] ${TEXT_TERTIARY_CLASS}`)}>{isZh ? `另有 ${value.length - 6} 项` : `${value.length - 6} more items`}</div> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/70 dark:border-white/8 dark:bg-white/[0.03]">
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-left text-xs">
+          <thead className="bg-slate-100/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-white/[0.04] dark:text-slate-400">
+            <tr>
+              {columns.map((column) => <th key={column} className="px-3 py-2 font-medium">{formatSnapshotLabel(column)}</th>)}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200/80 dark:divide-white/8">
+            {objectRows.slice(0, 5).map((row, index) => (
+              <tr key={row.id || row.uuid || index}>
+                {columns.map((column) => (
+                  <td key={column} className={cn(`max-w-[14rem] truncate px-3 py-2 ${TEXT_SECONDARY_CLASS}`)}>
+                    {formatSnapshotValue(row[column], isZh)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {value.length > 5 ? (
+        <div className={cn(`border-t border-slate-200/80 px-3 py-2 text-[11px] ${TEXT_TERTIARY_CLASS} dark:border-white/8`)}>
+          {isZh ? `仅显示前 5 项，共 ${value.length} 项` : `Showing 5 of ${value.length} items`}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ReadableSnapshot({ value, isZh, depth = 0 }) {
+  if (Array.isArray(value)) {
+    return (
+      <div className="space-y-3">
+        <SnapshotArrayTable value={value} isZh={isZh} />
+        <RawJsonToggle value={value} isZh={isZh} />
+      </div>
+    );
+  }
+
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value).filter(([, item]) => item != null && item !== '');
+    const simpleEntries = entries.filter(([, item]) => isSimpleSnapshotValue(item));
+    const nestedEntries = entries.filter(([, item]) => Array.isArray(item) || isPlainObject(item));
+
+    return (
+      <div className="space-y-3">
+        {simpleEntries.length > 0 ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {simpleEntries.map(([key, item]) => (
+              <div key={key} className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 dark:border-white/8 dark:bg-white/[0.03]">
+                <div className={cn(`text-[11px] uppercase tracking-wide ${TEXT_TERTIARY_CLASS}`)}>{formatSnapshotLabel(key)}</div>
+                <div className={cn(`mt-1 break-words text-xs font-medium ${TEXT_PRIMARY_CLASS}`)}>{formatSnapshotValue(item, isZh)}</div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {nestedEntries.slice(0, depth > 0 ? 2 : 4).map(([key, item]) => (
+          <div key={key} className="space-y-2">
+            <div className={cn(`text-[11px] font-semibold uppercase tracking-wide ${TEXT_TERTIARY_CLASS}`)}>{formatSnapshotLabel(key)}</div>
+            {depth >= 1 && isPlainObject(item) ? (
+              <div className={cn(`rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs ${TEXT_SECONDARY_CLASS} dark:border-white/8 dark:bg-white/[0.03]`)}>
+                {Object.keys(item).length} {isZh ? '个字段' : 'fields'}
+              </div>
+            ) : (
+              <ReadableSnapshot value={item} isZh={isZh} depth={depth + 1} />
+            )}
+          </div>
+        ))}
+        {nestedEntries.length > (depth > 0 ? 2 : 4) ? (
+          <div className={cn(`text-[11px] ${TEXT_TERTIARY_CLASS}`)}>
+            {isZh ? `另有 ${nestedEntries.length - (depth > 0 ? 2 : 4)} 个分组` : `${nestedEntries.length - (depth > 0 ? 2 : 4)} more groups`}
+          </div>
+        ) : null}
+        <RawJsonToggle value={value} isZh={isZh} />
+      </div>
+    );
+  }
+
+  return <div className={cn(`text-xs leading-6 ${TEXT_SECONDARY_CLASS}`)}>{formatSnapshotValue(value, isZh)}</div>;
 }
 
 function ResultSnapshot({ title, value, isZh }) {
@@ -1414,11 +1580,7 @@ function ResultSnapshot({ title, value, isZh }) {
           {open ? (isZh ? '收起' : 'Collapse') : (isZh ? '展开' : 'Expand')}
         </span>
       </button>
-      {open ? (
-        typeof displayValue === 'object'
-          ? <JsonPreview value={displayValue} className="mt-3" />
-          : <div className={cn(`mt-3 text-xs leading-6 ${TEXT_SECONDARY_CLASS}`)}>{String(displayValue) || (isZh ? '无结果。' : 'No result.')}</div>
-      ) : null}
+      {open ? <div className="mt-3"><ReadableSnapshot value={displayValue} isZh={isZh} /></div> : null}
     </div>
   );
 }
@@ -1460,7 +1622,7 @@ function AgentStepTimelineCard({ item, locale, isZh, disabled, onRollback }) {
   const result = output?.result ?? null;
   const proposal = output?.proposal ?? null;
   const suggestion = output?.suggestion ?? null;
-  const rollback = output?.meta?.rollback_available || output?.rollback_available || null;
+  const rollback = output?.meta?.rollback_available || null;
   const status = step?.status || 'unknown';
   const toolName = step.tool_name || step.type || (isZh ? '管理工具' : 'Admin tool');
   const statusTone = status === 'error'
