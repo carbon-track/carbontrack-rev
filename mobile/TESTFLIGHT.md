@@ -11,6 +11,21 @@
 - 默认 API: `https://dev-api.carbontrackapp.com/api/v1`
 - Turnstile base URL: `https://dev.carbontrackapp.com`
 
+## macOS / Xcode 要求
+
+为启用 iOS 26 Liquid Glass，并避免 native tabs 与 JS bundle 版本错配，TestFlight 构建机应使用当前稳定 Xcode 26 线：
+
+- 推荐：macOS Tahoe 26.2 或更新版本。
+- 推荐：Xcode 26.4.1 或更新的稳定版。
+- 最低可理解范围：Xcode 26.0-26.3 可在 macOS Sequoia 15.6 或更新版本运行，但这些版本较旧，不建议作为 TestFlight 发布环境。
+- 不建议：Xcode beta 作为面向测试用户的 TestFlight 包，除非需要验证 beta SDK 行为。
+
+参考 Apple 官方要求：
+
+- Xcode system requirements: `https://developer.apple.com/xcode/system-requirements/`
+- Xcode 26.4.1 Release Notes: `https://developer.apple.com/documentation/xcode-release-notes/xcode-26_4_1-release-notes`
+- iOS & iPadOS 26 Release Notes: `https://developer.apple.com/documentation/ios-ipados-release-notes/ios-ipados-26-release-notes`
+
 ## 关键原生包
 
 - Liquid Glass: `@callstack/liquid-glass`
@@ -39,6 +54,20 @@ EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS=true
 
 ## 构建步骤
 
+0. 在构建机确认版本：
+
+```bash
+sw_vers
+xcodebuild -version
+xcode-select -p
+```
+
+期望输出至少满足：
+
+- `ProductVersion` 为 `26.2` 或更新，或已确认使用兼容的 macOS Sequoia 15.6+ 与 Xcode 26.0-26.3。
+- `Xcode` 为 `26.4.1` 或更新稳定版。
+- `xcode-select -p` 指向当前 Xcode，例如 `/Applications/Xcode.app/Contents/Developer`。
+
 1. 安装依赖：
 
 ```powershell
@@ -59,7 +88,7 @@ pnpm exec expo config --type public
 - `app.json` 内保留 `ios.associatedDomains=["webcredentials:carbontrackapp.com"]`。
 - `https://carbontrackapp.com/.well-known/apple-app-site-association` 包含 `webcredentials` 配置，并覆盖 `com.carbontrack.mobile` 所属 Team ID 与 bundle identifier。
 
-4. 构建 iOS 原生包。仓库当前没有固定 `eas.json`，可在 CI 或本机使用等价的 production profile；核心要求是重新执行 prebuild/native build，让 CocoaPods 安装上面列出的 native packages。
+4. 构建 iOS 原生包。仓库当前没有固定 `eas.json`，可在 CI 或本机使用等价的 production profile；核心要求是使用上面指定的 macOS / Xcode 环境重新执行 prebuild/native build，让 CocoaPods 安装上面列出的 native packages。
 
 ```powershell
 npx eas-cli build --platform ios --profile production
