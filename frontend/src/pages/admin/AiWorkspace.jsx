@@ -470,6 +470,11 @@ function getTimelineSortOrder(item) {
   return Number.isFinite(order) ? order : 0;
 }
 
+function getTimelineStepSequence(item) {
+  const sequence = Number(item?.step?.sequence);
+  return Number.isFinite(sequence) ? sequence : null;
+}
+
 function getTimelineSortRank(item) {
   if (item?.role === 'user') return 0;
   if (item?.kind === 'agent_step') return 1;
@@ -577,6 +582,13 @@ function buildConversationTimeline(conversation) {
     const rightRank = getTimelineSortRank(right);
     if (leftRank !== rightRank) {
       return leftRank - rightRank;
+    }
+    if (left?.kind === 'agent_step' && right?.kind === 'agent_step') {
+      const leftSequence = getTimelineStepSequence(left);
+      const rightSequence = getTimelineStepSequence(right);
+      if (leftSequence != null && rightSequence != null && leftSequence !== rightSequence) {
+        return leftSequence - rightSequence;
+      }
     }
     return getTimelineSortOrder(left) - getTimelineSortOrder(right);
   });
