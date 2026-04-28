@@ -4,7 +4,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useQuery } from '@tanstack/react-query';
 import { Field, LinkButton, PrimaryButton } from '../components/FormControls';
 import RegionSelector from '../components/RegionSelector';
-import TurnstileWidget from '../components/Turnstile';
+import TurnstileWidget, { isTurnstileConfigured } from '../components/Turnstile';
 import { authApi } from '../api/auth';
 import { schoolApi } from '../api/schools';
 import useAuthStore from '../store/authStore';
@@ -61,7 +61,7 @@ export default function RegisterScreen({ navigation }) {
     if (useNewSchool && !newSchoolName.trim()) {
       return '请输入学校名称';
     }
-    if (!turnstileToken) {
+    if (isTurnstileConfigured && !turnstileToken) {
       return '请先完成人机验证';
     }
     return '';
@@ -83,8 +83,10 @@ export default function RegisterScreen({ navigation }) {
         confirm_password: confirmPassword,
         country_code: countryCode,
         state_code: stateCode,
-        cf_turnstile_response: turnstileToken,
       };
+      if (turnstileToken) {
+        payload.cf_turnstile_response = turnstileToken;
+      }
       if (schoolId) {
         payload.school_id = Number(schoolId);
       } else if (newSchoolName.trim()) {
@@ -147,12 +149,14 @@ export default function RegisterScreen({ navigation }) {
             </View>
           )}
 
-          <TurnstileWidget
-            resetKey={turnstileResetKey}
-            onVerify={setTurnstileToken}
-            onExpire={resetTurnstile}
-            onError={resetTurnstile}
-          />
+          {isTurnstileConfigured ? (
+            <TurnstileWidget
+              resetKey={turnstileResetKey}
+              onVerify={setTurnstileToken}
+              onExpire={resetTurnstile}
+              onError={resetTurnstile}
+            />
+          ) : null}
           <PrimaryButton title="注册" loading={loading} onPress={handleRegister} />
           <LinkButton title="已有账号？登录" onPress={() => navigation.navigate('Login')} />
         </View>

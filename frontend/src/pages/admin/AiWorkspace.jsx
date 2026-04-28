@@ -1330,10 +1330,10 @@ function isPlainObject(value) {
   return value && Object.prototype.toString.call(value) === '[object Object]';
 }
 
-const SENSITIVE_FIELD_PATTERN = /(?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential)/i;
+const SENSITIVE_FIELD_PATTERN = /(?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential|cvv|credit[_-]?card)/i;
 const SENSITIVE_STRING_PATTERNS = [
   [/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, '$1***'],
-  [/((?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential)\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,;]+)/gi, '$1***'],
+  [/((?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential|cvv|credit[_-]?card)\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,;]+)/gi, '$1***'],
 ];
 
 function maskSensitiveString(value) {

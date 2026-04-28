@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Field, PrimaryButton } from '../components/FormControls';
-import TurnstileWidget from '../components/Turnstile';
+import TurnstileWidget, { isTurnstileConfigured } from '../components/Turnstile';
 import { authApi } from '../api/auth';
 import useAuthStore from '../store/authStore';
 
@@ -22,16 +22,19 @@ export default function VerifyEmailScreen({ navigation, route }) {
   };
 
   const handleSendCode = async () => {
-    if (!email.trim() || !turnstileToken) {
-      Alert.alert('发送失败', '请输入邮箱并完成人机验证');
+    if (!email.trim() || (isTurnstileConfigured && !turnstileToken)) {
+      Alert.alert('发送失败', isTurnstileConfigured ? '请输入邮箱并完成人机验证' : '请输入邮箱');
       return;
     }
     setSending(true);
     try {
-      await authApi.sendVerificationCode({
+      const payload = {
         email: email.trim(),
-        cf_turnstile_response: turnstileToken,
-      });
+      };
+      if (turnstileToken) {
+        payload.cf_turnstile_response = turnstileToken;
+      }
+      await authApi.sendVerificationCode(payload);
       resetTurnstile();
       Alert.alert('已发送', '验证码已发送至邮箱');
     } catch (err) {
@@ -43,17 +46,20 @@ export default function VerifyEmailScreen({ navigation, route }) {
   };
 
   const handleVerify = async () => {
-    if (!email.trim() || !code.trim() || !turnstileToken) {
-      Alert.alert('验证失败', '请输入邮箱、验证码并完成人机验证');
+    if (!email.trim() || !code.trim() || (isTurnstileConfigured && !turnstileToken)) {
+      Alert.alert('验证失败', isTurnstileConfigured ? '请输入邮箱、验证码并完成人机验证' : '请输入邮箱和验证码');
       return;
     }
     setLoading(true);
     try {
-      const result = await authApi.verifyEmail({
+      const payload = {
         email: email.trim(),
         code: code.trim(),
-        cf_turnstile_response: turnstileToken,
-      });
+      };
+      if (turnstileToken) {
+        payload.cf_turnstile_response = turnstileToken;
+      }
+      const result = await authApi.verifyEmail(payload);
       if (!result.success) {
         throw new Error(result.message || '验证失败');
       }
@@ -78,12 +84,14 @@ export default function VerifyEmailScreen({ navigation, route }) {
         <View style={styles.form}>
           <Field label="邮箱" placeholder="name@example.com" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
           <Field label="验证码" placeholder="请输入验证码" value={code} onChangeText={setCode} autoCapitalize="none" />
-          <TurnstileWidget
-            resetKey={turnstileResetKey}
-            onVerify={setTurnstileToken}
-            onExpire={resetTurnstile}
-            onError={resetTurnstile}
-          />
+          {isTurnstileConfigured ? (
+            <TurnstileWidget
+              resetKey={turnstileResetKey}
+              onVerify={setTurnstileToken}
+              onExpire={resetTurnstile}
+              onError={resetTurnstile}
+            />
+          ) : null}
           <PrimaryButton title="验证邮箱" loading={loading} onPress={handleVerify} />
           <PrimaryButton title="重新发送验证码" loading={sending} onPress={handleSendCode} />
         </View>
