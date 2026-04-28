@@ -52,6 +52,8 @@ EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS=true
 
 默认仓库配置把两个 native 开关设为 `false`，是为了让 Expo Go 和未重建的旧 dev client 不因为缺少 `NativeLiquidGlassModule` 或 native tabs 新签名而崩溃。只有 TestFlight 或重新构建后的自定义 dev client 才应设为 `true`。
 
+开发模式下 `__DEV__` 为 `true`，应用会强制使用 JS fallback；即使本地把开关设为 `true`，也不会加载 Liquid Glass 或 native tabs。验证原生 Liquid Glass 时请使用 TestFlight/Release 构建。
+
 ## 构建步骤
 
 0. 在构建机确认版本：

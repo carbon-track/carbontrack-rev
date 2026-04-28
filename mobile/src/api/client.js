@@ -3,7 +3,7 @@ import { jwtDecode } from 'jwt-decode';
 import useAuthStore from '../store/authStore';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dev-api.carbontrackapp.com/api/v1';
-const REFRESH_THRESHOLD_SECONDS = 30 * 60;
+const REFRESH_THRESHOLD_SECONDS = 10 * 60;
 
 const refreshPromises = new Map();
 

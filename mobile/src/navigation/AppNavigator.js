@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { enableScreens } from 'react-native-screens';
 import useAuthStore from '../store/authStore';
@@ -24,8 +23,21 @@ enableScreens();
 
 const Stack = createNativeStackNavigator();
 const RecordStack = createNativeStackNavigator();
-const nativeTabsEnabled = Platform.OS === 'ios' && process.env.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS === 'true';
-const Tab = nativeTabsEnabled ? createNativeBottomTabNavigator() : createBottomTabNavigator();
+const nativeTabsEnabled = !__DEV__ && Platform.OS === 'ios' && process.env.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS === 'true';
+const createTabs = () => {
+  if (nativeTabsEnabled) {
+    try {
+      const { createNativeBottomTabNavigator } = require('@react-navigation/bottom-tabs/unstable');
+      return createNativeBottomTabNavigator();
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('Native iOS tabs unavailable; using JS tabs.', error);
+      }
+    }
+  }
+  return createBottomTabNavigator();
+};
+const Tab = createTabs();
 
 const tabIcons = {
   Home: {
