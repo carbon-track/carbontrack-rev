@@ -4,7 +4,7 @@ let apiPromise;
 let tokenRefreshPromise = null;
 
 const TOKEN_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
-const TOKEN_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
+const TOKEN_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 const getApi = async () => {
   if (!apiPromise) {
