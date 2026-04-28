@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { LiquidGlassContainerView, LiquidGlassView, isLiquidGlassSupported } from '@callstack/liquid-glass';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { makeShadow, useTheme } from '../theme';
 
@@ -17,13 +17,24 @@ export function ScreenBackground({ children, centered = false, style }) {
 
 export function GlassSurface({ children, style, contentStyle, intensity = 36 }) {
   const { colors, isDark } = useTheme();
+  const glassEffect = intensity >= 42 ? 'regular' : 'clear';
   return (
-    <View style={[styles.glassShell, makeShadow(colors, isDark ? 0.32 : 0.14, 10), style]}>
-      <BlurView intensity={intensity} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFillObject} />
-      <View style={[styles.glassFill, { backgroundColor: colors.surface, borderColor: colors.border }, contentStyle]}>
+    <LiquidGlassContainerView spacing={18} style={[styles.glassShell, makeShadow(colors, isDark ? 0.32 : 0.14, 10), style]}>
+      <LiquidGlassView
+        interactive
+        effect={glassEffect}
+        colorScheme={isDark ? 'dark' : 'light'}
+        tintColor={colors.surface}
+        style={[
+          styles.glassFill,
+          { borderColor: colors.border },
+          !isLiquidGlassSupported ? { backgroundColor: colors.surface } : null,
+          contentStyle,
+        ]}
+      >
         {children}
-      </View>
-    </View>
+      </LiquidGlassView>
+    </LiquidGlassContainerView>
   );
 }
 

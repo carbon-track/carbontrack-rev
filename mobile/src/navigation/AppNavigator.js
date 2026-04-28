@@ -1,10 +1,8 @@
 import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { enableScreens } from 'react-native-screens';
 import useAuthStore from '../store/authStore';
@@ -22,13 +20,13 @@ import ProfileScreen from '../screens/ProfileScreen';
 enableScreens();
 
 const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Tab = createNativeBottomTabNavigator();
 
 const tabIcons = {
-  Home: ['home', 'home-outline'],
-  Record: ['add-circle', 'add-circle-outline'],
-  Store: ['storefront', 'storefront-outline'],
-  Profile: ['person', 'person-outline'],
+  Home: ['house.fill', 'house'],
+  Record: ['plus.circle.fill', 'plus.circle'],
+  Store: ['bag.fill', 'bag'],
+  Profile: ['person.crop.circle.fill', 'person.crop.circle'],
 };
 
 function MainTabs() {
@@ -37,33 +35,27 @@ function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        headerLargeTitleEnabled: true,
         headerShadowVisible: false,
-        headerStyle: { backgroundColor: colors.background },
+        headerStyle: { backgroundColor: 'transparent' },
+        headerTransparent: Platform.OS === 'ios',
+        headerBlurEffect: isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight',
+        headerTintColor: colors.primary,
         headerTitleStyle: { color: colors.text, fontWeight: '900' },
+        headerLargeTitleStyle: { color: colors.text, fontWeight: '900' },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: colors.tab,
-          borderColor: colors.border,
-          borderRadius: 24,
-          borderTopWidth: 1,
-          bottom: 12,
-          height: 68,
-          marginHorizontal: 14,
-          paddingBottom: 10,
-          paddingTop: 8,
-          position: 'absolute',
-        },
-        tabBarBackground: () => (
-          <BlurView intensity={42} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFillObject} />
-        ),
+        tabBarBlurEffect: isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight',
+        tabBarControllerMode: 'tabBar',
+        tabBarMinimizeBehavior: 'onScrollDown',
+        tabBarStyle: { backgroundColor: colors.tab },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '800',
         },
-        tabBarIcon: ({ color, focused, size }) => {
+        tabBarIcon: ({ focused }) => {
           const [active, inactive] = tabIcons[route.name] || tabIcons.Home;
-          return <Ionicons color={color} name={focused ? active : inactive} size={size} />;
+          return Platform.OS === 'ios' ? { type: 'sfSymbol', name: focused ? active : inactive } : undefined;
         },
       })}
     >
