@@ -1,8 +1,34 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { LiquidGlassContainerView, LiquidGlassView, isLiquidGlassSupported } from '@callstack/liquid-glass';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { makeShadow, useTheme } from '../theme';
+
+const loadLiquidGlass = () => {
+  try {
+    const module = require('@callstack/liquid-glass');
+    const supportedFlag = module?.isLiquidGlassSupported;
+    const isSupported = typeof supportedFlag === 'function' ? supportedFlag() : Boolean(supportedFlag);
+    if (module?.LiquidGlassContainerView && module?.LiquidGlassView && isSupported) {
+      return {
+        Container: module.LiquidGlassContainerView,
+        Surface: module.LiquidGlassView,
+        isAvailable: true,
+      };
+    }
+  } catch (error) {
+    if (__DEV__) {
+      console.warn('Liquid Glass native module unavailable; using fallback surface.', error);
+    }
+  }
+
+  return {
+    Container: View,
+    Surface: View,
+    isAvailable: false,
+  };
+};
+
+const LiquidGlass = loadLiquidGlass();
 
 export function ScreenBackground({ children, centered = false, style }) {
   const { colors } = useTheme();
@@ -18,9 +44,28 @@ export function ScreenBackground({ children, centered = false, style }) {
 export function GlassSurface({ children, style, contentStyle, intensity = 36 }) {
   const { colors, isDark } = useTheme();
   const glassEffect = intensity >= 42 ? 'regular' : 'clear';
+  const Container = LiquidGlass.Container;
+  const Surface = LiquidGlass.Surface;
+
+  if (!LiquidGlass.isAvailable) {
+    return (
+      <Container style={[styles.glassShell, makeShadow(colors, isDark ? 0.32 : 0.14, 10), style]}>
+        <Surface
+          style={[
+            styles.glassFill,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+            contentStyle,
+          ]}
+        >
+          {children}
+        </Surface>
+      </Container>
+    );
+  }
+
   return (
-    <LiquidGlassContainerView spacing={18} style={[styles.glassShell, makeShadow(colors, isDark ? 0.32 : 0.14, 10), style]}>
-      <LiquidGlassView
+    <Container spacing={18} style={[styles.glassShell, makeShadow(colors, isDark ? 0.32 : 0.14, 10), style]}>
+      <Surface
         interactive
         effect={glassEffect}
         colorScheme={isDark ? 'dark' : 'light'}
@@ -28,13 +73,12 @@ export function GlassSurface({ children, style, contentStyle, intensity = 36 }) 
         style={[
           styles.glassFill,
           { borderColor: colors.border },
-          !isLiquidGlassSupported ? { backgroundColor: colors.surface } : null,
           contentStyle,
         ]}
       >
         {children}
-      </LiquidGlassView>
-    </LiquidGlassContainerView>
+      </Surface>
+    </Container>
   );
 }
 
