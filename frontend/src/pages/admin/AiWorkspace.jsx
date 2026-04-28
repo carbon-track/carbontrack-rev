@@ -440,11 +440,11 @@ function getConversationMessageStepId(message) {
 function getConversationMessageActionName(message) {
   const data = message?.meta?.data || {};
   return data?.action_name
-    || message?.action
     || data?.request_payload?.action_name
     || data?.request_payload?.payload?.action
     || data?.payload?.action
     || data?.tool_name
+    || message?.action
     || null;
 }
 
@@ -578,6 +578,10 @@ function buildConversationTimeline(conversation) {
     if (leftTime !== rightTime) {
       return leftTime - rightTime;
     }
+    const orderDiff = getTimelineSortOrder(left) - getTimelineSortOrder(right);
+    if (orderDiff !== 0) {
+      return orderDiff;
+    }
     const leftRank = getTimelineSortRank(left);
     const rightRank = getTimelineSortRank(right);
     if (leftRank !== rightRank) {
@@ -590,7 +594,7 @@ function buildConversationTimeline(conversation) {
         return leftSequence - rightSequence;
       }
     }
-    return getTimelineSortOrder(left) - getTimelineSortOrder(right);
+    return 0;
   });
 }
 
@@ -1345,7 +1349,7 @@ function maskSensitiveValue(value) {
   if (Array.isArray(value)) {
     return value.map((item) => maskSensitiveValue(item));
   }
-  if (value && typeof value === 'object' && value.constructor === Object) {
+  if (value && Object.prototype.toString.call(value) === '[object Object]') {
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [
         key,
