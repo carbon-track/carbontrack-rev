@@ -17,6 +17,7 @@ class ProofOfWorkService
     private int $difficulty;
     private int $ttlSeconds;
     private ?PDO $db;
+    private \DateTimeZone $clockTimezone;
 
     public function __construct(
         string $secret,
@@ -34,17 +35,18 @@ class ProofOfWorkService
         $this->difficulty = max(8, min(28, $difficulty));
         $this->ttlSeconds = max(30, min(600, $ttlSeconds));
         $this->db = $db;
+        $this->clockTimezone = new \DateTimeZone('UTC');
     }
 
     public function createChallenge(string $scope): array
     {
-        $expiresAt = time() + $this->ttlSeconds;
+        $expiresAt = $this->now()->modify('+' . $this->ttlSeconds . ' seconds');
         $payload = [
             'id' => bin2hex(random_bytes(16)),
             'salt' => bin2hex(random_bytes(16)),
             'scope' => $scope,
             'difficulty' => $this->difficulty,
-            'exp' => $expiresAt,
+            'exp' => $expiresAt->getTimestamp(),
         ];
         $payloadJson = json_encode($payload, JSON_UNESCAPED_SLASHES);
         if ($payloadJson === false) {
@@ -59,7 +61,7 @@ class ProofOfWorkService
         $this->logAudit('pow_challenge_created', [
             'scope' => $scope,
             'difficulty' => $this->difficulty,
-            'expires_at' => gmdate(DATE_ATOM, $expiresAt),
+            'expires_at' => $this->formatAtom($expiresAt),
         ]);
 
         return [
@@ -67,7 +69,7 @@ class ProofOfWorkService
             'difficulty' => $this->difficulty,
             'algorithm' => 'sha256',
             'scope' => $scope,
-            'expires_at' => gmdate(DATE_ATOM, $expiresAt),
+            'expires_at' => $this->formatAtom($expiresAt),
         ];
     }
 
@@ -101,7 +103,7 @@ class ProofOfWorkService
             return ['success' => false, 'error' => 'scope-mismatch'];
         }
 
-        if ((int)($payload['exp'] ?? 0) < time()) {
+        if ((int)($payload['exp'] ?? 0) < $this->now()->getTimestamp()) {
             $this->logAudit('pow_verification_expired', ['scope' => $expectedScope], 'failed');
             return ['success' => false, 'error' => 'expired-challenge'];
         }
@@ -168,13 +170,13 @@ class ProofOfWorkService
                 'INSERT INTO proof_of_work_challenges (challenge_id, challenge_hash, scope, difficulty, expires_at, created_at, updated_at)
                  VALUES (?, ?, ?, ?, ?, ? , ?)'
             );
-            $now = gmdate('Y-m-d H:i:s');
+            $now = $this->formatSql($this->now());
             $stmt->execute([
                 (string)$payload['id'],
                 hash('sha256', $challenge),
                 (string)$payload['scope'],
                 (int)$payload['difficulty'],
-                gmdate('Y-m-d H:i:s', (int)$payload['exp']),
+                $this->formatSql($this->fromEpoch((int)$payload['exp'])),
                 $now,
                 $now,
             ]);
@@ -191,7 +193,7 @@ class ProofOfWorkService
         }
 
         try {
-            $now = gmdate('Y-m-d H:i:s');
+            $now = $this->formatSql($this->now());
             $stmt = $this->db->prepare(
                 'UPDATE proof_of_work_challenges
                  SET used_at = ?, updated_at = ?
@@ -224,7 +226,7 @@ class ProofOfWorkService
         }
 
         try {
-            $threshold = gmdate('Y-m-d H:i:s', time() - 600);
+            $threshold = $this->formatSql($this->now()->modify('-600 seconds'));
             $stmt = $this->db->prepare(
                 'DELETE FROM proof_of_work_challenges
                  WHERE expires_at < ?
@@ -252,6 +254,26 @@ class ProofOfWorkService
 
         $mask = 0xff << (8 - $remainingBits);
         return (ord($hash[$fullBytes]) & $mask) === 0;
+    }
+
+    private function now(): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable('now', $this->clockTimezone);
+    }
+
+    private function fromEpoch(int $timestamp): \DateTimeImmutable
+    {
+        return (new \DateTimeImmutable('@' . $timestamp))->setTimezone($this->clockTimezone);
+    }
+
+    private function formatSql(\DateTimeImmutable $value): string
+    {
+        return $value->setTimezone($this->clockTimezone)->format('Y-m-d H:i:s');
+    }
+
+    private function formatAtom(\DateTimeImmutable $value): string
+    {
+        return $value->setTimezone($this->clockTimezone)->format(DATE_ATOM);
     }
 
     private function base64UrlEncode(string $value): string

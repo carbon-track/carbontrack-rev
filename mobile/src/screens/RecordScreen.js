@@ -23,8 +23,54 @@ import { carbonApi } from '../api/carbon';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
 
-const todayString = () => new Date().toLocaleDateString('en-CA');
+const padDatePart = (value) => String(value).padStart(2, '0');
+const todayString = (value = new Date()) => (
+  `${value.getFullYear()}-${padDatePart(value.getMonth() + 1)}-${padDatePart(value.getDate())}`
+);
 const formatNumber = (value) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(Number(value || 0));
+
+const normalizeAmountInput = (value) => {
+  const asciiValue = String(value || '')
+    .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    .replace(/[，。]/g, '.')
+    .replace(/,/g, '.')
+    .replace(/[^\d.]/g, '');
+  const [whole, ...fractions] = asciiValue.split('.');
+  const normalized = fractions.length ? `${whole}.${fractions.join('')}` : whole;
+  return normalized.startsWith('.') ? `0${normalized}` : normalized;
+};
+
+const parsePositiveAmount = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const normalizeDateInput = (value) => {
+  const digits = String(value || '').replace(/[^\d]/g, '').slice(0, 8);
+  if (digits.length <= 4) {
+    return digits;
+  }
+  if (digits.length <= 6) {
+    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  }
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+};
+
+const isValidDateString = (value) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return false;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const dateValue = new Date(year, month - 1, day);
+  return (
+    dateValue.getFullYear() === year
+    && dateValue.getMonth() === month - 1
+    && dateValue.getDate() === day
+  );
+};
 
 const getActivityName = (item, language) => {
   if (language === 'zh') {
@@ -132,11 +178,16 @@ export default function RecordScreen({ navigation }) {
   });
 
   const requestCalculation = () => {
-    if (!activityId || !amount || Number(amount) <= 0) {
+    const parsedAmount = parsePositiveAmount(amount);
+    if (!activityId) {
       Alert.alert(t('record.calculateFailed'), t('record.missingCalculationFields'));
       return;
     }
-    calculateMutation.mutate({ activityId, amount, unit: selectedActivity?.unit });
+    if (parsedAmount === null) {
+      Alert.alert(t('record.calculateFailed'), t('record.invalidAmount'));
+      return;
+    }
+    calculateMutation.mutate({ activityId, amount: parsedAmount, unit: selectedActivity?.unit });
   };
 
   const pickImage = async () => {
@@ -156,14 +207,24 @@ export default function RecordScreen({ navigation }) {
   };
 
   const submit = () => {
-    if (!activityId || !amount || Number(amount) <= 0 || !date || !image) {
+    const parsedAmount = parsePositiveAmount(amount);
+    const normalizedDate = normalizeDateInput(date);
+    if (!activityId || !normalizedDate || !image) {
       Alert.alert(t('record.submitFailed'), t('record.missingSubmitFields'));
+      return;
+    }
+    if (parsedAmount === null) {
+      Alert.alert(t('record.submitFailed'), t('record.invalidAmount'));
+      return;
+    }
+    if (!isValidDateString(normalizedDate)) {
+      Alert.alert(t('record.submitFailed'), t('record.invalidDate'));
       return;
     }
     submitMutation.mutate({
       activityId,
-      amount,
-      date,
+      amount: parsedAmount,
+      date: normalizedDate,
       description,
       image,
       unit: selectedActivity?.unit,
@@ -225,12 +286,33 @@ export default function RecordScreen({ navigation }) {
                 placeholder={selectedActivity?.unit ? t('record.amountPlaceholderWithUnit', { unit: selectedActivity.unit }) : t('record.amountPlaceholder')}
                 value={amount}
                 onChangeText={(value) => {
-                  setAmount(value);
+                  setAmount(normalizeAmountInput(value));
                   setCalculation(null);
                 }}
                 keyboardType="decimal-pad"
               />
-              <Field label={t('record.date')} placeholder={t('record.datePlaceholder')} value={date} onChangeText={setDate} />
+              <View style={styles.dateRow}>
+                <View style={styles.dateField}>
+                  <Field
+                    label={t('record.date')}
+                    placeholder={t('record.datePlaceholder')}
+                    value={date}
+                    onChangeText={(value) => setDate(normalizeDateInput(value))}
+                    keyboardType={Platform.OS === 'ios' ? 'number-pad' : 'numeric'}
+                  />
+                </View>
+                <Pressable
+                  onPress={() => setDate(todayString())}
+                  style={({ pressed }) => [
+                    styles.todayButton,
+                    { backgroundColor: colors.surfaceStrong, borderColor: colors.borderStrong },
+                    pressed ? { opacity: 0.78 } : null,
+                  ]}
+                >
+                  <Ionicons color={colors.primary} name="calendar-outline" size={17} />
+                  <Text style={[styles.todayButtonText, { color: colors.text }]}>{t('record.useToday')}</Text>
+                </Pressable>
+              </View>
               <Field
                 label={t('record.description')}
                 placeholder={t('record.descriptionPlaceholder')}
@@ -354,6 +436,28 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
+  },
+  dateRow: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  dateField: {
+    flex: 1,
+    minWidth: 0,
+  },
+  todayButton: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 50,
+    paddingHorizontal: 12,
+  },
+  todayButtonText: {
+    fontSize: 13,
+    fontWeight: '800',
   },
   descriptionInput: {
     minHeight: 86,
