@@ -100,7 +100,16 @@ class AuthController
             ]);
         } catch (\Throwable $e) {
             $this->logger->error('Proof-of-work challenge creation failed', ['error' => $e->getMessage()]);
-            try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
+            try {
+                if ($this->errorLogService) {
+                    $this->errorLogService->logException($e, $request);
+                }
+            } catch (\Throwable $loggingError) {
+                $this->logger->warning('ErrorLogService failed while logging proof-of-work challenge error', [
+                    'error' => $loggingError->getMessage(),
+                    'original_error' => $e->getMessage(),
+                ]);
+            }
             return $this->jsonResponse($response, [
                 'success' => false,
                 'message' => 'Failed to create proof-of-work challenge',
@@ -1384,13 +1393,15 @@ class AuthController
 
     private function shouldUseMobileProofOfWork(Request $request, array $data): bool
     {
-        $clientType = strtolower(trim((string)($data['client_type'] ?? $request->getHeaderLine('X-Client-Platform'))));
-        if ($clientType !== 'mobile') {
+        $bodyClientType = strtolower(trim((string)($data['client_type'] ?? '')));
+        $headerClientType = strtolower(trim($request->getHeaderLine('X-Client-Platform')));
+        if ($bodyClientType !== 'mobile' || $headerClientType !== 'mobile') {
             return false;
         }
 
-        // Browser-originated requests must stay on Turnstile even if a caller spoofs client_type.
-        return trim($request->getHeaderLine('Origin')) === '';
+        // Browser-originated requests must stay on Turnstile even if a caller spoofs mobile markers.
+        return trim($request->getHeaderLine('Origin')) === ''
+            && trim($request->getHeaderLine('Sec-Fetch-Site')) === '';
     }
 
     private function logChallengeFailure(string $action, Request $request, string $scope, ?string $reason = null): void
@@ -1408,8 +1419,13 @@ class AuthController
                     'user_agent' => $request->getHeaderLine('User-Agent'),
                 ],
             ]);
-        } catch (\Throwable $ignore) {
-            // ignore audit failures for challenge rejection
+        } catch (\Throwable $auditError) {
+            $this->logger->warning('AuditLogService failed while logging challenge rejection', [
+                'action' => $action,
+                'scope' => $scope,
+                'reason' => $reason,
+                'error' => $auditError->getMessage(),
+            ]);
         }
     }
 

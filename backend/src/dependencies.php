@@ -741,7 +741,7 @@ $__deps_initializer = function (Container $container) {
             $c->get(BadgeService::class),
             $c->get(LeaderboardService::class),
             $c->get(StreakLeaderboardService::class),
-            $envBool('CRON_ENDPOINT_AUDIT_LOGS_ENABLED', false),
+            $envBool('CRON_ENDPOINT_AUDIT_LOGS_ENABLED', true),
             $c->get(ProofOfWorkService::class)
         );
     });
@@ -1135,7 +1135,7 @@ $__deps_initializer = function (Container $container) {
             $c->get(LoggerInterface::class),
             $c->get(ErrorLogService::class),
             $c->get(AuditLogService::class),
-            $envBool('CRON_ENDPOINT_AUDIT_LOGS_ENABLED', false)
+            $envBool('CRON_ENDPOINT_AUDIT_LOGS_ENABLED', true)
         );
     });
 
@@ -1177,7 +1177,7 @@ $__deps_initializer = function (Container $container) {
             $c->get(SystemLogService::class),
             $c->get(AuthService::class),
             $c->get(Logger::class),
-            $envBool('CRON_ENDPOINT_SYSTEM_LOGS_ENABLED', false)
+            $envBool('CRON_ENDPOINT_SYSTEM_LOGS_ENABLED', true)
         );
     });
 };

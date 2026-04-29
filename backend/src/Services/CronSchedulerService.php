@@ -51,7 +51,7 @@ class CronSchedulerService
         private BadgeService $badgeService,
         private LeaderboardService $leaderboardService,
         private StreakLeaderboardService $streakLeaderboardService,
-        private bool $cronEndpointAuditLogsEnabled = false,
+        private bool $cronEndpointAuditLogsEnabled = true,
         private ?ProofOfWorkService $proofOfWorkService = null
     ) {
     }

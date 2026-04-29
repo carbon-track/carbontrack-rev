@@ -123,33 +123,7 @@ class CronSchedulerServiceTest extends TestCase
         $this->assertSame('success', CronTask::query()->where('task_key', CronSchedulerService::TASK_BADGE_AUTO_AWARD)->value('last_status'));
     }
 
-    public function testCronEndpointAuditLogsAreSkippedByDefault(): void
-    {
-        $this->seedTask(CronSchedulerService::TASK_SUPPORT_SLA_SWEEP, 'Support SLA Sweep', 1, true, $this->now());
-
-        $support = $this->createMock(SupportRoutingEngineService::class);
-        $support->expects($this->once())->method('runSlaSweep')->willReturn(['processed' => 1, 'breached' => 0, 'rerouted' => 0]);
-
-        $audit = $this->createMock(AuditLogService::class);
-        $audit->expects($this->never())->method('logSystemEvent');
-
-        $service = new CronSchedulerService(
-            self::$capsule->getConnection()->getPdo(),
-            $this->createMock(LoggerInterface::class),
-            $audit,
-            $this->createMock(ErrorLogService::class),
-            $support,
-            $this->createMock(BadgeService::class),
-            $this->createMock(LeaderboardService::class),
-            $this->createMock(StreakLeaderboardService::class)
-        );
-
-        $result = $service->runDueTasks('cron_endpoint', ['request_id' => 'req-no-audit']);
-
-        $this->assertCount(1, $result['executed']);
-    }
-
-    public function testCanEnableCronEndpointAuditLogs(): void
+    public function testCronEndpointAuditLogsAreWrittenByDefault(): void
     {
         $this->seedTask(CronSchedulerService::TASK_SUPPORT_SLA_SWEEP, 'Support SLA Sweep', 1, true, $this->now());
 
@@ -167,8 +141,34 @@ class CronSchedulerServiceTest extends TestCase
             $support,
             $this->createMock(BadgeService::class),
             $this->createMock(LeaderboardService::class),
+            $this->createMock(StreakLeaderboardService::class)
+        );
+
+        $result = $service->runDueTasks('cron_endpoint', ['request_id' => 'req-no-audit']);
+
+        $this->assertCount(1, $result['executed']);
+    }
+
+    public function testCanDisableCronEndpointAuditLogs(): void
+    {
+        $this->seedTask(CronSchedulerService::TASK_SUPPORT_SLA_SWEEP, 'Support SLA Sweep', 1, true, $this->now());
+
+        $support = $this->createMock(SupportRoutingEngineService::class);
+        $support->expects($this->once())->method('runSlaSweep')->willReturn(['processed' => 1, 'breached' => 0, 'rerouted' => 0]);
+
+        $audit = $this->createMock(AuditLogService::class);
+        $audit->expects($this->never())->method('logSystemEvent');
+
+        $service = new CronSchedulerService(
+            self::$capsule->getConnection()->getPdo(),
+            $this->createMock(LoggerInterface::class),
+            $audit,
+            $this->createMock(ErrorLogService::class),
+            $support,
+            $this->createMock(BadgeService::class),
+            $this->createMock(LeaderboardService::class),
             $this->createMock(StreakLeaderboardService::class),
-            true
+            false
         );
 
         $result = $service->runDueTasks('cron_endpoint', ['request_id' => 'req-with-audit']);

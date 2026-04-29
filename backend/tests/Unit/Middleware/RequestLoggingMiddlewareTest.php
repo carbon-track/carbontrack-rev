@@ -141,10 +141,14 @@ class RequestLoggingMiddlewareTest extends TestCase
         $this->assertSame($handler->header, $_SERVER['HTTP_X_REQUEST_ID']);
     }
 
-    public function testSkipsCronEndpointSystemLogByDefault(): void
+    public function testWritesCronEndpointSystemLogByDefault(): void
     {
         $systemLog = $this->createMock(SystemLogService::class);
-        $systemLog->expects($this->never())->method('log');
+        $systemLog->expects($this->once())
+            ->method('log')
+            ->with($this->callback(static function (array $context): bool {
+                return ($context['path'] ?? null) === '/api/v1/cron/run';
+            }));
         $authService = $this->createMock(AuthService::class);
         $authService->method('getCurrentUser')->willReturn(null);
 
@@ -167,14 +171,10 @@ class RequestLoggingMiddlewareTest extends TestCase
         $this->assertNotEmpty($response->getHeaderLine('X-Request-ID'));
     }
 
-    public function testCanEnableCronEndpointSystemLog(): void
+    public function testCanDisableCronEndpointSystemLog(): void
     {
         $systemLog = $this->createMock(SystemLogService::class);
-        $systemLog->expects($this->once())
-            ->method('log')
-            ->with($this->callback(static function (array $context): bool {
-                return ($context['path'] ?? null) === '/api/v1/cron/run';
-            }));
+        $systemLog->expects($this->never())->method('log');
         $authService = $this->createMock(AuthService::class);
         $authService->method('getCurrentUser')->willReturn(null);
 
@@ -182,7 +182,7 @@ class RequestLoggingMiddlewareTest extends TestCase
             $systemLog,
             $authService,
             $this->createMock(Logger::class),
-            true
+            false
         );
 
         $handler = new class implements RequestHandlerInterface {

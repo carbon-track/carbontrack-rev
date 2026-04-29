@@ -9,12 +9,12 @@ const refreshPromises = new Map();
 
 const apiClient = axios.create({
   baseURL: API_URL,
-  headers: { Accept: 'application/json' },
+  headers: { Accept: 'application/json', 'X-Client-Platform': 'mobile' },
 });
 
 const refreshClient = axios.create({
   baseURL: API_URL,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', 'X-Client-Platform': 'mobile' },
 });
 
 const decodeJwtPayload = (token) => {

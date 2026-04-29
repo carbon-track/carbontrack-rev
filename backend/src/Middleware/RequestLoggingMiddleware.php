@@ -30,7 +30,7 @@ class RequestLoggingMiddleware implements MiddlewareInterface
         SystemLogService $systemLogService,
         AuthService $authService,
         Logger $logger,
-        bool $cronEndpointSystemLogsEnabled = false
+        bool $cronEndpointSystemLogsEnabled = true
     )
     {
         $this->systemLogService = $systemLogService;

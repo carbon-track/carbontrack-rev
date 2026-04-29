@@ -1739,8 +1739,12 @@ class CarbonTrackController
 
     private function shouldUseMobileProofOfWork(Request $request, array $data): bool
     {
-        $clientType = strtolower(trim((string)($data['client_type'] ?? $request->getHeaderLine('X-Client-Platform'))));
-        return $clientType === 'mobile' && trim($request->getHeaderLine('Origin')) === '';
+        $bodyClientType = strtolower(trim((string)($data['client_type'] ?? '')));
+        $headerClientType = strtolower(trim($request->getHeaderLine('X-Client-Platform')));
+        return $bodyClientType === 'mobile'
+            && $headerClientType === 'mobile'
+            && trim($request->getHeaderLine('Origin')) === ''
+            && trim($request->getHeaderLine('Sec-Fetch-Site')) === '';
     }
 
     private function logChallengeFailure(string $action, Request $request, string $scope, ?string $reason = null): void
@@ -1758,8 +1762,8 @@ class CarbonTrackController
                     'user_agent' => $request->getHeaderLine('User-Agent'),
                 ],
             ]);
-        } catch (\Throwable $ignore) {
-            // ignore audit failures for rejected challenge
+        } catch (\Throwable $auditError) {
+            error_log('AuditLogService failed while logging rejected challenge: ' . $auditError->getMessage());
         }
     }
 
