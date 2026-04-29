@@ -47,10 +47,10 @@ class AuthController
         TurnstileService $turnstileService,
         AuditLogService $auditLogService,
         MessageService $messageService,
-        CloudflareR2Service $r2Service = null,
+        ?CloudflareR2Service $r2Service,
         Logger $logger,
         PDO $db,
-        ErrorLogService $errorLogService = null,
+        ?ErrorLogService $errorLogService,
         RegionService $regionService,
         ?CheckinService $checkinService = null,
         ?UserProfileViewService $userProfileViewService = null,
@@ -468,7 +468,7 @@ class AuthController
                 ], 401);
             }
 
-            $refreshedToken = $this->authService->refreshToken($token, $payload, $userDetail);
+            $refreshedToken = $this->authService->refreshToken($token, $payload, $this->formatUserPayload($userDetail));
             if ($refreshedToken === null) {
                 $this->logTokenRefreshFailure($request, $userId > 0 ? $userId : null, 'INVALID_TOKEN');
                 return $this->jsonResponse($response, [

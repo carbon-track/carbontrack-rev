@@ -38,7 +38,7 @@ export const solveProofOfWork = async (challenge, difficulty) => {
     throw new Error('Invalid proof-of-work challenge');
   }
 
-  let nonce = Math.floor(Math.random() * 1000000);
+  let nonce = 0;
   let checked = 0;
   for (;;) {
     const batch = Array.from({ length: HASH_BATCH_SIZE }, (_, index) => nonce + index);

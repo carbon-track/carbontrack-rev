@@ -7,8 +7,10 @@ import { useTheme } from '../theme';
 const SITE_KEY = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '';
 const TURNSTILE_BASE_URL = process.env.EXPO_PUBLIC_TURNSTILE_BASE_URL || '';
 const turnstileWebViewEnabled = !__DEV__ || process.env.EXPO_PUBLIC_ENABLE_TURNSTILE_WEBVIEW === 'true';
+const sanitizeSiteKey = (value) => String(value || '').replace(/[^0-9A-Za-z_-]/g, '');
+const TURNSTILE_SITE_KEY = sanitizeSiteKey(SITE_KEY);
 
-export const isTurnstileConfigured = Boolean(SITE_KEY && TURNSTILE_BASE_URL && turnstileWebViewEnabled);
+export const isTurnstileConfigured = Boolean(TURNSTILE_SITE_KEY && TURNSTILE_BASE_URL && turnstileWebViewEnabled);
 
 const getTurnstileOrigins = () => {
   const origins = ['https://challenges.cloudflare.com', 'about:blank', 'about:srcdoc'];
@@ -58,7 +60,7 @@ const buildTurnstileHtml = (siteKey) => `
 export default function TurnstileWidget({ onVerify, onExpire, onError, resetKey }) {
   const { t } = useI18n();
   const { colors } = useTheme();
-  const html = useMemo(() => buildTurnstileHtml(SITE_KEY), []);
+  const html = useMemo(() => buildTurnstileHtml(TURNSTILE_SITE_KEY), []);
 
   if (!isTurnstileConfigured) {
     return (
