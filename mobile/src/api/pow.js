@@ -4,6 +4,8 @@ import * as Crypto from 'expo-crypto';
 const MOBILE_CLIENT_TYPE = 'mobile';
 const HASH_BATCH_SIZE = 64;
 const YIELD_INTERVAL = 2048;
+const MAX_SOLVE_ATTEMPTS = 2000000;
+const MAX_SOLVE_MS = 30000;
 
 const pause = () => new Promise((resolve) => {
   setTimeout(resolve, 0);
@@ -23,7 +25,7 @@ const hasLeadingZeroBits = (hex, difficulty) => {
   }
 
   const nibble = parseInt(hex[fullNibbles], 16);
-  const mask = 0xf << (4 - remainingBits);
+  const mask = (0xf << (4 - remainingBits)) & 0xf;
   return (nibble & mask) === 0;
 };
 
@@ -32,15 +34,29 @@ const sha256Hex = (message) => Crypto.digestStringAsync(
   message,
 );
 
-export const solveProofOfWork = async (challenge, difficulty) => {
+export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
   const targetDifficulty = Number(difficulty);
   if (!challenge || !Number.isFinite(targetDifficulty) || targetDifficulty < 1) {
     throw new Error('Invalid proof-of-work challenge');
   }
 
+  const maxAttempts = Number.isFinite(options.maxAttempts)
+    ? Math.max(1, Math.floor(options.maxAttempts))
+    : MAX_SOLVE_ATTEMPTS;
+  const maxSolveMs = Number.isFinite(options.timeoutMs)
+    ? Math.max(1000, Math.floor(options.timeoutMs))
+    : MAX_SOLVE_MS;
+  const startedAt = Date.now();
   let nonce = 0;
   let checked = 0;
-  for (;;) {
+  while (checked < maxAttempts) {
+    if (options.signal?.aborted) {
+      throw new Error('Proof-of-work calculation cancelled');
+    }
+    if (Date.now() - startedAt > maxSolveMs) {
+      throw new Error('Proof-of-work calculation timed out');
+    }
+
     const batch = Array.from({ length: HASH_BATCH_SIZE }, (_, index) => nonce + index);
     const hashes = await Promise.all(batch.map((candidate) => sha256Hex(`${challenge}:${candidate}`)));
 
@@ -56,6 +72,8 @@ export const solveProofOfWork = async (challenge, difficulty) => {
       await pause();
     }
   }
+
+  throw new Error('Proof-of-work attempt limit exceeded');
 };
 
 export const getProofOfWorkChallenge = async (scope) => {

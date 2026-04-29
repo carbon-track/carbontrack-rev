@@ -65,7 +65,8 @@ class AuthController
             $auditLogService,
             $errorLogService,
             (int)($_ENV['POW_DIFFICULTY'] ?? 16),
-            (int)($_ENV['POW_TTL_SECONDS'] ?? 120)
+            (int)($_ENV['POW_TTL_SECONDS'] ?? 120),
+            $db
         );
         $this->auditLogService = $auditLogService;
         $this->messageService = $messageService;
@@ -83,19 +84,8 @@ class AuthController
         try {
             $data = $request->getParsedBody() ?? [];
             $scope = is_string($data['scope'] ?? null) ? trim($data['scope']) : '';
-            $allowedScopes = [
-                'auth.login',
-                'auth.register',
-                'auth.send_verification_code',
-                'auth.verify_email',
-                'auth.forgot_password',
-                'carbon.record.submit',
-                'user.profile.school_change',
-                'support.ticket.create',
-                'support.ticket.reply',
-            ];
 
-            if (!in_array($scope, $allowedScopes, true)) {
+            if (!in_array($scope, ProofOfWorkService::ALLOWED_SCOPES, true)) {
                 return $this->jsonResponse($response, [
                     'success' => false,
                     'message' => 'Invalid proof-of-work scope',

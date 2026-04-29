@@ -10,6 +10,18 @@ use PDO;
 
 class ProofOfWorkService
 {
+    public const ALLOWED_SCOPES = [
+        'auth.login',
+        'auth.register',
+        'auth.send_verification_code',
+        'auth.verify_email',
+        'auth.forgot_password',
+        'carbon.record.submit',
+        'user.profile.school_change',
+        'support.ticket.create',
+        'support.ticket.reply',
+    ];
+
     private string $secret;
     private Logger $logger;
     private ?AuditLogService $auditLogService;
@@ -252,7 +264,7 @@ class ProofOfWorkService
             return true;
         }
 
-        $mask = 0xff << (8 - $remainingBits);
+        $mask = (0xff << (8 - $remainingBits)) & 0xff;
         return (ord($hash[$fullBytes]) & $mask) === 0;
     }
 
