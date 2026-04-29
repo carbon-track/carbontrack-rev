@@ -448,32 +448,15 @@ function getConversationMessageActionName(message) {
     || null;
 }
 
-function normalizeTimestampValue(value, options = {}) {
+function normalizeTimestampValue(value) {
   if (typeof value !== 'string') {
     return value;
   }
-  const { assumeUtc = false } = options;
   const trimmed = value.trim();
   if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(\.\d+)?/.test(trimmed)) {
-    const normalized = trimmed.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}(?:\.\d+)?)/, '$1T$2');
-    return assumeUtc ? `${normalized}Z` : normalized;
-  }
-  if (assumeUtc && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(trimmed)) {
-    return `${trimmed}Z`;
+    return trimmed.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}(?:\.\d+)?)/, '$1T$2');
   }
   return trimmed;
-}
-
-function parseTimelineTime(value) {
-  if (!value) {
-    return Number.POSITIVE_INFINITY;
-  }
-  const normalized = normalizeTimestampValue(value, { assumeUtc: true });
-  if (!normalized) {
-    return Number.POSITIVE_INFINITY;
-  }
-  const timestamp = new Date(normalized).getTime();
-  return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
 }
 
 function getTimelineSortOrder(item) {
@@ -582,11 +565,6 @@ function buildConversationTimeline(conversation) {
     const orderDiff = getTimelineSortOrder(left) - getTimelineSortOrder(right);
     if (orderDiff !== 0) {
       return orderDiff;
-    }
-    const leftTime = parseTimelineTime(left?.created_at || left?.step?.started_at || left?.run?.started_at || '');
-    const rightTime = parseTimelineTime(right?.created_at || right?.step?.started_at || right?.run?.started_at || '');
-    if (leftTime !== rightTime) {
-      return leftTime - rightTime;
     }
     const leftRank = getTimelineSortRank(left);
     const rightRank = getTimelineSortRank(right);
