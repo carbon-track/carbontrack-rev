@@ -13,6 +13,10 @@ const normalizeActivitiesPayload = (payload) => {
   };
 };
 
+const getUploadFileName = (image) => image.fileName
+  || image.uri?.split('/').pop()
+  || `carbon-record-${Date.now()}.jpg`;
+
 export const carbonApi = {
   getActivityFactors: async () => {
     const [factorResponse, activityResponse] = await Promise.all([
@@ -45,7 +49,7 @@ export const carbonApi = {
     }
     formData.append('image', {
       uri: image.uri,
-      name: image.fileName || `carbon-record-${Date.now()}.jpg`,
+      name: getUploadFileName(image),
       type: image.mimeType || 'image/jpeg',
     });
 

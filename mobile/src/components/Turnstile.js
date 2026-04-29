@@ -9,6 +9,18 @@ const TURNSTILE_BASE_URL = process.env.EXPO_PUBLIC_TURNSTILE_BASE_URL || '';
 
 export const isTurnstileConfigured = Boolean(SITE_KEY && TURNSTILE_BASE_URL);
 
+const getTurnstileOrigins = () => {
+  const origins = ['https://challenges.cloudflare.com', 'about:blank', 'about:srcdoc'];
+  try {
+    origins.unshift(new URL(TURNSTILE_BASE_URL).origin);
+  } catch {
+    if (TURNSTILE_BASE_URL) {
+      origins.unshift(TURNSTILE_BASE_URL);
+    }
+  }
+  return origins;
+};
+
 const buildTurnstileHtml = (siteKey) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -65,7 +77,7 @@ export default function TurnstileWidget({ onVerify, onExpire, onError, resetKey 
         sharedCookiesEnabled={true}
         thirdPartyCookiesEnabled={true}
         setSupportMultipleWindows={false}
-        originWhitelist={['https://*', 'http://*', 'about:blank', 'about:srcdoc']}
+        originWhitelist={getTurnstileOrigins()}
         onMessage={(event) => {
           try {
             const payload = JSON.parse(event.nativeEvent.data);

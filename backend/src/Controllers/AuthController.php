@@ -399,16 +399,6 @@ class AuthController
                 ], 401);
             }
 
-            $refreshedToken = $this->authService->refreshToken($token);
-            if ($refreshedToken === null) {
-                $this->logTokenRefreshFailure($request, null, 'INVALID_TOKEN');
-                return $this->jsonResponse($response, [
-                    'success' => false,
-                    'message' => 'Authentication token is invalid or expired',
-                    'code' => 'INVALID_TOKEN'
-                ], 401);
-            }
-
             $decodedUser = (array)($payload['user'] ?? []);
             $userId = isset($decodedUser['id']) ? (int) $decodedUser['id'] : 0;
             $userUuid = isset($decodedUser['uuid']) && Uuid::isValid((string)$decodedUser['uuid'])
@@ -431,6 +421,20 @@ class AuthController
                     'message' => 'User not found',
                     'code' => 'USER_NOT_FOUND'
                 ], 401);
+            }
+
+            $refreshedToken = $this->authService->refreshToken($token);
+            if ($refreshedToken === null) {
+                $this->logTokenRefreshFailure($request, $userId > 0 ? $userId : null, 'INVALID_TOKEN');
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'message' => 'Authentication token is invalid or expired',
+                    'code' => 'INVALID_TOKEN'
+                ], 401);
+            }
+
+            if ($refreshedToken !== $token) {
+                $refreshedToken = $this->authService->generateToken($userDetail);
             }
 
             $this->auditLogService->logAuthOperation('token_refresh', $userId, true, [
