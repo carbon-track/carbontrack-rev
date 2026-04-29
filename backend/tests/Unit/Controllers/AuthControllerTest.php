@@ -633,6 +633,8 @@ class AuthControllerTest extends TestCase
             'identifier' => 'john@example.com',
             'password' => 'secret123',
             'client_type' => 'mobile',
+        ], null, [
+            'X-Client-Platform' => ['mobile'],
         ]);
         $response = new \Slim\Psr7\Response();
 
