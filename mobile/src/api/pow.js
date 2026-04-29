@@ -2,8 +2,8 @@ import apiClient from './client';
 import * as Crypto from 'expo-crypto';
 
 const MOBILE_CLIENT_TYPE = 'mobile';
-const HASH_BATCH_SIZE = 64;
-const YIELD_INTERVAL = 2048;
+const HASH_BATCH_SIZE = 16;
+const YIELD_INTERVAL = 512;
 const MAX_SOLVE_ATTEMPTS = 2000000;
 const MAX_SOLVE_MS = 30000;
 

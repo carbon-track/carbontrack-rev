@@ -56,6 +56,7 @@ const refreshToken = async (token) => {
     await useAuthStore.getState().setSession({
       token: data.token,
       user: data.user || useAuthStore.getState().user,
+      preserve_email_verification_required: true,
     });
     return data.token;
   }
