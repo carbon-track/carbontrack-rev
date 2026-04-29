@@ -56,12 +56,14 @@ final class AuthRefreshTest extends TestCase
         $this->authService = new AuthService('test-refresh-secret-with-enough-length', 'HS256', 60);
     }
 
-    private function makeController(): AuthController
+    private function makeController(?AuditLogService $audit = null): AuthController
     {
         $email = $this->createMock(EmailService::class);
         $turnstile = $this->createMock(TurnstileService::class);
-        $audit = $this->createMock(AuditLogService::class);
-        $audit->method('logAuthOperation')->willReturn(true);
+        if ($audit === null) {
+            $audit = $this->createMock(AuditLogService::class);
+            $audit->method('logAuthOperation')->willReturn(true);
+        }
         $message = $this->createMock(MessageService::class);
         $r2 = $this->createMock(CloudflareR2Service::class);
         $errorLog = $this->createMock(ErrorLogService::class);
@@ -157,6 +159,26 @@ final class AuthRefreshTest extends TestCase
         $this->assertSame(401, $response->getStatusCode());
         $payload = json_decode((string) $response->getBody(), true);
         $this->assertSame('AUTH_REQUIRED', $payload['code']);
+    }
+
+    public function testRefreshAuditsMissingAuthorization(): void
+    {
+        $audit = $this->createMock(AuditLogService::class);
+        $audit->expects($this->once())
+            ->method('logAuthOperation')
+            ->with(
+                'token_refresh',
+                null,
+                false,
+                $this->callback(static fn (array $context): bool => (
+                    ($context['request_data']['code'] ?? null) === 'AUTH_REQUIRED'
+                ))
+            )
+            ->willReturn(true);
+
+        $response = $this->makeController($audit)->refresh($this->makeRequest(null), new Response());
+
+        $this->assertSame(401, $response->getStatusCode());
     }
 
     public function testRefreshRejectsInvalidToken(): void

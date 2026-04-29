@@ -380,6 +380,7 @@ class AuthController
         try {
             $token = $this->extractBearerToken($request);
             if ($token === null) {
+                $this->logTokenRefreshFailure($request, null, 'AUTH_REQUIRED');
                 return $this->jsonResponse($response, [
                     'success' => false,
                     'message' => 'Authentication token is required',
@@ -390,6 +391,7 @@ class AuthController
             try {
                 $payload = $this->authService->validateToken($token);
             } catch (\Throwable $e) {
+                $this->logTokenRefreshFailure($request, null, 'INVALID_TOKEN');
                 return $this->jsonResponse($response, [
                     'success' => false,
                     'message' => 'Authentication token is invalid or expired',
@@ -399,6 +401,7 @@ class AuthController
 
             $refreshedToken = $this->authService->refreshToken($token);
             if ($refreshedToken === null) {
+                $this->logTokenRefreshFailure($request, null, 'INVALID_TOKEN');
                 return $this->jsonResponse($response, [
                     'success' => false,
                     'message' => 'Authentication token is invalid or expired',
@@ -422,6 +425,7 @@ class AuthController
                 $userId = (int)($userDetail['id'] ?? 0);
             }
             if ($userDetail === null) {
+                $this->logTokenRefreshFailure($request, $userId > 0 ? $userId : null, 'USER_NOT_FOUND');
                 return $this->jsonResponse($response, [
                     'success' => false,
                     'message' => 'User not found',
@@ -1375,6 +1379,24 @@ class AuthController
             'avatar_path' => $originalPath,
             'avatar_url' => $url,
         ];
+    }
+
+    private function logTokenRefreshFailure(Request $request, ?int $userId, string $code): void
+    {
+        try {
+            $this->auditLogService->logAuthOperation('token_refresh', $userId, false, [
+                'request_data' => [
+                    'code' => $code,
+                    'ip_address' => $this->getClientIP($request),
+                    'user_agent' => $request->getHeaderLine('User-Agent')
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->debug('Failed to record token refresh failure audit log', [
+                'error' => $e->getMessage(),
+                'code' => $code
+            ]);
+        }
     }
 
     private function jsonResponse(Response $response, array $data, int $status = 200): Response
