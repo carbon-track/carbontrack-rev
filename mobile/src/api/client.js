@@ -9,7 +9,7 @@ const refreshPromises = new Map();
 
 const apiClient = axios.create({
   baseURL: API_URL,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { Accept: 'application/json' },
 });
 
 const refreshClient = axios.create({
