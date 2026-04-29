@@ -23,9 +23,15 @@ enableScreens();
 
 const Stack = createNativeStackNavigator();
 const RecordStack = createNativeStackNavigator();
-const nativeTabsEnabled = !__DEV__ && Platform.OS === 'ios' && process.env.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS === 'true';
+
+const isNativeTabsEnabled = () => (
+  !__DEV__
+  && Platform.OS === 'ios'
+  && process.env.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS === 'true'
+);
+
 const createTabs = () => {
-  if (nativeTabsEnabled) {
+  if (isNativeTabsEnabled()) {
     try {
       const { createNativeBottomTabNavigator } = require('@react-navigation/bottom-tabs/unstable');
       return createNativeBottomTabNavigator();
@@ -70,6 +76,7 @@ function RecordStackNavigator() {
 function MainTabs() {
   const { t } = useI18n();
   const { colors, isDark } = useTheme();
+  const nativeTabsEnabled = isNativeTabsEnabled();
   const sharedTabOptions = {
     tabBarActiveTintColor: colors.primary,
     tabBarInactiveTintColor: colors.textMuted,

@@ -60,10 +60,11 @@ export default function TurnstileWidget({ onVerify, onExpire, onError, resetKey 
       <WebView
         key={resetKey}
         source={{ html, baseUrl: TURNSTILE_BASE_URL }}
-        javaScriptEnabled
-        domStorageEnabled
-        sharedCookiesEnabled
-        thirdPartyCookiesEnabled
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        sharedCookiesEnabled={true}
+        thirdPartyCookiesEnabled={true}
+        setSupportMultipleWindows={false}
         originWhitelist={['https://*', 'http://*', 'about:blank', 'about:srcdoc']}
         onMessage={(event) => {
           try {
