@@ -741,7 +741,8 @@ $__deps_initializer = function (Container $container) {
             $c->get(BadgeService::class),
             $c->get(LeaderboardService::class),
             $c->get(StreakLeaderboardService::class),
-            $envBool('CRON_ENDPOINT_AUDIT_LOGS_ENABLED', false)
+            $envBool('CRON_ENDPOINT_AUDIT_LOGS_ENABLED', false),
+            $c->get(ProofOfWorkService::class)
         );
     });
 

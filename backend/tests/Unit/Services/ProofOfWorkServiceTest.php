@@ -50,6 +50,30 @@ class ProofOfWorkServiceTest extends TestCase
         $this->assertSame('replayed-challenge', $second['error']);
     }
 
+    public function testCleanupExpiredChallengesDeletesExpiredAndOldConsumedRows(): void
+    {
+        $db = $this->makeChallengeDatabase();
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $old = $now->modify('-20 minutes')->format('Y-m-d H:i:s');
+        $future = $now->modify('+20 minutes')->format('Y-m-d H:i:s');
+        $recent = $now->modify('-2 minutes')->format('Y-m-d H:i:s');
+
+        $insert = $db->prepare(
+            'INSERT INTO proof_of_work_challenges (challenge_id, challenge_hash, scope, difficulty, expires_at, used_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $insert->execute(['expired', 'hash-expired', 'auth.login', 8, $old, null, $old, $old]);
+        $insert->execute(['old-used', 'hash-old-used', 'auth.login', 8, $future, $old, $old, $old]);
+        $insert->execute(['fresh-used', 'hash-fresh-used', 'auth.login', 8, $future, $recent, $recent, $recent]);
+        $insert->execute(['fresh-open', 'hash-fresh-open', 'auth.login', 8, $future, null, $recent, $recent]);
+
+        $service = $this->makeService(8, $db);
+        $result = $service->cleanupExpiredChallenges();
+
+        $this->assertSame(2, $result['deleted']);
+        $this->assertSame(2, (int)$db->query('SELECT COUNT(*) FROM proof_of_work_challenges')->fetchColumn());
+    }
+
     private function makeService(int $difficulty, ?PDO $db = null): ProofOfWorkService
     {
         $logger = new Logger('test');

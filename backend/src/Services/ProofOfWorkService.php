@@ -177,7 +177,6 @@ class ProofOfWorkService
         }
 
         try {
-            $this->cleanupConsumedChallenges();
             $stmt = $this->db->prepare(
                 'INSERT INTO proof_of_work_challenges (challenge_id, challenge_hash, scope, difficulty, expires_at, created_at, updated_at)
                  VALUES (?, ?, ?, ?, ?, ? , ?)'
@@ -231,22 +230,32 @@ class ProofOfWorkService
         }
     }
 
-    private function cleanupConsumedChallenges(): void
+    public function cleanupExpiredChallenges(): array
     {
-        if ($this->db === null || random_int(1, 20) !== 1) {
-            return;
+        if ($this->db === null) {
+            return ['deleted' => 0];
         }
 
         try {
             $threshold = $this->formatSql($this->now()->modify('-600 seconds'));
+            $countStmt = $this->db->prepare(
+                'SELECT COUNT(*)
+                 FROM proof_of_work_challenges
+                 WHERE expires_at < ?
+                    OR (used_at IS NOT NULL AND used_at < ?)'
+            );
+            $countStmt->execute([$threshold, $threshold]);
+            $deleted = (int)$countStmt->fetchColumn();
             $stmt = $this->db->prepare(
                 'DELETE FROM proof_of_work_challenges
                  WHERE expires_at < ?
                     OR (used_at IS NOT NULL AND used_at < ?)'
             );
             $stmt->execute([$threshold, $threshold]);
+            return ['deleted' => $deleted];
         } catch (\Throwable $e) {
-            $this->logger->warning('pow_challenge_cleanup_failed', ['error' => $e->getMessage()]);
+            $this->logFailure('pow_challenge_cleanup_failed', $e);
+            throw $e;
         }
     }
 

@@ -1153,7 +1153,8 @@ INSERT INTO `cron_tasks` (`id`, `task_key`, `task_name`, `description`, `interva
 (1, 'support_sla_sweep', 'Support SLA Sweep', 'Inspect unresolved support tickets, update SLA status, and reroute escalated tickets.', 1, 1, CURRENT_TIMESTAMP, 'idle', 0, '{}'),
 (2, 'badge_auto_award', 'Badge Auto Award', 'Evaluate active users against badge auto-grant rules and award newly qualified badges.', 5, 1, CURRENT_TIMESTAMP, 'idle', 0, '{}'),
 (3, 'leaderboard_refresh', 'Leaderboard Refresh', 'Refresh the main points leaderboard cache for global, regional, and school rankings.', 10, 1, CURRENT_TIMESTAMP, 'idle', 0, '{}'),
-(4, 'streak_leaderboard_refresh', 'Streak Leaderboard Refresh', 'Refresh the streak leaderboard cache for current and longest check-in streak rankings.', 10, 1, CURRENT_TIMESTAMP, 'idle', 0, '{}');
+(4, 'streak_leaderboard_refresh', 'Streak Leaderboard Refresh', 'Refresh the streak leaderboard cache for current and longest check-in streak rankings.', 10, 1, CURRENT_TIMESTAMP, 'idle', 0, '{}'),
+(5, 'pow_challenge_cleanup', 'Proof-of-Work Challenge Cleanup', 'Delete expired or already consumed proof-of-work challenges outside anonymous request handling.', 10, 1, CURRENT_TIMESTAMP, 'idle', 0, '{}');
 
 -- --------------------------------------------------------
 

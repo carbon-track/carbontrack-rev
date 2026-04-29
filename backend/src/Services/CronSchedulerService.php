@@ -18,6 +18,7 @@ class CronSchedulerService
     public const TASK_BADGE_AUTO_AWARD = 'badge_auto_award';
     public const TASK_LEADERBOARD_REFRESH = 'leaderboard_refresh';
     public const TASK_STREAK_LEADERBOARD_REFRESH = 'streak_leaderboard_refresh';
+    public const TASK_POW_CHALLENGE_CLEANUP = 'pow_challenge_cleanup';
 
     private const LOCK_TIMEOUT_SECONDS = 600;
     private const RUN_STATUS_SUCCESS = 'success';
@@ -50,7 +51,8 @@ class CronSchedulerService
         private BadgeService $badgeService,
         private LeaderboardService $leaderboardService,
         private StreakLeaderboardService $streakLeaderboardService,
-        private bool $cronEndpointAuditLogsEnabled = false
+        private bool $cronEndpointAuditLogsEnabled = false,
+        private ?ProofOfWorkService $proofOfWorkService = null
     ) {
     }
 
@@ -612,6 +614,8 @@ class CronSchedulerService
             self::TASK_BADGE_AUTO_AWARD => $this->badgeService->runAutoGrant(),
             self::TASK_LEADERBOARD_REFRESH => $this->leaderboardService->rebuildCache($this->reasonForTrigger($triggerSource)),
             self::TASK_STREAK_LEADERBOARD_REFRESH => $this->streakLeaderboardService->rebuildCache($this->reasonForTrigger($triggerSource)),
+            self::TASK_POW_CHALLENGE_CLEANUP => $this->proofOfWorkService?->cleanupExpiredChallenges()
+                ?? throw new \RuntimeException('Proof-of-work service not available'),
             default => throw new \RuntimeException('Unsupported cron task'),
         };
     }
@@ -647,6 +651,9 @@ class CronSchedulerService
                 'global_count' => count($rawResult['global'] ?? []),
                 'regions_count' => count($rawResult['regions'] ?? []),
                 'schools_count' => count($rawResult['schools'] ?? []),
+            ],
+            self::TASK_POW_CHALLENGE_CLEANUP => [
+                'deleted' => (int) ($rawResult['deleted'] ?? 0),
             ],
             default => $rawResult,
         };
@@ -845,6 +852,10 @@ class CronSchedulerService
             self::TASK_STREAK_LEADERBOARD_REFRESH => [
                 'task_name' => 'Streak Leaderboard Refresh',
                 'description' => 'Refresh the streak leaderboard cache for current and longest check-in streak rankings.',
+            ],
+            self::TASK_POW_CHALLENGE_CLEANUP => [
+                'task_name' => 'Proof-of-Work Challenge Cleanup',
+                'description' => 'Delete expired or already consumed proof-of-work challenges outside anonymous request handling.',
             ],
         ];
     }

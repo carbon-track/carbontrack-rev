@@ -11,6 +11,7 @@ use CarbonTrack\Services\BadgeService;
 use CarbonTrack\Services\CronSchedulerService;
 use CarbonTrack\Services\ErrorLogService;
 use CarbonTrack\Services\LeaderboardService;
+use CarbonTrack\Services\ProofOfWorkService;
 use CarbonTrack\Services\StreakLeaderboardService;
 use CarbonTrack\Services\SupportRoutingEngineService;
 use Illuminate\Database\Capsule\Manager as Capsule;
@@ -173,6 +174,38 @@ class CronSchedulerServiceTest extends TestCase
         $result = $service->runDueTasks('cron_endpoint', ['request_id' => 'req-with-audit']);
 
         $this->assertCount(1, $result['executed']);
+    }
+
+    public function testProofOfWorkCleanupRunsAsCronTask(): void
+    {
+        $this->seedTask(
+            CronSchedulerService::TASK_POW_CHALLENGE_CLEANUP,
+            'Proof-of-Work Challenge Cleanup',
+            10,
+            true,
+            $this->now()
+        );
+
+        $proofOfWork = $this->createMock(ProofOfWorkService::class);
+        $proofOfWork->expects($this->once())->method('cleanupExpiredChallenges')->willReturn(['deleted' => 2]);
+
+        $service = new CronSchedulerService(
+            self::$capsule->getConnection()->getPdo(),
+            $this->createMock(LoggerInterface::class),
+            $this->createMock(AuditLogService::class),
+            $this->createMock(ErrorLogService::class),
+            $this->createMock(SupportRoutingEngineService::class),
+            $this->createMock(BadgeService::class),
+            $this->createMock(LeaderboardService::class),
+            $this->createMock(StreakLeaderboardService::class),
+            false,
+            $proofOfWork
+        );
+
+        $result = $service->runDueTasks('cron_endpoint', ['request_id' => 'req-pow-cleanup']);
+
+        $this->assertCount(1, $result['executed']);
+        $this->assertSame(['deleted' => 2], $result['executed'][0]['result']);
     }
 
     public function testFailedTaskIncrementsFailureCounterAndRunHistory(): void

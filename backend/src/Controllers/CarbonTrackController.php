@@ -1720,7 +1720,7 @@ class CarbonTrackController
         $token = is_string($data['cf_turnstile_response'] ?? null) ? trim($data['cf_turnstile_response']) : '';
         if ($token !== '' && $this->turnstileService !== null) {
             try {
-                $verification = $this->turnstileService->verify($token);
+                $verification = $this->turnstileService->verify($token, $this->getClientIpAddress($request));
                 if (is_array($verification) && !empty($verification['success'])) {
                     return ['success' => true];
                 }
@@ -1754,13 +1754,35 @@ class CarbonTrackController
                 'data' => [
                     'scope' => $scope,
                     'reason' => $reason,
-                    'ip_address' => $request->getServerParams()['REMOTE_ADDR'] ?? null,
+                    'ip_address' => $this->getClientIpAddress($request),
                     'user_agent' => $request->getHeaderLine('User-Agent'),
                 ],
             ]);
         } catch (\Throwable $ignore) {
             // ignore audit failures for rejected challenge
         }
+    }
+
+    private function getClientIpAddress(Request $request): string
+    {
+        $candidates = [
+            $request->getHeaderLine('CF-Connecting-IP'),
+            $request->getHeaderLine('X-Forwarded-For'),
+            $request->getHeaderLine('X-Real-IP'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (!$candidate) {
+                continue;
+            }
+            $parts = explode(',', $candidate);
+            $ip = trim($parts[0]);
+            if ($ip !== '') {
+                return $ip;
+            }
+        }
+
+        return (string)($request->getServerParams()['REMOTE_ADDR'] ?? '0.0.0.0');
     }
 
     private function normalizeCheckinDate(string $raw): ?string
