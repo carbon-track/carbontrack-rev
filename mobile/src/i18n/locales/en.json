@@ -86,7 +86,9 @@
     "pendingActivities": "Pending",
     "overview": "Overview",
     "carbonChart": "Carbon trend",
+    "activityTrendDescription": "Approved activity over the last 30 days.",
     "pointsChart": "Points trend",
+    "pointsTrendDescription": "Points earned from approved records.",
     "emptyChart": "No trend data yet.",
     "recentActivities": "Recent activity",
     "emptyActivities": "No recent records yet."

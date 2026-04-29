@@ -86,7 +86,9 @@
     "pendingActivities": "待审核",
     "overview": "趋势总览",
     "carbonChart": "减碳趋势",
+    "activityTrendDescription": "近 30 天已通过记录的减碳变化。",
     "pointsChart": "积分趋势",
+    "pointsTrendDescription": "已通过记录带来的积分变化。",
     "emptyChart": "暂无可展示的趋势数据。",
     "recentActivities": "近期动态",
     "emptyActivities": "还没有近期记录。"

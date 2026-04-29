@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Field, LinkButton, PrimaryButton } from '../components/FormControls';
 import { GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
 import RegionSelector from '../components/RegionSelector';
-import TurnstileWidget, { isTurnstileConfigured } from '../components/Turnstile';
 import { authApi } from '../api/auth';
 import { schoolApi } from '../api/schools';
 import useAuthStore from '../store/authStore';
@@ -24,8 +23,6 @@ export default function RegisterScreen({ navigation }) {
   const [schoolId, setSchoolId] = useState('');
   const [useNewSchool, setUseNewSchool] = useState(false);
   const [newSchoolName, setNewSchoolName] = useState('');
-  const [turnstileToken, setTurnstileToken] = useState('');
-  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const setSession = useAuthStore((state) => state.setSession);
 
@@ -45,11 +42,6 @@ export default function RegisterScreen({ navigation }) {
     }
   }, [useNewSchool]);
 
-  const resetTurnstile = () => {
-    setTurnstileToken('');
-    setTurnstileResetKey((value) => value + 1);
-  };
-
   const validate = () => {
     if (!username.trim() || !email.trim() || !password || !confirmPassword) {
       return t('auth.registerMissingFields');
@@ -65,9 +57,6 @@ export default function RegisterScreen({ navigation }) {
     }
     if (useNewSchool && !newSchoolName.trim()) {
       return t('auth.schoolNameRequired');
-    }
-    if (isTurnstileConfigured && !turnstileToken) {
-      return t('auth.turnstileRequired');
     }
     return '';
   };
@@ -89,9 +78,6 @@ export default function RegisterScreen({ navigation }) {
         country_code: countryCode,
         state_code: stateCode,
       };
-      if (turnstileToken) {
-        payload.cf_turnstile_response = turnstileToken;
-      }
       if (schoolId) {
         payload.school_id = Number(schoolId);
       } else if (newSchoolName.trim()) {
@@ -105,7 +91,6 @@ export default function RegisterScreen({ navigation }) {
 
       await setSession(result.data);
     } catch (err) {
-      resetTurnstile();
       Alert.alert(t('auth.registerFailed'), err.response?.data?.message || err.message || t('auth.retryLater'));
     } finally {
       setLoading(false);
@@ -165,14 +150,6 @@ export default function RegisterScreen({ navigation }) {
               </View>
             )}
 
-            {isTurnstileConfigured ? (
-              <TurnstileWidget
-                resetKey={turnstileResetKey}
-                onVerify={setTurnstileToken}
-                onExpire={resetTurnstile}
-                onError={resetTurnstile}
-              />
-            ) : null}
             <PrimaryButton title={t('auth.register')} loading={loading} onPress={handleRegister} icon="person-add-outline" />
             <LinkButton title={t('auth.hasAccount')} onPress={() => navigation.navigate('Login')} />
           </GlassSurface>

@@ -6,8 +6,9 @@ import { useTheme } from '../theme';
 
 const SITE_KEY = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '';
 const TURNSTILE_BASE_URL = process.env.EXPO_PUBLIC_TURNSTILE_BASE_URL || '';
+const turnstileWebViewEnabled = !__DEV__ || process.env.EXPO_PUBLIC_ENABLE_TURNSTILE_WEBVIEW === 'true';
 
-export const isTurnstileConfigured = Boolean(SITE_KEY && TURNSTILE_BASE_URL);
+export const isTurnstileConfigured = Boolean(SITE_KEY && TURNSTILE_BASE_URL && turnstileWebViewEnabled);
 
 const getTurnstileOrigins = () => {
   const origins = ['https://challenges.cloudflare.com', 'about:blank', 'about:srcdoc'];

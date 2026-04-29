@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, ArrowLeft, Leaf } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -8,11 +8,12 @@ import DataInputForm from './DataInputForm';
 import { Button } from '../ui/Button';
 import { Alert, AlertDescription } from '../ui/Alert';
 import { SmartActivityInput } from './SmartActivityInput';
+import Turnstile from '../common/Turnstile';
 
 const InteractiveReceipt = React.lazy(() => import('./InteractiveReceipt'));
 
 export function CarbonCalculator() {
-  const { t } = useTranslation(['activities', 'common', 'errors', 'images']);
+  const { t } = useTranslation(['activities', 'common', 'errors', 'images', 'auth']);
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [activities, setActivities] = useState([]); // Store fetched activities
@@ -23,6 +24,9 @@ export function CarbonCalculator() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
   const [error, setError] = useState('');
+  const turnstileRef = useRef(null);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const requiresTurnstile = Boolean(import.meta.env?.VITE_TURNSTILE_SITE_KEY);
 
   const checkinDate = useMemo(() => {
     const raw = searchParams.get('checkin_date');
@@ -141,12 +145,18 @@ export function CarbonCalculator() {
 
   // 提交记录
   const handleSubmit = async (formData) => {
+    if (requiresTurnstile && !turnstileToken) {
+      setError(t('auth.verification.turnstileRequired'));
+      return;
+    }
+
     setIsSubmitting(true);
     setError('');
 
     try {
       const response = await carbonAPI.recordActivity({
-        ...formData
+        ...formData,
+        cf_turnstile_response: turnstileToken || undefined
       });
 
       if (response.data.success) {
@@ -172,6 +182,8 @@ export function CarbonCalculator() {
     } catch (err) {
       setError(err.message || t('activities.form.submitFailed'));
     } finally {
+      setTurnstileToken('');
+      turnstileRef.current?.reset?.();
       setIsSubmitting(false);
     }
   };
@@ -305,6 +317,20 @@ export function CarbonCalculator() {
               isSubmitting={isSubmitting}
               initialData={smartData}
               checkinDate={checkinDate}
+              isSubmitBlocked={requiresTurnstile && !turnstileToken}
+              verificationNode={(
+                <div className="flex justify-center">
+                  <Turnstile
+                    ref={turnstileRef}
+                    className="mt-1"
+                    action="carbon_record_submit"
+                    require={requiresTurnstile}
+                    onVerify={setTurnstileToken}
+                    onExpire={() => setTurnstileToken('')}
+                    onError={() => setTurnstileToken('')}
+                  />
+                </div>
+              )}
             />
           </div>
         )}

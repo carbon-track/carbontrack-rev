@@ -820,6 +820,24 @@ CREATE TABLE `login_attempts` (
 -- --------------------------------------------------------
 
 --
+-- 表的结构 `proof_of_work_challenges`
+--
+
+CREATE TABLE `proof_of_work_challenges` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `challenge_id` char(32) NOT NULL,
+  `challenge_hash` char(64) NOT NULL,
+  `scope` varchar(80) NOT NULL,
+  `difficulty` tinyint(3) UNSIGNED NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
 -- 表的结构 `messages`
 --
 
@@ -1377,6 +1395,16 @@ ALTER TABLE `login_attempts`
   ADD PRIMARY KEY (`id`);
 
 --
+-- 表的索引 `proof_of_work_challenges`
+--
+ALTER TABLE `proof_of_work_challenges`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_pow_challenges_challenge_id` (`challenge_id`),
+  ADD KEY `idx_pow_challenges_hash_scope` (`challenge_hash`,`scope`),
+  ADD KEY `idx_pow_challenges_expires_at` (`expires_at`),
+  ADD KEY `idx_pow_challenges_used_at` (`used_at`);
+
+--
 -- 表的索引 `messages`
 --
 ALTER TABLE `messages`
@@ -1728,6 +1756,12 @@ ALTER TABLE `idempotency_records`
 --
 ALTER TABLE `login_attempts`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- 使用表AUTO_INCREMENT `proof_of_work_challenges`
+--
+ALTER TABLE `proof_of_work_challenges`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- 使用表AUTO_INCREMENT `messages`

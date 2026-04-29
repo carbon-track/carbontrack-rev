@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
-import ResponsiveBarChart from '../components/ResponsiveBarChart';
+import ResponsiveTrendChart from '../components/ResponsiveTrendChart';
 import { dashboardApi } from '../api/dashboard';
 import useAuthStore from '../store/authStore';
 import { useI18n } from '../i18n';
@@ -77,8 +77,8 @@ export default function HomeScreen() {
     queryFn: dashboardApi.getStats,
   });
   const chartQuery = useQuery({
-    queryKey: ['mobile-dashboard-chart'],
-    queryFn: dashboardApi.getChartData,
+    queryKey: ['mobile-dashboard-chart', 30],
+    queryFn: () => dashboardApi.getChartData({ period: 30 }),
   });
   const activitiesQuery = useQuery({
     queryKey: ['mobile-dashboard-activities'],
@@ -118,8 +118,9 @@ export default function HomeScreen() {
           </View>
           <View style={[styles.chartGrid, isWide ? styles.chartGridWide : null]}>
             <View style={styles.chartItem}>
-              <ResponsiveBarChart
+              <ResponsiveTrendChart
                 data={chartData}
+                description={t('home.activityTrendDescription')}
                 emptyLabel={t('home.emptyChart')}
                 title={t('home.carbonChart')}
                 valueKey="carbon_saved"
@@ -127,8 +128,9 @@ export default function HomeScreen() {
               />
             </View>
             <View style={styles.chartItem}>
-              <ResponsiveBarChart
+              <ResponsiveTrendChart
                 data={chartData}
+                description={t('home.pointsTrendDescription')}
                 emptyLabel={t('home.emptyChart')}
                 title={t('home.pointsChart')}
                 valueKey="points"

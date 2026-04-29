@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
-import TurnstileWidget, { isTurnstileConfigured } from '../components/Turnstile';
 import { Field, LinkButton, PrimaryButton, SecondaryButton } from '../components/FormControls';
 import { GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
 import { authApi } from '../api/auth';
@@ -13,16 +12,9 @@ export default function LoginScreen({ navigation }) {
   const { t } = useI18n();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [turnstileToken, setTurnstileToken] = useState('');
-  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const setSession = useAuthStore((state) => state.setSession);
-
-  const resetTurnstile = () => {
-    setTurnstileToken('');
-    setTurnstileResetKey((value) => value + 1);
-  };
 
   const resolveError = (err, fallbackKey) => err.response?.data?.message || err.message || t(fallbackKey);
 
@@ -31,27 +23,18 @@ export default function LoginScreen({ navigation }) {
       Alert.alert(t('auth.loginFailed'), t('auth.loginMissingFields'));
       return;
     }
-    if (isTurnstileConfigured && !turnstileToken) {
-      Alert.alert(t('auth.loginFailed'), t('auth.turnstileRequired'));
-      return;
-    }
-
     setLoading(true);
     try {
       const payload = {
         identifier: identifier.trim(),
         password,
       };
-      if (turnstileToken) {
-        payload.cf_turnstile_response = turnstileToken;
-      }
       const result = await authApi.login(payload);
       if (!result.success) {
         throw new Error(result.message || t('auth.loginFailed'));
       }
       await setSession(result.data);
     } catch (err) {
-      resetTurnstile();
       Alert.alert(t('auth.loginFailed'), resolveError(err, 'auth.retryLater'));
     } finally {
       setLoading(false);
@@ -107,14 +90,6 @@ export default function LoginScreen({ navigation }) {
               value={password}
               onChangeText={setPassword}
             />
-            {isTurnstileConfigured ? (
-              <TurnstileWidget
-                resetKey={turnstileResetKey}
-                onVerify={setTurnstileToken}
-                onExpire={resetTurnstile}
-                onError={resetTurnstile}
-              />
-            ) : null}
             <PrimaryButton title={t('auth.login')} loading={loading} onPress={handleLogin} icon="log-in-outline" />
             <SecondaryButton
               title={t('auth.passkeyLogin')}

@@ -1,11 +1,9 @@
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
-import { enableScreens } from 'react-native-screens';
 import useAuthStore from '../store/authStore';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
@@ -18,11 +16,6 @@ import RecordScreen from '../screens/RecordScreen';
 import RecordDetailScreen from '../screens/RecordDetailScreen';
 import StoreScreen from '../screens/StoreScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-
-enableScreens();
-
-const Stack = createNativeStackNavigator();
-const RecordStack = createNativeStackNavigator();
 
 const isNativeTabsEnabled = () => (
   !__DEV__
@@ -45,6 +38,8 @@ const createTabs = () => {
 };
 const Tab = createTabs();
 
+const makeRoute = (params = {}) => ({ params });
+
 const tabIcons = {
   Home: {
     native: ['house.fill', 'house'],
@@ -65,18 +60,67 @@ const tabIcons = {
 };
 
 function RecordStackNavigator() {
-  return (
-    <RecordStack.Navigator screenOptions={{ headerShown: false }}>
-      <RecordStack.Screen name="RecordHome" component={RecordScreen} />
-      <RecordStack.Screen name="RecordDetail" component={RecordDetailScreen} />
-    </RecordStack.Navigator>
-  );
+  const [detailParams, setDetailParams] = React.useState(null);
+  const navigation = React.useMemo(() => ({
+    navigate: (name, params) => {
+      if (name === 'RecordDetail') {
+        setDetailParams(params || {});
+      }
+    },
+    goBack: () => setDetailParams(null),
+  }), []);
+
+  if (detailParams) {
+    return <RecordDetailScreen navigation={navigation} route={makeRoute(detailParams)} />;
+  }
+
+  return <RecordScreen navigation={navigation} />;
 }
 
 function MainTabs() {
   const { t } = useI18n();
   const { colors, isDark } = useTheme();
   const nativeTabsEnabled = isNativeTabsEnabled();
+  const [activeTab, setActiveTab] = React.useState('Home');
+
+  if (__DEV__) {
+    const tabs = [
+      { name: 'Home', title: t('tabs.home'), component: <HomeScreen /> },
+      { name: 'Record', title: t('tabs.record'), component: <RecordStackNavigator /> },
+      { name: 'Store', title: t('tabs.store'), component: <StoreScreen /> },
+      { name: 'Profile', title: t('tabs.profile'), component: <ProfileScreen /> },
+    ];
+    const active = tabs.find((tab) => tab.name === activeTab) || tabs[0];
+
+    return (
+      <View style={[styles.tabShell, { backgroundColor: colors.background }]}>
+        <View style={styles.tabContent}>{active.component}</View>
+        <View style={[styles.manualTabBar, { backgroundColor: colors.tab, borderTopColor: colors.borderStrong }]}>
+          {tabs.map((tab) => {
+            const selected = tab.name === active.name;
+            const [activeIcon, inactiveIcon] = tabIcons[tab.name].fallback;
+            return (
+              <Pressable
+                key={tab.name}
+                onPress={() => setActiveTab(tab.name)}
+                style={styles.manualTabButton}
+              >
+                <Ionicons
+                  color={selected ? colors.primary : colors.textMuted}
+                  name={selected ? activeIcon : inactiveIcon}
+                  size={22}
+                />
+                <Text style={[styles.manualTabLabel, { color: selected ? colors.primary : colors.textMuted }]}>
+                  {tab.title}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+
   const sharedTabOptions = {
     tabBarActiveTintColor: colors.primary,
     tabBarInactiveTintColor: colors.textMuted,
@@ -112,6 +156,7 @@ function MainTabs() {
 
   return (
     <Tab.Navigator
+      detachInactiveScreens={false}
       screenOptions={({ route }) => ({
         ...sharedTabOptions,
         ...(nativeTabsEnabled ? nativeTabOptions : fallbackTabOptions),
@@ -132,6 +177,25 @@ function MainTabs() {
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t('tabs.profile') }} />
     </Tab.Navigator>
   );
+}
+
+function AuthFlow() {
+  const [screen, setScreen] = React.useState('Login');
+  const navigation = React.useMemo(() => ({
+    navigate: (name) => setScreen(name),
+    replace: (name) => setScreen(name),
+    goBack: () => setScreen('Login'),
+  }), []);
+
+  if (screen === 'Register') {
+    return <RegisterScreen navigation={navigation} />;
+  }
+
+  if (screen === 'VerifyEmail') {
+    return <VerifyEmailScreen navigation={navigation} route={makeRoute()} />;
+  }
+
+  return <LoginScreen navigation={navigation} />;
 }
 
 export default function AppNavigator() {
@@ -157,41 +221,33 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer
-      theme={{
-        ...navigationTheme,
-        colors: {
-          ...navigationTheme.colors,
-          background: colors.background,
-          border: colors.border,
-          card: colors.surfaceStrong,
-          notification: colors.primary,
-          primary: colors.primary,
-          text: colors.text,
-        },
-      }}
-    >
+    <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
-          requiresEmailVerification ? (
-            <Stack.Screen
-              name="VerifyEmail"
-              component={VerifyEmailScreen}
-              initialParams={{ email: verificationEmail || '' }}
-            />
-          ) : (
-            <Stack.Screen name="Main" component={MainTabs} />
-          )
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+      {isAuthenticated && !requiresEmailVerification && __DEV__ ? (
+        <MainTabs />
+      ) : isAuthenticated && !requiresEmailVerification ? (
+        <NavigationContainer
+          theme={{
+            ...navigationTheme,
+            colors: {
+              ...navigationTheme.colors,
+              background: colors.background,
+              border: colors.border,
+              card: colors.surfaceStrong,
+              notification: colors.primary,
+              primary: colors.primary,
+              text: colors.text,
+            },
+          }}
+        >
+          <MainTabs />
+        </NavigationContainer>
+      ) : requiresEmailVerification ? (
+        <VerifyEmailScreen route={makeRoute({ email: verificationEmail || '' })} />
+      ) : (
+        <AuthFlow />
+      )}
+    </>
   );
 }
 
@@ -200,5 +256,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
+  },
+  manualTabBar: {
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    minHeight: 72,
+    paddingBottom: 10,
+    paddingTop: 8,
+  },
+  manualTabButton: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 3,
+    justifyContent: 'center',
+  },
+  manualTabLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  tabContent: {
+    flex: 1,
+  },
+  tabShell: {
+    flex: 1,
   },
 });

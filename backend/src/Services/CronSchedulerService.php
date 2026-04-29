@@ -49,7 +49,8 @@ class CronSchedulerService
         private SupportRoutingEngineService $supportRoutingEngineService,
         private BadgeService $badgeService,
         private LeaderboardService $leaderboardService,
-        private StreakLeaderboardService $streakLeaderboardService
+        private StreakLeaderboardService $streakLeaderboardService,
+        private bool $cronEndpointAuditLogsEnabled = false
     ) {
     }
 
@@ -195,30 +196,32 @@ class CronSchedulerService
             }
         }
 
-        try {
-            $this->auditLogService->logSystemEvent('cron_scheduler_batch_completed', 'cron_scheduler', [
-                'status' => !empty($response['failed']) || !empty($response['skipped']) ? 'failed' : 'success',
-                'request_method' => 'SYSTEM',
-                'endpoint' => '/cron/run',
-                'request_id' => $context['request_id'] ?? null,
-                'request_data' => [
-                    'trigger_source' => $triggerSource,
-                    'due_count' => count($response['due']),
-                    'executed_count' => count($response['executed']),
-                    'failed_count' => count($response['failed']),
-                    'skipped_count' => count($response['skipped']),
-                ],
-            ]);
-        } catch (\Throwable $exception) {
-            $this->logNonCriticalPostRunFailure(
-                'Cron scheduler batch audit logging failed',
-                'batch',
-                $triggerSource,
-                $context,
-                $exception,
-                '/cron/run',
-                'cron_scheduler_batch_logging_failed'
-            );
+        if ($this->shouldWriteAuditLogs($triggerSource)) {
+            try {
+                $this->auditLogService->logSystemEvent('cron_scheduler_batch_completed', 'cron_scheduler', [
+                    'status' => !empty($response['failed']) || !empty($response['skipped']) ? 'failed' : 'success',
+                    'request_method' => 'SYSTEM',
+                    'endpoint' => '/cron/run',
+                    'request_id' => $context['request_id'] ?? null,
+                    'request_data' => [
+                        'trigger_source' => $triggerSource,
+                        'due_count' => count($response['due']),
+                        'executed_count' => count($response['executed']),
+                        'failed_count' => count($response['failed']),
+                        'skipped_count' => count($response['skipped']),
+                    ],
+                ]);
+            } catch (\Throwable $exception) {
+                $this->logNonCriticalPostRunFailure(
+                    'Cron scheduler batch audit logging failed',
+                    'batch',
+                    $triggerSource,
+                    $context,
+                    $exception,
+                    '/cron/run',
+                    'cron_scheduler_batch_logging_failed'
+                );
+            }
         }
 
         return $response;
@@ -300,27 +303,29 @@ class CronSchedulerService
                 $this->logNonCriticalPostRunFailure('Cron task run-history persistence failed', $taskKey, $triggerSource, $context, $persistenceException);
             }
 
-            try {
-                $this->auditLogService->logSystemEvent('cron_task_run_completed', 'cron_scheduler', [
-                    'status' => 'success',
-                    'request_method' => 'SYSTEM',
-                    'endpoint' => '/internal/cron/' . $taskKey,
-                    'request_id' => $context['request_id'] ?? null,
-                    'request_data' => [
-                        'task_key' => $taskKey,
-                        'trigger_source' => $triggerSource,
-                        'duration_ms' => $durationMs,
-                    ],
-                    'new_data' => $result,
-                ]);
-            } catch (\Throwable $loggingException) {
-                $this->logNonCriticalPostRunFailure(
-                    'Cron task completion audit logging failed',
-                    $taskKey,
-                    $triggerSource,
-                    $context,
-                    $loggingException
-                );
+            if ($this->shouldWriteAuditLogs($triggerSource)) {
+                try {
+                    $this->auditLogService->logSystemEvent('cron_task_run_completed', 'cron_scheduler', [
+                        'status' => 'success',
+                        'request_method' => 'SYSTEM',
+                        'endpoint' => '/internal/cron/' . $taskKey,
+                        'request_id' => $context['request_id'] ?? null,
+                        'request_data' => [
+                            'task_key' => $taskKey,
+                            'trigger_source' => $triggerSource,
+                            'duration_ms' => $durationMs,
+                        ],
+                        'new_data' => $result,
+                    ]);
+                } catch (\Throwable $loggingException) {
+                    $this->logNonCriticalPostRunFailure(
+                        'Cron task completion audit logging failed',
+                        $taskKey,
+                        $triggerSource,
+                        $context,
+                        $loggingException
+                    );
+                }
             }
 
             return [
@@ -394,27 +399,29 @@ class CronSchedulerService
             }
 
             $this->logTaskException($taskKey, $triggerSource, $context, $exception);
-            try {
-                $this->auditLogService->logSystemEvent('cron_task_run_failed', 'cron_scheduler', [
-                    'status' => 'failed',
-                    'request_method' => 'SYSTEM',
-                    'endpoint' => '/internal/cron/' . $taskKey,
-                    'request_id' => $context['request_id'] ?? null,
-                    'request_data' => [
-                        'task_key' => $taskKey,
-                        'trigger_source' => $triggerSource,
-                        'duration_ms' => $durationMs,
-                    ],
-                    'data' => ['error' => $errorMessage],
-                ]);
-            } catch (\Throwable $loggingException) {
-                $this->logNonCriticalPostRunFailure(
-                    'Cron task failure audit logging failed',
-                    $taskKey,
-                    $triggerSource,
-                    $context,
-                    $loggingException
-                );
+            if ($this->shouldWriteAuditLogs($triggerSource)) {
+                try {
+                    $this->auditLogService->logSystemEvent('cron_task_run_failed', 'cron_scheduler', [
+                        'status' => 'failed',
+                        'request_method' => 'SYSTEM',
+                        'endpoint' => '/internal/cron/' . $taskKey,
+                        'request_id' => $context['request_id'] ?? null,
+                        'request_data' => [
+                            'task_key' => $taskKey,
+                            'trigger_source' => $triggerSource,
+                            'duration_ms' => $durationMs,
+                        ],
+                        'data' => ['error' => $errorMessage],
+                    ]);
+                } catch (\Throwable $loggingException) {
+                    $this->logNonCriticalPostRunFailure(
+                        'Cron task failure audit logging failed',
+                        $taskKey,
+                        $triggerSource,
+                        $context,
+                        $loggingException
+                    );
+                }
             }
 
             return [
@@ -459,26 +466,28 @@ class CronSchedulerService
             );
         }
 
-        try {
-            $this->auditLogService->logSystemEvent('cron_task_run_skipped', 'cron_scheduler', [
-                'status' => 'skipped',
-                'request_method' => 'SYSTEM',
-                'endpoint' => '/internal/cron/' . $task->task_key,
-                'request_id' => $context['request_id'] ?? null,
-                'request_data' => [
-                    'task_key' => $task->task_key,
-                    'trigger_source' => $triggerSource,
-                    'reason' => $reason,
-                ],
-            ]);
-        } catch (\Throwable $loggingException) {
-            $this->logNonCriticalPostRunFailure(
-                'Cron task skipped audit logging failed',
-                (string) $task->task_key,
-                $triggerSource,
-                $context,
-                $loggingException
-            );
+        if ($this->shouldWriteAuditLogs($triggerSource)) {
+            try {
+                $this->auditLogService->logSystemEvent('cron_task_run_skipped', 'cron_scheduler', [
+                    'status' => 'skipped',
+                    'request_method' => 'SYSTEM',
+                    'endpoint' => '/internal/cron/' . $task->task_key,
+                    'request_id' => $context['request_id'] ?? null,
+                    'request_data' => [
+                        'task_key' => $task->task_key,
+                        'trigger_source' => $triggerSource,
+                        'reason' => $reason,
+                    ],
+                ]);
+            } catch (\Throwable $loggingException) {
+                $this->logNonCriticalPostRunFailure(
+                    'Cron task skipped audit logging failed',
+                    (string) $task->task_key,
+                    $triggerSource,
+                    $context,
+                    $loggingException
+                );
+            }
         }
 
         return [
@@ -980,31 +989,33 @@ class CronSchedulerService
             );
         }
 
-        try {
-            $this->auditLogService->logSystemEvent('cron_task_run_failed', 'cron_scheduler', [
-                'status' => 'failed',
-                'request_method' => 'SYSTEM',
-                'endpoint' => '/internal/cron/' . $taskKey,
-                'request_id' => $context['request_id'] ?? null,
-                'request_data' => [
-                    'task_key' => $taskKey,
-                    'trigger_source' => $triggerSource,
-                    'duration_ms' => $durationMs,
-                    'reason' => $errorMessage,
-                ],
-                'data' => [
-                    'error' => $errorMessage,
-                    'result' => $runPayload,
-                ],
-            ]);
-        } catch (\Throwable $loggingException) {
-            $this->logNonCriticalPostRunFailure(
-                'Cron task stale-completion audit logging failed',
-                $taskKey,
-                $triggerSource,
-                $context,
-                $loggingException
-            );
+        if ($this->shouldWriteAuditLogs($triggerSource)) {
+            try {
+                $this->auditLogService->logSystemEvent('cron_task_run_failed', 'cron_scheduler', [
+                    'status' => 'failed',
+                    'request_method' => 'SYSTEM',
+                    'endpoint' => '/internal/cron/' . $taskKey,
+                    'request_id' => $context['request_id'] ?? null,
+                    'request_data' => [
+                        'task_key' => $taskKey,
+                        'trigger_source' => $triggerSource,
+                        'duration_ms' => $durationMs,
+                        'reason' => $errorMessage,
+                    ],
+                    'data' => [
+                        'error' => $errorMessage,
+                        'result' => $runPayload,
+                    ],
+                ]);
+            } catch (\Throwable $loggingException) {
+                $this->logNonCriticalPostRunFailure(
+                    'Cron task stale-completion audit logging failed',
+                    $taskKey,
+                    $triggerSource,
+                    $context,
+                    $loggingException
+                );
+            }
         }
 
         $freshTask = $this->findTask($taskKey);
@@ -1026,6 +1037,11 @@ class CronSchedulerService
     private function now(): string
     {
         return (new DateTimeImmutable('now', new DateTimeZone('Asia/Shanghai')))->format('Y-m-d H:i:s');
+    }
+
+    private function shouldWriteAuditLogs(string $triggerSource): bool
+    {
+        return $triggerSource !== 'cron_endpoint' || $this->cronEndpointAuditLogsEnabled;
     }
 
     private function addMinutes(string $dateTime, int $minutes): string

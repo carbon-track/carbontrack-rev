@@ -1,4 +1,5 @@
 import apiClient from './client';
+import { withMobileProofOfWork } from './pow';
 
 const unwrap = (response) => response.data?.data ?? response.data;
 
@@ -53,7 +54,8 @@ export const carbonApi = {
       type: image.mimeType || 'image/jpeg',
     });
 
-    return unwrap(await apiClient.post('/carbon-records', formData, {
+    const protectedFormData = await withMobileProofOfWork('carbon.record.submit', formData);
+    return unwrap(await apiClient.post('/carbon-records', protectedFormData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }));
   },

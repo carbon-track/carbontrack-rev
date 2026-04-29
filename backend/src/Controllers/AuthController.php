@@ -9,6 +9,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use CarbonTrack\Services\AuthService;
 use CarbonTrack\Services\EmailService;
 use CarbonTrack\Services\TurnstileService;
+use CarbonTrack\Services\ProofOfWorkService;
 use CarbonTrack\Services\AuditLogService;
 use CarbonTrack\Services\ErrorLogService;
 use CarbonTrack\Services\MessageService;
@@ -25,6 +26,7 @@ class AuthController
     private AuthService $authService;
     private EmailService $emailService;
     private TurnstileService $turnstileService;
+    private ProofOfWorkService $proofOfWorkService;
     private AuditLogService $auditLogService;
     private ?ErrorLogService $errorLogService;
     private MessageService $messageService;
@@ -51,11 +53,20 @@ class AuthController
         ErrorLogService $errorLogService = null,
         RegionService $regionService,
         ?CheckinService $checkinService = null,
-        ?UserProfileViewService $userProfileViewService = null
+        ?UserProfileViewService $userProfileViewService = null,
+        ?ProofOfWorkService $proofOfWorkService = null
     ) {
         $this->authService = $authService;
         $this->emailService = $emailService;
         $this->turnstileService = $turnstileService;
+        $this->proofOfWorkService = $proofOfWorkService ?? new ProofOfWorkService(
+            $_ENV['POW_SECRET'] ?? ($_ENV['JWT_SECRET'] ?? ''),
+            $logger,
+            $auditLogService,
+            $errorLogService,
+            (int)($_ENV['POW_DIFFICULTY'] ?? 16),
+            (int)($_ENV['POW_TTL_SECONDS'] ?? 120)
+        );
         $this->auditLogService = $auditLogService;
         $this->messageService = $messageService;
         $this->r2Service = $r2Service;
@@ -65,6 +76,47 @@ class AuthController
         $this->regionService = $regionService;
         $this->checkinService = $checkinService;
         $this->userProfileViewService = $userProfileViewService ?? new UserProfileViewService($regionService);
+    }
+
+    public function createProofOfWorkChallenge(Request $request, Response $response): Response
+    {
+        try {
+            $data = $request->getParsedBody() ?? [];
+            $scope = is_string($data['scope'] ?? null) ? trim($data['scope']) : '';
+            $allowedScopes = [
+                'auth.login',
+                'auth.register',
+                'auth.send_verification_code',
+                'auth.verify_email',
+                'auth.forgot_password',
+                'carbon.record.submit',
+                'user.profile.school_change',
+                'support.ticket.create',
+                'support.ticket.reply',
+            ];
+
+            if (!in_array($scope, $allowedScopes, true)) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'message' => 'Invalid proof-of-work scope',
+                    'code' => 'INVALID_POW_SCOPE',
+                ], 400);
+            }
+
+            return $this->jsonResponse($response, [
+                'success' => true,
+                'message' => 'Proof-of-work challenge created',
+                'data' => $this->proofOfWorkService->createChallenge($scope),
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Proof-of-work challenge creation failed', ['error' => $e->getMessage()]);
+            try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'message' => 'Failed to create proof-of-work challenge',
+                'code' => 'POW_CHALLENGE_FAILED',
+            ], 500);
+        }
     }
 
     public function register(Request $request, Response $response): Response
@@ -88,11 +140,12 @@ class AuthController
                     'code' => 'PASSWORD_MISMATCH'
                 ], 400);
             }
-            if (!$this->isTurnstileVerificationSuccessful($data['cf_turnstile_response'] ?? null)) {
+            $challenge = $this->verifyClientChallenge($request, $data, 'auth.register');
+            if (!$challenge['success']) {
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'message' => 'Turnstile verification failed',
-                    'code' => 'TURNSTILE_FAILED'
+                    'message' => $challenge['message'],
+                    'code' => $challenge['code']
                 ], 400);
             }
             $stmt = $this->db->prepare('SELECT id FROM users WHERE username = ? AND deleted_at IS NULL');
@@ -246,14 +299,13 @@ class AuthController
                     'code' => 'MISSING_CREDENTIALS'
                 ], 400);
             }
-            if (!empty($data['cf_turnstile_response'])) {
-                if (!$this->isTurnstileVerificationSuccessful($data['cf_turnstile_response'])) {
-                    return $this->jsonResponse($response, [
-                        'success' => false,
-                        'message' => 'Turnstile verification failed',
-                        'code' => 'TURNSTILE_FAILED'
-                    ], 400);
-                }
+            $challenge = $this->verifyClientChallenge($request, $data, 'auth.login');
+            if (!$challenge['success']) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'message' => $challenge['message'],
+                    'code' => $challenge['code']
+                ], 400);
             }
             $isEmail = filter_var($identifier, FILTER_VALIDATE_EMAIL) !== false;
             $field = $isEmail ? 'u.email' : 'u.username';
@@ -477,11 +529,12 @@ class AuthController
                 ], 400);
             }
 
-            if (!$this->isTurnstileVerificationSuccessful($data['cf_turnstile_response'] ?? null)) {
+            $challenge = $this->verifyClientChallenge($request, $data, 'auth.send_verification_code');
+            if (!$challenge['success']) {
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'message' => 'Turnstile verification failed',
-                    'code' => 'TURNSTILE_FAILED'
+                    'message' => $challenge['message'],
+                    'code' => $challenge['code']
                 ], 400);
             }
 
@@ -571,11 +624,12 @@ class AuthController
                 $stmt = $this->db->prepare('SELECT id, username, email, email_verified_at, verification_code_expires_at FROM users WHERE verification_token = ? AND deleted_at IS NULL LIMIT 1');
                 $stmt->execute([$token]);
             } else {
-                if (!$this->isTurnstileVerificationSuccessful($data['cf_turnstile_response'] ?? null)) {
+                $challenge = $this->verifyClientChallenge($request, $data, 'auth.verify_email');
+                if (!$challenge['success']) {
                     return $this->jsonResponse($response, [
                         'success' => false,
-                        'message' => 'Turnstile verification failed',
-                        'code' => 'TURNSTILE_FAILED'
+                        'message' => $challenge['message'],
+                        'code' => $challenge['code']
                     ], 400);
                 }
 
@@ -730,11 +784,12 @@ class AuthController
                     'code' => 'MISSING_EMAIL'
                 ], 400);
             }
-            if (!$this->isTurnstileVerificationSuccessful($data['cf_turnstile_response'] ?? null)) {
+            $challenge = $this->verifyClientChallenge($request, $data, 'auth.forgot_password');
+            if (!$challenge['success']) {
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'message' => 'Turnstile verification failed',
-                    'code' => 'TURNSTILE_FAILED'
+                    'message' => $challenge['message'],
+                    'code' => $challenge['code']
                 ], 400);
             }
             $stmt = $this->db->prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL');
@@ -1291,6 +1346,70 @@ class AuthController
         $verification = $this->turnstileService->verify($token);
 
         return is_array($verification) && !empty($verification['success']);
+    }
+
+    private function verifyClientChallenge(Request $request, array $data, string $scope): array
+    {
+        if ($this->shouldUseMobileProofOfWork($request, $data)) {
+            $verification = $this->proofOfWorkService->verify(
+                $data['pow_challenge'] ?? null,
+                $data['pow_nonce'] ?? null,
+                $scope
+            );
+
+            if (!empty($verification['success'])) {
+                return ['success' => true];
+            }
+
+            $this->logChallengeFailure('pow_challenge_failed', $request, $scope, $verification['error'] ?? null);
+            return [
+                'success' => false,
+                'message' => 'Proof-of-work verification failed',
+                'code' => 'POW_FAILED',
+            ];
+        }
+
+        if ($this->isTurnstileVerificationSuccessful($data['cf_turnstile_response'] ?? null)) {
+            return ['success' => true];
+        }
+
+        $this->logChallengeFailure('turnstile_challenge_failed', $request, $scope);
+        return [
+            'success' => false,
+            'message' => 'Turnstile verification failed',
+            'code' => 'TURNSTILE_FAILED',
+        ];
+    }
+
+    private function shouldUseMobileProofOfWork(Request $request, array $data): bool
+    {
+        $clientType = strtolower(trim((string)($data['client_type'] ?? $request->getHeaderLine('X-Client-Platform'))));
+        if ($clientType !== 'mobile') {
+            return false;
+        }
+
+        // Browser-originated requests must stay on Turnstile even if a caller spoofs client_type.
+        return trim($request->getHeaderLine('Origin')) === '';
+    }
+
+    private function logChallengeFailure(string $action, Request $request, string $scope, ?string $reason = null): void
+    {
+        try {
+            $this->auditLogService->log([
+                'action' => $action,
+                'operation_category' => 'security',
+                'actor_type' => 'anonymous',
+                'status' => 'failed',
+                'data' => [
+                    'scope' => $scope,
+                    'reason' => $reason,
+                    'ip_address' => $this->getClientIP($request),
+                    'user_agent' => $request->getHeaderLine('User-Agent'),
+                ],
+            ]);
+        } catch (\Throwable $ignore) {
+            // ignore audit failures for challenge rejection
+        }
     }
 
     private function updateVerificationAttempts(int $userId, int $attempts): void

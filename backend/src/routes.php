@@ -114,6 +114,12 @@ return function (App $app) {
         });
     };
 
+    $registerSecurityRoutes = function (RouteCollectorProxy $group) {
+        $group->group('/security', function (RouteCollectorProxy $security) {
+            $security->post('/pow/challenge', [AuthController::class, 'createProofOfWorkChallenge']);
+        });
+    };
+
     $registerUserRoutes = function (RouteCollectorProxy $group) {
         $group->group(PATH_USERS, function (RouteCollectorProxy $users) {
             $users->get('/me', [UserController::class, 'getCurrentUser']);
@@ -384,6 +390,7 @@ return function (App $app) {
     $app->group(API_V1_PREFIX, function (RouteCollectorProxy $group) use (
         $registerApiV1Root,
         $registerAuthRoutes,
+        $registerSecurityRoutes,
         $registerUserRoutes,
         $registerAvatarRoutes,
         $registerBadgeRoutes,
@@ -401,6 +408,7 @@ return function (App $app) {
     ) {
         $registerApiV1Root($group);
         $registerAuthRoutes($group);
+        $registerSecurityRoutes($group);
         $registerUserRoutes($group);
         $registerAvatarRoutes($group);
         $registerBadgeRoutes($group);
