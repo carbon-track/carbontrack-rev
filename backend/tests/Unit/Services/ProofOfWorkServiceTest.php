@@ -12,6 +12,9 @@ use PHPUnit\Framework\TestCase;
 
 class ProofOfWorkServiceTest extends TestCase
 {
+    private const SOLVE_MAX_ATTEMPTS = 1000000;
+    private const SOLVE_TIMEOUT_SECONDS = 2;
+
     public function testCreatesAndVerifiesChallenge(): void
     {
         $service = $this->makeService(8);
@@ -105,14 +108,20 @@ class ProofOfWorkServiceTest extends TestCase
 
     private function solve(string $challenge, int $difficulty): string
     {
-        for ($nonce = 0; $nonce < 1000000; $nonce++) {
+        $deadline = microtime(true) + self::SOLVE_TIMEOUT_SECONDS;
+
+        for ($nonce = 0; $nonce < self::SOLVE_MAX_ATTEMPTS && microtime(true) < $deadline; $nonce++) {
             $hash = hash('sha256', $challenge . ':' . $nonce, true);
             if ($this->hasLeadingZeroBits($hash, $difficulty)) {
                 return (string)$nonce;
             }
         }
 
-        $this->fail('Unable to solve proof-of-work challenge in test budget');
+        $this->fail(sprintf(
+            'Unable to solve proof-of-work challenge in %d attempts or %d seconds',
+            self::SOLVE_MAX_ATTEMPTS,
+            self::SOLVE_TIMEOUT_SECONDS
+        ));
     }
 
     private function hasLeadingZeroBits(string $hash, int $difficulty): bool

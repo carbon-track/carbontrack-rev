@@ -326,8 +326,12 @@ class ProofOfWorkService
                 'status' => $status,
                 'data' => $context,
             ]);
-        } catch (\Throwable $ignore) {
-            // ignore audit failures for proof-of-work service
+        } catch (\Throwable $auditError) {
+            $this->logger->warning('pow_audit_log_failed', [
+                'action' => $action,
+                'status' => $status,
+                'error' => $auditError->getMessage(),
+            ] + $context);
         }
     }
 
@@ -343,8 +347,12 @@ class ProofOfWorkService
         try {
             $request = SyntheticRequestFactory::fromContext('/internal/security/pow', 'POST', null, [], $context);
             $this->errorLogService->logException($e, $request, ['context_message' => $action] + $context);
-        } catch (\Throwable $ignore) {
-            // ignore error log failures for proof-of-work service
+        } catch (\Throwable $errorLogError) {
+            $this->logger->warning('pow_error_log_failed', [
+                'action' => $action,
+                'error' => $errorLogError->getMessage(),
+                'original_error' => $e->getMessage(),
+            ] + $context);
         }
     }
 }
