@@ -2,6 +2,7 @@ import apiClient from './client';
 import * as Crypto from 'expo-crypto';
 
 const MOBILE_CLIENT_TYPE = 'mobile';
+const HASH_BATCH_SIZE = 64;
 const YIELD_INTERVAL = 2048;
 
 const pause = () => new Promise((resolve) => {
@@ -38,14 +39,20 @@ export const solveProofOfWork = async (challenge, difficulty) => {
   }
 
   let nonce = Math.floor(Math.random() * 1000000);
+  let checked = 0;
   for (;;) {
-    const hash = await sha256Hex(`${challenge}:${nonce}`);
-    if (hasLeadingZeroBits(hash, targetDifficulty)) {
-      return String(nonce);
+    const batch = Array.from({ length: HASH_BATCH_SIZE }, (_, index) => nonce + index);
+    const hashes = await Promise.all(batch.map((candidate) => sha256Hex(`${challenge}:${candidate}`)));
+
+    for (let index = 0; index < hashes.length; index += 1) {
+      if (hasLeadingZeroBits(hashes[index], targetDifficulty)) {
+        return String(batch[index]);
+      }
     }
 
-    nonce += 1;
-    if (nonce % YIELD_INTERVAL === 0) {
+    nonce += HASH_BATCH_SIZE;
+    checked += HASH_BATCH_SIZE;
+    if (checked % YIELD_INTERVAL === 0) {
       await pause();
     }
   }
