@@ -1166,8 +1166,8 @@ function WorkspaceSectionButton({ active, icon, label, count, onClick }) {
 function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
   const event = item?.event;
   const data = item?.data || {};
-  const hasToolInput = data.arguments !== undefined && data.arguments !== null && data.arguments !== '';
-  const hasToolResult = data.result !== undefined && data.result !== null && data.result !== '';
+  const hasToolInput = data.arguments != null && data.arguments !== '';
+  const hasToolResult = data.result != null && data.result !== '';
 
   if (event === 'run.started') {
     return (
