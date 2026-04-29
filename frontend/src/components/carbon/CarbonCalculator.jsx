@@ -26,7 +26,7 @@ export function CarbonCalculator() {
   const [error, setError] = useState('');
   const turnstileRef = useRef(null);
   const [turnstileToken, setTurnstileToken] = useState('');
-  const requiresTurnstile = Boolean(import.meta.env?.VITE_TURNSTILE_SITE_KEY);
+  const requiresTurnstile = true;
 
   const checkinDate = useMemo(() => {
     const raw = searchParams.get('checkin_date');
