@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { sha256Hex } from '../lib/sha256';
+import * as Crypto from 'expo-crypto';
 
 const MOBILE_CLIENT_TYPE = 'mobile';
 const YIELD_INTERVAL = 2048;
@@ -26,6 +26,11 @@ const hasLeadingZeroBits = (hex, difficulty) => {
   return (nibble & mask) === 0;
 };
 
+const sha256Hex = (message) => Crypto.digestStringAsync(
+  Crypto.CryptoDigestAlgorithm.SHA256,
+  message,
+);
+
 export const solveProofOfWork = async (challenge, difficulty) => {
   const targetDifficulty = Number(difficulty);
   if (!challenge || !Number.isFinite(targetDifficulty) || targetDifficulty < 1) {
@@ -34,7 +39,7 @@ export const solveProofOfWork = async (challenge, difficulty) => {
 
   let nonce = Math.floor(Math.random() * 1000000);
   for (;;) {
-    const hash = sha256Hex(`${challenge}:${nonce}`);
+    const hash = await sha256Hex(`${challenge}:${nonce}`);
     if (hasLeadingZeroBits(hash, targetDifficulty)) {
       return String(nonce);
     }

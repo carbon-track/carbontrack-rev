@@ -451,16 +451,9 @@ class AuthController
                 ], 401);
             }
 
-            $decodedUser = (array)($payload['user'] ?? []);
-            $userId = isset($decodedUser['id']) ? (int) $decodedUser['id'] : 0;
-            $userUuid = isset($decodedUser['uuid']) && Uuid::isValid((string)$decodedUser['uuid'])
-                ? strtolower((string)$decodedUser['uuid'])
-                : null;
-            if ($userId <= 0 && isset($payload['sub']) && ctype_digit((string)$payload['sub'])) {
-                $userId = (int)$payload['sub'];
-            } elseif ($userUuid === null && isset($payload['sub']) && Uuid::isValid((string)$payload['sub'])) {
-                $userUuid = strtolower((string)$payload['sub']);
-            }
+            $identity = $this->extractUserIdentityFromPayload($payload);
+            $userId = $identity['id'];
+            $userUuid = $identity['uuid'];
             $userDetail = $userId > 0 ? $this->findUserDetailed($userId) : null;
             if ($userDetail === null && $userUuid !== null) {
                 $userDetail = $this->findUserDetailedByUuid($userUuid);
@@ -475,7 +468,7 @@ class AuthController
                 ], 401);
             }
 
-            $refreshedToken = $this->authService->refreshToken($token);
+            $refreshedToken = $this->authService->refreshToken($token, $payload, $userDetail);
             if ($refreshedToken === null) {
                 $this->logTokenRefreshFailure($request, $userId > 0 ? $userId : null, 'INVALID_TOKEN');
                 return $this->jsonResponse($response, [
@@ -485,9 +478,9 @@ class AuthController
                 ], 401);
             }
 
-            if ($refreshedToken !== $token) {
-                $refreshedToken = $this->authService->generateToken($userDetail);
-            }
+            $expiresIn = $refreshedToken === $token
+                ? $this->authService->getTokenRemainingTimeFromPayload($payload)
+                : $this->authService->getTokenRemainingTime($refreshedToken);
 
             $this->auditLogService->logAuthOperation('token_refresh', $userId, true, [
                 'ip_address' => $this->getClientIP($request),
@@ -501,7 +494,7 @@ class AuthController
                 'data' => [
                     'token' => $refreshedToken,
                     'user' => $this->formatUserPayload($userDetail),
-                    'expires_in' => $this->authService->getTokenRemainingTime($refreshedToken)
+                    'expires_in' => $expiresIn
                 ]
             ]);
         } catch (\Throwable $e) {
@@ -513,6 +506,24 @@ class AuthController
                 'code' => 'TOKEN_REFRESH_FAILED'
             ], 500);
         }
+    }
+
+    private function extractUserIdentityFromPayload(array $payload): array
+    {
+        $decodedUser = (array)($payload['user'] ?? []);
+        $userId = isset($decodedUser['id']) ? (int)$decodedUser['id'] : 0;
+        $userUuid = isset($decodedUser['uuid']) && Uuid::isValid((string)$decodedUser['uuid'])
+            ? strtolower((string)$decodedUser['uuid'])
+            : null;
+        $subject = isset($payload['sub']) ? trim((string)$payload['sub']) : '';
+
+        if ($userId <= 0 && $subject !== '' && ctype_digit($subject)) {
+            $userId = (int)$subject;
+        } elseif ($userUuid === null && $subject !== '' && Uuid::isValid($subject)) {
+            $userUuid = strtolower($subject);
+        }
+
+        return ['id' => $userId, 'uuid' => $userUuid];
     }
 
     public function sendVerificationCode(Request $request, Response $response): Response

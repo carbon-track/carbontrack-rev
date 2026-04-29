@@ -129,6 +129,9 @@ class AuthService
             'uuid' => $normalizedUser['uuid'] ?? null,
             'email' => $normalizedUser['email'] ?? null,
             'role' => $normalizedUser['role'] ?? 'user',
+            'sub' => $subject,
+            'iat' => isset($decoded['iat']) ? (int)$decoded['iat'] : null,
+            'exp' => isset($decoded['exp']) ? (int)$decoded['exp'] : null,
             'user' => $normalizedUser,
         ];
     }
@@ -362,9 +365,9 @@ class AuthService
     /**
      * 刷新令牌
      */
-    public function refreshToken(string $token): ?string
+    public function refreshToken(string $token, ?array $decoded = null, ?array $user = null): ?string
     {
-        $decoded = $this->verifyToken($token);
+        $decoded = $decoded ?? $this->verifyToken($token);
         
         if (!$decoded || $this->isTokenExpired($decoded)) {
             return null;
@@ -374,7 +377,7 @@ class AuthService
             return $token;
         }
 
-        $user = isset($decoded['user']) ? (array)$decoded['user'] : [];
+        $user = $user ?? (isset($decoded['user']) ? (array)$decoded['user'] : []);
         $subject = isset($decoded['sub']) ? trim((string)$decoded['sub']) : '';
         if ($user === [] && $subject !== '') {
             if (Uuid::isValid($subject)) {
@@ -399,6 +402,15 @@ class AuthService
         $decoded = $this->verifyToken($token);
         
         if (!$decoded || !isset($decoded['exp'])) {
+            return null;
+        }
+
+        return $this->getTokenRemainingTimeFromPayload($decoded);
+    }
+
+    public function getTokenRemainingTimeFromPayload(array $decoded): ?int
+    {
+        if (!isset($decoded['exp'])) {
             return null;
         }
 
