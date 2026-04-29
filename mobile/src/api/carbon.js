@@ -55,9 +55,7 @@ export const carbonApi = {
     });
 
     const protectedFormData = await withMobileProofOfWork('carbon.record.submit', formData);
-    return unwrap(await apiClient.post('/carbon-records', protectedFormData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }));
+    return unwrap(await apiClient.post('/carbon-records', protectedFormData));
   },
 
   getRecords: async (params = {}) => {
