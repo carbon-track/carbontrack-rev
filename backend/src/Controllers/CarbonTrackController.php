@@ -1763,7 +1763,7 @@ class CarbonTrackController
                 ],
             ]);
         } catch (\Throwable $auditError) {
-            error_log('AuditLogService failed while logging rejected challenge: ' . $auditError->getMessage());
+            $this->logControllerException($auditError, $request, 'CarbonTrackController::logChallengeFailure audit log error');
         }
     }
 
