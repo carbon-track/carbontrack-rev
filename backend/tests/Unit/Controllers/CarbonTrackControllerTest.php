@@ -367,7 +367,7 @@ class CarbonTrackControllerTest extends TestCase
                 ?string $recordId = null,
                 ?\DateTimeInterface $createdAt = null
             ): bool {
-                return false;
+                throw new \RuntimeException('simulated checkin write failure');
             }
         };
 
