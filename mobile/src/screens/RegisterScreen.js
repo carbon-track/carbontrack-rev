@@ -11,6 +11,8 @@ import useAuthStore from '../store/authStore';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
 
+const SCHOOLS_QUERY_STALE_TIME_MS = 5 * 60 * 1000;
+
 export default function RegisterScreen({ navigation }) {
   const { t } = useI18n();
   const { colors } = useTheme();
@@ -32,7 +34,7 @@ export default function RegisterScreen({ navigation }) {
       const result = await schoolApi.list();
       return result.data?.schools || result.data || [];
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: SCHOOLS_QUERY_STALE_TIME_MS,
   });
 
   useEffect(() => {
