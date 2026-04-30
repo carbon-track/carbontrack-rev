@@ -134,6 +134,7 @@ class CarbonTrackController
 
             $checkinDate = null;
             $isMakeup = false;
+            $userModel = null;
             if (!empty($data['checkin_date'])) {
                 $checkinDate = $this->normalizeCheckinDate((string) $data['checkin_date']);
                 if (!$checkinDate) {
@@ -179,13 +180,7 @@ class CarbonTrackController
                         ], 401);
                     }
 
-                    if (!$this->quotaService->checkAndConsume($userModel, 'checkin_makeup', 1)) {
-                        return $this->json($response, [
-                            'error' => 'Makeup quota exceeded',
-                            'code' => 'QUOTA_EXCEEDED',
-                            'translation_key' => 'error.quota.exceeded'
-                        ], 429);
-                    }
+                    $data['date'] = $checkinDate;
                 }
             }
 
@@ -335,6 +330,29 @@ class CarbonTrackController
             }
 
             try {
+                if ($checkinDate && $isMakeup) {
+                    if ($this->checkinService->hasCheckin((int) $user['id'], $checkinDate)) {
+                        if ($this->db->inTransaction()) {
+                            $this->db->rollBack();
+                        }
+                        return $this->json($response, [
+                            'error' => 'Already checked in for this date',
+                            'code' => 'ALREADY_CHECKED_IN'
+                        ], 409);
+                    }
+
+                    if (!$userModel || !$this->quotaService->checkAndConsumeOnConnection($this->db, $userModel, 'checkin_makeup', 1)) {
+                        if ($this->db->inTransaction()) {
+                            $this->db->rollBack();
+                        }
+                        return $this->json($response, [
+                            'error' => 'Makeup quota exceeded',
+                            'code' => 'QUOTA_EXCEEDED',
+                            'translation_key' => 'error.quota.exceeded'
+                        ], 429);
+                    }
+                }
+
                 $recordId = $this->createCarbonRecord([
                     'user_id' => $user['id'],
                     'activity_id' => $data['activity_id'],

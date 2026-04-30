@@ -152,49 +152,77 @@ class CheckinController
                 ], 401);
             }
 
-            $recordStmt = $this->checkinService->getConnection()->prepare(
-                "SELECT id FROM carbon_records WHERE id = :rid AND user_id = :uid AND deleted_at IS NULL LIMIT 1"
-            );
-            $recordStmt->execute([
-                'rid' => $recordId,
-                'uid' => (int) $user['id'],
-            ]);
-            $recordExists = $recordStmt->fetchColumn();
-            $recordStmt->closeCursor();
-            if (!$recordExists) {
-                return $this->json($response, [
-                    'success' => false,
-                    'message' => 'Record not found',
-                    'code' => 'RECORD_NOT_FOUND',
-                ], 404);
-            }
-
             $normalizedDate = $date->format('Y-m-d');
-            if ($this->checkinService->hasCheckin((int) $user['id'], $normalizedDate)) {
-                return $this->json($response, [
-                    'success' => false,
-                    'message' => 'Already checked in for this date',
-                    'code' => 'ALREADY_CHECKED_IN',
-                ], 409);
-            }
-
-            if (!$this->quotaService->checkAndConsume($userModel, 'checkin_makeup', 1)) {
-                return $this->json($response, [
-                    'success' => false,
-                    'message' => 'Makeup quota exceeded',
-                    'code' => 'QUOTA_EXCEEDED',
-                    'translation_key' => 'error.quota.exceeded',
-                ], 429);
-            }
-
             $note = isset($body['note']) ? trim((string) $body['note']) : null;
-            $ok = $this->checkinService->createMakeupCheckin((int) $user['id'], $normalizedDate, $note, $recordId);
-            if (!$ok) {
-                return $this->json($response, [
-                    'success' => false,
-                    'message' => 'Failed to apply makeup checkin',
-                    'code' => 'CHECKIN_FAILED',
-                ], 500);
+            $db = $this->checkinService->getConnection();
+            $db->beginTransaction();
+
+            try {
+                $recordStmt = $db->prepare(
+                    "SELECT id FROM carbon_records WHERE id = :rid AND user_id = :uid AND deleted_at IS NULL LIMIT 1"
+                );
+                $recordStmt->execute([
+                    'rid' => $recordId,
+                    'uid' => (int) $user['id'],
+                ]);
+                $recordExists = $recordStmt->fetchColumn();
+                $recordStmt->closeCursor();
+                if (!$recordExists) {
+                    if ($db->inTransaction()) {
+                        $db->rollBack();
+                    }
+                    return $this->json($response, [
+                        'success' => false,
+                        'message' => 'Record not found',
+                        'code' => 'RECORD_NOT_FOUND',
+                    ], 404);
+                }
+
+                if ($this->checkinService->hasCheckin((int) $user['id'], $normalizedDate)) {
+                    if ($db->inTransaction()) {
+                        $db->rollBack();
+                    }
+                    return $this->json($response, [
+                        'success' => false,
+                        'message' => 'Already checked in for this date',
+                        'code' => 'ALREADY_CHECKED_IN',
+                    ], 409);
+                }
+
+                $updateRecordStmt = $db->prepare(
+                    "UPDATE carbon_records SET date = :cdate WHERE id = :rid AND user_id = :uid AND deleted_at IS NULL"
+                );
+                $updateRecordStmt->execute([
+                    'cdate' => $normalizedDate,
+                    'rid' => $recordId,
+                    'uid' => (int) $user['id'],
+                ]);
+
+                if (!$this->quotaService->checkAndConsumeOnConnection($db, $userModel, 'checkin_makeup', 1)) {
+                    if ($db->inTransaction()) {
+                        $db->rollBack();
+                    }
+                    return $this->json($response, [
+                        'success' => false,
+                        'message' => 'Makeup quota exceeded',
+                        'code' => 'QUOTA_EXCEEDED',
+                        'translation_key' => 'error.quota.exceeded',
+                    ], 429);
+                }
+
+                $ok = $this->checkinService->createMakeupCheckin((int) $user['id'], $normalizedDate, $note, $recordId);
+                if (!$ok) {
+                    throw new \RuntimeException('Failed to apply makeup checkin');
+                }
+
+                if ($db->inTransaction()) {
+                    $db->commit();
+                }
+            } catch (\Throwable $e) {
+                if ($db->inTransaction()) {
+                    $db->rollBack();
+                }
+                throw $e;
             }
 
             $this->auditLogService->logDataChange(
