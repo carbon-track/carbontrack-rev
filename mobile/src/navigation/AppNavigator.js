@@ -56,7 +56,6 @@ const createTabs = () => {
   }
   return { Navigator: createBottomTabNavigator(), nativeTabsEnabled: false };
 };
-const { Navigator: Tab, nativeTabsEnabled } = createTabs();
 
 const makeRoute = (params = {}) => ({ params });
 
@@ -100,6 +99,7 @@ function RecordStackNavigator() {
 function MainTabs() {
   const { t } = useI18n();
   const { colors, isDark } = useTheme();
+  const { Navigator: Tab, nativeTabsEnabled } = React.useMemo(createTabs, []);
 
   const sharedTabOptions = {
     tabBarActiveTintColor: colors.primary,
