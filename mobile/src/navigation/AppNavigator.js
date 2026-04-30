@@ -33,8 +33,6 @@ const hasNativeTabsHost = () => {
   }
 };
 
-let nativeTabsAvailable = false;
-
 const createTabs = () => {
   if (shouldUseNativeTabs() && !hasNativeTabsHost()) {
     if (__DEV__) {
@@ -46,17 +44,16 @@ const createTabs = () => {
     try {
       const { createNativeBottomTabNavigator } = require('@react-navigation/bottom-tabs/unstable');
       const navigator = createNativeBottomTabNavigator();
-      nativeTabsAvailable = true;
-      return navigator;
+      return { Navigator: navigator, nativeTabsEnabled: true };
     } catch (error) {
       if (__DEV__) {
         console.warn('Native iOS tabs unavailable; using JS tabs.', error);
       }
     }
   }
-  return createBottomTabNavigator();
+  return { Navigator: createBottomTabNavigator(), nativeTabsEnabled: false };
 };
-const Tab = createTabs();
+const { Navigator: Tab, nativeTabsEnabled } = createTabs();
 
 const makeRoute = (params = {}) => ({ params });
 
@@ -100,7 +97,6 @@ function RecordStackNavigator() {
 function MainTabs() {
   const { t } = useI18n();
   const { colors, isDark } = useTheme();
-  const nativeTabsEnabled = nativeTabsAvailable;
 
   const sharedTabOptions = {
     tabBarActiveTintColor: colors.primary,
