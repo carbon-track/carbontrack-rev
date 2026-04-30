@@ -401,6 +401,80 @@ class CarbonTrackControllerTest extends TestCase
         $this->assertFalse($pdo->query("SELECT counter FROM user_usage_stats WHERE user_id = " . (int) $user->id . " AND resource_key = 'checkin_makeup_monthly'")->fetchColumn());
     }
 
+    public function testSubmitRecordMakeupDeletesUploadedImagesWhenQuotaFails(): void
+    {
+        [$pdo, $user] = $this->makeRealCheckinDatabase(0);
+        $activityId = (string) $pdo->query("SELECT id FROM carbon_activities LIMIT 1")->fetchColumn();
+        $checkinDate = (new \DateTimeImmutable('now'))->modify('-5 days')->format('Y-m-d');
+
+        $calc = $this->getMockBuilder(CarbonCalculatorService::class)->disableOriginalConstructor()->getMock();
+        $calc->method('calculateCarbonSavings')->willReturn(['carbon_savings' => 1.0]);
+        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth->method('getCurrentUser')->willReturn(['id' => (int) $user->id, 'username' => $user->username]);
+        $auth->method('getCurrentUserModel')->willReturn($user);
+
+        $r2 = $this->getMockBuilder(\CarbonTrack\Services\CloudflareR2Service::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['uploadMultipleFiles', 'deleteFile'])
+            ->getMock();
+        $r2->expects($this->once())
+            ->method('uploadMultipleFiles')
+            ->willReturn([
+                'results' => [[
+                    'success' => true,
+                    'file_path' => 'activities/' . (int) $user->id . '/quota-proof.jpg',
+                    'public_url' => 'https://cdn.example/quota-proof.jpg',
+                    'original_name' => 'quota-proof.jpg',
+                    'mime_type' => 'image/jpeg',
+                    'file_size' => 16,
+                ]],
+            ]);
+        $r2->expects($this->once())
+            ->method('deleteFile')
+            ->with('activities/' . (int) $user->id . '/quota-proof.jpg', (int) $user->id)
+            ->willReturn(true);
+
+        $controller = $this->makeController(
+            $pdo,
+            $calc,
+            $msg,
+            $audit,
+            $auth,
+            null,
+            $r2,
+            new CheckinService($pdo, null, 'UTC'),
+            new QuotaService()
+        );
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'quota-proof-');
+        file_put_contents($tmpFile, 'proof');
+
+        try {
+            $uploaded = new \Slim\Psr7\UploadedFile($tmpFile, 'quota-proof.jpg', 'image/jpeg', filesize($tmpFile), UPLOAD_ERR_OK);
+            $request = (new \Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest('POST', '/carbon-track/record');
+            $request = $request->withUploadedFiles(['images' => [$uploaded]])->withParsedBody([
+                'activity_id' => $activityId,
+                'amount' => 1,
+                'date' => (new \DateTimeImmutable('now'))->format('Y-m-d'),
+                'checkin_date' => $checkinDate,
+            ]);
+            $response = new \Slim\Psr7\Response();
+            $resp = $controller->submitRecord($request, $response);
+        } finally {
+            if (is_file($tmpFile)) {
+                @unlink($tmpFile);
+            }
+        }
+
+        $payload = json_decode((string) $resp->getBody(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(429, $resp->getStatusCode());
+        $this->assertSame('QUOTA_EXCEEDED', $payload['code'] ?? null);
+        $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM carbon_records WHERE user_id = " . (int) $user->id)->fetchColumn());
+        $this->assertFalse($pdo->query("SELECT counter FROM user_usage_stats WHERE user_id = " . (int) $user->id . " AND resource_key = 'checkin_makeup_monthly'")->fetchColumn());
+    }
+
     public function testReviewRecordRejectFlow(): void
     {
         $pdo = new \PDO('sqlite::memory:');
