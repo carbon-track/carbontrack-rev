@@ -49,10 +49,16 @@ export default function DataInputForm({
     formState: { errors }
   } = useForm({
     defaultValues: {
-      activity_date: new Date().toISOString().split('T')[0],
+      activity_date: checkinDate || new Date().toISOString().split('T')[0],
       description: ''
     }
   });
+
+  useEffect(() => {
+    if (checkinDate) {
+      setValue('activity_date', checkinDate);
+    }
+  }, [checkinDate, setValue]);
 
   // Handle initial data from Smart Add
   useEffect(() => {
@@ -61,12 +67,12 @@ export default function DataInputForm({
       if (initialData.description) {
         setValue('description', initialData.description);
       }
-      if (initialData.activity_date) {
+      if (initialData.activity_date && !checkinDate) {
         setValue('activity_date', initialData.activity_date);
       }
       // Trigger calculation if needed, but the existing useEffect watches 'watchedData' which will update when we setValue
     }
-  }, [initialData, setValue]);
+  }, [checkinDate, initialData, setValue]);
 
   const watchedData = watch('data');
 
@@ -311,7 +317,7 @@ export default function DataInputForm({
     const payload = {
       activity_id: activity.id || activity.uuid,
       amount: parseFloat(data.data),
-      date: data.activity_date,
+      date: checkinDate || data.activity_date,
       description: data.description,
       images: (finalImages || []).map(i => ({ url: i.url, file_path: i.file_path, original_name: i.original_name, mime_type: i.mime_type, size: i.size }))
     };

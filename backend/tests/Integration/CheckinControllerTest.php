@@ -124,6 +124,10 @@ class CheckinControllerTest extends TestCase
         $this->assertSame($firstDate, $payload['data']['checkin_date']);
         $this->assertSame(1, (int) $payload['data']['makeup_quota']['used']);
         $this->assertSame(0, (int) $payload['data']['makeup_quota']['remaining']);
+        $this->assertSame(
+            $firstDate,
+            $this->pdo->query("SELECT date FROM carbon_records WHERE id = 'rec-makeup-1'")->fetchColumn()
+        );
 
         $secondRequest = makeRequest('POST', '/users/me/checkins/makeup', [
             'date' => $secondDate,
@@ -132,6 +136,65 @@ class CheckinControllerTest extends TestCase
         $secondResponse = new Response();
         $secondResult = $controller->makeup($secondRequest, $secondResponse);
         $this->assertSame(429, $secondResult->getStatusCode());
+    }
+
+    public function testMakeupCheckinAlreadyCheckedInDoesNotConsumeQuota(): void
+    {
+        $controller = $this->makeController();
+
+        $targetDate = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-2 days')->format('Y-m-d');
+        $activityId = (string) $this->pdo->query("SELECT id FROM carbon_activities LIMIT 1")->fetchColumn();
+        $insertRecord = $this->pdo->prepare("INSERT INTO carbon_records (id, user_id, activity_id, amount, unit, carbon_saved, points_earned, date, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))");
+        $insertRecord->execute(['rec-makeup-duplicate', $this->user->id, $activityId, 1, 'km', 0.1, 0, $targetDate]);
+        $this->checkinService->createMakeupCheckin((int) $this->user->id, $targetDate, 'existing', 'rec-existing');
+
+        $request = makeRequest('POST', '/users/me/checkins/makeup', [
+            'date' => $targetDate,
+            'record_id' => 'rec-makeup-duplicate',
+        ]);
+        $response = new Response();
+        $result = $controller->makeup($request, $response);
+
+        $this->assertSame(409, $result->getStatusCode());
+        $this->assertFalse(
+            $this->pdo->query("SELECT counter FROM user_usage_stats WHERE user_id = " . (int) $this->user->id . " AND resource_key = 'checkin_makeup_monthly'")->fetchColumn()
+        );
+    }
+
+    public function testMakeupCheckinRollsBackQuotaAndRecordDateWhenCheckinWriteFails(): void
+    {
+        $this->checkinService = new class($this->pdo, null, 'UTC') extends CheckinService {
+            public function createMakeupCheckin(
+                int $userId,
+                string $date,
+                ?string $note = null,
+                ?string $recordId = null,
+                ?\DateTimeInterface $createdAt = null
+            ): bool {
+                return false;
+            }
+        };
+        $controller = $this->makeController();
+
+        $originalDate = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d');
+        $targetDate = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-3 days')->format('Y-m-d');
+        $activityId = (string) $this->pdo->query("SELECT id FROM carbon_activities LIMIT 1")->fetchColumn();
+        $insertRecord = $this->pdo->prepare("INSERT INTO carbon_records (id, user_id, activity_id, amount, unit, carbon_saved, points_earned, date, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))");
+        $insertRecord->execute(['rec-makeup-fail', $this->user->id, $activityId, 1, 'km', 0.1, 0, $originalDate]);
+
+        $request = makeRequest('POST', '/users/me/checkins/makeup', [
+            'date' => $targetDate,
+            'record_id' => 'rec-makeup-fail',
+        ]);
+        $response = new Response();
+        $result = $controller->makeup($request, $response);
+
+        $this->assertSame(500, $result->getStatusCode());
+        $this->assertSame($originalDate, $this->pdo->query("SELECT date FROM carbon_records WHERE id = 'rec-makeup-fail'")->fetchColumn());
+        $this->assertFalse(
+            $this->pdo->query("SELECT counter FROM user_usage_stats WHERE user_id = " . (int) $this->user->id . " AND resource_key = 'checkin_makeup_monthly'")->fetchColumn()
+        );
+        $this->assertSame(0, (int) $this->pdo->query("SELECT COUNT(*) FROM user_checkins WHERE record_id = 'rec-makeup-fail'")->fetchColumn());
     }
 
     private function seedUser(int $monthlyLimit): void
