@@ -32,6 +32,7 @@ export default function RegisterScreen({ navigation }) {
       const result = await schoolApi.list();
       return result.data?.schools || result.data || [];
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {

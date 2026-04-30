@@ -52,7 +52,57 @@ EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS=true
 
 默认仓库配置把两个 native 开关设为 `false`，是为了让 Expo Go 和未重建的旧 dev client 不因为缺少 `NativeLiquidGlassModule` 或 native tabs 新签名而崩溃。只有 TestFlight 或重新构建后的自定义 dev client 才应设为 `true`。
 
-开发模式下 `__DEV__` 为 `true`，应用会强制使用 JS fallback；即使本地把开关设为 `true`，也不会加载 Liquid Glass 或 native tabs。验证原生 Liquid Glass 时请使用 TestFlight/Release 构建。
+开发模式不再强制回退 JS tabs。使用 EAS development build 且两个 native 开关为 `true` 时，开发包也会尝试加载原生 tabs 与 Liquid Glass；Expo Go 或旧 binary 加载失败时仍会回退到 JS tabs / 普通半透明视图。
+
+## Windows + iPhone 开发包验证
+
+如果没有 macOS / Xcode，本地 Windows 只负责触发 EAS 云构建和启动 Metro，iOS 原生编译在 EAS 上完成。
+
+1. 登录 EAS：
+
+```bash
+npx eas-cli login
+```
+
+2. 如项目尚未初始化 EAS，先执行：
+
+```bash
+npx eas-cli build:configure
+```
+
+3. 登记 iPhone 到 internal distribution 设备列表：
+
+```bash
+npx eas-cli device:create
+```
+
+4. 构建 iOS development client：
+
+```bash
+npx eas-cli build --platform ios --profile development
+```
+
+仓库内 `eas.json` 的 `development` profile 已配置：
+
+- `developmentClient: true`
+- `distribution: internal`
+- `ios.image: latest`
+- `EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS=true`
+- `EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS=true`
+
+5. iPhone 安装 EAS 生成的 development build 后，在 Windows 上启动 Metro：
+
+```bash
+pnpm start:dev-client
+```
+
+或等价执行：
+
+```bash
+pnpm start -- --dev-client
+```
+
+注意：development build 可以验证原生模块是否正确打入 binary。iOS 26 Liquid Glass 的最终系统视觉仍取决于 EAS 当前 `latest` iOS image 是否使用 Xcode 26 或更新版本。
 
 ## 构建步骤
 
@@ -90,7 +140,7 @@ pnpm exec expo config --type public
 - `app.json` 内保留 `ios.associatedDomains=["webcredentials:carbontrackapp.com"]`。
 - `https://carbontrackapp.com/.well-known/apple-app-site-association` 包含 `webcredentials` 配置，并覆盖 `com.carbontrack.mobile` 所属 Team ID 与 bundle identifier。
 
-4. 构建 iOS 原生包。仓库当前没有固定 `eas.json`，可在 CI 或本机使用等价的 production profile；核心要求是使用上面指定的 macOS / Xcode 环境重新执行 prebuild/native build，让 CocoaPods 安装上面列出的 native packages。
+4. 构建 iOS 原生包。核心要求是使用上面指定的 macOS / Xcode 环境重新执行 prebuild/native build，让 CocoaPods 安装上面列出的 native packages。
 
 ```bash
 npx eas-cli build --platform ios --profile production

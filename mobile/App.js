@@ -4,7 +4,15 @@ import { AppearanceProvider } from './src/theme';
 import { I18nProvider } from './src/i18n';
 import AppNavigator from './src/navigation/AppNavigator';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnReconnect: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function App() {
   return (
