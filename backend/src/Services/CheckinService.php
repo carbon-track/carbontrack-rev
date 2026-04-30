@@ -334,7 +334,7 @@ class CheckinService
                 'checkin_date' => $date,
                 'source' => $source,
             ]);
-            return false;
+            throw $e;
         }
     }
 

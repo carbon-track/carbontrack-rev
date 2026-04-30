@@ -212,18 +212,15 @@ class CheckinController
 
                 $ok = $this->checkinService->createMakeupCheckin((int) $user['id'], $normalizedDate, $note, $recordId);
                 if (!$ok) {
-                    if ($this->checkinService->hasCheckin((int) $user['id'], $normalizedDate)) {
-                        if ($db->inTransaction()) {
-                            $db->rollBack();
-                        }
-                        return $this->json($response, [
-                            'success' => false,
-                            'message' => 'Already checked in for this date',
-                            'code' => 'ALREADY_CHECKED_IN',
-                        ], 409);
+                    if ($db->inTransaction()) {
+                        $db->rollBack();
                     }
 
-                    throw new \RuntimeException('Failed to apply makeup checkin');
+                    return $this->json($response, [
+                        'success' => false,
+                        'message' => 'Already checked in for this date',
+                        'code' => 'ALREADY_CHECKED_IN',
+                    ], 409);
                 }
 
                 if ($db->inTransaction()) {
