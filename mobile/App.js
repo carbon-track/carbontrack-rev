@@ -11,15 +11,15 @@ onlineManager.setEventListener((setOnline) => NetInfo.addEventListener((state) =
   setOnline(isOnline);
 }));
 
-focusManager.setEventListener((handleFocus) => {
-  const subscription = AppState.addEventListener('change', (status) => {
-    if (Platform.OS !== 'web') {
+if (Platform.OS !== 'web') {
+  focusManager.setEventListener((handleFocus) => {
+    const subscription = AppState.addEventListener('change', (status) => {
       handleFocus(status === 'active');
-    }
-  });
+    });
 
-  return () => subscription.remove();
-});
+    return () => subscription.remove();
+  });
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
