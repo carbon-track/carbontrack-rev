@@ -150,7 +150,7 @@ const Turnstile = forwardRef(function Turnstile(
 		return (
 			<div className={`w-full ${className}`}>
 				<div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
-					未配置 Turnstile 站点密钥（VITE_TURNSTILE_SITE_KEY）。在开发环境将跳过验证码，生产环境请务必配置。
+					未配置 Turnstile 站点密钥（VITE_TURNSTILE_SITE_KEY）。请先配置站点密钥后再继续。
 				</div>
 			</div>
 		);

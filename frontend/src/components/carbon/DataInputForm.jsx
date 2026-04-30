@@ -22,7 +22,9 @@ export default function DataInputForm({
   calculationResult,
   isSubmitting,
   initialData,
-  checkinDate
+  checkinDate,
+  verificationNode = null,
+  isSubmitBlocked = false
 }) {
   const { t, currentLanguage, tFileSize } = useTranslation(['activities', 'common', 'date', 'errors', 'units', 'validation']);
   // 选中的本地文件（未立即上传）
@@ -693,13 +695,15 @@ export default function DataInputForm({
               </div>
 
 
+              {verificationNode}
+
               {/* 提交按钮 */}
               <div className="flex gap-4">
                 <Button
                   type="submit"
                   className="flex-1"
                   loading={isSubmitting || uploading}
-                  disabled={isSubmitting || uploading || !showCalculation}
+                  disabled={isSubmitting || uploading || !showCalculation || isSubmitBlocked}
                 >
                   {(isSubmitting || uploading) ? t('activities.form.submitting') : t('activities.form.submit')}
                 </Button>

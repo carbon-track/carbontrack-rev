@@ -8,11 +8,12 @@ This document provides essential guidance for AI agents working on the CarbonTra
 
 ## Architecture Overview
 
-The project is a monorepo with two main parts:
+The project is a monorepo with three main parts:
 1.  **`backend/`**: A PHP-based REST API built with the Slim micro-framework.
 2.  **`frontend/`**: A React single-page application (SPA) built with Vite.
+3.  **`mobile/`**: An Expo / React Native mobile application.
 
-Communication between the frontend and backend is via a RESTful API, which is documented in `backend/openapi.json`.
+Communication between the frontend, mobile app, and backend is via a RESTful API, which is documented in `backend/openapi.json`.
 
 ### Key Files
 - `backend/openapi.json`: The OpenAPI specification that defines the contract between the frontend and backend. Keeping this up-to-date is crucial.
@@ -21,6 +22,7 @@ Communication between the frontend and backend is via a RESTful API, which is do
 - `frontend/src/router/`: Defines the client-side routes.
 - `frontend/src/pages/admin/AiWorkspace.jsx`: Dedicated admin AI workspace. Keep its UX, starter prompts, and capability presentation aligned with the backend admin AI catalogue and routes.
 - `frontend/src/pages/admin/Cron.jsx`: Admin cron console for task cadence, run history, and manual task execution.
+- `mobile/`: Expo / React Native mobile client. Keep its API assumptions aligned with `backend/openapi.json`.
 - `backend/database/localhost.sql`: Contains the primary database schema. All migration scripts in `backend/database/migrations/` have been executed, so this file, along with the migration scripts, represents the definitive schema.
 - `backend/config/admin_ai_commands.json`: Source of truth for the admin AI assistant's single multi-turn command and tool catalogue. Whenever you add, rename, or remove admin functionality that the AI should understand, update this file (and keep the companion loader `admin_ai_commands.php` in sync) so the knowledge base matches the code.
 
@@ -86,6 +88,19 @@ The frontend is a modern SPA.
     - If the copy change touches bundled homepage namespaces (`home`, `nav`), also update the mirrored files in `frontend/src/locales-generated/<lng>/` for each supported language you changed.
 - If new admin UI flows, functions, labels, or session-audit displays are introduced, update any corresponding AI knowledge base entries (e.g., adjust keywords, routes, tools, and confirmation metadata in `backend/config/admin_ai_commands.json`) so the admin AI surfaces them correctly.
 - If you add or change the cron console, scheduler labels, or admin-facing task controls, keep `frontend/src/pages/admin/Cron.jsx`, the admin navigation, and the `admin` locale namespace in sync; do not fall back to `common.json` for cron-specific copy.
+
+## Mobile (Expo / React Native)
+
+The mobile app is a React Native client built with Expo and lives under `mobile/`.
+
+### Developer Workflow
+- **Setup**: Run `pnpm install` in the `mobile` directory.
+- **Validate**: Run `pnpm exec expo config --type public` to verify Expo metadata and config parsing.
+- **Run Locally**: Use `pnpm start`, `pnpm android`, `pnpm ios`, or `pnpm web` from `mobile/` as appropriate.
+- **After Mobile Changes (Required)**: After modifying mobile components, navigation, API clients, state, or Expo config:
+    - Run `pnpm install --frozen-lockfile` and `pnpm exec expo config --type public`.
+    - Keep `mobile/pnpm-lock.yaml` committed and do not add `mobile/package-lock.json`.
+    - If mobile behavior depends on backend endpoints, verify the contract against `backend/openapi.json`.
 
 ## Admin AI Maintenance
 

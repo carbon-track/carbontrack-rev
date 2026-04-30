@@ -459,6 +459,18 @@ function normalizeTimestampValue(value) {
   return trimmed;
 }
 
+function parseTimelineTime(value) {
+  if (!value) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const normalized = normalizeTimestampValue(value);
+  if (!normalized) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const timestamp = new Date(normalized).getTime();
+  return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
+}
+
 function getTimelineSortOrder(item) {
   const order = Number(item?.timeline_order);
   return Number.isFinite(order) ? order : 0;
@@ -562,6 +574,11 @@ function buildConversationTimeline(conversation) {
   });
 
   return timeline.sort((left, right) => {
+    const leftTime = parseTimelineTime(left?.created_at || left?.step?.started_at || left?.run?.started_at || '');
+    const rightTime = parseTimelineTime(right?.created_at || right?.step?.started_at || right?.run?.started_at || '');
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime;
+    }
     const orderDiff = getTimelineSortOrder(left) - getTimelineSortOrder(right);
     if (orderDiff !== 0) {
       return orderDiff;
@@ -1313,10 +1330,10 @@ function isPlainObject(value) {
   return value && Object.prototype.toString.call(value) === '[object Object]';
 }
 
-const SENSITIVE_FIELD_PATTERN = /(?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential)/i;
+const SENSITIVE_FIELD_PATTERN = /(?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential|cvv|credit[_-]?card)/i;
 const SENSITIVE_STRING_PATTERNS = [
   [/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, '$1***'],
-  [/((?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential)\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,;]+)/gi, '$1***'],
+  [/((?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential|cvv|credit[_-]?card)\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,;]+)/gi, '$1***'],
 ];
 
 function maskSensitiveString(value) {

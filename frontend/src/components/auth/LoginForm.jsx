@@ -110,6 +110,11 @@ export function LoginForm() {
   })();
 
   const onSubmit = async (data) => {
+    if (!turnstileToken) {
+      setError(t('auth.verification.turnstileRequired'));
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
@@ -254,6 +259,7 @@ export function LoginForm() {
                 <Turnstile
                   ref={turnstileRef}
                   className="mt-2"
+                  require
                   onVerify={(tk) => setTurnstileToken(tk)}
                   onExpire={() => setTurnstileToken('')}
                   onError={() => setTurnstileToken('')}
@@ -265,7 +271,7 @@ export function LoginForm() {
                   type="submit"
                   className="w-full"
                   loading={isLoading}
-                  disabled={isLoading || (!!import.meta.env?.VITE_TURNSTILE_SITE_KEY && !turnstileToken)}
+                  disabled={isLoading || !turnstileToken}
                 >
                   {isLoading ? t('auth.signingIn') : t('auth.signIn')}
                 </Button>
