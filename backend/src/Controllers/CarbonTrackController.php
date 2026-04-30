@@ -267,34 +267,14 @@ class CarbonTrackController
                     );
 
                     foreach ($uploadResult['results'] as $res) {
-                        // 仅收集成功项
-                        if (!empty($res['success'])) {
-                            $uploadedImage = [
-                                'file_path' => $res['file_path'] ?? null,
-                                'public_url' => $res['public_url'] ?? null,
-                                'original_name' => $res['original_name'] ?? null,
-                                'mime_type' => $res['mime_type'] ?? null,
-                                'file_size' => $res['file_size'] ?? null,
-                            ];
-                            $images[] = $uploadedImage;
-                            if (!empty($uploadedImage['file_path'])) {
-                                $uploadedImages[] = $uploadedImage;
-                            }
-                        } else {
-                            // 如果uploadMultipleFiles未标识success字段，也将非空结果记录
-                            if (isset($res['file_path']) || isset($res['public_url'])) {
-                                $uploadedImage = [
-                                    'file_path' => $res['file_path'] ?? null,
-                                    'public_url' => $res['public_url'] ?? null,
-                                    'original_name' => $res['original_name'] ?? null,
-                                    'mime_type' => $res['mime_type'] ?? null,
-                                    'file_size' => $res['file_size'] ?? null,
-                                ];
-                                $images[] = $uploadedImage;
-                                if (!empty($uploadedImage['file_path'])) {
-                                    $uploadedImages[] = $uploadedImage;
-                                }
-                            }
+                        $uploadedImage = $this->normalizeUploadedImageResult($res);
+                        if ($uploadedImage === null) {
+                            continue;
+                        }
+
+                        $images[] = $uploadedImage;
+                        if (!empty($uploadedImage['file_path'])) {
+                            $uploadedImages[] = $uploadedImage;
                         }
                     }
                 } catch (\Throwable $e) {
@@ -399,7 +379,14 @@ class CarbonTrackController
                         if ($checkinDate && $isMakeup) {
                             $checkinAdded = $this->checkinService->createMakeupCheckin((int) $user['id'], $checkinDate, null, $recordId, $submittedAt);
                             if (!$checkinAdded) {
-                                throw new \RuntimeException('Failed to apply makeup checkin');
+                                if ($this->db->inTransaction()) {
+                                    $this->db->rollBack();
+                                }
+                                $this->cleanupUploadedImages($uploadedImages, (int) $user['id'], $request);
+                                return $this->json($response, [
+                                    'error' => 'Already checked in for this date',
+                                    'code' => 'ALREADY_CHECKED_IN'
+                                ], 409);
                             }
                             $this->auditLog->logUserAction((int) $user['id'], 'checkin_makeup_recorded', [
                                 'checkin_date' => $checkinDate,
@@ -1262,6 +1249,21 @@ class CarbonTrackController
             'status' => $data['status']
         ]);
         return $recordId;
+    }
+
+    private function normalizeUploadedImageResult(array $result): ?array
+    {
+        if (empty($result['success']) && !isset($result['file_path']) && !isset($result['public_url'])) {
+            return null;
+        }
+
+        return [
+            'file_path' => $result['file_path'] ?? null,
+            'public_url' => $result['public_url'] ?? null,
+            'original_name' => $result['original_name'] ?? null,
+            'mime_type' => $result['mime_type'] ?? null,
+            'file_size' => $result['file_size'] ?? null,
+        ];
     }
 
     private function cleanupUploadedImages(array $uploadedImages, int $userId, Request $request): void
