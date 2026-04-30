@@ -129,6 +129,8 @@
       "points": "积分",
       "status": "状态",
       "date": "日期",
+      "activityDate": "活动日期",
+      "submittedAt": "提交日期",
       "actions": "操作",
       "images": "图片"
     },

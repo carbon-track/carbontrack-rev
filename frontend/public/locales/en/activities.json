@@ -129,6 +129,8 @@
       "points": "Points",
       "status": "Status",
       "date": "Date",
+      "activityDate": "Activity Date",
+      "submittedAt": "Submitted At",
       "actions": "Actions",
       "images": "Images"
     },
