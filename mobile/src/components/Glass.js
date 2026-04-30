@@ -1,9 +1,12 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { makeShadow, useTheme } from '../theme';
 
-const nativeLiquidGlassEnabled = !__DEV__ && process.env.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS === 'true';
+const nativeLiquidGlassEnabled = (
+  Platform.OS === 'ios'
+  && process.env.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS === 'true'
+);
 
 const loadLiquidGlass = () => {
   if (!nativeLiquidGlassEnabled) {
