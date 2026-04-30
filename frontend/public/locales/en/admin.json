@@ -1074,7 +1074,8 @@
         "carbonSaved": "Carbon Saved",
         "points": "Points",
         "status": "Status",
-        "date": "Date"
+        "date": "Date",
+        "activityDate": "Activity Date"
       },
       "dialog": {
         "approveAction": "Approve",

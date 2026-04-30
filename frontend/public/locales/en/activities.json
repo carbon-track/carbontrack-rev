@@ -37,7 +37,7 @@
     "checkin": {
       "makeupNotice": "Makeup date: {{date}}. This submission will count for that day.",
       "clear": "Clear makeup",
-      "makeupHelper": "Makeup date: {{date}} (does not change activity date)"
+      "makeupHelper": "Makeup date: {{date}}. The activity date will be submitted as this day."
     },
     "form": {
       "selectActivity": "Select Activity",
@@ -129,6 +129,8 @@
       "points": "Points",
       "status": "Status",
       "date": "Date",
+      "activityDate": "Activity Date",
+      "submittedAt": "Submitted At",
       "actions": "Actions",
       "images": "Images"
     },
