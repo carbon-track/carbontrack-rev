@@ -331,12 +331,10 @@ class CarbonTrackController
 
             $recordId = null;
             $submittedAt = new \DateTimeImmutable('now');
-            if ($isMakeup) {
-                $this->db->beginTransaction();
-            }
 
             try {
                 if ($checkinDate && $isMakeup) {
+                    $this->db->beginTransaction();
                     if ($this->checkinService->hasCheckin((int) $user['id'], $checkinDate)) {
                         if ($this->db->inTransaction()) {
                             $this->db->rollBack();
