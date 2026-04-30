@@ -105,9 +105,10 @@ class CheckinControllerTest extends TestCase
         $today = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $firstDate = $today->modify('-2 days')->format('Y-m-d');
         $secondDate = $today->modify('-1 day')->format('Y-m-d');
+        $originalRecordDate = $today->format('Y-m-d');
         $activityId = (string) $this->pdo->query("SELECT id FROM carbon_activities LIMIT 1")->fetchColumn();
         $insertRecord = $this->pdo->prepare("INSERT INTO carbon_records (id, user_id, activity_id, amount, unit, carbon_saved, points_earned, date, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))");
-        $insertRecord->execute(['rec-makeup-1', $this->user->id, $activityId, 1, 'km', 0.1, 0, $firstDate]);
+        $insertRecord->execute(['rec-makeup-1', $this->user->id, $activityId, 1, 'km', 0.1, 0, $originalRecordDate]);
         $insertRecord->execute(['rec-makeup-2', $this->user->id, $activityId, 1, 'km', 0.1, 0, $secondDate]);
 
         $request = makeRequest('POST', '/users/me/checkins/makeup', [
@@ -128,6 +129,10 @@ class CheckinControllerTest extends TestCase
             $firstDate,
             $this->pdo->query("SELECT date FROM carbon_records WHERE id = 'rec-makeup-1'")->fetchColumn()
         );
+        $audit = $this->pdo->query("SELECT affected_table, old_data, new_data FROM audit_logs WHERE action = 'carbon_record_date_updated_for_makeup'")->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('carbon_records', $audit['affected_table']);
+        $this->assertSame(['date' => $originalRecordDate], json_decode((string) $audit['old_data'], true, 512, JSON_THROW_ON_ERROR));
+        $this->assertSame(['date' => $firstDate], json_decode((string) $audit['new_data'], true, 512, JSON_THROW_ON_ERROR));
 
         $secondRequest = makeRequest('POST', '/users/me/checkins/makeup', [
             'date' => $secondDate,
@@ -136,6 +141,33 @@ class CheckinControllerTest extends TestCase
         $secondResponse = new Response();
         $secondResult = $controller->makeup($secondRequest, $secondResponse);
         $this->assertSame(429, $secondResult->getStatusCode());
+    }
+
+    public function testMakeupCheckinCannotMoveReviewedRecord(): void
+    {
+        $controller = $this->makeController();
+
+        $originalDate = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-10 days')->format('Y-m-d');
+        $targetDate = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-2 days')->format('Y-m-d');
+        $activityId = (string) $this->pdo->query("SELECT id FROM carbon_activities LIMIT 1")->fetchColumn();
+        $insertRecord = $this->pdo->prepare("INSERT INTO carbon_records (id, user_id, activity_id, amount, unit, carbon_saved, points_earned, date, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'approved', datetime('now'))");
+        $insertRecord->execute(['rec-makeup-approved', $this->user->id, $activityId, 1, 'km', 0.1, 0, $originalDate]);
+
+        $request = makeRequest('POST', '/users/me/checkins/makeup', [
+            'date' => $targetDate,
+            'record_id' => 'rec-makeup-approved',
+        ]);
+        $response = new Response();
+        $result = $controller->makeup($request, $response);
+
+        $payload = json_decode((string) $result->getBody(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(409, $result->getStatusCode());
+        $this->assertSame('RECORD_NOT_MUTABLE', $payload['code']);
+        $this->assertSame($originalDate, $this->pdo->query("SELECT date FROM carbon_records WHERE id = 'rec-makeup-approved'")->fetchColumn());
+        $this->assertFalse(
+            $this->pdo->query("SELECT counter FROM user_usage_stats WHERE user_id = " . (int) $this->user->id . " AND resource_key = 'checkin_makeup_monthly'")->fetchColumn()
+        );
+        $this->assertSame(0, (int) $this->pdo->query("SELECT COUNT(*) FROM user_checkins WHERE record_id = 'rec-makeup-approved'")->fetchColumn());
     }
 
     public function testMakeupCheckinAlreadyCheckedInDoesNotConsumeQuota(): void
@@ -306,7 +338,7 @@ class CheckinControllerTest extends TestCase
             }
         };
 
-        $auditLog = $this->createMock(AuditLogService::class);
+        $auditLog = new AuditLogService($this->pdo, $logger);
 
         return new CheckinController(
             $authService,

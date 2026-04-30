@@ -13,6 +13,7 @@ use CarbonTrack\Services\QuotaService;
 use DateTimeImmutable;
 use DateTimeZone;
 use Monolog\Logger;
+use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -156,18 +157,23 @@ class CheckinController
             $note = isset($body['note']) ? trim((string) $body['note']) : null;
             $db = $this->checkinService->getConnection();
             $db->beginTransaction();
+            $recordDateBefore = null;
 
             try {
+                $recordSql = "SELECT id, status, date FROM carbon_records WHERE id = :rid AND user_id = :uid AND deleted_at IS NULL LIMIT 1";
+                if ((string) $db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql') {
+                    $recordSql .= " FOR UPDATE";
+                }
                 $recordStmt = $db->prepare(
-                    "SELECT id FROM carbon_records WHERE id = :rid AND user_id = :uid AND deleted_at IS NULL LIMIT 1"
+                    $recordSql
                 );
                 $recordStmt->execute([
                     'rid' => $recordId,
                     'uid' => (int) $user['id'],
                 ]);
-                $recordExists = $recordStmt->fetchColumn();
+                $record = $recordStmt->fetch(PDO::FETCH_ASSOC);
                 $recordStmt->closeCursor();
-                if (!$recordExists) {
+                if (!$record) {
                     if ($db->inTransaction()) {
                         $db->rollBack();
                     }
@@ -177,6 +183,20 @@ class CheckinController
                         'code' => 'RECORD_NOT_FOUND',
                     ], 404);
                 }
+
+                $recordStatus = strtolower(trim((string) ($record['status'] ?? '')));
+                if ($recordStatus !== 'pending') {
+                    if ($db->inTransaction()) {
+                        $db->rollBack();
+                    }
+                    return $this->json($response, [
+                        'success' => false,
+                        'message' => 'Record is already reviewed and cannot be moved',
+                        'code' => 'RECORD_NOT_MUTABLE',
+                    ], 409);
+                }
+
+                $recordDateBefore = isset($record['date']) ? (string) $record['date'] : null;
 
                 if ($this->checkinService->hasCheckin((int) $user['id'], $normalizedDate)) {
                     if ($db->inTransaction()) {
@@ -190,7 +210,7 @@ class CheckinController
                 }
 
                 $updateRecordStmt = $db->prepare(
-                    "UPDATE carbon_records SET date = :cdate WHERE id = :rid AND user_id = :uid AND deleted_at IS NULL"
+                    "UPDATE carbon_records SET date = :cdate WHERE id = :rid AND user_id = :uid AND deleted_at IS NULL AND status = 'pending'"
                 );
                 $updateRecordStmt->execute([
                     'cdate' => $normalizedDate,
@@ -231,6 +251,26 @@ class CheckinController
                     $db->rollBack();
                 }
                 throw $e;
+            }
+
+            if ($recordDateBefore !== $normalizedDate) {
+                $this->auditLogService->logDataChange(
+                    'carbon_management',
+                    'carbon_record_date_updated_for_makeup',
+                    (int) $user['id'],
+                    'user',
+                    'carbon_records',
+                    $recordId,
+                    ['date' => $recordDateBefore],
+                    ['date' => $normalizedDate],
+                    [
+                        'request_data' => [
+                            'record_id' => $recordId,
+                            'checkin_date' => $normalizedDate,
+                            'source' => 'checkin_makeup',
+                        ],
+                    ]
+                );
             }
 
             $this->auditLogService->logDataChange(
