@@ -7,9 +7,10 @@ import AppNavigator from './src/navigation/AppNavigator';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: false,
-      refetchOnReconnect: false,
-      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 30 * 1000,
+      refetchOnReconnect: true,
+      refetchOnWindowFocus: true,
     },
   },
 });
