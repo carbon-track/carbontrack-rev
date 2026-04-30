@@ -45,8 +45,9 @@ const createTabs = () => {
   if (shouldUseNativeTabs() && hasNativeTabsHost()) {
     try {
       const { createNativeBottomTabNavigator } = require('@react-navigation/bottom-tabs/unstable');
+      const navigator = createNativeBottomTabNavigator();
       nativeTabsAvailable = true;
-      return createNativeBottomTabNavigator();
+      return navigator;
     } catch (error) {
       if (__DEV__) {
         console.warn('Native iOS tabs unavailable; using JS tabs.', error);
