@@ -110,8 +110,8 @@ class QuotaService
         $stats = $this->findUsageStatsOnConnection($db, $userId, $key);
 
         $now = Carbon::now();
-        $resetAt = $this->toCarbon($stats['reset_at'] ?? null);
-        $counter = (float) ($stats['counter'] ?? 0);
+        $resetAt = $this->toCarbon($stats ? ($stats['reset_at'] ?? null) : null);
+        $counter = (float) ($stats ? ($stats['counter'] ?? 0) : 0);
 
         if (!$resetAt || $now >= $resetAt) {
             $counter = 0;
@@ -188,8 +188,8 @@ class QuotaService
         $stats = $this->findUsageStatsOnConnection($db, $userId, $key);
 
         $now = Carbon::now();
-        $resetAt = $this->toCarbon($stats['reset_at'] ?? null);
-        $counter = (float) ($stats['counter'] ?? 0);
+        $resetAt = $this->toCarbon($stats ? ($stats['reset_at'] ?? null) : null);
+        $counter = (float) ($stats ? ($stats['counter'] ?? 0) : 0);
 
         if (!$resetAt || $now >= $resetAt) {
             $counter = 0;
@@ -245,7 +245,7 @@ class QuotaService
 
         $capacity = $ratePerMinute;
         $now = Carbon::now();
-        $lastUpdate = $this->toCarbon($stats['last_updated_at'] ?? null) ?? $now;
+        $lastUpdate = $this->toCarbon($stats ? ($stats['last_updated_at'] ?? null) : null) ?? $now;
         $secondsPassed = max(0, $now->getTimestamp() - $lastUpdate->getTimestamp());
         $tokensToAdd = ($secondsPassed / 60) * $ratePerMinute;
 
@@ -253,11 +253,11 @@ class QuotaService
         $newTokens = min($capacity, $currentTokens + $tokensToAdd);
 
         if ($newTokens < $cost) {
-            $this->persistUsageStatsOnConnection($db, $userId, $key, $newTokens, $now, $stats['reset_at'] ?? null);
+            $this->persistUsageStatsOnConnection($db, $userId, $key, $newTokens, $now, $stats ? ($stats['reset_at'] ?? null) : null);
             return false;
         }
 
-        $this->persistUsageStatsOnConnection($db, $userId, $key, $newTokens - $cost, $now, $stats['reset_at'] ?? null);
+        $this->persistUsageStatsOnConnection($db, $userId, $key, $newTokens - $cost, $now, $stats ? ($stats['reset_at'] ?? null) : null);
 
         return true;
     }
@@ -294,7 +294,12 @@ class QuotaService
 
     private function findUsageStatsOnConnection(PDO $db, int $userId, string $resourceKey): ?array
     {
-        $stmt = $db->prepare("SELECT counter, last_updated_at, reset_at FROM user_usage_stats WHERE user_id = :uid AND resource_key = :rkey LIMIT 1");
+        $sql = "SELECT counter, last_updated_at, reset_at FROM user_usage_stats WHERE user_id = :uid AND resource_key = :rkey LIMIT 1";
+        if ($this->getDriverName($db) === 'mysql') {
+            $sql .= " FOR UPDATE";
+        }
+
+        $stmt = $db->prepare($sql);
         $stmt->execute([
             'uid' => $userId,
             'rkey' => $resourceKey,
@@ -308,14 +313,6 @@ class QuotaService
     private function persistUsageStatsOnConnection(PDO $db, int $userId, string $resourceKey, float $counter, Carbon $timestamp, $resetAt): void
     {
         $reset = $this->toCarbon($resetAt);
-        $existsStmt = $db->prepare("SELECT 1 FROM user_usage_stats WHERE user_id = :uid AND resource_key = :rkey LIMIT 1");
-        $existsStmt->execute([
-            'uid' => $userId,
-            'rkey' => $resourceKey,
-        ]);
-        $exists = (bool) $existsStmt->fetchColumn();
-        $existsStmt->closeCursor();
-
         $payload = [
             'uid' => $userId,
             'rkey' => $resourceKey,
@@ -324,13 +321,46 @@ class QuotaService
             'reset_at' => $reset ? $reset->toDateTimeString() : null,
         ];
 
-        if ($exists) {
-            $stmt = $db->prepare("UPDATE user_usage_stats SET counter = :counter, last_updated_at = :last_updated_at, reset_at = :reset_at WHERE user_id = :uid AND resource_key = :rkey");
+        $driver = $this->getDriverName($db);
+        if ($driver === 'mysql') {
+            $stmt = $db->prepare(
+                "INSERT INTO user_usage_stats (user_id, resource_key, counter, last_updated_at, reset_at)
+                 VALUES (:uid, :rkey, :counter, :last_updated_at, :reset_at)
+                 ON DUPLICATE KEY UPDATE
+                    counter = VALUES(counter),
+                    last_updated_at = VALUES(last_updated_at),
+                    reset_at = VALUES(reset_at)"
+            );
+        } elseif ($driver === 'sqlite') {
+            $stmt = $db->prepare(
+                "INSERT INTO user_usage_stats (user_id, resource_key, counter, last_updated_at, reset_at)
+                 VALUES (:uid, :rkey, :counter, :last_updated_at, :reset_at)
+                 ON CONFLICT(user_id, resource_key) DO UPDATE SET
+                    counter = excluded.counter,
+                    last_updated_at = excluded.last_updated_at,
+                    reset_at = excluded.reset_at"
+            );
         } else {
+            $stmt = $db->prepare("UPDATE user_usage_stats SET counter = :counter, last_updated_at = :last_updated_at, reset_at = :reset_at WHERE user_id = :uid AND resource_key = :rkey");
+            $stmt->execute($payload);
+            if ($stmt->rowCount() > 0) {
+                $stmt->closeCursor();
+                return;
+            }
+            $stmt->closeCursor();
             $stmt = $db->prepare("INSERT INTO user_usage_stats (user_id, resource_key, counter, last_updated_at, reset_at) VALUES (:uid, :rkey, :counter, :last_updated_at, :reset_at)");
         }
 
         $stmt->execute($payload);
         $stmt->closeCursor();
+    }
+
+    private function getDriverName(PDO $db): string
+    {
+        try {
+            return (string) $db->getAttribute(PDO::ATTR_DRIVER_NAME);
+        } catch (\Throwable $e) {
+            return '';
+        }
     }
 }
