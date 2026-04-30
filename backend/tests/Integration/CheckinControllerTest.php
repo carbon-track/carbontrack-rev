@@ -197,6 +197,49 @@ class CheckinControllerTest extends TestCase
         $this->assertSame(0, (int) $this->pdo->query("SELECT COUNT(*) FROM user_checkins WHERE record_id = 'rec-makeup-fail'")->fetchColumn());
     }
 
+    public function testMakeupCheckinReturnsConflictWhenConcurrentDuplicateWins(): void
+    {
+        $this->checkinService = new class($this->pdo, null, 'UTC') extends CheckinService {
+            private int $hasCheckinCalls = 0;
+
+            public function hasCheckin(int $userId, string $date): bool
+            {
+                $this->hasCheckinCalls++;
+                return $this->hasCheckinCalls > 1;
+            }
+
+            public function createMakeupCheckin(
+                int $userId,
+                string $date,
+                ?string $note = null,
+                ?string $recordId = null,
+                ?\DateTimeInterface $createdAt = null
+            ): bool {
+                return false;
+            }
+        };
+        $controller = $this->makeController();
+
+        $originalDate = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d');
+        $targetDate = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-4 days')->format('Y-m-d');
+        $activityId = (string) $this->pdo->query("SELECT id FROM carbon_activities LIMIT 1")->fetchColumn();
+        $insertRecord = $this->pdo->prepare("INSERT INTO carbon_records (id, user_id, activity_id, amount, unit, carbon_saved, points_earned, date, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))");
+        $insertRecord->execute(['rec-makeup-race', $this->user->id, $activityId, 1, 'km', 0.1, 0, $originalDate]);
+
+        $request = makeRequest('POST', '/users/me/checkins/makeup', [
+            'date' => $targetDate,
+            'record_id' => 'rec-makeup-race',
+        ]);
+        $response = new Response();
+        $result = $controller->makeup($request, $response);
+
+        $this->assertSame(409, $result->getStatusCode());
+        $this->assertSame($originalDate, $this->pdo->query("SELECT date FROM carbon_records WHERE id = 'rec-makeup-race'")->fetchColumn());
+        $this->assertFalse(
+            $this->pdo->query("SELECT counter FROM user_usage_stats WHERE user_id = " . (int) $this->user->id . " AND resource_key = 'checkin_makeup_monthly'")->fetchColumn()
+        );
+    }
+
     private function seedUser(int $monthlyLimit): void
     {
         $now = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s');
