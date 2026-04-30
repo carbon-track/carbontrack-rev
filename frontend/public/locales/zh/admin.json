@@ -940,7 +940,8 @@
         "carbonSaved": "减排量",
         "points": "积分",
         "status": "状态",
-        "date": "日期"
+        "date": "日期",
+        "activityDate": "活动日期"
       },
       "dialog": {
         "approveAction": "通过审核",

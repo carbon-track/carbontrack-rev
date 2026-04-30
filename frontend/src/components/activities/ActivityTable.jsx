@@ -10,6 +10,7 @@ export function ActivityTable({ activities, onRowClick }) {
   const getName = (a) => a.activity_name || a.activity_name_zh || a.activity_name_en || a.activity || '';
   const getCategory = (a) => a.activity_category || a.category || 'unknown';
   const getUnit = (a) => a.activity_unit || a.unit || '';
+  const getActivityDate = (a) => a.activity_date || a.date;
   const statusBadgeClassNames = {
     pending: 'bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-400/30',
     approved: 'bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-400/30',
@@ -86,7 +87,7 @@ export function ActivityTable({ activities, onRowClick }) {
               scope="col"
               className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
             >
-              {t('activities.table.date')}
+              {t('activities.table.activityDate')}
             </th>
             <th
               scope="col"
@@ -129,7 +130,7 @@ export function ActivityTable({ activities, onRowClick }) {
                 {getStatusBadge(activity.status)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                {formatDateSafe(activity.activity_date, 'yyyy-MM-dd')}
+                {formatDateSafe(getActivityDate(activity), 'yyyy-MM-dd')}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <Button
