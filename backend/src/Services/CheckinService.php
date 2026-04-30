@@ -345,7 +345,14 @@ class CheckinService
     private function isUniqueConstraintViolation(PDOException $e): bool
     {
         $sqlState = (string) ($e->errorInfo[0] ?? $e->getCode());
-        return $sqlState === '23000';
+        $driverCode = (string) ($e->errorInfo[1] ?? '');
+        if ($sqlState === '23000' && $driverCode === '1062') {
+            return true;
+        }
+
+        return $sqlState === '23000'
+            && $this->driver === 'sqlite'
+            && stripos($e->getMessage(), 'UNIQUE constraint failed') !== false;
     }
 
     private function formatDate(DateTimeInterface $date): string
