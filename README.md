@@ -31,8 +31,9 @@
 
 - **Frontend**: React + Vite + Tailwind + shadcn/ui
 - **Backend**: PHP + Slim + Eloquent ORM
+- **Mobile**: Expo + React Native
 - **Data & API**: MySQL + RESTful API（`/api/v1`）
-- **Engineering**: Monorepo 协作模式（`frontend/` + `backend/`）
+- **Engineering**: Monorepo 协作模式（`frontend/` + `backend/` + `mobile/`）
 
 ## 为什么是 V3.0+
 
@@ -48,6 +49,7 @@
 - 项目总览：本仓库根目录
 - 前端说明：`frontend/README.md`
 - 后端能力：`backend/` 目录与接口定义
+- 移动端入口：`mobile/`
 
 ## 开发者文档入口
 

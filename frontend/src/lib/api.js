@@ -90,6 +90,9 @@ export const authAPI = {
   // 用户登出
   logout: () => api.post('/auth/logout'),
 
+  // 刷新当前 JWT
+  refresh: () => api.post('/auth/refresh'),
+
   // 发送验证码
   sendVerificationCode: (data) => api.post('/auth/send-verification-code', data),
 
