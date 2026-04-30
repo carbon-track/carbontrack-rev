@@ -171,7 +171,7 @@ class CheckinControllerTest extends TestCase
                 ?string $recordId = null,
                 ?\DateTimeInterface $createdAt = null
             ): bool {
-                return false;
+                throw new \RuntimeException('simulated checkin write failure');
             }
         };
         $controller = $this->makeController();
@@ -205,7 +205,12 @@ class CheckinControllerTest extends TestCase
             public function hasCheckin(int $userId, string $date): bool
             {
                 $this->hasCheckinCalls++;
-                return $this->hasCheckinCalls > 1;
+                return false;
+            }
+
+            public function getHasCheckinCalls(): int
+            {
+                return $this->hasCheckinCalls;
             }
 
             public function createMakeupCheckin(
@@ -234,6 +239,7 @@ class CheckinControllerTest extends TestCase
         $result = $controller->makeup($request, $response);
 
         $this->assertSame(409, $result->getStatusCode());
+        $this->assertSame(1, $this->checkinService->getHasCheckinCalls());
         $this->assertSame($originalDate, $this->pdo->query("SELECT date FROM carbon_records WHERE id = 'rec-makeup-race'")->fetchColumn());
         $this->assertFalse(
             $this->pdo->query("SELECT counter FROM user_usage_stats WHERE user_id = " . (int) $this->user->id . " AND resource_key = 'checkin_makeup_monthly'")->fetchColumn()
