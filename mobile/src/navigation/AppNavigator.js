@@ -34,13 +34,16 @@ const hasNativeTabsHost = () => {
 };
 
 const createTabs = () => {
-  if (shouldUseNativeTabs() && !hasNativeTabsHost()) {
+  const nativeTabsRequested = shouldUseNativeTabs();
+  const nativeTabsHostAvailable = nativeTabsRequested && hasNativeTabsHost();
+
+  if (nativeTabsRequested && !nativeTabsHostAvailable) {
     if (__DEV__) {
       console.warn('Native iOS tabs requested, but RNSTabsHost is unavailable; using JS tabs.');
     }
   }
 
-  if (shouldUseNativeTabs() && hasNativeTabsHost()) {
+  if (nativeTabsHostAvailable) {
     try {
       const { createNativeBottomTabNavigator } = require('@react-navigation/bottom-tabs/unstable');
       const navigator = createNativeBottomTabNavigator();
