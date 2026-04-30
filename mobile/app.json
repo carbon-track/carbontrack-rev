@@ -17,7 +17,10 @@
       "bundleIdentifier": "com.carbontrack.mobile",
       "associatedDomains": [
         "webcredentials:carbontrackapp.com"
-      ]
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.carbontrack.mobile",
