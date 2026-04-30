@@ -247,6 +247,7 @@ class CarbonTrackController
 
             // 先处理附件上传（如有），上传到 R2 并备好 images 数组
             $images = [];
+            $uploadedImages = [];
             if (!empty($imageFiles)) {
                 // 限制最多 10 张
                 if (count($imageFiles) > 10) {
@@ -268,23 +269,31 @@ class CarbonTrackController
                     foreach ($uploadResult['results'] as $res) {
                         // 仅收集成功项
                         if (!empty($res['success'])) {
-                            $images[] = [
+                            $uploadedImage = [
                                 'file_path' => $res['file_path'] ?? null,
                                 'public_url' => $res['public_url'] ?? null,
                                 'original_name' => $res['original_name'] ?? null,
                                 'mime_type' => $res['mime_type'] ?? null,
                                 'file_size' => $res['file_size'] ?? null,
                             ];
+                            $images[] = $uploadedImage;
+                            if (!empty($uploadedImage['file_path'])) {
+                                $uploadedImages[] = $uploadedImage;
+                            }
                         } else {
                             // 如果uploadMultipleFiles未标识success字段，也将非空结果记录
                             if (isset($res['file_path']) || isset($res['public_url'])) {
-                                $images[] = [
+                                $uploadedImage = [
                                     'file_path' => $res['file_path'] ?? null,
                                     'public_url' => $res['public_url'] ?? null,
                                     'original_name' => $res['original_name'] ?? null,
                                     'mime_type' => $res['mime_type'] ?? null,
                                     'file_size' => $res['file_size'] ?? null,
                                 ];
+                                $images[] = $uploadedImage;
+                                if (!empty($uploadedImage['file_path'])) {
+                                    $uploadedImages[] = $uploadedImage;
+                                }
                             }
                         }
                     }
@@ -352,6 +361,7 @@ class CarbonTrackController
                         if ($this->db->inTransaction()) {
                             $this->db->rollBack();
                         }
+                        $this->cleanupUploadedImages($uploadedImages, (int) $user['id'], $request);
                         return $this->json($response, [
                             'error' => 'Already checked in for this date',
                             'code' => 'ALREADY_CHECKED_IN'
@@ -362,6 +372,7 @@ class CarbonTrackController
                         if ($this->db->inTransaction()) {
                             $this->db->rollBack();
                         }
+                        $this->cleanupUploadedImages($uploadedImages, (int) $user['id'], $request);
                         return $this->json($response, [
                             'error' => 'Makeup quota exceeded',
                             'code' => 'QUOTA_EXCEEDED',
@@ -419,6 +430,7 @@ class CarbonTrackController
                 if ($isMakeup && $this->db->inTransaction()) {
                     $this->db->rollBack();
                 }
+                $this->cleanupUploadedImages($uploadedImages, (int) $user['id'], $request);
                 throw $e;
             }
 
@@ -1250,6 +1262,30 @@ class CarbonTrackController
             'status' => $data['status']
         ]);
         return $recordId;
+    }
+
+    private function cleanupUploadedImages(array $uploadedImages, int $userId, Request $request): void
+    {
+        if (!$this->r2Service || empty($uploadedImages)) {
+            return;
+        }
+
+        foreach ($uploadedImages as $image) {
+            $filePath = is_array($image) ? ($image['file_path'] ?? null) : null;
+            if (!$filePath) {
+                continue;
+            }
+
+            try {
+                $this->r2Service->deleteFile((string) $filePath, $userId);
+            } catch (\Throwable $cleanupError) {
+                $this->logControllerException(
+                    $cleanupError,
+                    $request,
+                    'CarbonTrackController::submitRecord uploaded image cleanup error: ' . $cleanupError->getMessage()
+                );
+            }
+        }
     }
 
     /**
