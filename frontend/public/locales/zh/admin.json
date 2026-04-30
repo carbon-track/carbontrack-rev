@@ -1317,6 +1317,11 @@
       "drawer": {
         "title": "请求 ID：{{id}}",
         "refresh": "刷新",
+        "copyAll": "复制全部",
+        "copyCategory": "复制本类",
+        "copyItem": "复制此项",
+        "copied": "已复制",
+        "copyFailed": "复制失败，请重试",
         "loading": "正在加载关联日志...",
         "systemTitle": "系统（{{count}}）",
         "auditTitle": "审计（{{count}}）",

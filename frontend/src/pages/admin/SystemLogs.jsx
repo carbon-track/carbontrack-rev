@@ -11,6 +11,7 @@ import RawView from '../../components/logs/RawView';
 import RequestIdRelatedDrawer from '../../components/logs/RequestIdRelatedDrawer';
 import JsonTreeViewer from '../../components/logs/JsonTreeViewer';
 import AuditDiffViewer from '../../components/logs/AuditDiffViewer';
+import { maskServerMeta } from '../../lib/logRedaction';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/badge';
@@ -29,17 +30,6 @@ const AUDIT_COLUMNS = ['id', 'conversation_id', 'request_id', 'actor_type', 'act
 const ERROR_COLUMNS = ['id', 'request_id', 'error_type', 'error_message', 'error_file', 'error_line', 'error_time', 'ops'];
 const LLM_COLUMNS = ['id', 'conversation_id', 'turn_no', 'actor_type', 'actor_id', 'source', 'model', 'llm_status', 'total_tokens', 'latency_ms', 'created_at', 'ops'];
 const TABLE_RENDER_LIMIT = 120;
-const MASKED_VALUE = '[REDACTED]';
-const SENSITIVE_KEY_PATTERNS = [
-  /(^|[_-])(password|passwd|passphrase|pwd|pass|pw)([_-]|$)/i,
-  /(^|[_-])(token|secret|credential|credentials)([_-]|$)/i,
-  /authorization/i,
-  /cookie/i,
-  /(^|[_-])auth([_-]|$)/i,
-  /(^|[_-])(session|sess)([_-]|$)/i,
-  /(^|[_-])jwt([_-].*(secret|token)|$)/i,
-  /(^|[_-])(api|access|private|secret|signing|encryption|webhook|client|r2|s3|aws|cloudflare)[_-]?key([_-]|$)/i
-];
 
 const COLUMN_STORAGE_KEYS = {
   system: 'logCols_system',
@@ -1279,40 +1269,6 @@ function safeParse(value) {
   } catch {
     return value;
   }
-}
-
-function isSensitiveKey(key) {
-  const normalized = String(key)
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .toLowerCase();
-  return SENSITIVE_KEY_PATTERNS.some((pattern) => pattern.test(normalized));
-}
-
-function maskServerMeta(value) {
-  const parsed = safeParse(value);
-  if (typeof parsed === 'string' && parsed.trim() !== '') {
-    return MASKED_VALUE;
-  }
-  if (!parsed || typeof parsed !== 'object') {
-    return parsed;
-  }
-
-  return maskSensitiveJson(parsed);
-}
-
-function maskSensitiveJson(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => maskSensitiveJson(item));
-  }
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, child]) => [
-        key,
-        isSensitiveKey(key) ? MASKED_VALUE : maskSensitiveJson(child)
-      ])
-    );
-  }
-  return value;
 }
 
 function llmCell(log, column) {

@@ -1317,6 +1317,11 @@
       "drawer": {
         "title": "Request ID: {{id}}",
         "refresh": "Refresh",
+        "copyAll": "Copy all",
+        "copyCategory": "Copy group",
+        "copyItem": "Copy item",
+        "copied": "Copied",
+        "copyFailed": "Copy failed. Please try again",
         "loading": "Loading related logs...",
         "systemTitle": "System ({{count}})",
         "auditTitle": "Audit ({{count}})",
