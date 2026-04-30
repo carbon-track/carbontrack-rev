@@ -55,10 +55,11 @@ export default function DataInputForm({
   });
 
   useEffect(() => {
-    if (checkinDate) {
-      setValue('activity_date', checkinDate);
-    }
-  }, [checkinDate, setValue]);
+    setValue(
+      'activity_date',
+      checkinDate || initialData?.activity_date || new Date().toISOString().split('T')[0]
+    );
+  }, [checkinDate, initialData?.activity_date, setValue]);
 
   // Handle initial data from Smart Add
   useEffect(() => {
