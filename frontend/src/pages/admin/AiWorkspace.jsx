@@ -432,6 +432,149 @@ function buildFallbackConversation(conversation, conversationId, previousConvers
   };
 }
 
+function getConversationMessageStepId(message) {
+  const data = message?.meta?.data || {};
+  return data?.meta?.step_id || data?.step_id || null;
+}
+
+function getConversationMessageActionName(message) {
+  const data = message?.meta?.data || {};
+  return data?.action_name
+    || data?.request_payload?.action_name
+    || data?.request_payload?.payload?.action
+    || data?.payload?.action
+    || data?.tool_name
+    || message?.action
+    || null;
+}
+
+function normalizeTimestampValue(value) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(\.\d+)?/.test(trimmed)) {
+    return trimmed.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}(?:\.\d+)?)/, '$1T$2');
+  }
+  return trimmed;
+}
+
+function getTimelineSortOrder(item) {
+  const order = Number(item?.timeline_order);
+  return Number.isFinite(order) ? order : 0;
+}
+
+function getTimelineSortRank(item) {
+  if (item?.role === 'user') return 0;
+  if (item?.kind === 'agent_step') return 1;
+  if (item?.kind === 'tool') return 1;
+  if (item?.role === 'assistant') return 2;
+  return 3;
+}
+
+function getStepActionKeys(step) {
+  return [
+    step?.input?.action,
+    step?.output?.meta?.action_name,
+    step?.tool_name,
+  ].filter(Boolean);
+}
+
+function buildConversationTimeline(conversation) {
+  const messages = Array.isArray(conversation?.messages) ? conversation.messages : [];
+  const runs = Array.isArray(conversation?.runs) ? conversation.runs : [];
+  const stepsById = new Map();
+  const stepMatchesByAction = new Map();
+  const stepMatchCursorsByAction = new Map();
+  const usedStepIds = new Set();
+  let timelineOrder = 0;
+
+  runs.forEach((run) => {
+    const steps = Array.isArray(run?.steps) ? run.steps : [];
+    steps.forEach((step) => {
+      if (step?.step_id) {
+        const match = { step, run };
+        stepsById.set(step.step_id, match);
+        getStepActionKeys(step).forEach((actionKey) => {
+          const matches = stepMatchesByAction.get(actionKey) || [];
+          matches.push(match);
+          stepMatchesByAction.set(actionKey, matches);
+        });
+      }
+    });
+  });
+
+  const timeline = messages.map((message) => {
+    const nextOrder = timelineOrder;
+    timelineOrder += 1;
+
+    if (message?.kind !== 'tool') {
+      return { ...message, timeline_order: nextOrder };
+    }
+
+    const stepId = getConversationMessageStepId(message);
+    const actionName = getConversationMessageActionName(message);
+    const actionMatches = actionName ? stepMatchesByAction.get(actionName) || [] : [];
+    let match = stepId ? stepsById.get(stepId) : null;
+    if (!match && actionName && actionMatches.length > 0) {
+      const cursor = stepMatchCursorsByAction.get(actionName) || 0;
+      for (let index = cursor; index < actionMatches.length; index += 1) {
+        const candidate = actionMatches[index];
+        stepMatchCursorsByAction.set(actionName, index + 1);
+        if (candidate?.step?.step_id && !usedStepIds.has(candidate.step.step_id)) {
+          match = candidate;
+          break;
+        }
+      }
+    }
+    if (message?.kind === 'tool' && match) {
+      usedStepIds.add(match.step.step_id);
+      return {
+        id: `agent-step-${match.step.step_id}`,
+        kind: 'agent_step',
+        created_at: message.created_at || match.step.started_at,
+        timeline_order: nextOrder,
+        message,
+        step: match.step,
+        run: match.run,
+      };
+    }
+    return { ...message, timeline_order: nextOrder };
+  });
+
+  runs.forEach((run) => {
+    const steps = Array.isArray(run?.steps) ? run.steps : [];
+    steps.forEach((step) => {
+      if (!step?.step_id || usedStepIds.has(step.step_id)) {
+        return;
+      }
+      usedStepIds.add(step.step_id);
+      timeline.push({
+        id: `agent-step-${step.step_id}`,
+        kind: 'agent_step',
+        created_at: step.started_at || run.started_at,
+        timeline_order: timelineOrder,
+        step,
+        run,
+      });
+      timelineOrder += 1;
+    });
+  });
+
+  return timeline.sort((left, right) => {
+    const orderDiff = getTimelineSortOrder(left) - getTimelineSortOrder(right);
+    if (orderDiff !== 0) {
+      return orderDiff;
+    }
+    const leftRank = getTimelineSortRank(left);
+    const rightRank = getTimelineSortRank(right);
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+    return 0;
+  });
+}
+
 function formatAbsoluteTime(value, locale = 'zh-CN') {
   if (!value) return '--';
 
@@ -441,7 +584,7 @@ function formatAbsoluteTime(value, locale = 'zh-CN') {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    }).format(new Date(value));
+    }).format(new Date(normalizeTimestampValue(value)));
   } catch {
     return String(value);
   }
@@ -450,7 +593,7 @@ function formatAbsoluteTime(value, locale = 'zh-CN') {
 function formatRelativeTime(value, locale = 'zh-CN', isZh = true) {
   if (!value) return isZh ? '刚刚' : 'just now';
 
-  const time = new Date(value).getTime();
+  const time = new Date(normalizeTimestampValue(value)).getTime();
   if (Number.isNaN(time)) {
     return formatAbsoluteTime(value, locale);
   }
@@ -1006,6 +1149,8 @@ function WorkspaceSectionButton({ active, icon, label, count, onClick }) {
 function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
   const event = item?.event;
   const data = item?.data || {};
+  const hasToolInput = data.arguments != null && data.arguments !== '';
+  const hasToolResult = data.result != null && data.result !== '';
 
   if (event === 'run.started') {
     return (
@@ -1063,6 +1208,12 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         {data.error ? <div className="mt-2 text-xs opacity-80">{data.error}</div> : null}
         {data.proposal?.summary ? <div className="mt-2 text-xs opacity-80">{data.proposal.summary}</div> : null}
         {data.step_id ? <div className="mt-2 font-mono text-[11px] opacity-60">{data.step_id}</div> : null}
+        {hasToolInput || hasToolResult ? (
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <ResultSnapshot title={isZh ? '工具输入' : 'Tool input'} value={data.arguments} isZh={isZh} />
+            <ResultSnapshot title={isZh ? '工具结果' : 'Tool result'} value={data.result} isZh={isZh} />
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -1158,9 +1309,222 @@ function JsonPreview({ value, className }) {
   );
 }
 
+function isPlainObject(value) {
+  return value && Object.prototype.toString.call(value) === '[object Object]';
+}
+
+const SENSITIVE_FIELD_PATTERN = /(?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential)/i;
+const SENSITIVE_STRING_PATTERNS = [
+  [/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, '$1***'],
+  [/((?:password|passcode|token|secret|api[_-]?key|access[_-]?key|private[_-]?key|authorization|credential)\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,;]+)/gi, '$1***'],
+];
+
+function maskSensitiveString(value) {
+  return SENSITIVE_STRING_PATTERNS.reduce(
+    (masked, [pattern, replacement]) => masked.replace(pattern, replacement),
+    value
+  );
+}
+
+function maskSensitiveValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => maskSensitiveValue(item));
+  }
+  if (isPlainObject(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        SENSITIVE_FIELD_PATTERN.test(key) ? '***' : maskSensitiveValue(item),
+      ])
+    );
+  }
+  if (typeof value === 'string') {
+    return maskSensitiveString(value);
+  }
+  return value;
+}
+
+function formatSnapshotLabel(value) {
+  return String(value || '')
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function isSimpleSnapshotValue(value) {
+  return value == null || ['string', 'number', 'boolean'].includes(typeof value);
+}
+
+function formatSnapshotValue(value, isZh) {
+  if (value == null || value === '') {
+    return isZh ? '无' : 'None';
+  }
+  if (typeof value === 'boolean') {
+    return value ? (isZh ? '是' : 'Yes') : (isZh ? '否' : 'No');
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? String(value) : '--';
+  }
+  return maskSensitiveString(String(value));
+}
+
+function getTableColumns(rows) {
+  const priority = ['id', 'status', 'username', 'email', 'name', 'activity_name', 'date', 'carbon_saved', 'points_earned', 'total'];
+  const keys = [];
+  rows.forEach((row) => {
+    if (!isPlainObject(row)) return;
+    Object.entries(row).forEach(([key, value]) => {
+      if (isSimpleSnapshotValue(value) && !keys.includes(key)) {
+        keys.push(key);
+      }
+    });
+  });
+
+  return keys
+    .sort((left, right) => {
+      const leftPriority = priority.indexOf(left);
+      const rightPriority = priority.indexOf(right);
+      if (leftPriority !== -1 || rightPriority !== -1) {
+        return (leftPriority === -1 ? 999 : leftPriority) - (rightPriority === -1 ? 999 : rightPriority);
+      }
+      return left.localeCompare(right);
+    })
+    .slice(0, 6);
+}
+
+function RawJsonToggle({ value, isZh }) {
+  const [open, setOpen] = useState(false);
+
+  if (!Array.isArray(value) && !isPlainObject(value)) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 border-t border-slate-200/80 pt-3 dark:border-white/8">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className={cn(`inline-flex items-center gap-1 text-[11px] font-medium ${TEXT_TERTIARY_CLASS} hover:text-slate-700 dark:hover:text-slate-300`)}
+      >
+        <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-90')} />
+        {open ? (isZh ? '隐藏原始 JSON' : 'Hide raw JSON') : (isZh ? '查看原始 JSON' : 'View raw JSON')}
+      </button>
+      {open ? <JsonPreview value={value} className="mt-2" /> : null}
+    </div>
+  );
+}
+
+function SnapshotArrayTable({ value, isZh }) {
+  if (!value.length) {
+    return <div className={cn(`text-xs ${TEXT_TERTIARY_CLASS}`)}>{isZh ? '空列表' : 'Empty list'}</div>;
+  }
+
+  const objectRows = value.filter((item) => isPlainObject(item));
+  const columns = getTableColumns(objectRows);
+
+  if (objectRows.length === 0 || columns.length === 0) {
+    return (
+      <div className="space-y-1.5">
+        {value.slice(0, 6).map((item, index) => (
+          <div key={index} className={cn(`rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs ${TEXT_SECONDARY_CLASS} dark:border-white/8 dark:bg-white/[0.03]`)}>
+            {formatSnapshotValue(item, isZh)}
+          </div>
+        ))}
+        {value.length > 6 ? <div className={cn(`text-[11px] ${TEXT_TERTIARY_CLASS}`)}>{isZh ? `另有 ${value.length - 6} 项` : `${value.length - 6} more items`}</div> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/70 dark:border-white/8 dark:bg-white/[0.03]">
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-left text-xs">
+          <thead className="bg-slate-100/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-white/[0.04] dark:text-slate-400">
+            <tr>
+              {columns.map((column) => <th key={column} className="px-3 py-2 font-medium">{formatSnapshotLabel(column)}</th>)}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200/80 dark:divide-white/8">
+            {objectRows.slice(0, 5).map((row, index) => (
+              <tr key={row.id || row.uuid || index}>
+                {columns.map((column) => (
+                  <td key={column} className={cn(`max-w-[14rem] truncate px-3 py-2 ${TEXT_SECONDARY_CLASS}`)}>
+                    {formatSnapshotValue(row[column], isZh)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {value.length > 5 ? (
+        <div className={cn(`border-t border-slate-200/80 px-3 py-2 text-[11px] ${TEXT_TERTIARY_CLASS} dark:border-white/8`)}>
+          {isZh ? `仅显示前 5 项，共 ${value.length} 项` : `Showing 5 of ${value.length} items`}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ReadableSnapshot({ value, isZh, depth = 0 }) {
+  if (Array.isArray(value)) {
+    return (
+      <div className="space-y-3">
+        <SnapshotArrayTable value={value} isZh={isZh} />
+        <RawJsonToggle value={value} isZh={isZh} />
+      </div>
+    );
+  }
+
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value).filter(([, item]) => item != null && item !== '');
+    const simpleEntries = entries.filter(([, item]) => isSimpleSnapshotValue(item));
+    const nestedEntries = entries.filter(([, item]) => Array.isArray(item) || isPlainObject(item));
+
+    return (
+      <div className="space-y-3">
+        {simpleEntries.length > 0 ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {simpleEntries.map(([key, item]) => (
+              <div key={key} className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 dark:border-white/8 dark:bg-white/[0.03]">
+                <div className={cn(`text-[11px] uppercase tracking-wide ${TEXT_TERTIARY_CLASS}`)}>{formatSnapshotLabel(key)}</div>
+                <div className={cn(`mt-1 break-words text-xs font-medium ${TEXT_PRIMARY_CLASS}`)}>{formatSnapshotValue(item, isZh)}</div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {nestedEntries.slice(0, depth > 0 ? 2 : 4).map(([key, item]) => (
+          <div key={key} className="space-y-2">
+            <div className={cn(`text-[11px] font-semibold uppercase tracking-wide ${TEXT_TERTIARY_CLASS}`)}>{formatSnapshotLabel(key)}</div>
+            {depth >= 1 && isPlainObject(item) ? (
+              <div className={cn(`rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs ${TEXT_SECONDARY_CLASS} dark:border-white/8 dark:bg-white/[0.03]`)}>
+                {Object.keys(item).length} {isZh ? '个字段' : 'fields'}
+              </div>
+            ) : (
+              <ReadableSnapshot value={item} isZh={isZh} depth={depth + 1} />
+            )}
+          </div>
+        ))}
+        {nestedEntries.length > (depth > 0 ? 2 : 4) ? (
+          <div className={cn(`text-[11px] ${TEXT_TERTIARY_CLASS}`)}>
+            {isZh ? `另有 ${nestedEntries.length - (depth > 0 ? 2 : 4)} 个分组` : `${nestedEntries.length - (depth > 0 ? 2 : 4)} more groups`}
+          </div>
+        ) : null}
+        <RawJsonToggle value={value} isZh={isZh} />
+      </div>
+    );
+  }
+
+  return <div className={cn(`text-xs leading-6 ${TEXT_SECONDARY_CLASS}`)}>{formatSnapshotValue(value, isZh)}</div>;
+}
+
 function ResultSnapshot({ title, value, isZh }) {
   const hasValue = value != null && value !== '';
   const [open, setOpen] = useState(false);
+  const displayValue = useMemo(
+    () => (open && hasValue ? maskSensitiveValue(value) : value),
+    [hasValue, open, value]
+  );
   const summary = useMemo(() => {
     if (!hasValue) {
       return isZh ? '无结果' : 'No result';
@@ -1175,7 +1539,7 @@ function ResultSnapshot({ title, value, isZh }) {
       return isZh ? `对象 · ${size} 个字段` : `Object · ${size} fields`;
     }
 
-    const text = String(value);
+    const text = typeof value === 'string' ? maskSensitiveString(value) : String(value);
     if (!text) {
       return isZh ? '无结果' : 'No result';
     }
@@ -1205,11 +1569,7 @@ function ResultSnapshot({ title, value, isZh }) {
           {open ? (isZh ? '收起' : 'Collapse') : (isZh ? '展开' : 'Expand')}
         </span>
       </button>
-      {open ? (
-        typeof value === 'object'
-          ? <JsonPreview value={value} className="mt-3" />
-          : <div className={cn(`mt-3 text-xs leading-6 ${TEXT_SECONDARY_CLASS}`)}>{String(value) || (isZh ? '无结果。' : 'No result.')}</div>
-      ) : null}
+      {open ? <div className="mt-3"><ReadableSnapshot value={displayValue} isZh={isZh} /></div> : null}
     </div>
   );
 }
@@ -1241,6 +1601,100 @@ function RunStepCard({ step, isZh }) {
       ) : null}
       {step?.error_message ? <div className="mt-2 leading-5 opacity-80">{step.error_message}</div> : null}
     </div>
+  );
+}
+
+function AgentStepTimelineCard({ item, locale, isZh, disabled, onRollback }) {
+  const step = item?.step || {};
+  const run = item?.run || {};
+  const output = step?.output || {};
+  const result = output?.result ?? null;
+  const proposal = output?.proposal ?? null;
+  const suggestion = output?.suggestion ?? null;
+  const rollback = output?.meta?.rollback_available || null;
+  const status = step?.status || 'unknown';
+  const toolName = step.tool_name || step.type || (isZh ? '管理工具' : 'Admin tool');
+  const statusTone = status === 'error'
+    ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100'
+    : status === 'running'
+      ? 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100'
+      : status === 'waiting_approval' || status === 'waiting_input'
+        ? 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100'
+        : 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100';
+  const resultSummary = result?.scope
+    ? `${result.scope}${Number.isFinite(Number(result.total)) ? ` · ${result.total}` : ''}`
+    : null;
+  const messageSummary = item?.message?.kind === 'tool'
+    ? item.message.content?.split('\n\n')[0] || (isZh ? '工具执行完成。' : 'Tool completed.')
+    : item?.message?.content;
+
+  return (
+    <MotionDiv
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-[24px] border border-slate-200/80 bg-white/90 p-5 shadow-sm dark:border-white/8 dark:bg-white/[0.04]"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex items-start gap-3">
+          <span className={cn('mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border', statusTone)}>
+            {status === 'running' ? <Loader2 className="h-4 w-4 animate-spin" /> : <TerminalSquare className="h-4 w-4" />}
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className={cn(`text-sm font-semibold ${TEXT_PRIMARY_CLASS}`)}>
+                {isZh ? '工具步骤' : 'Tool step'} #{step.sequence ?? '-'} · {toolName}
+              </div>
+              <Badge variant="outline" className="border-current/30 text-current">{status}</Badge>
+              {step.approval_state ? <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-300/40 dark:text-amber-100">{step.approval_state}</Badge> : null}
+              {step.rollback_state ? <Badge variant="outline" className="border-teal-300 text-teal-700 dark:border-teal-300/40 dark:text-teal-100">{step.rollback_state}</Badge> : null}
+            </div>
+            <div className={cn(`mt-2 text-xs leading-5 ${TEXT_SECONDARY_CLASS}`)}>
+              {resultSummary || output?.assistant_text || messageSummary || (isZh ? '已记录工具输入、输出和运行状态。' : 'Tool input, output, and run state are recorded.')}
+            </div>
+            <div className={cn(`mt-2 flex flex-wrap gap-2 text-[11px] ${TEXT_TERTIARY_CLASS}`)}>
+              {step.step_id ? <span className="font-mono">{step.step_id}</span> : null}
+              {run.run_id ? <span className="font-mono">{run.run_id}</span> : null}
+              {step.duration_ms != null ? <span>{formatLatency(step.duration_ms, isZh)}</span> : null}
+            </div>
+          </div>
+        </div>
+        <div className={cn(`shrink-0 pt-1 text-[11px] ${TEXT_TERTIARY_CLASS}`)}>
+          {formatAbsoluteTime(step.started_at || item?.created_at, locale)}
+        </div>
+      </div>
+
+      {step.error_message ? (
+        <div className="mt-4 rounded-[18px] border border-rose-200 bg-rose-50 px-3 py-3 text-sm text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100">
+          {step.error_message}
+        </div>
+      ) : null}
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <ResultSnapshot title={isZh ? '工具输入' : 'Tool input'} value={step.input} isZh={isZh} />
+        <ResultSnapshot title={isZh ? '工具结果' : 'Tool result'} value={result} isZh={isZh} />
+      </div>
+      {proposal ? <ResultSnapshot title={isZh ? '确认提案' : 'Approval proposal'} value={proposal} isZh={isZh} /> : null}
+      {suggestion ? <ResultSnapshot title={isZh ? '下一步建议' : 'Suggestion'} value={suggestion} isZh={isZh} /> : null}
+
+      {rollback?.action_name && rollback?.payload ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-teal-200 bg-teal-50 px-3 py-3 text-sm text-teal-950 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-100">
+          <div>
+            <div className="font-medium">{isZh ? '可回滚' : 'Rollback available'}</div>
+            <div className="mt-1 text-xs opacity-80">{rollback?.prompt_i18n?.[isZh ? 'zh' : 'en'] || rollback?.prompt}</div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={disabled}
+            className="rounded-full border-current/30 text-current hover:bg-current/10"
+            onClick={() => onRollback?.(rollback)}
+          >
+            {isZh ? '生成回滚卡' : 'Rollback'}
+          </Button>
+        </div>
+      ) : null}
+    </MotionDiv>
   );
 }
 
@@ -1698,7 +2152,7 @@ export default function AdminAiWorkspacePage() {
   const normalizedSelectedConversationId = selectedConversationId == null ? null : String(selectedConversationId);
 
   const conversationTimeline = useMemo(
-    () => (Array.isArray(activeConversation?.messages) ? activeConversation.messages : []),
+    () => buildConversationTimeline(activeConversation),
     [activeConversation]
   );
   const visibleMessages = useMemo(
@@ -2366,7 +2820,7 @@ export default function AdminAiWorkspacePage() {
                             {conversationTimeline.map((item) => (
                               item?.kind === 'message' ? (
                                 <MessageBubble
-                                  key={item.id}
+                                  key={`message-${item.id}`}
                                   message={item}
                                   locale={locale}
                                   isZh={isZh}
@@ -2384,9 +2838,18 @@ export default function AdminAiWorkspacePage() {
                                     conversationId: normalizedSelectedConversationId,
                                   })}
                                 />
+                              ) : item?.kind === 'agent_step' ? (
+                                <AgentStepTimelineCard
+                                  key={item.id}
+                                  item={item}
+                                  locale={locale}
+                                  isZh={isZh}
+                                  disabled={disableProposalActions}
+                                  onRollback={handleCreateRollback}
+                                />
                               ) : (
                                 <EventTimelineRow
-                                  key={item.id}
+                                  key={`event-${item.id}`}
                                   item={item}
                                   locale={locale}
                                   isZh={isZh}
