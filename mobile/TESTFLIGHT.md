@@ -135,10 +135,10 @@ pnpm exec expo config --type public
 3. 确认 Apple Developer 配置：
 
 - App ID 启用 Associated Domains。
-- Bundle ID 为 `com.carbontrack.mobile`。
+- Bundle ID 为 `CarbonTrack.CarbonTrackApp`。
 - Provisioning profile 包含 `com.apple.developer.associated-domains`。
 - `app.json` 内保留 `ios.associatedDomains=["webcredentials:carbontrackapp.com"]`。
-- `https://carbontrackapp.com/.well-known/apple-app-site-association` 包含 `webcredentials` 配置，并覆盖 `com.carbontrack.mobile` 所属 Team ID 与 bundle identifier。
+- `https://carbontrackapp.com/.well-known/apple-app-site-association` 包含 `webcredentials` 配置，并覆盖 `CarbonTrack.CarbonTrackApp` 所属 Team ID 与 bundle identifier。
 
 4. 构建 iOS 原生包。核心要求是使用上面指定的 macOS / Xcode 环境重新执行 prebuild/native build，让 CocoaPods 安装上面列出的 native packages。
 

@@ -31,3 +31,5 @@
 /mobile/.env
 /mobile/dist/
 /mobile/web-build/
+# Added by code-review-graph
+.code-review-graph/
