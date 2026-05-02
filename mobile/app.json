@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "CarbonTrackOrg.CarbonTrackApp",
+      "bundleIdentifier": "CarbonTrack.CarbonTrackApp",
       "associatedDomains": [
         "webcredentials:carbontrackapp.com"
       ],
