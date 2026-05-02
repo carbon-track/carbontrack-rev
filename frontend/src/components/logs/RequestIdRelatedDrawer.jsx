@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Copy, Loader2 } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -28,8 +28,13 @@ export function RequestIdRelatedDrawer({
   const [copyingKey, setCopyingKey] = useState(null);
   const [copiedKey, setCopiedKey] = useState(null);
   const [copyError, setCopyError] = useState('');
+  const copyResetTimerRef = useRef(null);
 
   useEffect(() => {
+    if (copyResetTimerRef.current) {
+      window.clearTimeout(copyResetTimerRef.current);
+      copyResetTimerRef.current = null;
+    }
     setSystemDetails({});
     setLlmDetails({});
     setDetailLoading({ system: {}, llm: {} });
@@ -38,6 +43,12 @@ export function RequestIdRelatedDrawer({
     setCopiedKey(null);
     setCopyError('');
   }, [requestId]);
+
+  useEffect(() => () => {
+    if (copyResetTimerRef.current) {
+      window.clearTimeout(copyResetTimerRef.current);
+    }
+  }, []);
 
   const setLoadingFlag = useCallback((type, id, value) => {
     setDetailLoading((prev) => {
@@ -170,8 +181,12 @@ export function RequestIdRelatedDrawer({
       const payload = await buildPayload();
       await writeClipboard(JSON.stringify(payload, null, 2));
       setCopiedKey(key);
-      window.setTimeout(() => {
+      if (copyResetTimerRef.current) {
+        window.clearTimeout(copyResetTimerRef.current);
+      }
+      copyResetTimerRef.current = window.setTimeout(() => {
         setCopiedKey((current) => (current === key ? null : current));
+        copyResetTimerRef.current = null;
       }, 1800);
     } catch (err) {
       setCopyError(err?.message || t('admin.systemLogs.drawer.copyFailed'));
