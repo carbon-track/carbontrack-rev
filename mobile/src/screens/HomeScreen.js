@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
+import { GlassContainer, GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
+import CarbonRecordList from '../components/CarbonRecordList';
 import ResponsiveTrendChart from '../components/ResponsiveTrendChart';
 import { dashboardApi } from '../api/dashboard';
 import useAuthStore from '../store/authStore';
@@ -11,60 +12,20 @@ import { useTheme } from '../theme';
 const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
 
 const formatNumber = (value) => numberFormat.format(Number(value || 0));
-
-const getActivityName = (item, language) => {
-  if (language === 'zh') {
-    return item.activity_name_zh || item.activity_name_en || item.category || '';
-  }
-  return item.activity_name_en || item.activity_name_zh || item.category || '';
-};
-
-const statusKey = (status) => {
-  if (status === 'approved' || status === 'pending' || status === 'rejected') {
-    return `record.status.${status}`;
-  }
-  return 'record.status.unknown';
-};
-
 function StatCard({ label, value, suffix }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.statCard, { backgroundColor: colors.surfaceMuted, borderColor: colors.borderStrong }]}>
+    <GlassSurface effect="clear" style={styles.statCard} tintColor={colors.primarySoft}>
       <Text style={[styles.statLabel, { color: colors.textMuted }]}>{label}</Text>
       <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statValue, { color: colors.text }]}>
         {value}
       </Text>
       {suffix ? <Text style={[styles.statSuffix, { color: colors.primary }]}>{suffix}</Text> : null}
-    </View>
+    </GlassSurface>
   );
 }
 
-function ActivityRow({ item }) {
-  const { t, resolvedLanguage } = useI18n();
-  const { colors } = useTheme();
-  return (
-    <View style={[styles.activityRow, { borderColor: colors.borderStrong }]}>
-      <View style={styles.activityText}>
-        <Text numberOfLines={1} style={[styles.activityTitle, { color: colors.text }]}>
-          {getActivityName(item, resolvedLanguage) || t('record.activityFallback')}
-        </Text>
-        <Text style={[styles.activityMeta, { color: colors.textMuted }]}>
-          {t(statusKey(item.status))} / {item.created_at || item.date || ''}
-        </Text>
-      </View>
-      <View style={styles.activityMetrics}>
-        <Text style={[styles.activityCarbon, { color: colors.primary }]}>
-          {formatNumber(item.carbon_saved)} {t('units.kgCo2e')}
-        </Text>
-        <Text style={[styles.activityPoints, { color: colors.textMuted }]}>
-          +{formatNumber(item.points_earned)} {t('units.points')}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   const { t } = useI18n();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
@@ -104,12 +65,12 @@ export default function HomeScreen() {
       >
         <PageHeader eyebrow={t('home.eyebrow')} title={t('home.title', { name })} subtitle={t('home.subtitle')} />
 
-        <View style={[styles.statGrid, isWide ? styles.statGridWide : null]}>
+        <GlassContainer spacing={12} style={[styles.statGrid, isWide ? styles.statGridWide : null]}>
           <StatCard label={t('home.currentPoints')} value={formatNumber(stats.current_points)} suffix={t('units.points')} />
           <StatCard label={t('home.carbonSaved')} value={formatNumber(stats.total_carbon_saved)} suffix={t('units.kgCo2e')} />
           <StatCard label={t('home.totalActivities')} value={formatNumber(stats.total_activities)} />
           <StatCard label={t('home.pendingActivities')} value={formatNumber(stats.pending_activities)} />
-        </View>
+        </GlassContainer>
 
         <GlassSurface contentStyle={styles.section}>
           <View style={styles.sectionHeader}>
@@ -145,13 +106,11 @@ export default function HomeScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.recentActivities')}</Text>
             {activitiesQuery.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
           </View>
-          {activities.length ? (
-            <View style={styles.activityList}>
-              {activities.map((item) => <ActivityRow key={item.id} item={item} />)}
-            </View>
-          ) : (
-            <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t('home.emptyActivities')}</Text>
-          )}
+          <CarbonRecordList
+            records={activities}
+            emptyText={t('home.emptyActivities')}
+            onRecordPress={(record) => navigation.navigate('Record', { detailRecord: { id: record.id, record } })}
+          />
         </GlassSurface>
       </ScrollView>
     </ScreenBackground>
@@ -178,8 +137,7 @@ const styles = StyleSheet.create({
     flexWrap: 'nowrap',
   },
   statCard: {
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 22,
     flexBasis: '47%',
     flexGrow: 1,
     minHeight: 116,
@@ -220,47 +178,5 @@ const styles = StyleSheet.create({
   chartItem: {
     flex: 1,
     minWidth: 0,
-  },
-  activityList: {
-    gap: 10,
-  },
-  activityRow: {
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    minHeight: 64,
-    paddingBottom: 10,
-  },
-  activityText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  activityTitle: {
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  activityMeta: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  activityMetrics: {
-    alignItems: 'flex-end',
-    flexShrink: 0,
-  },
-  activityCarbon: {
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  activityPoints: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  emptyText: {
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
   },
 });

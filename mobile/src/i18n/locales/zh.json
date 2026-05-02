@@ -107,6 +107,8 @@
     "amountPlaceholder": "请输入活动数量",
     "amountPlaceholderWithUnit": "请输入数量（{{unit}}）",
     "date": "活动日期",
+    "activityDate": "活动发生日期",
+    "submittedAt": "提交日期：{{date}}",
     "datePlaceholder": "YYYY-MM-DD",
     "useToday": "今天",
     "description": "说明",
@@ -135,7 +137,7 @@
     "carbonSaved": "减碳量",
     "pointsEarned": "获得积分",
     "category": "分类",
-    "createdAt": "提交时间",
+    "createdAt": "提交日期",
     "reviewNote": "审核备注",
     "status": {
       "pending": "待审核",
@@ -144,19 +146,180 @@
       "unknown": "未知状态"
     }
   },
+  "media": {
+    "previewTitle": "图片预览",
+    "previewSubtitle": "可放大查看并保存到系统相册。",
+    "saveToLibrary": "保存到相册",
+    "saveSuccessTitle": "已保存",
+    "saveSuccessMessage": "图片已保存到系统相册。",
+    "saveFailedTitle": "保存失败",
+    "saveFailedMessage": "请稍后再试，或检查照片权限。",
+    "permissionTitle": "需要照片权限",
+    "permissionMessage": "请允许访问照片以保存图片。",
+    "saveUnsupportedTitle": "当前平台不支持",
+    "saveUnsupportedMessage": "Web 端无法直接保存到系统相册，请在移动端使用。"
+  },
   "units": {
     "points": "积分",
     "kgCo2e": "kg CO2e"
   },
   "store": {
     "eyebrow": "商城",
-    "title": "积分兑换功能待接入",
-    "body": "阶段 3 将接入商品列表、分类、兑换和兑换记录。"
+    "title": "积分商城",
+    "subtitle": "用低碳行动获得的积分兑换商品，并追踪兑换进度。",
+    "yourPoints": "可用积分",
+    "views": {
+      "products": "商品",
+      "history": "兑换记录"
+    },
+    "filters": {
+      "search": "搜索商品",
+      "searchPlaceholder": "输入商品名称或描述",
+      "category": "分类",
+      "allCategories": "全部分类",
+      "sortBy": "排序",
+      "current": "当前筛选",
+      "menuTitle": "筛选与排序",
+      "menuSubtitle": "{{category}} / {{sort}}",
+      "categorySection": "选择分类",
+      "sortSection": "排序方式",
+      "close": "完成",
+      "sort": {
+        "created_at": "最新上架",
+        "points_asc": "积分从低到高",
+        "points_desc": "积分从高到低",
+        "popular": "兑换热门",
+        "name": "名称"
+      }
+    },
+    "categories": {
+      "electronics": "电子产品",
+      "books": "图书",
+      "lifestyle": "生活方式",
+      "food": "食品",
+      "sports": "运动",
+      "travel": "旅行",
+      "eco": "环保"
+    },
+    "uncategorized": "未分类",
+    "featured": "精选",
+    "noDescription": "暂无商品说明。",
+    "pointsRequired": "所需积分",
+    "unlimited": "不限库存",
+    "stock": "库存 {{count}}",
+    "unavailable": "暂不可兑换",
+    "outOfStock": "已兑完",
+    "insufficientPoints": "积分不足",
+    "afterExchange": "兑换后",
+    "previous": "上一页",
+    "next": "下一页",
+    "noProducts": {
+      "title": "暂无商品",
+      "description": "当前筛选下没有可兑换商品。"
+    },
+    "errors": {
+      "exchangeFailed": "兑换失败，请稍后重试。"
+    },
+    "exchange": {
+      "button": "立即兑换",
+      "title": "确认兑换",
+      "subtitle": "填写收货信息后提交兑换申请。",
+      "quantity": "数量",
+      "maxQuantity": "最多可兑换 {{max}} 件",
+      "deliveryAddress": "收货地址",
+      "addressPlaceholder": "请输入收货地址或邮箱",
+      "addressRequired": "请填写收货地址。",
+      "areaCode": "区号",
+      "invalidAreaCode": "请输入有效区号。",
+      "contactPhone": "联系电话",
+      "phonePlaceholder": "请输入联系电话（可选）",
+      "invalidPhone": "请输入有效联系电话。",
+      "notes": "备注",
+      "notesPlaceholder": "补充配送备注（可选）",
+      "totalCost": "合计消耗",
+      "afterExchange": "兑换后积分",
+      "confirm": "确认兑换",
+      "failed": "兑换失败",
+      "successTitle": "兑换成功",
+      "successMessage": "本次消耗 {{points}} 积分，兑换记录已生成。"
+    },
+    "history": {
+      "unknownProduct": "未知商品",
+      "orderDate": "兑换时间",
+      "quantity": "数量",
+      "pointsUsed": "消耗积分",
+      "deliveryInfo": "收货信息",
+      "contactPhone": "联系电话",
+      "trackingNumber": "物流单号",
+      "notProvided": "未提供",
+      "emptyTitle": "暂无兑换记录",
+      "emptyDescription": "兑换商品后，进度会显示在这里。",
+      "filters": {
+        "status": "订单状态",
+        "statusAll": "全部状态"
+      },
+      "statuses": {
+        "pending": "待处理",
+        "processing": "处理中",
+        "shipped": "已发货",
+        "completed": "已完成",
+        "rejected": "已拒绝",
+        "cancelled": "已取消",
+        "unknown": "未知"
+      }
+    }
   },
   "profile": {
     "eyebrow": "我的",
     "emailMissing": "未提供邮箱",
     "points": "积分：{{points}}",
+    "checkin": {
+      "title": "签到日历",
+      "subtitle": "查看连续签到、补签额度和本月签到状态。",
+      "currentStreak": "当前连续",
+      "todayChecked": "今日已签到",
+      "todayMissing": "今日待签到",
+      "longestStreak": "最长连续",
+      "totalDays": "累计 {{count}} 天",
+      "makeupQuota": "补签额度",
+      "monthlyReset": "每月重置",
+      "previousMonth": "上月",
+      "nextMonth": "下月",
+      "weekdays": {
+        "sun": "日",
+        "mon": "一",
+        "tue": "二",
+        "wed": "三",
+        "thu": "四",
+        "fri": "五",
+        "sat": "六"
+      },
+      "selectedDate": "已选日期：{{date}}",
+      "selectHint": "请选择日期",
+      "statusChecked": "已签到",
+      "statusMakeup": "补签",
+      "statusRecord": "记录签到",
+      "statusFuture": "未来日期不可补签",
+      "statusMissing": "未签到",
+      "makeupAction": "补签此日",
+      "makeupHint": "可补签日期会跳转到记录页并带入该日期。"
+    },
+    "badges": {
+      "title": "徽章与成就",
+      "subtitle": "同步网页端的已解锁、待解锁和获得时间线。",
+      "total": "全部徽章",
+      "unlocked": "已解锁",
+      "completion": "完成度",
+      "unnamed": "未命名徽章",
+      "noDescription": "暂无徽章说明。",
+      "awardedAt": "获得时间",
+      "unlockedTitle": "已解锁徽章",
+      "unlockedEmpty": "还没有解锁徽章。",
+      "lockedTitle": "待解锁徽章",
+      "lockedEmpty": "所有徽章均已解锁。",
+      "timelineTitle": "获得时间线",
+      "timelineEmpty": "暂无徽章获得记录。"
+    },
     "appearance": "外观",
     "theme": "主题",
     "language": "语言",

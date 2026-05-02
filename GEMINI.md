@@ -97,6 +97,7 @@ The mobile app is a React Native client built with Expo and lives under `mobile/
 - **Setup**: Run `pnpm install` in the `mobile` directory.
 - **Validate**: Run `pnpm exec expo config --type public` to verify Expo metadata and config parsing.
 - **Run Locally**: Use `pnpm start`, `pnpm android`, `pnpm ios`, or `pnpm web` from `mobile/` as appropriate.
+- **Keyboard-safe forms**: Any mobile screen, modal, or bottom sheet that contains `TextInput` must use an explicit keyboard-avoidance strategy (`KeyboardAvoidingView` with platform-specific behavior or an equivalent tested approach). Check exchange/confirmation modals as well as full-page forms so lower inputs remain visible when the keyboard is open.
 - **After Mobile Changes (Required)**: After modifying mobile components, navigation, API clients, state, or Expo config:
     - Run `pnpm install --frozen-lockfile` and `pnpm exec expo config --type public`.
     - Keep `mobile/pnpm-lock.yaml` committed and do not add `mobile/package-lock.json`.

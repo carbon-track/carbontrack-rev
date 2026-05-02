@@ -1,11 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -18,7 +16,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Field, PrimaryButton, SecondaryButton } from '../components/FormControls';
-import { GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
+import {
+  GlassListItemSurface,
+  GlassPickerSurface,
+  GlassPressable,
+  GlassSurface,
+  PageHeader,
+  ScreenBackground,
+} from '../components/Glass';
 import { carbonApi } from '../api/carbon';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
@@ -28,6 +33,11 @@ const todayString = (value = new Date()) => (
   `${value.getFullYear()}-${padDatePart(value.getMonth() + 1)}-${padDatePart(value.getDate())}`
 );
 const formatNumber = (value) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(Number(value || 0));
+const getApiErrorMessage = (error, fallback) => (
+  error?.response?.data?.message
+  || error?.response?.data?.error
+  || fallback
+);
 
 const normalizeAmountInput = (value) => {
   const asciiValue = String(value || '')
@@ -79,54 +89,7 @@ const getActivityName = (item, language) => {
   return item.name_en || item.name_zh || item.combined_name || item.category || '';
 };
 
-const getRecordName = (item, language) => {
-  if (language === 'zh') {
-    return item.activity_name_zh || item.activity_name_en || item.category || '';
-  }
-  return item.activity_name_en || item.activity_name_zh || item.category || '';
-};
-
-const statusKey = (status) => {
-  if (status === 'approved' || status === 'pending' || status === 'rejected') {
-    return `record.status.${status}`;
-  }
-  return 'record.status.unknown';
-};
-
-function HistoryRow({ item, onPress }) {
-  const { t, resolvedLanguage } = useI18n();
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.historyRow,
-        { backgroundColor: colors.surfaceMuted, borderColor: colors.borderStrong },
-        pressed ? { opacity: 0.78 } : null,
-      ]}
-    >
-      <View style={styles.historyMain}>
-        <Text numberOfLines={1} style={[styles.historyTitle, { color: colors.text }]}>
-          {getRecordName(item, resolvedLanguage) || t('record.activityFallback')}
-        </Text>
-        <Text style={[styles.historyMeta, { color: colors.textMuted }]}>
-          {t(statusKey(item.status))} / {item.date || item.created_at || ''}
-        </Text>
-      </View>
-      <View style={styles.historyMetrics}>
-        <Text style={[styles.historyCarbon, { color: colors.primary }]}>
-          {formatNumber(item.carbon_saved)} {t('units.kgCo2e')}
-        </Text>
-        <Text style={[styles.historyPoints, { color: colors.textMuted }]}>
-          +{formatNumber(item.points_earned)} {t('units.points')}
-        </Text>
-      </View>
-      <Ionicons color={colors.textMuted} name="chevron-forward" size={18} />
-    </Pressable>
-  );
-}
-
-export default function RecordScreen({ navigation }) {
+export default function RecordScreen({ route }) {
   const { t, resolvedLanguage } = useI18n();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
@@ -140,13 +103,20 @@ export default function RecordScreen({ navigation }) {
   const [image, setImage] = useState(null);
   const [calculation, setCalculation] = useState(null);
 
+  useEffect(() => {
+    const requestedDate = route?.params?.checkinDate;
+    if (!requestedDate) {
+      return;
+    }
+    const normalizedDate = normalizeDateInput(requestedDate);
+    if (isValidDateString(normalizedDate)) {
+      setDate(normalizedDate);
+    }
+  }, [route?.params?.checkinDate]);
+
   const factorsQuery = useQuery({
     queryKey: ['mobile-carbon-activity-factors'],
     queryFn: carbonApi.getActivityFactors,
-  });
-  const historyQuery = useQuery({
-    queryKey: ['mobile-carbon-records', 1],
-    queryFn: () => carbonApi.getRecords({ page: 1, limit: 20 }),
   });
 
   const activities = factorsQuery.data?.activities || [];
@@ -174,7 +144,7 @@ export default function RecordScreen({ navigation }) {
       queryClient.invalidateQueries({ queryKey: ['mobile-dashboard-activities'] });
       Alert.alert(t('record.submitSuccessTitle'), t('record.submitSuccessMessage'));
     },
-    onError: () => Alert.alert(t('record.submitFailed'), t('record.retryLater')),
+    onError: (error) => Alert.alert(t('record.submitFailed'), getApiErrorMessage(error, t('record.retryLater'))),
   });
 
   const requestCalculation = () => {
@@ -231,12 +201,11 @@ export default function RecordScreen({ navigation }) {
     });
   };
 
-  const records = historyQuery.data?.records || [];
-  const refreshing = factorsQuery.isFetching || historyQuery.isFetching;
+  const refreshing = factorsQuery.isFetching;
 
   return (
     <ScreenBackground>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           contentContainerStyle={[styles.container, isWide ? styles.containerWide : null]}
           keyboardShouldPersistTaps="handled"
@@ -245,7 +214,6 @@ export default function RecordScreen({ navigation }) {
               refreshing={refreshing}
               onRefresh={() => {
                 factorsQuery.refetch();
-                historyQuery.refetch();
               }}
               tintColor={colors.primary}
             />
@@ -259,7 +227,7 @@ export default function RecordScreen({ navigation }) {
 
               <View style={styles.field}>
                 <Text style={[styles.label, { color: colors.text }]}>{t('record.activityType')}</Text>
-                <View style={[styles.pickerBox, { backgroundColor: colors.input, borderColor: colors.borderStrong }]}>
+                <GlassPickerSurface>
                   <Picker
                     dropdownIconColor={colors.text}
                     selectedValue={activityId}
@@ -278,7 +246,7 @@ export default function RecordScreen({ navigation }) {
                       />
                     ))}
                   </Picker>
-                </View>
+                </GlassPickerSurface>
               </View>
 
               <Field
@@ -301,17 +269,14 @@ export default function RecordScreen({ navigation }) {
                     keyboardType={Platform.OS === 'ios' ? 'number-pad' : 'numeric'}
                   />
                 </View>
-                <Pressable
+                <GlassPressable
                   onPress={() => setDate(todayString())}
-                  style={({ pressed }) => [
-                    styles.todayButton,
-                    { backgroundColor: colors.surfaceStrong, borderColor: colors.borderStrong },
-                    pressed ? { opacity: 0.78 } : null,
-                  ]}
+                  style={styles.todayButton}
+                  contentStyle={styles.todayButtonContent}
                 >
                   <Ionicons color={colors.primary} name="calendar-outline" size={17} />
                   <Text style={[styles.todayButtonText, { color: colors.text }]}>{t('record.useToday')}</Text>
-                </Pressable>
+                </GlassPressable>
               </View>
               <Field
                 label={t('record.description')}
@@ -323,13 +288,10 @@ export default function RecordScreen({ navigation }) {
                 textAlignVertical="top"
               />
 
-              <Pressable
+              <GlassPressable
                 onPress={pickImage}
-                style={({ pressed }) => [
-                  styles.imagePicker,
-                  { backgroundColor: colors.input, borderColor: colors.borderStrong },
-                  pressed ? { opacity: 0.78 } : null,
-                ]}
+                style={styles.imagePicker}
+                contentStyle={styles.imagePickerContent}
               >
                 {image ? (
                   <Image source={{ uri: image.uri }} style={styles.previewImage} />
@@ -340,17 +302,17 @@ export default function RecordScreen({ navigation }) {
                     <Text style={[styles.imageHint, { color: colors.textMuted }]}>{t('record.pickImageHint')}</Text>
                   </View>
                 )}
-              </Pressable>
+              </GlassPressable>
 
               {calculation ? (
-                <View style={[styles.calculation, { backgroundColor: colors.primarySoft }]}>
+                <GlassListItemSurface contentStyle={styles.calculation} tintColor={colors.primarySoft}>
                   <Text style={[styles.calculationText, { color: colors.text }]}>
                     {t('record.calculatedCarbon', { value: formatNumber(calculation.carbon_saved), unit: t('units.kgCo2e') })}
                   </Text>
                   <Text style={[styles.calculationText, { color: colors.text }]}>
                     {t('record.calculatedPoints', { value: formatNumber(calculation.points_earned) })}
                   </Text>
-                </View>
+                </GlassListItemSurface>
               ) : null}
 
               <View style={styles.actions}>
@@ -359,25 +321,6 @@ export default function RecordScreen({ navigation }) {
               </View>
             </GlassSurface>
 
-            <GlassSurface style={styles.gridItem} contentStyle={styles.historySection}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('record.history')}</Text>
-                {historyQuery.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
-              </View>
-              {records.length ? (
-                <View style={styles.historyList}>
-                  {records.map((record) => (
-                    <HistoryRow
-                      key={record.id}
-                      item={record}
-                      onPress={() => navigation.navigate('RecordDetail', { id: record.id, record })}
-                    />
-                  ))}
-                </View>
-              ) : (
-                <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t('record.emptyHistory')}</Text>
-              )}
-            </GlassSurface>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -413,14 +356,6 @@ const styles = StyleSheet.create({
   form: {
     gap: 14,
   },
-  historySection: {
-    gap: 14,
-  },
-  sectionHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '900',
@@ -432,11 +367,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  pickerBox: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
   dateRow: {
     alignItems: 'flex-end',
     flexDirection: 'row',
@@ -447,11 +377,14 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   todayButton: {
-    alignItems: 'center',
     borderRadius: 16,
-    borderWidth: 1,
+    minHeight: 50,
+  },
+  todayButtonContent: {
+    alignItems: 'center',
     flexDirection: 'row',
     gap: 6,
+    justifyContent: 'center',
     minHeight: 50,
     paddingHorizontal: 12,
   },
@@ -465,9 +398,10 @@ const styles = StyleSheet.create({
   },
   imagePicker: {
     borderRadius: 18,
-    borderWidth: 1,
     minHeight: 160,
-    overflow: 'hidden',
+  },
+  imagePickerContent: {
+    width: '100%',
   },
   previewImage: {
     aspectRatio: 1.7,
@@ -501,48 +435,5 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: 10,
-  },
-  historyList: {
-    gap: 10,
-  },
-  historyRow: {
-    alignItems: 'center',
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 10,
-    minHeight: 74,
-    padding: 12,
-  },
-  historyMain: {
-    flex: 1,
-    minWidth: 0,
-  },
-  historyTitle: {
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  historyMeta: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  historyMetrics: {
-    alignItems: 'flex-end',
-    flexShrink: 0,
-  },
-  historyCarbon: {
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  historyPoints: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  emptyText: {
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
   },
 });

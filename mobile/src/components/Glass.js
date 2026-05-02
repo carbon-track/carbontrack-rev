@@ -1,97 +1,122 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { makeShadow, useTheme } from '../theme';
 
-const nativeLiquidGlassEnabled = (
-  Platform.OS === 'ios'
-  && process.env.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS === 'true'
-);
-
 const loadLiquidGlass = () => {
-  if (!nativeLiquidGlassEnabled) {
+  try {
+    const module = require('@callstack/liquid-glass');
+    return {
+      Container: module?.LiquidGlassContainerView || View,
+      Surface: module?.LiquidGlassView || View,
+      isSupported: Boolean(module?.isLiquidGlassSupported),
+    };
+  } catch (error) {
+    if (__DEV__) {
+      console.warn('Liquid Glass native module unavailable; using fallback surfaces.', error);
+    }
     return {
       Container: View,
       Surface: View,
-      isAvailable: false,
+      isSupported: false,
     };
   }
-
-  try {
-    const module = require('@callstack/liquid-glass');
-    const supportedFlag = module?.isLiquidGlassSupported;
-    const isSupported = typeof supportedFlag === 'function' ? supportedFlag() : Boolean(supportedFlag);
-    if (module?.LiquidGlassContainerView && module?.LiquidGlassView && isSupported) {
-      return {
-        Container: module.LiquidGlassContainerView,
-        Surface: module.LiquidGlassView,
-        isAvailable: true,
-      };
-    }
-  } catch (error) {
-    if (__DEV__) {
-      console.warn('Liquid Glass native module unavailable; using fallback surface.', error);
-    }
-  }
-
-  return {
-    Container: View,
-    Surface: View,
-    isAvailable: false,
-  };
 };
 
 const LiquidGlass = loadLiquidGlass();
 
+const glassTint = (colors, tintColor) => (
+  tintColor || (colors.dark ? 'rgba(110, 231, 168, 0.10)' : 'rgba(18, 129, 79, 0.08)')
+);
+
+function GlassLayer({
+  children,
+  contentProps,
+  contentStyle,
+  effect = 'regular',
+  fallbackStyle,
+  interactive = false,
+  style,
+  tintColor,
+}) {
+  const { colors } = useTheme();
+  const glassProps = LiquidGlass.isSupported
+    ? {
+        colorScheme: colors.dark ? 'dark' : 'light',
+        effect,
+        interactive,
+        tintColor: glassTint(colors, tintColor),
+      }
+    : null;
+
+  return (
+    <LiquidGlass.Surface
+      {...glassProps}
+      style={[
+        styles.glassBase,
+        { borderColor: colors.border },
+        !LiquidGlass.isSupported ? [{ backgroundColor: colors.surface }, fallbackStyle] : null,
+        style,
+      ]}
+    >
+      <View {...contentProps} style={contentStyle}>{children}</View>
+    </LiquidGlass.Surface>
+  );
+}
+
 export function ScreenBackground({ children, centered = false, style }) {
   const { colors } = useTheme();
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }, centered ? styles.centered : null, style]}>
-      <View style={[styles.wash, { backgroundColor: colors.primarySoft }]} />
-      <View style={[styles.washSecondary, { backgroundColor: colors.surfaceMuted }]} />
+    <SafeAreaView
+      style={[
+        styles.screen,
+        { backgroundColor: colors.background },
+        centered ? styles.centered : null,
+        style,
+      ]}
+    >
+      <View pointerEvents="none" style={[styles.glowOne, { backgroundColor: colors.primarySoft }]} />
+      <View pointerEvents="none" style={[styles.glowTwo, { backgroundColor: colors.surfaceStrong }]} />
       {children}
     </SafeAreaView>
   );
 }
 
-export function GlassSurface({ children, style, contentStyle, intensity = 36 }) {
-  const { colors, isDark } = useTheme();
-  const glassEffect = intensity >= 42 ? 'regular' : 'clear';
-  const Container = LiquidGlass.Container;
-  const Surface = LiquidGlass.Surface;
-
-  if (!LiquidGlass.isAvailable) {
-    return (
-      <Container style={[styles.glassShell, makeShadow(colors, isDark ? 0.32 : 0.14, 10), style]}>
-        <Surface
-          style={[
-            styles.glassFill,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-            contentStyle,
-          ]}
-        >
-          {children}
-        </Surface>
-      </Container>
-    );
-  }
-
+export function GlassContainer({ children, spacing = 12, style }) {
+  const containerProps = LiquidGlass.isSupported ? { spacing } : null;
   return (
-    <Container spacing={18} style={[styles.glassShell, makeShadow(colors, isDark ? 0.32 : 0.14, 10), style]}>
-      <Surface
-        interactive
-        effect={glassEffect}
-        colorScheme={isDark ? 'dark' : 'light'}
-        tintColor={colors.surface}
-        style={[
-          styles.glassFill,
-          { borderColor: colors.border },
-          contentStyle,
-        ]}
-      >
-        {children}
-      </Surface>
-    </Container>
+    <LiquidGlass.Container {...containerProps} style={style}>
+      {children}
+    </LiquidGlass.Container>
+  );
+}
+
+export function GlassSurface({
+  children,
+  contentStyle,
+  effect = 'regular',
+  interactive = false,
+  padded = true,
+  style,
+  tintColor,
+}) {
+  const { colors } = useTheme();
+  return (
+    <GlassLayer
+      contentStyle={contentStyle}
+      effect={effect}
+      fallbackStyle={{ backgroundColor: colors.surface }}
+      interactive={interactive}
+      style={[
+        styles.surface,
+        !padded ? styles.surfaceFlush : null,
+        makeShadow(colors, colors.dark ? 0.28 : 0.12, 10),
+        style,
+      ]}
+      tintColor={tintColor}
+    >
+      {children}
+    </GlassLayer>
   );
 }
 
@@ -106,25 +131,228 @@ export function PageHeader({ eyebrow, title, subtitle, style }) {
   );
 }
 
-export function SegmentedControl({ options, value, onChange }) {
+export function SegmentedControl({ value, onChange, options = [] }) {
   const { colors } = useTheme();
+  const [trackWidth, setTrackWidth] = React.useState(0);
+  const translateX = React.useRef(new Animated.Value(0)).current;
+  const selectedIndex = Math.max(options.findIndex((option) => option.value === value), 0);
+  const indicatorWidth = options.length && trackWidth > 0 ? (trackWidth - 8) / options.length : 0;
+
+  React.useEffect(() => {
+    if (!indicatorWidth) {
+      return;
+    }
+    Animated.spring(translateX, {
+      damping: 18,
+      mass: 0.85,
+      stiffness: 220,
+      toValue: selectedIndex * indicatorWidth,
+      useNativeDriver: true,
+    }).start();
+  }, [indicatorWidth, selectedIndex]);
+
   return (
-    <View style={[styles.segmented, { backgroundColor: colors.surfaceMuted, borderColor: colors.borderStrong }]}>
+    <GlassLayer
+      contentProps={{
+        onLayout: (event) => setTrackWidth(event.nativeEvent.layout.width),
+      }}
+      contentStyle={styles.segmentedContent}
+      effect="clear"
+      fallbackStyle={{ backgroundColor: colors.surfaceMuted }}
+      style={styles.segmentedTrack}
+      tintColor={colors.surfaceMuted}
+    >
+      {indicatorWidth > 0 ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.segmentIndicator,
+            {
+              transform: [{ translateX }],
+              width: indicatorWidth,
+            },
+          ]}
+        >
+          <GlassLayer
+            effect="regular"
+            fallbackStyle={{ backgroundColor: colors.primarySoft }}
+            style={[styles.segmentIndicatorGlass, { borderColor: colors.primary }]}
+            tintColor={colors.primarySoft}
+          />
+        </Animated.View>
+      ) : null}
       {options.map((option) => {
         const active = option.value === value;
         return (
           <Pressable
             key={option.value}
             onPress={() => onChange(option.value)}
-            style={[styles.segment, active ? { backgroundColor: colors.surfaceStrong } : null]}
+            style={({ pressed }) => [
+              styles.segmentPressable,
+              pressed ? { opacity: 0.78 } : null,
+            ]}
           >
-            <Text style={[styles.segmentText, { color: active ? colors.text : colors.textMuted }]}>
-              {option.label}
-            </Text>
+            <View style={styles.segmentOption}>
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={[
+                  styles.segmentText,
+                  { color: active ? colors.primary : colors.textMuted },
+                ]}
+              >
+                {option.label}
+              </Text>
+            </View>
           </Pressable>
         );
       })}
-    </View>
+    </GlassLayer>
+  );
+}
+
+export function GlassFieldSurface({ children, error, style }) {
+  const { colors } = useTheme();
+  return (
+    <GlassLayer
+      effect="regular"
+      fallbackStyle={{ backgroundColor: colors.surfaceStrong }}
+      style={[
+        styles.fieldSurface,
+        { borderColor: error ? colors.danger : colors.borderStrong },
+        makeShadow(colors, colors.dark ? 0.16 : 0.08, 7),
+        style,
+      ]}
+      tintColor={colors.input}
+    >
+      {children}
+    </GlassLayer>
+  );
+}
+
+export function GlassPickerSurface({ children, error, style }) {
+  const { colors } = useTheme();
+  return (
+    <GlassLayer
+      effect="clear"
+      fallbackStyle={{ backgroundColor: colors.input }}
+      style={[
+        styles.pickerSurface,
+        { borderColor: error ? colors.danger : colors.borderStrong },
+        style,
+      ]}
+      tintColor={colors.primarySoft}
+    >
+      {children}
+    </GlassLayer>
+  );
+}
+
+export function GlassListItemSurface({ children, contentStyle, style, tintColor }) {
+  const { colors } = useTheme();
+  return (
+    <GlassLayer
+      contentStyle={contentStyle}
+      effect="clear"
+      fallbackStyle={{ backgroundColor: colors.surfaceMuted }}
+      style={[styles.listItemSurface, { borderColor: colors.borderStrong }, style]}
+      tintColor={tintColor || colors.primarySoft}
+    >
+      {children}
+    </GlassLayer>
+  );
+}
+
+export function GlassToggleSurface({ children, contentStyle, style }) {
+  const { colors } = useTheme();
+  return (
+    <GlassLayer
+      contentStyle={contentStyle}
+      effect="clear"
+      fallbackStyle={{ backgroundColor: colors.surfaceMuted }}
+      style={[styles.toggleSurface, { borderColor: colors.borderStrong }, style]}
+      tintColor={colors.primarySoft}
+    >
+      {children}
+    </GlassLayer>
+  );
+}
+
+export function GlassPressable({
+  children,
+  contentStyle,
+  disabled,
+  effect = 'clear',
+  fallbackStyle,
+  onPress,
+  style,
+  tintColor,
+  wrapperStyle,
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.pressableWrapper,
+        wrapperStyle,
+        pressed ? { opacity: 0.78 } : null,
+        disabled ? { opacity: 0.55 } : null,
+      ]}
+    >
+      <GlassLayer
+        contentStyle={contentStyle}
+        effect={effect}
+        fallbackStyle={fallbackStyle || { backgroundColor: colors.surfaceMuted }}
+        interactive={!disabled}
+        style={[styles.pressableSurface, style]}
+        tintColor={tintColor}
+      >
+        {children}
+      </GlassLayer>
+    </Pressable>
+  );
+}
+
+export function GlassButtonSurface({
+  children,
+  contentStyle,
+  disabled,
+  effect = 'clear',
+  onPress,
+  style,
+  variant = 'secondary',
+}) {
+  const { colors } = useTheme();
+  const primary = variant === 'primary';
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.pressableWrapper,
+        pressed ? { opacity: 0.78 } : null,
+        disabled ? { opacity: 0.55 } : null,
+      ]}
+    >
+      <GlassLayer
+        contentStyle={[styles.buttonContentSurface, contentStyle]}
+        effect={effect}
+        fallbackStyle={{ backgroundColor: primary ? colors.primarySoft : colors.surfaceStrong }}
+        interactive={!disabled}
+        style={[
+          styles.buttonSurface,
+          {
+            borderColor: primary ? colors.primary : colors.borderStrong,
+          },
+          style,
+        ]}
+        tintColor={primary ? colors.primarySoft : colors.surfaceMuted}
+      >
+        {children}
+      </GlassLayer>
+    </Pressable>
   );
 }
 
@@ -134,68 +362,125 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   centered: {
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  wash: {
-    borderRadius: 180,
-    height: 260,
+  glowOne: {
+    borderRadius: 220,
+    height: 320,
+    opacity: 0.9,
     position: 'absolute',
-    right: -90,
-    top: -80,
-    width: 260,
+    right: -140,
+    top: -100,
+    width: 320,
   },
-  washSecondary: {
+  glowTwo: {
     borderRadius: 180,
     bottom: -120,
-    height: 300,
-    left: -120,
+    height: 260,
+    left: -100,
+    opacity: 0.62,
     position: 'absolute',
-    width: 300,
+    width: 260,
   },
-  glassShell: {
-    borderRadius: 26,
+  glassBase: {
+    borderCurve: 'continuous',
+    borderWidth: 1,
     overflow: 'hidden',
   },
-  glassFill: {
-    borderRadius: 26,
-    borderWidth: 1,
+  surface: {
+    borderRadius: 24,
     padding: 18,
   },
+  surfaceFlush: {
+    padding: 0,
+  },
   header: {
-    gap: 8,
+    gap: 7,
   },
   eyebrow: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
     letterSpacing: 0,
     textTransform: 'uppercase',
   },
   title: {
     fontSize: 30,
     fontWeight: '900',
-    letterSpacing: 0,
+    lineHeight: 36,
   },
   subtitle: {
     fontSize: 15,
+    fontWeight: '700',
     lineHeight: 22,
   },
-  segmented: {
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 4,
-    padding: 4,
+  segmentedTrack: {
+    borderRadius: 20,
   },
-  segment: {
-    alignItems: 'center',
-    borderRadius: 14,
+  segmentedContent: {
+    flexDirection: 'row',
+    minHeight: 48,
+    padding: 4,
+    position: 'relative',
+  },
+  segmentIndicator: {
+    bottom: 4,
+    left: 4,
+    position: 'absolute',
+    top: 4,
+    zIndex: 0,
+  },
+  segmentIndicatorGlass: {
+    borderRadius: 16,
+    height: '100%',
+    width: '100%',
+  },
+  segmentPressable: {
     flex: 1,
-    minHeight: 38,
+    minWidth: 0,
+    zIndex: 1,
+  },
+  segmentOption: {
+    alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 40,
     paddingHorizontal: 10,
   },
   segmentText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '900',
+  },
+  fieldSurface: {
+    borderRadius: 18,
+    minHeight: 54,
+  },
+  pickerSurface: {
+    borderRadius: 16,
+    minHeight: 50,
+  },
+  listItemSurface: {
+    borderRadius: 18,
+  },
+  toggleSurface: {
+    borderRadius: 18,
+    padding: 12,
+  },
+  pressableWrapper: {
+    alignSelf: 'stretch',
+  },
+  pressableSurface: {
+    width: '100%',
+  },
+  buttonContentSurface: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonSurface: {
+    alignItems: 'center',
+    borderRadius: 18,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 16,
+    width: '100%',
   },
 });

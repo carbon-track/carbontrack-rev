@@ -24,10 +24,16 @@ const shouldUseNativeTabs = () => (
 
 const hasNativeTabsHost = () => {
   try {
-    if (typeof UIManager?.hasViewManagerConfig === 'function') {
-      return UIManager.hasViewManagerConfig('RNSTabsHost');
+    const screens = require('react-native-screens');
+    if (!screens?.BottomTabs || !screens?.BottomTabsScreen) {
+      return false;
     }
-    return Boolean(UIManager?.getViewManagerConfig?.('RNSTabsHost'));
+
+    const nativeComponentNames = ['RNSBottomTabs', 'RNSBottomTabsScreen'];
+    if (typeof UIManager?.hasViewManagerConfig === 'function') {
+      return nativeComponentNames.every((name) => UIManager.hasViewManagerConfig(name));
+    }
+    return nativeComponentNames.every((name) => Boolean(UIManager?.getViewManagerConfig?.(name)));
   } catch {
     return false;
   }
@@ -78,7 +84,7 @@ const tabIcons = {
   },
 };
 
-function RecordStackNavigator() {
+function RecordStackNavigator({ route }) {
   const [detailParams, setDetailParams] = React.useState(null);
   const navigation = React.useMemo(() => ({
     navigate: (name, params) => {
@@ -89,11 +95,17 @@ function RecordStackNavigator() {
     goBack: () => setDetailParams(null),
   }), []);
 
+  React.useEffect(() => {
+    if (route?.params?.detailRecord) {
+      setDetailParams(route.params.detailRecord);
+    }
+  }, [route?.params?.detailRecord]);
+
   if (detailParams) {
     return <RecordDetailScreen navigation={navigation} route={makeRoute(detailParams)} />;
   }
 
-  return <RecordScreen navigation={navigation} />;
+  return <RecordScreen navigation={navigation} route={makeRoute(route?.params || {})} />;
 }
 
 function MainTabs() {
@@ -111,16 +123,8 @@ function MainTabs() {
   };
 
   const nativeTabOptions = {
-    headerLargeTitleEnabled: true,
-    headerShadowVisible: false,
-    headerStyle: { backgroundColor: 'transparent' },
-    headerTransparent: true,
-    headerBlurEffect: isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight',
-    headerTintColor: colors.primary,
-    headerTitleStyle: { color: colors.text, fontWeight: '900' },
-    headerLargeTitleStyle: { color: colors.text, fontWeight: '900' },
+    headerShown: false,
     tabBarBlurEffect: isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight',
-    tabBarControllerMode: 'tabBar',
     tabBarMinimizeBehavior: 'onScrollDown',
   };
 
@@ -143,7 +147,8 @@ function MainTabs() {
           const icons = tabIcons[route.name] || tabIcons.Home;
           if (nativeTabsEnabled) {
             const [active, inactive] = icons.native;
-            return { type: 'sfSymbol', name: focused ? active : inactive };
+            const name = focused ? active : inactive;
+            return { type: 'sfSymbol', name, sfSymbolName: name };
           }
           const [active, inactive] = icons.fallback;
           return <Ionicons color={color} name={focused ? active : inactive} size={size ?? 22} />;

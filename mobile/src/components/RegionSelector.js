@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import countries from '../data/states.json';
+import { GlassPickerSurface } from './Glass';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
 
@@ -20,7 +21,7 @@ export default function RegionSelector({ countryCode, stateCode, onCountryChange
   return (
     <View style={styles.wrapper}>
       <Text style={[styles.label, { color: colors.text }]}>{t('region.country')}</Text>
-      <View style={[styles.pickerBox, { backgroundColor: colors.input, borderColor: colors.borderStrong }]}>
+      <GlassPickerSurface>
         <Picker
           dropdownIconColor={colors.text}
           style={{ color: colors.text }}
@@ -35,10 +36,10 @@ export default function RegionSelector({ countryCode, stateCode, onCountryChange
             <Picker.Item key={country.iso2} label={getCountryLabel(country, resolvedLanguage)} value={country.iso2} />
           ))}
         </Picker>
-      </View>
+      </GlassPickerSurface>
 
       <Text style={[styles.label, { color: colors.text }]}>{t('region.state')}</Text>
-      <View style={[styles.pickerBox, { backgroundColor: colors.input, borderColor: colors.borderStrong }]}>
+      <GlassPickerSurface>
         {states.length > 0 ? (
           <Picker
             dropdownIconColor={colors.text}
@@ -63,7 +64,7 @@ export default function RegionSelector({ countryCode, stateCode, onCountryChange
             <Picker.Item label={countryCode ? t('region.stateMissing') : t('region.countryFirst')} value="" />
           </Picker>
         )}
-      </View>
+      </GlassPickerSurface>
     </View>
   );
 }
@@ -75,10 +76,5 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '700',
-  },
-  pickerBox: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
   },
 });
