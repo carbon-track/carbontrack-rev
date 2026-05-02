@@ -28,6 +28,15 @@ const todayString = (value = new Date()) => (
   `${value.getFullYear()}-${padDatePart(value.getMonth() + 1)}-${padDatePart(value.getDate())}`
 );
 const formatNumber = (value) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(Number(value || 0));
+const formatSubmittedDate = (item) => {
+  const value = item.created_at || item.submitted_at || '';
+  return String(value).split(/[T ]/)[0];
+};
+const getApiErrorMessage = (error, fallback) => (
+  error?.response?.data?.message
+  || error?.response?.data?.error
+  || fallback
+);
 
 const normalizeAmountInput = (value) => {
   const asciiValue = String(value || '')
@@ -110,7 +119,7 @@ function HistoryRow({ item, onPress }) {
           {getRecordName(item, resolvedLanguage) || t('record.activityFallback')}
         </Text>
         <Text style={[styles.historyMeta, { color: colors.textMuted }]}>
-          {t(statusKey(item.status))} / {item.date || item.created_at || ''}
+          {t(statusKey(item.status))} / {t('record.submittedAt', { date: formatSubmittedDate(item) || t('app.emptyValue') })}
         </Text>
       </View>
       <View style={styles.historyMetrics}>
@@ -174,7 +183,7 @@ export default function RecordScreen({ navigation }) {
       queryClient.invalidateQueries({ queryKey: ['mobile-dashboard-activities'] });
       Alert.alert(t('record.submitSuccessTitle'), t('record.submitSuccessMessage'));
     },
-    onError: () => Alert.alert(t('record.submitFailed'), t('record.retryLater')),
+    onError: (error) => Alert.alert(t('record.submitFailed'), getApiErrorMessage(error, t('record.retryLater'))),
   });
 
   const requestCalculation = () => {

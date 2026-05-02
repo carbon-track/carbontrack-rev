@@ -8,6 +8,10 @@ import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
 
 const formatNumber = (value) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(Number(value || 0));
+const formatSubmittedDate = (record) => {
+  const value = record.created_at || record.submitted_at || '';
+  return String(value).split(/[T ]/)[0];
+};
 
 const getRecordName = (item, language) => {
   if (language === 'zh') {
@@ -87,10 +91,10 @@ export default function RecordDetailScreen({ route, navigation }) {
           </View>
           <View style={styles.details}>
             <DetailRow label={t('record.amount')} value={`${formatNumber(record.amount)} ${record.unit || ''}`} />
-            <DetailRow label={t('record.date')} value={record.date} />
+            <DetailRow label={t('record.activityDate')} value={record.date} />
             <DetailRow label={t('record.category')} value={record.category} />
             <DetailRow label={t('record.description')} value={record.description} />
-            <DetailRow label={t('record.createdAt')} value={record.created_at} />
+            <DetailRow label={t('record.createdAt')} value={formatSubmittedDate(record)} />
             <DetailRow label={t('record.reviewNote')} value={record.review_note || record.admin_notes} />
           </View>
         </GlassSurface>

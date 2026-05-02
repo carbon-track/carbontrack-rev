@@ -11,6 +11,10 @@ import { useTheme } from '../theme';
 const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
 
 const formatNumber = (value) => numberFormat.format(Number(value || 0));
+const formatSubmittedDate = (item) => {
+  const value = item.created_at || item.submitted_at || '';
+  return String(value).split(/[T ]/)[0];
+};
 
 const getActivityName = (item, language) => {
   if (language === 'zh') {
@@ -49,7 +53,7 @@ function ActivityRow({ item }) {
           {getActivityName(item, resolvedLanguage) || t('record.activityFallback')}
         </Text>
         <Text style={[styles.activityMeta, { color: colors.textMuted }]}>
-          {t(statusKey(item.status))} / {item.created_at || item.date || ''}
+          {t(statusKey(item.status))} / {t('record.submittedAt', { date: formatSubmittedDate(item) || t('app.emptyValue') })}
         </Text>
       </View>
       <View style={styles.activityMetrics}>

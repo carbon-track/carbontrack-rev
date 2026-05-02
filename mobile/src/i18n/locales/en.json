@@ -107,6 +107,8 @@
     "amountPlaceholder": "Enter activity amount",
     "amountPlaceholderWithUnit": "Enter amount ({{unit}})",
     "date": "Activity date",
+    "activityDate": "Activity date",
+    "submittedAt": "Submitted: {{date}}",
     "datePlaceholder": "YYYY-MM-DD",
     "useToday": "Today",
     "description": "Description",
@@ -135,7 +137,7 @@
     "carbonSaved": "Carbon saved",
     "pointsEarned": "Points earned",
     "category": "Category",
-    "createdAt": "Submitted at",
+    "createdAt": "Submitted date",
     "reviewNote": "Review note",
     "status": {
       "pending": "Pending",

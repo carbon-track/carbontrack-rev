@@ -107,6 +107,8 @@
     "amountPlaceholder": "请输入活动数量",
     "amountPlaceholderWithUnit": "请输入数量（{{unit}}）",
     "date": "活动日期",
+    "activityDate": "活动发生日期",
+    "submittedAt": "提交日期：{{date}}",
     "datePlaceholder": "YYYY-MM-DD",
     "useToday": "今天",
     "description": "说明",
@@ -135,7 +137,7 @@
     "carbonSaved": "减碳量",
     "pointsEarned": "获得积分",
     "category": "分类",
-    "createdAt": "提交时间",
+    "createdAt": "提交日期",
     "reviewNote": "审核备注",
     "status": {
       "pending": "待审核",
