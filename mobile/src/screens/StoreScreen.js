@@ -455,7 +455,7 @@ function ExchangeModal({ product, visible, onClose, onConfirm, loading, userEmai
               <View style={styles.quantityInput}>
                 <Field
                   label={t('store.exchange.quantity')}
-                  value={String(parsedQuantity)}
+                  value={quantity}
                   onChangeText={(value) => setQuantity(value.replace(/[^\d]/g, ''))}
                   keyboardType="number-pad"
                 />

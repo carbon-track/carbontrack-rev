@@ -51,18 +51,28 @@ export default function ImageLightbox({
       return;
     }
     setSaving(true);
+    let localUri;
+    let shouldDeleteLocalFile = false;
     try {
       const permission = await MediaLibrary.requestPermissionsAsync();
       if (!permission.granted) {
         Alert.alert(t('media.permissionTitle'), t('media.permissionMessage'));
         return;
       }
-      const localUri = await localFileForSave(uri);
+      shouldDeleteLocalFile = !String(uri).startsWith('file://');
+      localUri = await localFileForSave(uri);
       await MediaLibrary.saveToLibraryAsync(localUri);
       Alert.alert(t('media.saveSuccessTitle'), t('media.saveSuccessMessage'));
     } catch (error) {
       Alert.alert(t('media.saveFailedTitle'), t('media.saveFailedMessage'));
     } finally {
+      if (shouldDeleteLocalFile && localUri) {
+        try {
+          await FileSystem.deleteAsync(localUri, { idempotent: true });
+        } catch {
+          // Best-effort cleanup; saving already completed or reported its own error.
+        }
+      }
       setSaving(false);
     }
   };

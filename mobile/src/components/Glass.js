@@ -149,7 +149,7 @@ export function SegmentedControl({ value, onChange, options = [] }) {
       toValue: selectedIndex * indicatorWidth,
       useNativeDriver: true,
     }).start();
-  }, [indicatorWidth, selectedIndex, translateX]);
+  }, [indicatorWidth, selectedIndex]);
 
   return (
     <GlassLayer

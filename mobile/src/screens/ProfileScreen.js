@@ -133,7 +133,7 @@ function CheckinCalendarPanel({ data, loading, month, onMonthChange, onMakeup })
       toValue: 0,
       useNativeDriver: true,
     }).start();
-  }, [currentMonthKey, monthMotion]);
+  }, [currentMonthKey]);
 
   const calendarTranslateX = monthMotion.interpolate({
     inputRange: [-1, 0, 1],
