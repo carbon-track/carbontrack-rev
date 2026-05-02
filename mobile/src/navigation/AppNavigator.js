@@ -24,10 +24,16 @@ const shouldUseNativeTabs = () => (
 
 const hasNativeTabsHost = () => {
   try {
-    if (typeof UIManager?.hasViewManagerConfig === 'function') {
-      return UIManager.hasViewManagerConfig('RNSTabsHost');
+    const screens = require('react-native-screens');
+    if (!screens?.BottomTabs || !screens?.BottomTabsScreen) {
+      return false;
     }
-    return Boolean(UIManager?.getViewManagerConfig?.('RNSTabsHost'));
+
+    const nativeComponentNames = ['RNSBottomTabs', 'RNSBottomTabsScreen'];
+    if (typeof UIManager?.hasViewManagerConfig === 'function') {
+      return nativeComponentNames.every((name) => UIManager.hasViewManagerConfig(name));
+    }
+    return nativeComponentNames.every((name) => Boolean(UIManager?.getViewManagerConfig?.(name)));
   } catch {
     return false;
   }
@@ -120,7 +126,6 @@ function MainTabs() {
     headerTitleStyle: { color: colors.text, fontWeight: '900' },
     headerLargeTitleStyle: { color: colors.text, fontWeight: '900' },
     tabBarBlurEffect: isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight',
-    tabBarControllerMode: 'tabBar',
     tabBarMinimizeBehavior: 'onScrollDown',
   };
 

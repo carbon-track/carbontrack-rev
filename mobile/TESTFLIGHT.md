@@ -5,7 +5,7 @@
 ## 应用标识
 
 - Expo project: `mobile`
-- iOS bundle identifier: `com.carbontrack.mobile`
+- iOS bundle identifier: `CarbonTrackOrg.CarbonTrackApp`
 - Android package: `com.carbontrack.mobile`
 - Associated Domain: `webcredentials:carbontrackapp.com`
 - 默认 API: `https://dev-api.carbontrackapp.com/api/v1`
@@ -135,10 +135,10 @@ pnpm exec expo config --type public
 3. 确认 Apple Developer 配置：
 
 - App ID 启用 Associated Domains。
-- Bundle ID 为 `CarbonTrack.CarbonTrackApp`。
+- Bundle ID 为 `CarbonTrackOrg.CarbonTrackApp`。
 - Provisioning profile 包含 `com.apple.developer.associated-domains`。
 - `app.json` 内保留 `ios.associatedDomains=["webcredentials:carbontrackapp.com"]`。
-- `https://carbontrackapp.com/.well-known/apple-app-site-association` 包含 `webcredentials` 配置，并覆盖 `CarbonTrack.CarbonTrackApp` 所属 Team ID 与 bundle identifier。
+- `https://carbontrackapp.com/.well-known/apple-app-site-association` 包含 `webcredentials` 配置，并覆盖 `CarbonTrackOrg.CarbonTrackApp` 所属 Team ID 与 bundle identifier。
 
 4. 构建 iOS 原生包。核心要求是使用上面指定的 macOS / Xcode 环境重新执行 prebuild/native build，让 CocoaPods 安装上面列出的 native packages。
 
@@ -163,7 +163,7 @@ npx eas-cli submit --platform ios --latest
 ## 验证 Passkey 登录
 
 - iOS 设备必须登录 iCloud Keychain，且系统允许 Passkeys。
-- `com.carbontrack.mobile` 的 Associated Domains 必须在签名后的 entitlements 中可见。
+- `CarbonTrackOrg.CarbonTrackApp` 的 Associated Domains 必须在签名后的 entitlements 中可见。
 - 后端接口必须可用：
   - `POST /api/v1/auth/passkey/login/options`
   - `POST /api/v1/auth/passkey/login/verify`
@@ -173,7 +173,7 @@ npx eas-cli submit --platform ios --latest
 ## Debug 清单
 
 - JS 包名：`mobile`
-- iOS bundle identifier：`com.carbontrack.mobile`
+- iOS bundle identifier：`CarbonTrackOrg.CarbonTrackApp`
 - Native module：`NativeLiquidGlassModule`
 - Native package：`@callstack/liquid-glass`
 - Native tabs package：`react-native-screens`
