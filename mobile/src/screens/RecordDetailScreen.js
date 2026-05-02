@@ -2,7 +2,8 @@ import React from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { SecondaryButton } from '../components/FormControls';
-import { GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
+import { GlassListItemSurface, GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
+import ImageLightbox from '../components/ImageLightbox';
 import { carbonApi } from '../api/carbon';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
@@ -30,12 +31,12 @@ const statusKey = (status) => {
 function DetailMetric({ label, value }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.metric, { backgroundColor: colors.surfaceMuted, borderColor: colors.borderStrong }]}>
+    <GlassListItemSurface style={styles.metric} contentStyle={styles.metricContent}>
       <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
       <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.metricValue, { color: colors.text }]}>
         {value}
       </Text>
-    </View>
+    </GlassListItemSurface>
   );
 }
 
@@ -43,10 +44,10 @@ function DetailRow({ label, value }) {
   const { t } = useI18n();
   const { colors } = useTheme();
   return (
-    <View style={[styles.detailRow, { borderColor: colors.borderStrong }]}>
+    <GlassListItemSurface style={styles.detailRow} contentStyle={styles.detailRowContent}>
       <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{label}</Text>
       <Text style={[styles.detailValue, { color: colors.text }]}>{value || t('app.emptyValue')}</Text>
-    </View>
+    </GlassListItemSurface>
   );
 }
 
@@ -84,7 +85,11 @@ export default function RecordDetailScreen({ route, navigation }) {
 
         <GlassSurface contentStyle={styles.content}>
           {detailQuery.isFetching ? <ActivityIndicator color={colors.primary} /> : null}
-          {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} /> : null}
+          {imageUrl ? (
+            <ImageLightbox uri={imageUrl} title={getRecordName(record, resolvedLanguage) || t('record.activityFallback')} style={styles.imageSurface} contentStyle={styles.imageContent}>
+              <Image source={{ uri: imageUrl }} style={styles.image} />
+            </ImageLightbox>
+          ) : null}
           <View style={[styles.metricGrid, isWide ? styles.metricGridWide : null]}>
             <DetailMetric label={t('record.carbonSaved')} value={`${formatNumber(record.carbon_saved)} ${t('units.kgCo2e')}`} />
             <DetailMetric label={t('record.pointsEarned')} value={`+${formatNumber(record.points_earned)} ${t('units.points')}`} />
@@ -122,8 +127,13 @@ const styles = StyleSheet.create({
   },
   image: {
     aspectRatio: 1.65,
-    borderRadius: 18,
     width: '100%',
+  },
+  imageContent: {
+    width: '100%',
+  },
+  imageSurface: {
+    borderRadius: 20,
   },
   metricGrid: {
     flexDirection: 'row',
@@ -134,9 +144,10 @@ const styles = StyleSheet.create({
   },
   metric: {
     borderRadius: 18,
-    borderWidth: 1,
     flex: 1,
     minHeight: 96,
+  },
+  metricContent: {
     padding: 14,
   },
   metricLabel: {
@@ -152,9 +163,11 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   detailRow: {
-    borderBottomWidth: 1,
+    borderRadius: 18,
+  },
+  detailRowContent: {
     gap: 6,
-    paddingBottom: 10,
+    padding: 12,
   },
   detailLabel: {
     fontSize: 12,

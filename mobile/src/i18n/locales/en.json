@@ -146,19 +146,180 @@
       "unknown": "Unknown"
     }
   },
+  "media": {
+    "previewTitle": "Image preview",
+    "previewSubtitle": "View larger and save it to the photo library.",
+    "saveToLibrary": "Save to Photos",
+    "saveSuccessTitle": "Saved",
+    "saveSuccessMessage": "The image was saved to your photo library.",
+    "saveFailedTitle": "Save failed",
+    "saveFailedMessage": "Try again later or check photo permissions.",
+    "permissionTitle": "Photo permission needed",
+    "permissionMessage": "Allow photo access to save this image.",
+    "saveUnsupportedTitle": "Unsupported here",
+    "saveUnsupportedMessage": "Web cannot save directly to the system photo library. Use the mobile app."
+  },
   "units": {
     "points": "pts",
     "kgCo2e": "kg CO2e"
   },
   "store": {
     "eyebrow": "Store",
-    "title": "Point redemption is coming",
-    "body": "Phase 3 will add products, categories, redemptions, and history."
+    "title": "Point store",
+    "subtitle": "Redeem rewards with points earned from low-carbon actions and track each order.",
+    "yourPoints": "Available points",
+    "views": {
+      "products": "Products",
+      "history": "History"
+    },
+    "filters": {
+      "search": "Search products",
+      "searchPlaceholder": "Search by name or description",
+      "category": "Category",
+      "allCategories": "All categories",
+      "sortBy": "Sort",
+      "current": "Current filter",
+      "menuTitle": "Filters and sort",
+      "menuSubtitle": "{{category}} / {{sort}}",
+      "categorySection": "Choose category",
+      "sortSection": "Sort by",
+      "close": "Done",
+      "sort": {
+        "created_at": "Newest",
+        "points_asc": "Points low to high",
+        "points_desc": "Points high to low",
+        "popular": "Popular",
+        "name": "Name"
+      }
+    },
+    "categories": {
+      "electronics": "Electronics",
+      "books": "Books",
+      "lifestyle": "Lifestyle",
+      "food": "Food",
+      "sports": "Sports",
+      "travel": "Travel",
+      "eco": "Eco"
+    },
+    "uncategorized": "Uncategorized",
+    "featured": "Featured",
+    "noDescription": "No product description yet.",
+    "pointsRequired": "Points needed",
+    "unlimited": "Unlimited stock",
+    "stock": "Stock {{count}}",
+    "unavailable": "Unavailable",
+    "outOfStock": "Out of stock",
+    "insufficientPoints": "Not enough points",
+    "afterExchange": "After exchange",
+    "previous": "Previous",
+    "next": "Next",
+    "noProducts": {
+      "title": "No products",
+      "description": "No redeemable products match the current filters."
+    },
+    "errors": {
+      "exchangeFailed": "Exchange failed. Please try again later."
+    },
+    "exchange": {
+      "button": "Redeem",
+      "title": "Confirm exchange",
+      "subtitle": "Add delivery details before submitting the exchange.",
+      "quantity": "Quantity",
+      "maxQuantity": "Up to {{max}} items",
+      "deliveryAddress": "Delivery address",
+      "addressPlaceholder": "Enter delivery address or email",
+      "addressRequired": "Enter a delivery address.",
+      "areaCode": "Area code",
+      "invalidAreaCode": "Enter a valid area code.",
+      "contactPhone": "Contact phone",
+      "phonePlaceholder": "Enter contact phone (optional)",
+      "invalidPhone": "Enter a valid contact phone.",
+      "notes": "Notes",
+      "notesPlaceholder": "Add delivery notes (optional)",
+      "totalCost": "Total cost",
+      "afterExchange": "Points after exchange",
+      "confirm": "Confirm",
+      "failed": "Exchange failed",
+      "successTitle": "Exchange submitted",
+      "successMessage": "{{points}} points were used and the exchange record was created."
+    },
+    "history": {
+      "unknownProduct": "Unknown product",
+      "orderDate": "Order date",
+      "quantity": "Quantity",
+      "pointsUsed": "Points used",
+      "deliveryInfo": "Delivery info",
+      "contactPhone": "Contact phone",
+      "trackingNumber": "Tracking number",
+      "notProvided": "Not provided",
+      "emptyTitle": "No exchange history",
+      "emptyDescription": "Redeemed products and status updates will appear here.",
+      "filters": {
+        "status": "Order status",
+        "statusAll": "All statuses"
+      },
+      "statuses": {
+        "pending": "Pending",
+        "processing": "Processing",
+        "shipped": "Shipped",
+        "completed": "Completed",
+        "rejected": "Rejected",
+        "cancelled": "Cancelled",
+        "unknown": "Unknown"
+      }
+    }
   },
   "profile": {
     "eyebrow": "Profile",
     "emailMissing": "No email provided",
     "points": "Points: {{points}}",
+    "checkin": {
+      "title": "Check-in calendar",
+      "subtitle": "Review streaks, makeup quota, and this month's check-ins.",
+      "currentStreak": "Current streak",
+      "todayChecked": "Checked in today",
+      "todayMissing": "Not checked in today",
+      "longestStreak": "Longest streak",
+      "totalDays": "{{count}} total days",
+      "makeupQuota": "Makeup quota",
+      "monthlyReset": "Resets monthly",
+      "previousMonth": "Prev",
+      "nextMonth": "Next",
+      "weekdays": {
+        "sun": "Sun",
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat"
+      },
+      "selectedDate": "Selected: {{date}}",
+      "selectHint": "Select a date",
+      "statusChecked": "Checked in",
+      "statusMakeup": "Makeup",
+      "statusRecord": "Record check-in",
+      "statusFuture": "Future dates cannot be made up",
+      "statusMissing": "Missing",
+      "makeupAction": "Make up this day",
+      "makeupHint": "Available makeup dates open the record tab with this date filled in."
+    },
+    "badges": {
+      "title": "Badges and achievements",
+      "subtitle": "Synced with the web view for unlocked, locked, and award timeline content.",
+      "total": "All badges",
+      "unlocked": "Unlocked",
+      "completion": "Completion",
+      "unnamed": "Unnamed badge",
+      "noDescription": "No badge description yet.",
+      "awardedAt": "Awarded",
+      "unlockedTitle": "Unlocked badges",
+      "unlockedEmpty": "No unlocked badges yet.",
+      "lockedTitle": "Locked badges",
+      "lockedEmpty": "All badges are unlocked.",
+      "timelineTitle": "Award timeline",
+      "timelineEmpty": "No badge award records yet."
+    },
     "appearance": "Appearance",
     "theme": "Theme",
     "language": "Language",

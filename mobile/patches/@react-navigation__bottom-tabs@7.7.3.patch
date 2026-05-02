@@ -1,0 +1,26 @@
+diff --git a/lib/module/unstable/NativeBottomTabView.native.js b/lib/module/unstable/NativeBottomTabView.native.js
+index cade73acf0c630aa9c31e85d4cbe3173d10a32f8..9635a1c29ee6e53e6dc2efc27e27603851c68eb5 100644
+--- a/lib/module/unstable/NativeBottomTabView.native.js
++++ b/lib/module/unstable/NativeBottomTabView.native.js
+@@ -176,7 +176,7 @@ export function NativeBottomTabView({
+             route
+           }),
+           tabKey: route.key,
+-          icon: icon,
++          icon: icon?.ios ?? icon?.shared,
+           selectedIcon: selectedIcon?.ios ?? selectedIcon?.shared,
+           tabBarItemBadgeBackgroundColor: badgeBackgroundColor,
+           tabBarItemBadgeTextColor: badgeTextColor,
+diff --git a/src/unstable/NativeBottomTabView.native.tsx b/src/unstable/NativeBottomTabView.native.tsx
+index da6cfbe50eb51ca8834460e03e9627ee13534579..ba715a6fdfe78dd4cb06de9fae43ed1dee2da760 100644
+--- a/src/unstable/NativeBottomTabView.native.tsx
++++ b/src/unstable/NativeBottomTabView.native.tsx
+@@ -240,7 +240,7 @@ export function NativeBottomTabView({ state, navigation, descriptors }: Props) {
+               onDidDisappear={() => onTransitionEnd({ closing: true, route })}
+               key={route.key}
+               tabKey={route.key}
+-              icon={icon}
++              icon={icon?.ios ?? icon?.shared}
+               selectedIcon={selectedIcon?.ios ?? selectedIcon?.shared}
+               tabBarItemBadgeBackgroundColor={badgeBackgroundColor}
+               tabBarItemBadgeTextColor={badgeTextColor}

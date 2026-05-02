@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { GlassSurface } from './Glass';
 import { useTheme } from '../theme';
 
 const toNumber = (value) => {
@@ -38,7 +39,7 @@ export default function ResponsiveBarChart({ data = [], emptyLabel, title, value
   const labelInterval = points.length <= 6 ? 1 : Math.ceil(points.length / (isWide ? 6 : 4));
 
   return (
-    <View style={[styles.panel, { backgroundColor: colors.surfaceMuted, borderColor: colors.borderStrong }]}>
+    <GlassSurface contentStyle={styles.panel} effect="clear" style={styles.panelShell}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
         <Text style={[styles.valueLabel, { color: colors.textMuted }]}>{valueLabel}</Text>
@@ -71,16 +72,16 @@ export default function ResponsiveBarChart({ data = [], emptyLabel, title, value
           <Text style={[styles.emptyText, { color: colors.textMuted }]}>{emptyLabel}</Text>
         </View>
       )}
-    </View>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  panel: {
+  panelShell: {
     borderRadius: 20,
-    borderWidth: 1,
+  },
+  panel: {
     gap: 14,
-    padding: 16,
   },
   header: {
     flexDirection: 'row',

@@ -71,7 +71,7 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <ScreenBackground>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <PageHeader title={t('auth.loginTitle')} subtitle={t('auth.loginSubtitle')} style={styles.header} />
 

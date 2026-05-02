@@ -44,6 +44,13 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow CarbonTrack to show saved images.",
+          "savePhotosPermission": "Allow CarbonTrack to save activity and reward images to your photo library."
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "ios": {

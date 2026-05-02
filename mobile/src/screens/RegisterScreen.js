@@ -3,7 +3,7 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, 
 import { Picker } from '@react-native-picker/picker';
 import { useQuery } from '@tanstack/react-query';
 import { Field, LinkButton, PrimaryButton } from '../components/FormControls';
-import { GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
+import { GlassPickerSurface, GlassSurface, GlassToggleSurface, PageHeader, ScreenBackground } from '../components/Glass';
 import RegionSelector from '../components/RegionSelector';
 import { authApi } from '../api/auth';
 import { schoolApi } from '../api/schools';
@@ -104,7 +104,7 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <ScreenBackground>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <PageHeader title={t('auth.registerTitle')} subtitle={t('auth.registerSubtitle')} style={styles.header} />
 
@@ -121,7 +121,7 @@ export default function RegisterScreen({ navigation }) {
               onStateChange={setStateCode}
             />
 
-            <View style={styles.switchRow}>
+            <GlassToggleSurface contentStyle={styles.switchRow}>
               <Text style={[styles.switchLabel, { color: colors.text }]}>{t('auth.createNewSchool')}</Text>
               <Switch
                 value={useNewSchool}
@@ -129,14 +129,14 @@ export default function RegisterScreen({ navigation }) {
                 trackColor={{ false: colors.borderStrong, true: colors.primarySoft }}
                 thumbColor={useNewSchool ? colors.primary : colors.surfaceStrong}
               />
-            </View>
+            </GlassToggleSurface>
 
             {useNewSchool ? (
               <Field label={t('auth.schoolName')} placeholder={t('auth.schoolNamePlaceholder')} value={newSchoolName} onChangeText={setNewSchoolName} />
             ) : (
               <View style={styles.field}>
                 <Text style={[styles.label, { color: colors.text }]}>{t('auth.school')}</Text>
-                <View style={[styles.pickerBox, { backgroundColor: colors.input, borderColor: colors.borderStrong }]}>
+                <GlassPickerSurface>
                   <Picker
                     dropdownIconColor={colors.text}
                     enabled={!schoolsQuery.isLoading}
@@ -149,7 +149,7 @@ export default function RegisterScreen({ navigation }) {
                       <Picker.Item key={school.id} label={school.name} value={String(school.id)} />
                     ))}
                   </Picker>
-                </View>
+                </GlassPickerSurface>
               </View>
             )}
 
@@ -183,11 +183,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '700',
-  },
-  pickerBox: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
   },
   switchRow: {
     alignItems: 'center',
