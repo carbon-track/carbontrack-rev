@@ -89,7 +89,9 @@ export function ActivityReview() {
         carbon_saved: item.carbon_saved || 0,
         points_earned: item.points_earned || 0,
         status: item.status || (isRecord ? 'pending' : (item.is_active ? 'approved' : 'pending')),
-        created_at: item.created_at || item.date || item.updated_at || null,
+        activity_date: item.activity_date || item.date || null,
+        submitted_at: item.submitted_at || item.created_at || null,
+        created_at: item.created_at || null,
         description,
       };
     });
@@ -472,7 +474,7 @@ const isReviewSubmitting = reviewActivityMutation.isLoading || reviewActivitiesB
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('admin.activities.table.carbonSaved')}</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('admin.activities.table.points')}</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('admin.activities.table.status')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('admin.activities.table.date')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('admin.activities.table.activityDate')}</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('common.actions')}</th>
                 </tr>
               </thead>
@@ -521,7 +523,7 @@ const isReviewSubmitting = reviewActivityMutation.isLoading || reviewActivitiesB
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{formatDateSafe(activity.created_at, 'yyyy-MM-dd')}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{formatDateSafe(activity.activity_date, 'yyyy-MM-dd')}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Button variant="ghost" size="sm" onClick={() => handleViewDetails(activity)} className="mr-2">
                         <Eye className="h-4 w-4" />

@@ -79,6 +79,31 @@ api.interceptors.response.use(
   }
 );
 
+export async function streamApiRequest(path, { method = 'GET', headers = {}, body, signal } = {}) {
+  const token = localStorage.getItem('auth_token');
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: {
+      Accept: 'text/event-stream',
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal,
+  });
+
+  if (response.status === 401) {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_info');
+    if (window.location.pathname !== '/auth/login') {
+      window.location.href = '/auth/login';
+    }
+  }
+
+  return response;
+}
+
 // API方法封装
 export const authAPI = {
   // 用户注册
@@ -89,6 +114,9 @@ export const authAPI = {
 
   // 用户登出
   logout: () => api.post('/auth/logout'),
+
+  // 刷新当前 JWT
+  refresh: () => api.post('/auth/refresh'),
 
   // 发送验证码
   sendVerificationCode: (data) => api.post('/auth/send-verification-code', data),

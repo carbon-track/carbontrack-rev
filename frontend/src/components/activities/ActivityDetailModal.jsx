@@ -14,7 +14,8 @@ export function ActivityDetailModal({ activity, isOpen, onClose }) {
   const getName = (a) => a.activity_name || a.activity_name_zh || a.activity_name_en || a.activity || '';
   const getCategory = (a) => a.activity_category || a.category || 'unknown';
   const getUnit = (a) => a.activity_unit || a.unit || '';
-  const getDate = (a) => a.activity_date || a.date || a.created_at;
+  const getActivityDate = (a) => a.activity_date || a.date;
+  const getSubmittedDate = (a) => a.submitted_at || a.created_at;
   const getDescription = (a) => a.description || a.notes || a.note || a.remark || a.comments || '';
   const images = Array.isArray(activity.images) ? activity.images
     : (Array.isArray(activity.proof_images) ? activity.proof_images : []);
@@ -115,8 +116,12 @@ export function ActivityDetailModal({ activity, isOpen, onClose }) {
                 {getStatusBadge(activity.status)}
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{t('activities.table.date')}</p>
-                  <p className="text-foreground">{formatDateSafe(getDate(activity), 'yyyy-MM-dd')}</p>
+                <p className="text-sm font-medium text-muted-foreground">{t('activities.table.activityDate')}</p>
+                  <p className="text-foreground">{formatDateSafe(getActivityDate(activity), 'yyyy-MM-dd')}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">{t('activities.table.submittedAt')}</p>
+                  <p className="text-foreground">{formatDateSafe(getSubmittedDate(activity), 'yyyy-MM-dd HH:mm')}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">{t('activities.table.data')}</p>

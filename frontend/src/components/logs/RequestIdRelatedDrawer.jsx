@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import { Loader2 } from 'lucide-react';
+import { Copy, Loader2 } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
 import JsonTreeViewer from './JsonTreeViewer';
 import AuditDiffViewer from './AuditDiffViewer';
 import { fetchSystemLogDetail } from '../../lib/api/systemLogs';
 import { adminAPI } from '../../lib/api';
+import { maskServerMeta, redactLogEntry, safeParseLogValue } from '../../lib/logRedaction';
 
 export function RequestIdRelatedDrawer({
   open,
@@ -24,13 +25,30 @@ export function RequestIdRelatedDrawer({
   const [llmDetails, setLlmDetails] = useState({});
   const [detailLoading, setDetailLoading] = useState({ system: {}, llm: {} });
   const [detailErrors, setDetailErrors] = useState({ system: {}, llm: {} });
+  const [copyingKey, setCopyingKey] = useState(null);
+  const [copiedKey, setCopiedKey] = useState(null);
+  const [copyError, setCopyError] = useState('');
+  const copyResetTimerRef = useRef(null);
 
   useEffect(() => {
+    if (copyResetTimerRef.current) {
+      window.clearTimeout(copyResetTimerRef.current);
+      copyResetTimerRef.current = null;
+    }
     setSystemDetails({});
     setLlmDetails({});
     setDetailLoading({ system: {}, llm: {} });
     setDetailErrors({ system: {}, llm: {} });
+    setCopyingKey(null);
+    setCopiedKey(null);
+    setCopyError('');
   }, [requestId]);
+
+  useEffect(() => () => {
+    if (copyResetTimerRef.current) {
+      window.clearTimeout(copyResetTimerRef.current);
+    }
+  }, []);
 
   const setLoadingFlag = useCallback((type, id, value) => {
     setDetailLoading((prev) => {
@@ -88,13 +106,121 @@ export function RequestIdRelatedDrawer({
     }
   }, [detailLoading.llm, llmDetails, setErrorFlag, setLoadingFlag, t]);
 
-  if (!open) return null;
+  const resolved = useMemo(() => data ?? { system, audit, error, llm }, [audit, data, error, llm, system]);
+  const systemLogs = useMemo(() => (Array.isArray(resolved.system) ? resolved.system : []), [resolved.system]);
+  const auditLogs = useMemo(() => (Array.isArray(resolved.audit) ? resolved.audit : []), [resolved.audit]);
+  const errorLogs = useMemo(() => (Array.isArray(resolved.error) ? resolved.error : []), [resolved.error]);
+  const llmLogs = useMemo(() => (Array.isArray(resolved.llm) ? resolved.llm : []), [resolved.llm]);
 
-  const resolved = data ?? { system, audit, error, llm };
-  const systemLogs = resolved?.system || [];
-  const auditLogs = resolved?.audit || [];
-  const errorLogs = resolved?.error || [];
-  const llmLogs = resolved?.llm || [];
+  const fetchSystemDetailForCopy = useCallback(async (log) => {
+    if (!log?.id) return log;
+    if (systemDetails[log.id]) return systemDetails[log.id];
+    try {
+      const response = await fetchSystemLogDetail(log.id);
+      const payload = response?.data || response;
+      const detail = payload?.data || payload || log;
+      setSystemDetails((prev) => ({ ...prev, [log.id]: detail }));
+      return detail;
+    } catch (err) {
+      return {
+        ...log,
+        detail_load_error: err?.message || t('errors.loadFailed'),
+      };
+    }
+  }, [systemDetails, t]);
+
+  const fetchLlmDetailForCopy = useCallback(async (log) => {
+    if (!log?.id) return log;
+    if (llmDetails[log.id]) return llmDetails[log.id];
+    try {
+      const response = await adminAPI.getLlmLogDetail(log.id);
+      const payload = response?.data || response;
+      const detail = payload?.data || payload || log;
+      setLlmDetails((prev) => ({ ...prev, [log.id]: detail }));
+      return detail;
+    } catch (err) {
+      return {
+        ...log,
+        detail_load_error: err?.message || t('errors.loadFailed'),
+      };
+    }
+  }, [llmDetails, t]);
+
+  const getRedactedCategoryLogs = useCallback(async (type) => {
+    if (type === 'system') {
+      const logs = await Promise.all(systemLogs.map((log) => fetchSystemDetailForCopy(log)));
+      return logs.map((log) => redactLogEntry(log));
+    }
+    if (type === 'audit') {
+      return auditLogs.map((log) => redactLogEntry(log));
+    }
+    if (type === 'error') {
+      return errorLogs.map((log) => redactLogEntry(log));
+    }
+    if (type === 'llm') {
+      const logs = await Promise.all(llmLogs.map((log) => fetchLlmDetailForCopy(log)));
+      return logs.map((log) => redactLogEntry(log));
+    }
+    return [];
+  }, [auditLogs, errorLogs, fetchLlmDetailForCopy, fetchSystemDetailForCopy, llmLogs, systemLogs]);
+
+  const getRedactedSingleLog = useCallback(async (type, log) => {
+    if (type === 'system') {
+      return redactLogEntry(await fetchSystemDetailForCopy(log));
+    }
+    if (type === 'llm') {
+      return redactLogEntry(await fetchLlmDetailForCopy(log));
+    }
+    return redactLogEntry(log);
+  }, [fetchLlmDetailForCopy, fetchSystemDetailForCopy]);
+
+  const copyPayload = useCallback(async (key, buildPayload) => {
+    setCopyingKey(key);
+    setCopyError('');
+    try {
+      const payload = await buildPayload();
+      await writeClipboard(JSON.stringify(payload, null, 2));
+      setCopiedKey(key);
+      if (copyResetTimerRef.current) {
+        window.clearTimeout(copyResetTimerRef.current);
+      }
+      copyResetTimerRef.current = window.setTimeout(() => {
+        setCopiedKey((current) => (current === key ? null : current));
+        copyResetTimerRef.current = null;
+      }, 1800);
+    } catch (err) {
+      setCopyError(err?.message || t('admin.systemLogs.drawer.copyFailed'));
+    } finally {
+      setCopyingKey(null);
+    }
+  }, [t]);
+
+  const copyAllLogs = useCallback(() => copyPayload('all', async () => ({
+    request_id: requestId,
+    copied_at: new Date().toISOString(),
+    logs: {
+      system: await getRedactedCategoryLogs('system'),
+      audit: await getRedactedCategoryLogs('audit'),
+      error: await getRedactedCategoryLogs('error'),
+      llm: await getRedactedCategoryLogs('llm'),
+    },
+  })), [copyPayload, getRedactedCategoryLogs, requestId]);
+
+  const copyCategoryLogs = useCallback((type) => copyPayload(`category-${type}`, async () => ({
+    request_id: requestId,
+    type,
+    copied_at: new Date().toISOString(),
+    logs: await getRedactedCategoryLogs(type),
+  })), [copyPayload, getRedactedCategoryLogs, requestId]);
+
+  const copySingleLog = useCallback((type, log) => copyPayload(`${type}-${log?.id ?? 'item'}`, async () => ({
+    request_id: requestId,
+    type,
+    copied_at: new Date().toISOString(),
+    log: await getRedactedSingleLog(type, log),
+  })), [copyPayload, getRedactedSingleLog, requestId]);
+
+  if (!open) return null;
 
   const columnLabel = (key) => t(`admin.systemLogs.columns.${key}`, { defaultValue: key });
 
@@ -116,6 +242,13 @@ export function RequestIdRelatedDrawer({
             {t('admin.systemLogs.drawer.title', { id: requestId })}
           </h2>
           <div className="flex items-center gap-2">
+            <CopyActionButton
+              label={t('admin.systemLogs.drawer.copyAll')}
+              copiedLabel={t('admin.systemLogs.drawer.copied')}
+              loading={copyingKey === 'all'}
+              copied={copiedKey === 'all'}
+              onClick={copyAllLogs}
+            />
             <button type="button" className="text-sm text-primary transition-colors hover:text-primary/80" onClick={onRefresh}>
               {t('admin.systemLogs.drawer.refresh')}
             </button>
@@ -129,11 +262,28 @@ export function RequestIdRelatedDrawer({
             </button>
           </div>
         </div>
+        {copyError && (
+          <div className="border-b border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs text-rose-700 dark:text-rose-300">
+            {copyError}
+          </div>
+        )}
         <div className="flex-1 space-y-6 overflow-auto p-4 text-sm">
           {loading && <div className="text-muted-foreground">{t('admin.systemLogs.drawer.loading')}</div>}
           {!loading && (
             <>
-              <Section title={t('admin.systemLogs.drawer.systemTitle', { count: systemLogs.length })}>
+              <Section
+                title={t('admin.systemLogs.drawer.systemTitle', { count: systemLogs.length })}
+                actions={(
+                  <CopyActionButton
+                    label={t('admin.systemLogs.drawer.copyCategory')}
+                    copiedLabel={t('admin.systemLogs.drawer.copied')}
+                    loading={copyingKey === 'category-system'}
+                    copied={copiedKey === 'category-system'}
+                    disabled={systemLogs.length === 0}
+                    onClick={() => copyCategoryLogs('system')}
+                  />
+                )}
+              >
                 {systemLogs.length === 0 && renderEmpty()}
                 {systemLogs.map((log) => {
                   const detail = systemDetails[log.id];
@@ -157,6 +307,16 @@ export function RequestIdRelatedDrawer({
                       onOpen={() => loadSystemDetail(log.id)}
                       openLabel={t('admin.systemLogs.actions.expand')}
                       closeLabel={t('admin.systemLogs.actions.collapse')}
+                      actions={(
+                        <CopyActionButton
+                          label={t('admin.systemLogs.drawer.copyItem')}
+                          copiedLabel={t('admin.systemLogs.drawer.copied')}
+                          loading={copyingKey === `system-${log.id}`}
+                          copied={copiedKey === `system-${log.id}`}
+                          compact
+                          onClick={() => copySingleLog('system', log)}
+                        />
+                      )}
                       detail={(
                         <div className="space-y-3 text-xs">
                           <DetailGrid
@@ -185,7 +345,7 @@ export function RequestIdRelatedDrawer({
                             <>
                               <DetailValueBlock title={t('admin.systemLogs.requestBody')} value={detail.request_body} />
                               <DetailValueBlock title={t('admin.systemLogs.responseBody')} value={detail.response_body} />
-                              <DetailValueBlock title={t('admin.systemLogs.serverMeta')} value={detail.server_meta} />
+                              <DetailValueBlock title={t('admin.systemLogs.serverMeta')} value={maskServerMeta(detail.server_meta)} />
                             </>
                           )}
                         </div>
@@ -195,7 +355,19 @@ export function RequestIdRelatedDrawer({
                 })}
               </Section>
 
-              <Section title={t('admin.systemLogs.drawer.auditTitle', { count: auditLogs.length })}>
+              <Section
+                title={t('admin.systemLogs.drawer.auditTitle', { count: auditLogs.length })}
+                actions={(
+                  <CopyActionButton
+                    label={t('admin.systemLogs.drawer.copyCategory')}
+                    copiedLabel={t('admin.systemLogs.drawer.copied')}
+                    loading={copyingKey === 'category-audit'}
+                    copied={copiedKey === 'category-audit'}
+                    disabled={auditLogs.length === 0}
+                    onClick={() => copyCategoryLogs('audit')}
+                  />
+                )}
+              >
                 {auditLogs.length === 0 && renderEmpty()}
                 {auditLogs.map((log) => (
                   <ExpandableItem
@@ -213,6 +385,16 @@ export function RequestIdRelatedDrawer({
                     )}
                     openLabel={t('admin.systemLogs.actions.expand')}
                     closeLabel={t('admin.systemLogs.actions.collapse')}
+                    actions={(
+                      <CopyActionButton
+                        label={t('admin.systemLogs.drawer.copyItem')}
+                        copiedLabel={t('admin.systemLogs.drawer.copied')}
+                        loading={copyingKey === `audit-${log.id}`}
+                        copied={copiedKey === `audit-${log.id}`}
+                        compact
+                        onClick={() => copySingleLog('audit', log)}
+                      />
+                    )}
                     detail={(
                       <div className="space-y-3 text-xs">
                         <DetailGrid
@@ -239,7 +421,19 @@ export function RequestIdRelatedDrawer({
                 ))}
               </Section>
 
-              <Section title={t('admin.systemLogs.drawer.errorsTitle', { count: errorLogs.length })}>
+              <Section
+                title={t('admin.systemLogs.drawer.errorsTitle', { count: errorLogs.length })}
+                actions={(
+                  <CopyActionButton
+                    label={t('admin.systemLogs.drawer.copyCategory')}
+                    copiedLabel={t('admin.systemLogs.drawer.copied')}
+                    loading={copyingKey === 'category-error'}
+                    copied={copiedKey === 'category-error'}
+                    disabled={errorLogs.length === 0}
+                    onClick={() => copyCategoryLogs('error')}
+                  />
+                )}
+              >
                 {errorLogs.length === 0 && renderEmpty()}
                 {errorLogs.map((log) => (
                   <ExpandableItem
@@ -256,6 +450,16 @@ export function RequestIdRelatedDrawer({
                     )}
                     openLabel={t('admin.systemLogs.actions.expand')}
                     closeLabel={t('admin.systemLogs.actions.collapse')}
+                    actions={(
+                      <CopyActionButton
+                        label={t('admin.systemLogs.drawer.copyItem')}
+                        copiedLabel={t('admin.systemLogs.drawer.copied')}
+                        loading={copyingKey === `error-${log.id}`}
+                        copied={copiedKey === `error-${log.id}`}
+                        compact
+                        onClick={() => copySingleLog('error', log)}
+                      />
+                    )}
                     detail={(
                       <div className="space-y-3 text-xs">
                         <DetailGrid
@@ -280,7 +484,19 @@ export function RequestIdRelatedDrawer({
                 ))}
               </Section>
 
-              <Section title={t('admin.systemLogs.drawer.llmTitle', { count: llmLogs.length })}>
+              <Section
+                title={t('admin.systemLogs.drawer.llmTitle', { count: llmLogs.length })}
+                actions={(
+                  <CopyActionButton
+                    label={t('admin.systemLogs.drawer.copyCategory')}
+                    copiedLabel={t('admin.systemLogs.drawer.copied')}
+                    loading={copyingKey === 'category-llm'}
+                    copied={copiedKey === 'category-llm'}
+                    disabled={llmLogs.length === 0}
+                    onClick={() => copyCategoryLogs('llm')}
+                  />
+                )}
+              >
                 {llmLogs.length === 0 && renderEmpty()}
                 {llmLogs.map((log) => {
                   const detail = llmDetails[log.id];
@@ -305,6 +521,16 @@ export function RequestIdRelatedDrawer({
                       onOpen={() => loadLlmDetail(log.id)}
                       openLabel={t('admin.systemLogs.actions.expand')}
                       closeLabel={t('admin.systemLogs.actions.collapse')}
+                      actions={(
+                        <CopyActionButton
+                          label={t('admin.systemLogs.drawer.copyItem')}
+                          copiedLabel={t('admin.systemLogs.drawer.copied')}
+                          loading={copyingKey === `llm-${log.id}`}
+                          copied={copiedKey === `llm-${log.id}`}
+                          compact
+                          onClick={() => copySingleLog('llm', log)}
+                        />
+                      )}
                       detail={(
                         <div className="space-y-3 text-xs">
                           <DetailGrid
@@ -367,16 +593,19 @@ export function RequestIdRelatedDrawer({
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, actions, children }) {
   return (
     <div>
-      <h3 className="mb-2 font-semibold">{title}</h3>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="font-semibold">{title}</h3>
+        {actions}
+      </div>
       {children}
     </div>
   );
 }
 
-function ExpandableItem({ summary, detail, openLabel, closeLabel, onOpen, toneClass }) {
+function ExpandableItem({ summary, detail, openLabel, closeLabel, onOpen, toneClass, actions }) {
   const [open, setOpen] = useState(false);
   const toggleOpen = () => {
     setOpen((prev) => {
@@ -390,14 +619,17 @@ function ExpandableItem({ summary, detail, openLabel, closeLabel, onOpen, toneCl
     <div className={`mb-2 rounded-lg border p-3 ${toneClass}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px]">{summary}</div>
-        <button
-          type="button"
-          className="text-[11px] text-primary transition-colors hover:text-primary/80"
-          onClick={toggleOpen}
-          aria-expanded={open}
-        >
-          {open ? closeLabel : openLabel}
-        </button>
+        <div className="flex items-center gap-2">
+          {actions}
+          <button
+            type="button"
+            className="text-[11px] text-primary transition-colors hover:text-primary/80"
+            onClick={toggleOpen}
+            aria-expanded={open}
+          >
+            {open ? closeLabel : openLabel}
+          </button>
+        </div>
       </div>
       {open && (
         <div className="mt-3 border-t border-border pt-3">
@@ -405,6 +637,22 @@ function ExpandableItem({ summary, detail, openLabel, closeLabel, onOpen, toneCl
         </div>
       )}
     </div>
+  );
+}
+
+function CopyActionButton({ label, copiedLabel, loading, copied, disabled, compact, onClick }) {
+  const text = copied ? copiedLabel : label;
+  return (
+    <button
+      type="button"
+      className={`inline-flex items-center gap-1 text-primary transition-colors hover:text-primary/80 disabled:cursor-not-allowed disabled:text-muted-foreground ${compact ? 'text-[11px]' : 'text-xs'}`}
+      onClick={onClick}
+      disabled={disabled || loading}
+      aria-label={text}
+    >
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+      <span>{text}</span>
+    </button>
   );
 }
 
@@ -474,13 +722,26 @@ function DetailValue({ value }) {
 }
 
 function parseMaybeJson(value) {
-  if (value == null) return null;
-  if (typeof value === 'object') return value;
-  if (typeof value !== 'string') return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return value;
+  return safeParseLogValue(value);
+}
+
+async function writeClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand('copy');
+  document.body.removeChild(textarea);
+  if (!copied) {
+    throw new Error('Copy failed');
   }
 }
 
@@ -499,6 +760,7 @@ RequestIdRelatedDrawer.propTypes = {
 
 Section.propTypes = {
   title: PropTypes.node,
+  actions: PropTypes.node,
   children: PropTypes.node
 };
 
@@ -508,7 +770,18 @@ ExpandableItem.propTypes = {
   openLabel: PropTypes.node,
   closeLabel: PropTypes.node,
   onOpen: PropTypes.func,
-  toneClass: PropTypes.string
+  toneClass: PropTypes.string,
+  actions: PropTypes.node
+};
+
+CopyActionButton.propTypes = {
+  label: PropTypes.node,
+  copiedLabel: PropTypes.node,
+  loading: PropTypes.bool,
+  copied: PropTypes.bool,
+  disabled: PropTypes.bool,
+  compact: PropTypes.bool,
+  onClick: PropTypes.func
 };
 
 KeyValueItem.propTypes = {

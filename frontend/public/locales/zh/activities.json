@@ -37,7 +37,7 @@
     "checkin": {
       "makeupNotice": "补打卡日期：{{date}}，提交记录后将计入该日",
       "clear": "取消补打卡",
-      "makeupHelper": "补打卡日期：{{date}}（不影响活动发生时间）"
+      "makeupHelper": "补打卡日期：{{date}}，活动日期将按该日提交"
     },
     "form": {
       "selectActivity": "选择活动",
@@ -129,6 +129,8 @@
       "points": "积分",
       "status": "状态",
       "date": "日期",
+      "activityDate": "活动日期",
+      "submittedAt": "提交日期",
       "actions": "操作",
       "images": "图片"
     },

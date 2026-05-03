@@ -130,7 +130,13 @@
       "capabilityDescription": "This view is synced from the shared workspace configuration used by both frontend and backend.",
       "navigationTitle": "Navigation targets",
       "managementActionsTitle": "Management actions",
-      "requiredFields": "Required: {{fields}}"
+      "requiredFields": "Required: {{fields}}",
+      "messages": {
+        "actionRejected": "The pending action was cancelled. Add more details and send a new instruction when ready.",
+        "actionExecutionFailed": "The action failed while executing. Please try again later.",
+        "rollbackConfirmationGenerated": "Rollback confirmation card generated. Please confirm to execute the reverse action.",
+        "proposalReady": "Draft action prepared: {{summary}}\nConfirm when you want to execute it."
+      }
     },
     "passkeys": {
       "title": "Passkey Overview",
@@ -1068,7 +1074,8 @@
         "carbonSaved": "Carbon Saved",
         "points": "Points",
         "status": "Status",
-        "date": "Date"
+        "date": "Date",
+        "activityDate": "Activity Date"
       },
       "dialog": {
         "approveAction": "Approve",
@@ -1234,6 +1241,11 @@
       "requestBody": "Request Body",
       "responseBody": "Response Body",
       "serverMeta": "Server Meta",
+      "privacy": {
+        "masked": "Sensitive fields masked",
+        "showingSecrets": "Sensitive fields visible",
+        "toggle": "Show or hide sensitive fields in server metadata"
+      },
       "requestId": "Request ID",
       "method": "Method",
       "path": "Path",
@@ -1305,6 +1317,11 @@
       "drawer": {
         "title": "Request ID: {{id}}",
         "refresh": "Refresh",
+        "copyAll": "Copy all",
+        "copyCategory": "Copy group",
+        "copyItem": "Copy item",
+        "copied": "Copied",
+        "copyFailed": "Copy failed. Please try again",
         "loading": "Loading related logs...",
         "systemTitle": "System ({{count}})",
         "auditTitle": "Audit ({{count}})",

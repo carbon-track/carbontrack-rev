@@ -17,7 +17,7 @@ export function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
   const turnstileRef = useRef(null);
   const [turnstileToken, setTurnstileToken] = useState('');
-  const requiresTurnstile = Boolean(import.meta.env?.VITE_TURNSTILE_SITE_KEY);
+  const requiresTurnstile = true;
 
   const {
     register,

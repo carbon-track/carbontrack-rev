@@ -130,7 +130,13 @@
       "capabilityDescription": "从工作区配置同步的能力视图，前后端使用同一份定义。",
       "navigationTitle": "导航目标",
       "managementActionsTitle": "管理动作",
-      "requiredFields": "必填：{{fields}}"
+      "requiredFields": "必填：{{fields}}",
+      "messages": {
+        "actionRejected": "已取消该待执行操作。你可以补充条件后重新下达指令。",
+        "actionExecutionFailed": "执行该操作时出现错误，请稍后重试。",
+        "rollbackConfirmationGenerated": "已生成回滚确认卡。请确认后执行反向操作。",
+        "proposalReady": "已整理待执行操作：{{summary}}\n如需执行，请确认。"
+      }
     },
     "passkeys": {
       "title": "通行密钥概览",
@@ -934,7 +940,8 @@
         "carbonSaved": "减排量",
         "points": "积分",
         "status": "状态",
-        "date": "日期"
+        "date": "日期",
+        "activityDate": "活动日期"
       },
       "dialog": {
         "approveAction": "通过审核",
@@ -1234,6 +1241,11 @@
       "requestBody": "请求体",
       "responseBody": "响应体",
       "serverMeta": "服务器元数据",
+      "privacy": {
+        "masked": "敏感字段已打码",
+        "showingSecrets": "正在显示敏感字段",
+        "toggle": "显示或隐藏服务器元数据中的敏感字段"
+      },
       "requestId": "请求ID",
       "method": "方法",
       "path": "路径",
@@ -1305,6 +1317,11 @@
       "drawer": {
         "title": "请求 ID：{{id}}",
         "refresh": "刷新",
+        "copyAll": "复制全部",
+        "copyCategory": "复制本类",
+        "copyItem": "复制此项",
+        "copied": "已复制",
+        "copyFailed": "复制失败，请重试",
         "loading": "正在加载关联日志...",
         "systemTitle": "系统（{{count}}）",
         "auditTitle": "审计（{{count}}）",

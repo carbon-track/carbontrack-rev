@@ -64,7 +64,7 @@ const VerifyEmailPage = () => {
   const [resendCountdown, setResendCountdown] = useState(0);
   const turnstileRef = useRef(null);
   const [turnstileToken, setTurnstileToken] = useState('');
-  const requiresTurnstile = Boolean(import.meta.env?.VITE_TURNSTILE_SITE_KEY);
+  const requiresTurnstile = true;
 
   const emailValue = watch('email');
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { RefreshCw, Download, Columns2, X, Loader2 } from 'lucide-react';
+import { RefreshCw, Download, Columns2, X, Loader2, EyeOff } from 'lucide-react';
 
 import { useTranslation } from '../../hooks/useTranslation';
 import { useSystemLogDetail } from '../../hooks/useSystemLogs';
@@ -11,6 +11,7 @@ import RawView from '../../components/logs/RawView';
 import RequestIdRelatedDrawer from '../../components/logs/RequestIdRelatedDrawer';
 import JsonTreeViewer from '../../components/logs/JsonTreeViewer';
 import AuditDiffViewer from '../../components/logs/AuditDiffViewer';
+import { maskServerMeta } from '../../lib/logRedaction';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/badge';
@@ -57,6 +58,7 @@ export default function SystemLogsPage() {
   const [activeTypes, setActiveTypes] = useState(['system', 'audit', 'error', 'llm']);
   const [limitPerType, setLimitPerType] = useState(50);
   const [selectedSystemId, setSelectedSystemId] = useState(null);
+  const [showServerMetaSecrets, setShowServerMetaSecrets] = useState(false);
   const [view, setView] = useState('table');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [requestDrawerId, setRequestDrawerId] = useState(null);
@@ -108,6 +110,15 @@ export default function SystemLogsPage() {
   });
 
   const { data: detailData, isLoading: loadingDetail } = useSystemLogDetail(selectedSystemId);
+
+  useEffect(() => {
+    setShowServerMetaSecrets(false);
+  }, [selectedSystemId]);
+
+  const visibleServerMeta = useMemo(() => {
+    const serverMeta = detailData?.data?.server_meta;
+    return showServerMetaSecrets ? serverMeta : maskServerMeta(serverMeta);
+  }, [detailData?.data?.server_meta, showServerMetaSecrets]);
 
   useEffect(() => {
     if (!autoRefresh) return undefined;
@@ -790,9 +801,25 @@ export default function SystemLogsPage() {
                 {detailData.data.server_meta && (
                   <JsonSection
                     title={t('admin.systemLogs.serverMeta')}
-                    value={detailData.data.server_meta}
+                    value={visibleServerMeta}
                     onCopy={copy}
                     copyLabel={t('common.copy')}
+                    headerActions={(
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        {!showServerMetaSecrets && <EyeOff className="h-3.5 w-3.5" />}
+                        <Label htmlFor="server-meta-privacy" className="text-xs">
+                          {showServerMetaSecrets
+                            ? t('admin.systemLogs.privacy.showingSecrets')
+                            : t('admin.systemLogs.privacy.masked')}
+                        </Label>
+                        <Switch
+                          id="server-meta-privacy"
+                          checked={showServerMetaSecrets}
+                          onCheckedChange={setShowServerMetaSecrets}
+                          aria-label={t('admin.systemLogs.privacy.toggle')}
+                        />
+                      </div>
+                    )}
                   />
                 )}
               </div>
@@ -1197,15 +1224,18 @@ function LlmDetail({ log, columnLabel, onRelated, t }) {
   );
 }
 
-function JsonSection({ title, value, onCopy, copyLabel }) {
+function JsonSection({ title, value, onCopy, copyLabel, headerActions }) {
   if (!value) return null;
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">{title}</h3>
-        <Button variant="link" className="h-auto p-0 text-xs" onClick={() => onCopy(value)}>
-          {copyLabel}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {headerActions}
+          <Button variant="link" className="h-auto p-0 text-xs" onClick={() => onCopy(value)}>
+            {copyLabel}
+          </Button>
+        </div>
       </div>
       <JsonTreeViewer value={safeParse(value)} />
     </div>

@@ -1,6 +1,10 @@
 const DEV_AUTH_TRUTHY_VALUES = new Set(['1', 'true', 'yes', 'on']);
 
 let apiPromise;
+let tokenRefreshPromise = null;
+
+const TOKEN_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
+const TOKEN_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 const getApi = async () => {
   if (!apiPromise) {
@@ -25,6 +29,35 @@ const decodeBase64Utf8 = (rawBase64) => {
 
   return binary;
 };
+
+const decodeJwtPayload = (token) => {
+  const [, payload] = String(token || '').split('.');
+  if (!payload) {
+    return null;
+  }
+
+  return JSON.parse(decodeBase64Utf8(payload));
+};
+
+const getTokenRemainingMs = (token) => {
+  try {
+    const payload = decodeJwtPayload(token);
+    if (!payload?.exp) {
+      return 0;
+    }
+
+    return payload.exp * 1000 - Date.now();
+  } catch {
+    return 0;
+  }
+};
+
+const shouldRefreshToken = (token) => {
+  const remainingTime = getTokenRemainingMs(token);
+  return remainingTime > 0 && remainingTime < TOKEN_REFRESH_THRESHOLD_MS;
+};
+
+const isRefreshRequest = (url = '') => String(url).includes('/auth/refresh');
 
 const hasMinimalDevUserInfoFields = (userInfo) => (
   userInfo
@@ -88,11 +121,18 @@ export const tokenManager = {
     if (!token) return false;
 
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.exp * 1000 > Date.now();
+      return getTokenRemainingMs(token) > 0;
     } catch {
       return false;
     }
+  },
+
+  getTokenRemainingMs() {
+    return getTokenRemainingMs(this.getToken());
+  },
+
+  shouldRefresh() {
+    return shouldRefreshToken(this.getToken());
   }
 };
 
@@ -189,6 +229,51 @@ export const bootstrapDevAuthFromEnv = () => {
   return true;
 };
 
+export const refreshAuthToken = async () => {
+  const token = tokenManager.getToken();
+  if (!token || !tokenManager.isTokenValid()) {
+    throw new Error('Cannot refresh a missing or expired token');
+  }
+
+  if (tokenRefreshPromise?.token === token) {
+    return tokenRefreshPromise.promise;
+  }
+
+  const refreshEntry = {
+    token,
+    promise: (async () => {
+      const api = await getApi();
+      const response = await api.post('/auth/refresh');
+      const responseData = response.data;
+      const { token: nextToken, user } = responseData?.data || {};
+
+      if (!responseData?.success || !nextToken) {
+        throw new Error(responseData?.message || 'Token refresh failed');
+      }
+
+      if (tokenManager.getToken() !== token) {
+        return responseData;
+      }
+
+      tokenManager.setToken(nextToken);
+      if (user) {
+        userManager.setUser(user);
+      }
+
+      return responseData;
+    })(),
+  };
+  tokenRefreshPromise = refreshEntry;
+
+  try {
+    return await refreshEntry.promise;
+  } finally {
+    if (tokenRefreshPromise === refreshEntry) {
+      tokenRefreshPromise = null;
+    }
+  }
+};
+
 // 认证API (注意：这些方法也在 api.js 中的 authAPI 对象中定义了，建议统一使用)
 export const authAPI = {
   async login(credentials) {
@@ -244,6 +329,10 @@ export const authAPI = {
       tokenManager.removeToken();
       userManager.removeUser();
     }
+  },
+
+  async refresh() {
+    return refreshAuthToken();
   },
 
   async getCurrentUser() {
@@ -423,40 +512,43 @@ export const handleAuthError = (error) => {
 
 // 自动刷新token
 export const setupTokenRefresh = () => {
-  const refreshInterval = 30 * 60 * 1000; // 30分钟
-  
-  setInterval(async () => {
+  const refreshIfNeeded = async () => {
     const token = tokenManager.getToken();
     if (!token || !tokenManager.isTokenValid()) {
       return;
     }
     
     try {
-      // 检查token是否即将过期（剩余时间少于10分钟）
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const remainingTime = payload.exp * 1000 - Date.now();
-      
-      if (remainingTime < 10 * 60 * 1000) {
-        const user = await authAPI.getCurrentUser();
-        if (!user) {
-          authAPI.logout();
-        }
+      if (shouldRefreshToken(token)) {
+        await refreshAuthToken();
       }
     } catch (error) {
       console.error('Token refresh failed:', error);
       authAPI.logout();
     }
-  }, refreshInterval);
+  };
+
+  refreshIfNeeded();
+  return setInterval(refreshIfNeeded, TOKEN_REFRESH_INTERVAL_MS);
 };
 
 // 初始化认证
 export const initAuth = async () => {
   const api = await getApi();
 
-  api.interceptors.request.use((config) => {
+  api.interceptors.request.use(async (config) => {
     const token = tokenManager.getToken();
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      if (!isRefreshRequest(config.url) && shouldRefreshToken(token)) {
+        try {
+          await refreshAuthToken();
+        } catch (error) {
+          console.warn('Token refresh failed; continuing with the current valid token:', error);
+        }
+      }
+
+      const currentToken = tokenManager.getToken();
+      config.headers.Authorization = `Bearer ${currentToken || token}`;
     }
     return config;
   });
