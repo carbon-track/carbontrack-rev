@@ -24,8 +24,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { API_BASE_URL, adminAPI } from '../../lib/api';
-import { tokenManager, userManager } from '../../lib/auth';
+import { adminAPI, streamApiRequest } from '../../lib/api';
+import { userManager } from '../../lib/auth';
 import { useTranslation } from '../../hooks/useTranslation';
 import { cn } from '../../lib/utils';
 import { Button } from '../../components/ui/Button';
@@ -39,24 +39,16 @@ const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
 
 async function streamAdminAiChat(payload, onEvent) {
-  const token = tokenManager.getToken();
-  const response = await fetch(`${API_BASE_URL}/admin/ai/chat/stream`, {
+  const response = await streamApiRequest('/admin/ai/chat/stream', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       Accept: 'text/event-stream',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify(payload),
+    body: payload,
   });
 
   const contentType = response.headers.get('content-type') || '';
   if (response.status === 401) {
-    tokenManager.removeToken();
-    userManager.removeUser();
-    if (window.location.pathname !== '/auth/login') {
-      window.location.href = '/auth/login';
-    }
     const error = new Error('Unauthorized');
     error.code = 'UNAUTHORIZED';
     error.response = {
