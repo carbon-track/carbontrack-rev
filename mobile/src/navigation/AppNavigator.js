@@ -12,10 +12,12 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import VerifyEmailScreen from '../screens/VerifyEmailScreen';
 import HomeScreen from '../screens/HomeScreen';
+import MessagesScreen from '../screens/MessagesScreen';
 import RecordScreen from '../screens/RecordScreen';
 import RecordDetailScreen from '../screens/RecordDetailScreen';
 import StoreScreen from '../screens/StoreScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import ProfileSettingsScreen from '../screens/ProfileSettingsScreen';
 
 const shouldUseNativeTabs = () => (
   Platform.OS === 'ios'
@@ -78,22 +80,28 @@ const tabIcons = {
     native: ['bag.fill', 'bag'],
     fallback: ['bag', 'bag-outline'],
   },
+  Messages: {
+    native: ['envelope.fill', 'envelope'],
+    fallback: ['mail', 'mail-outline'],
+  },
   Profile: {
     native: ['person.crop.circle.fill', 'person.crop.circle'],
     fallback: ['person-circle', 'person-circle-outline'],
   },
 };
 
-function RecordStackNavigator({ route }) {
+function RecordStackNavigator({ navigation: tabNavigation, route }) {
   const [detailParams, setDetailParams] = React.useState(null);
   const navigation = React.useMemo(() => ({
     navigate: (name, params) => {
       if (name === 'RecordDetail') {
         setDetailParams(params || {});
+        return;
       }
+      tabNavigation?.navigate?.(name, params);
     },
     goBack: () => setDetailParams(null),
-  }), []);
+  }), [tabNavigation]);
 
   React.useEffect(() => {
     if (route?.params?.detailRecord) {
@@ -106,6 +114,32 @@ function RecordStackNavigator({ route }) {
   }
 
   return <RecordScreen navigation={navigation} route={makeRoute(route?.params || {})} />;
+}
+
+function ProfileStackNavigator({ navigation: tabNavigation, route }) {
+  const [settingsParams, setSettingsParams] = React.useState(null);
+  const navigation = React.useMemo(() => ({
+    navigate: (name, params) => {
+      if (name === 'ProfileSettings') {
+        setSettingsParams(params || {});
+        return;
+      }
+      tabNavigation?.navigate?.(name, params);
+    },
+    goBack: () => setSettingsParams(null),
+  }), [tabNavigation]);
+
+  React.useEffect(() => {
+    if (route?.params?.settings) {
+      setSettingsParams(route.params.settings);
+    }
+  }, [route?.params?.settings]);
+
+  if (settingsParams) {
+    return <ProfileSettingsScreen navigation={navigation} route={makeRoute(settingsParams)} />;
+  }
+
+  return <ProfileScreen navigation={navigation} route={makeRoute(route?.params || {})} />;
 }
 
 function MainTabs() {
@@ -158,7 +192,8 @@ function MainTabs() {
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: t('tabs.home') }} />
       <Tab.Screen name="Record" component={RecordStackNavigator} options={{ title: t('tabs.record') }} />
       <Tab.Screen name="Store" component={StoreScreen} options={{ title: t('tabs.store') }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t('tabs.profile') }} />
+      <Tab.Screen name="Messages" component={MessagesScreen} options={{ title: t('tabs.messages') }} />
+      <Tab.Screen name="Profile" component={ProfileStackNavigator} options={{ title: t('tabs.profile') }} />
     </Tab.Navigator>
   );
 }

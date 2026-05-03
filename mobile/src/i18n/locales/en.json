@@ -74,6 +74,7 @@
     "home": "Home",
     "record": "Record",
     "store": "Store",
+    "messages": "Messages",
     "profile": "Profile"
   },
   "home": {
@@ -130,6 +131,27 @@
     "calculatedPoints": "Estimated points: {{value}}",
     "submitSuccessTitle": "Submitted",
     "submitSuccessMessage": "Your record was submitted for review.",
+    "receipt": {
+      "title": "Carbon Reduction Receipt",
+      "successDescription": "The calculation details are now printed on a thermal-style receipt for review.",
+      "untitledActivity": "Untitled activity",
+      "uncategorized": "Uncategorized",
+      "activityLabel": "Activity",
+      "categoryLabel": "Category",
+      "amountLabel": "Submitted amount",
+      "factorLabel": "Carbon factor",
+      "activityDateLabel": "Activity date",
+      "checkinLabel": "Check-in date",
+      "submittedAtLabel": "Submitted at",
+      "imageCountLabel": "Proof images",
+      "files": "{{count}} files",
+      "formulaLabel": "Calculation formula",
+      "descriptionLabel": "Notes / review memo",
+      "descriptionFallback": "No extra note.",
+      "footerLineOne": "This receipt is queued for manual review. Keep your proof ready.",
+      "recordAnother": "Record another",
+      "goHome": "Go home"
+    },
     "history": "Record history",
     "emptyHistory": "No carbon record history yet.",
     "detailEyebrow": "Record detail",
@@ -320,6 +342,103 @@
       "timelineTitle": "Award timeline",
       "timelineEmpty": "No badge award records yet."
     },
+    "username": "Username",
+    "email": "Email",
+    "account": {
+      "title": "Account and security",
+      "subtitle": "Synced with the web profile, notification, security, and passkey tools.",
+      "profile": "Profile and password",
+      "notifications": "Notifications",
+      "security": "Security activity",
+      "passkeys": "Passkeys"
+    },
+    "settings": {
+      "eyebrow": "Account settings",
+      "title": "Profile and security",
+      "subtitle": "Manage profile details, notifications, security records, and sign-in credentials.",
+      "sections": {
+        "profile": "Profile",
+        "notifications": "Notifications",
+        "security": "Security",
+        "passkeys": "Passkeys"
+      },
+      "profileTitle": "Profile details",
+      "school": "School",
+      "schoolPlaceholder": "Search or enter a school name",
+      "saveProfile": "Save profile",
+      "saved": "Saved",
+      "savedMessage": "Profile details were synced.",
+      "saveFailed": "Save failed"
+    },
+    "notifications": {
+      "title": "Email notifications",
+      "save": "Save preferences",
+      "saved": "Saved",
+      "savedMessage": "Notification preferences were updated.",
+      "saveFailed": "Notification preferences failed to save",
+      "testEmail": "Send test email",
+      "testSent": "Sent",
+      "testSentMessage": "The test email was sent.",
+      "testFailed": "Test email failed",
+      "categories": {
+        "system": { "label": "System notices", "description": "Account, security, and platform updates." },
+        "security": { "label": "Security alerts", "description": "Sign-ins, passwords, and passkey changes." },
+        "review": { "label": "Review results", "description": "Low-carbon record review progress and results." },
+        "support": { "label": "Support replies", "description": "Ticket replies and status updates." },
+        "achievement": { "label": "Achievements", "description": "Badge awards and point rewards." },
+        "marketing": { "label": "Campaign updates", "description": "Activity, store, and product announcements." }
+      }
+    },
+    "security": {
+      "passwordTitle": "Change password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "changePassword": "Change password",
+      "currentPasswordRequired": "Enter the current password.",
+      "newPasswordTooShort": "New password must be at least 8 characters.",
+      "passwordMismatch": "New passwords do not match.",
+      "passwordSaved": "Updated",
+      "passwordSavedMessage": "Password was updated.",
+      "passwordFailed": "Password change failed",
+      "activityTitle": "Security activity",
+      "unknownActivity": "Security event",
+      "emptyActivity": "No security activity yet.",
+      "types": {
+        "all": "All",
+        "sign_ins": "Sign-ins",
+        "passkey_changes": "Passkeys",
+        "password_changes": "Passwords",
+        "logouts": "Sign-outs"
+      },
+      "periods": {
+        "all": "All",
+        "7d": "Last 7 days",
+        "30d": "Last 30 days",
+        "90d": "Last 90 days"
+      }
+    },
+    "passkeys": {
+      "title": "Passkey management",
+      "registrationHint": "Registration, viewing, renaming, and deletion sync with the same web passkeys.",
+      "register": "Register passkey",
+      "defaultLabel": "Mobile passkey",
+      "registered": "Registered",
+      "registeredMessage": "The passkey was added to this account.",
+      "registerCancelled": "Passkey registration was cancelled.",
+      "registerFailed": "Registration failed",
+      "label": "Label",
+      "unnamed": "Unnamed passkey",
+      "lastUsed": "Last used",
+      "edit": "Rename",
+      "save": "Save label",
+      "empty": "No registered passkeys yet.",
+      "delete": "Delete",
+      "deleteTitle": "Delete passkey",
+      "deleteMessage": "Delete this passkey?",
+      "deleteFailed": "Delete failed",
+      "updateFailed": "Update failed"
+    },
     "appearance": "Appearance",
     "theme": "Theme",
     "language": "Language",
@@ -328,6 +447,74 @@
     "logoutMessage": "Sign out of the current account?",
     "cancel": "Cancel",
     "confirmLogout": "Sign out"
+  },
+  "messages": {
+    "eyebrow": "Messages",
+    "title": "Messages and tickets",
+    "subtitle": "Read in-app messages and follow support tickets.",
+    "tabMessages": "Messages",
+    "tabTickets": "Tickets",
+    "empty": "No messages yet.",
+    "detailTitle": "Message detail",
+    "noContent": "No content.",
+    "markAllRead": "Mark all read",
+    "deleteFailed": "Failed to delete message",
+    "filters": {
+      "all": "All",
+      "unread": "Unread"
+    }
+  },
+  "support": {
+    "newTicket": "New ticket",
+    "newTicketSubtitle": "Describe the issue for the support team.",
+    "empty": "No tickets yet.",
+    "subject": "Subject",
+    "content": "Content",
+    "category": "Category",
+    "priority": "Priority",
+    "submitTicket": "Submit ticket",
+    "createFailed": "Ticket creation failed",
+    "ticketDetail": "Ticket detail",
+    "reply": "Reply",
+    "addImage": "Add image attachment",
+    "submitReply": "Send reply",
+    "replyFailed": "Reply failed",
+    "feedbackTitle": "Service feedback",
+    "feedbackComment": "Feedback note",
+    "submitFeedback": "Submit feedback",
+    "feedbackFailed": "Feedback failed",
+    "turnstileRequiredTitle": "Verification required",
+    "turnstileRequired": "Complete the human check first.",
+    "validation": {
+      "subjectRequired": "Enter a ticket subject.",
+      "contentRequired": "Enter content."
+    },
+    "statuses": {
+      "all": "All",
+      "open": "Open",
+      "in_progress": "In progress",
+      "waiting_user": "Waiting for you",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "priorities": {
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "categories": {
+      "website_bug": "Website issue",
+      "business_issue": "Business issue",
+      "feature_request": "Feature request",
+      "account": "Account",
+      "other": "Other"
+    },
+    "senderRoles": {
+      "user": "User",
+      "support": "Support",
+      "admin": "Admin"
+    }
   },
   "appearance": {
     "system": "System",

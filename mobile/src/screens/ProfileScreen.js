@@ -451,6 +451,10 @@ export default function ProfileScreen({ navigation }) {
     navigation?.navigate?.('Record', { checkinDate: date });
   };
 
+  const openSettings = (section) => {
+    navigation?.navigate?.('ProfileSettings', { section });
+  };
+
   return (
     <ScreenBackground>
       <ScrollView
@@ -476,6 +480,17 @@ export default function ProfileScreen({ navigation }) {
           myBadgesData={myBadgesQuery.data}
           loading={badgesQuery.isLoading || myBadgesQuery.isLoading}
         />
+
+        <GlassSurface contentStyle={styles.settings}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.account.title')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>{t('profile.account.subtitle')}</Text>
+          <View style={styles.actionGrid}>
+            <SecondaryButton icon="person-outline" onPress={() => openSettings('profile')} title={t('profile.account.profile')} />
+            <SecondaryButton icon="notifications-outline" onPress={() => openSettings('notifications')} title={t('profile.account.notifications')} />
+            <SecondaryButton icon="shield-checkmark-outline" onPress={() => openSettings('security')} title={t('profile.account.security')} />
+            <SecondaryButton icon="finger-print-outline" onPress={() => openSettings('passkeys')} title={t('profile.account.passkeys')} />
+          </View>
+        </GlassSurface>
 
         <GlassSurface contentStyle={styles.settings}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.appearance')}</Text>
@@ -717,6 +732,9 @@ const styles = StyleSheet.create({
   },
   settings: {
     gap: 18,
+  },
+  actionGrid: {
+    gap: 10,
   },
   settingGroup: {
     gap: 8,
