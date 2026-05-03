@@ -12,8 +12,8 @@ const asArray = (value) => (Array.isArray(value) ? value : []);
 const asBoolean = (value) => value === true || value === 1 || value === '1';
 
 const normalizePagination = (pagination, fallbackTotal = 0) => ({
-  page: Number(pagination?.page ?? 1),
-  pages: Number(pagination?.pages ?? pagination?.total_pages ?? 1),
+  page: Number(pagination?.page ?? DEFAULT_PAGINATION.page),
+  pages: Number(pagination?.pages ?? pagination?.total_pages ?? DEFAULT_PAGINATION.pages),
   total: Number(pagination?.total ?? fallbackTotal),
 });
 
