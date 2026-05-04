@@ -5,7 +5,9 @@
 
 const MAX_RETURN_LENGTH = 1024;
 
-const stripControlCharacters = (value) => value.replaceAll(/[\u0000-\u001f\u007f]/g, '');
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g;
+const stripControlCharacters = (value) => value.replaceAll(CONTROL_CHARS, '');
 
 export const safeReturnPath = (raw, fallback = '/dashboard') => {
   if (typeof raw !== 'string') {
