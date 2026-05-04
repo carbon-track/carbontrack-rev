@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Services;
 
+use CarbonTrack\Support\SensitiveDataRedactor;
 use PDO;
 use Monolog\Logger;
 
@@ -89,14 +90,8 @@ class SystemLogService
         if ($body === null) {
             return null;
         }
-        if (is_array($body)) {
-            // 复制数组并脱敏常见敏感字段
-            $clone = $body;
-            $sensitive = ['password','pass','token','authorization','auth','secret'];
-            foreach ($sensitive as $key) {
-                if (isset($clone[$key])) { $clone[$key] = '[REDACTED]'; }
-            }
-            $body = json_encode($clone, JSON_UNESCAPED_UNICODE);
+        if (is_array($body) || is_object($body)) {
+            $body = json_encode(SensitiveDataRedactor::redact($body), JSON_UNESCAPED_UNICODE);
         } elseif (!is_string($body)) {
             $body = json_encode($body, JSON_UNESCAPED_UNICODE);
         }
@@ -113,11 +108,7 @@ class SystemLogService
 
     private function buildServerMeta(array $server, array $summaryOverride = []): string
     {
-        $clone = $server;
-        $sensitiveKeys = ['HTTP_AUTHORIZATION','PHP_AUTH_PW','HTTP_COOKIE'];
-        foreach ($sensitiveKeys as $k) {
-            if (isset($clone[$k])) { $clone[$k] = '[REDACTED]'; }
-        }
+        $clone = SensitiveDataRedactor::redactServer($server);
         $clone['_summary'] = [
             'method' => $this->resolveSummaryMethod($clone, $summaryOverride),
             'uri' => $this->resolveSummaryUri($clone, $summaryOverride),
