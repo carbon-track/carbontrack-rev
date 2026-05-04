@@ -44,11 +44,14 @@ TestFlight 构建前，确认 `mobile/.env` 或构建环境包含：
 
 ```env
 EXPO_PUBLIC_API_URL=https://api.carbontrackapp.com/api/v1
+EXPO_PUBLIC_MOBILE_CLIENT_TOKEN=<same value as backend MOBILE_CLIENT_TOKEN>
 EXPO_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAAA0wcgSIUML5Ocs3
 EXPO_PUBLIC_TURNSTILE_BASE_URL=https://carbontrackapp.com
 EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS=true
 EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS=true
 ```
+
+`EXPO_PUBLIC_MOBILE_CLIENT_TOKEN` 必须与后端 `MOBILE_CLIENT_TOKEN` 保持一致；匿名移动端注册、登录、邮箱验证码等接口会以 `X-Mobile-Client-Token` 请求头配合 PoW 校验。该值会进入移动端 bundle，生产环境应通过 EAS/CI 环境变量注入并按版本轮换。
 
 默认仓库配置把两个 native 开关设为 `false`，是为了让 Expo Go 和未重建的旧 dev client 不因为缺少 `NativeLiquidGlassModule` 或 native tabs 新签名而崩溃。只有 TestFlight 或重新构建后的自定义 dev client 才应设为 `true`。
 

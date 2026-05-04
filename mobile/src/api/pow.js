@@ -1,7 +1,7 @@
 import apiClient from './client';
 import * as Crypto from 'expo-crypto';
+import { mobileClientType, requireMobileClientToken } from './mobileClientConfig';
 
-const MOBILE_CLIENT_TYPE = 'mobile';
 const HASH_BATCH_SIZE = 16;
 const YIELD_INTERVAL = 512;
 const MAX_SOLVE_ATTEMPTS = 2000000;
@@ -24,7 +24,7 @@ const hasLeadingZeroBits = (hex, difficulty) => {
     return true;
   }
 
-  const nibble = parseInt(hex[fullNibbles], 16);
+  const nibble = Number.parseInt(hex[fullNibbles], 16);
   const mask = (0xf << (4 - remainingBits)) & 0xf;
   return (nibble & mask) === 0;
 };
@@ -77,9 +77,11 @@ export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
 };
 
 export const getProofOfWorkChallenge = async (scope) => {
+  requireMobileClientToken();
+
   const response = await apiClient.post('/security/pow/challenge', {
     scope,
-    client_type: MOBILE_CLIENT_TYPE,
+    client_type: mobileClientType,
   });
   return response.data?.data || {};
 };
@@ -89,7 +91,7 @@ export const withMobileProofOfWork = async (scope, payload) => {
   const nonce = await solveProofOfWork(challenge.challenge, challenge.difficulty);
 
   if (payload && typeof payload.append === 'function') {
-    payload.append('client_type', MOBILE_CLIENT_TYPE);
+    payload.append('client_type', mobileClientType);
     payload.append('pow_challenge', challenge.challenge);
     payload.append('pow_nonce', nonce);
     return payload;
@@ -97,7 +99,7 @@ export const withMobileProofOfWork = async (scope, payload) => {
 
   return {
     ...payload,
-    client_type: MOBILE_CLIENT_TYPE,
+    client_type: mobileClientType,
     pow_challenge: challenge.challenge,
     pow_nonce: nonce,
   };

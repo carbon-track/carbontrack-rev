@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import useAuthStore from '../store/authStore';
+import { mobileClientHeaders } from './mobileClientConfig';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dev-api.carbontrackapp.com/api/v1';
 const REFRESH_THRESHOLD_SECONDS = 10 * 60;
@@ -11,7 +12,7 @@ const refreshPromises = new Map();
 
 const apiClient = axios.create({
   baseURL: API_URL,
-  headers: { Accept: 'application/json', 'X-Client-Platform': 'mobile' },
+  headers: { Accept: 'application/json', ...mobileClientHeaders },
   timeout: API_REQUEST_TIMEOUT_MS,
   timeoutErrorMessage: NETWORK_TIMEOUT_CODE,
   transitional: { clarifyTimeoutError: true },
@@ -19,7 +20,7 @@ const apiClient = axios.create({
 
 const refreshClient = axios.create({
   baseURL: API_URL,
-  headers: { 'Content-Type': 'application/json', 'X-Client-Platform': 'mobile' },
+  headers: { 'Content-Type': 'application/json', ...mobileClientHeaders },
   timeout: API_REQUEST_TIMEOUT_MS,
   timeoutErrorMessage: NETWORK_TIMEOUT_CODE,
   transitional: { clarifyTimeoutError: true },
@@ -96,7 +97,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       await useAuthStore.getState().logout();
     }
-    return Promise.reject(error);
+    throw error;
   },
 );
 
