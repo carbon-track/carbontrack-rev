@@ -69,6 +69,45 @@ class AuthMiddlewareTest extends TestCase
         $this->assertEquals(401, $resp->getStatusCode());
     }
 
+    public function testTokenVersionMismatchReturns401WithSpecificCode(): void
+    {
+        $previousEnv = $_ENV['APP_ENV'] ?? null;
+        $previousAllow = $_ENV['ALLOW_TEST_AUTH_FALLBACK'] ?? null;
+        $_ENV['APP_ENV'] = 'production';
+        unset($_ENV['ALLOW_TEST_AUTH_FALLBACK']);
+
+        try {
+            $auth = $this->createMock(AuthService::class);
+            $auth->method('validateToken')->willThrowException(new \RuntimeException('Token version mismatch'));
+            $audit = $this->createMock(AuditLogService::class);
+            $audit->expects($this->atLeastOnce())
+                ->method('log')
+                ->with($this->callback(function ($payload): bool {
+                    return is_array($payload)
+                        && ($payload['action'] ?? null) === 'auth_token_version_mismatch';
+                }));
+
+            $mw = new AuthMiddleware($auth, $audit);
+            $request = makeRequest('GET', '/', null, null, ['Authorization' => 'Bearer stale']);
+            $handler = $this->createMock(\Psr\Http\Server\RequestHandlerInterface::class);
+            $handler->expects($this->never())->method('handle');
+
+            $resp = $mw->process($request, $handler);
+            $this->assertSame(401, $resp->getStatusCode());
+            $body = json_decode((string) $resp->getBody(), true);
+            $this->assertSame('TOKEN_VERSION_MISMATCH', $body['code']);
+        } finally {
+            if ($previousEnv === null) {
+                unset($_ENV['APP_ENV']);
+            } else {
+                $_ENV['APP_ENV'] = $previousEnv;
+            }
+            if ($previousAllow !== null) {
+                $_ENV['ALLOW_TEST_AUTH_FALLBACK'] = $previousAllow;
+            }
+        }
+    }
+
     public function testTestingEnvDoesNotFallbackWithoutExplicitAllowFlag(): void
     {
         $previousEnv = $_ENV['APP_ENV'] ?? null;

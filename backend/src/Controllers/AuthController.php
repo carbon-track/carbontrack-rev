@@ -933,6 +933,17 @@ class AuthController
                     $upd->execute([$hashed, $user['id']]);
                 }
             }
+            // W-201: invalidate every previously issued JWT for this account
+            // immediately after the password is rotated, so leaked / shared
+            // tokens can no longer impersonate the user.
+            try {
+                $this->authService->incrementTokenVersion((int) $user['id']);
+            } catch (\Throwable $bumpError) {
+                $this->logger->warning('Failed to bump token_version after password reset', [
+                    'user_id' => $user['id'] ?? null,
+                    'error' => $bumpError->getMessage(),
+                ]);
+            }
             $this->auditLogService->logAuthOperation('password_reset', $user['id'], true, [
                 'ip_address' => $this->getClientIP($request),
                 'user_agent' => $request->getHeaderLine('User-Agent')
@@ -1010,6 +1021,14 @@ class AuthController
                     $upd = $this->db->prepare('UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?');
                     $upd->execute([$hashed, $user['id']]);
                 }
+            }
+            try {
+                $this->authService->incrementTokenVersion((int) $user['id']);
+            } catch (\Throwable $bumpError) {
+                $this->logger->warning('Failed to bump token_version after password change', [
+                    'user_id' => $user['id'] ?? null,
+                    'error' => $bumpError->getMessage(),
+                ]);
             }
             $this->auditLogService->logAuthOperation('password_change', $user['id'], true, [
                 'ip_address' => $this->getClientIP($request),

@@ -68,8 +68,9 @@ class AuthMiddleware implements MiddlewareInterface
             return $handler->handle($request);
             
         } catch (\Exception $e) {
+            $isVersionMismatch = $e->getMessage() === 'Token version mismatch';
             $this->auditLogService->log([
-                'action' => 'auth_failure',
+                'action' => $isVersionMismatch ? 'auth_token_version_mismatch' : 'auth_failure',
                 'operation_category' => 'authentication',
                 'actor_type' => 'system',
                 'status' => 'failed',
@@ -79,6 +80,10 @@ class AuthMiddleware implements MiddlewareInterface
                     'message' => 'Token authentication failed: ' . $e->getMessage(),
                 ],
             ]);
+
+            if ($isVersionMismatch) {
+                return $this->unauthorizedResponse('Token has been revoked. Please sign in again.', 'TOKEN_VERSION_MISMATCH');
+            }
 
             if ($isTesting) {
                 $fallback = [
@@ -110,15 +115,15 @@ class AuthMiddleware implements MiddlewareInterface
         }
     }
 
-    private function unauthorizedResponse(string $message): ResponseInterface
+    private function unauthorizedResponse(string $message, string $code = 'UNAUTHORIZED'): ResponseInterface
     {
         $response = new Response();
         $response->getBody()->write(json_encode([
             'success' => false,
             'message' => $message,
-            'code' => 'UNAUTHORIZED'
+            'code' => $code,
         ]));
-        
+
         return $response
             ->withStatus(401)
             ->withHeader('Content-Type', 'application/json');
