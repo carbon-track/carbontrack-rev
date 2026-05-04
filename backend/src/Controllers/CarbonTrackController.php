@@ -1813,10 +1813,22 @@ class CarbonTrackController
     {
         $bodyClientType = strtolower(trim((string)($data['client_type'] ?? '')));
         $headerClientType = strtolower(trim($request->getHeaderLine('X-Client-Platform')));
-        return $bodyClientType === 'mobile'
-            && $headerClientType === 'mobile'
-            && trim($request->getHeaderLine('Origin')) === ''
-            && trim($request->getHeaderLine('Sec-Fetch-Site')) === '';
+        if ($bodyClientType !== 'mobile' || $headerClientType !== 'mobile') {
+            return false;
+        }
+
+        if (trim($request->getHeaderLine('Origin')) !== ''
+            || trim($request->getHeaderLine('Sec-Fetch-Site')) !== '') {
+            return false;
+        }
+
+        $expected = trim((string)($_ENV['MOBILE_CLIENT_TOKEN'] ?? ''));
+        if ($expected === '') {
+            return false;
+        }
+
+        $supplied = trim($request->getHeaderLine('X-Mobile-Client-Token'));
+        return $supplied !== '' && hash_equals($expected, $supplied);
     }
 
     private function logChallengeFailure(string $action, Request $request, string $scope, ?string $reason = null): void

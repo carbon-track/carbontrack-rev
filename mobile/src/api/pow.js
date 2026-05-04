@@ -6,6 +6,9 @@ const HASH_BATCH_SIZE = 16;
 const YIELD_INTERVAL = 512;
 const MAX_SOLVE_ATTEMPTS = 2000000;
 const MAX_SOLVE_MS = 30000;
+const MAX_DYNAMIC_SOLVE_ATTEMPTS = 12000000;
+const MAX_DYNAMIC_SOLVE_MS = 90000;
+const EXPECTED_ATTEMPT_MULTIPLIER = 3;
 
 const pause = () => new Promise((resolve) => {
   setTimeout(resolve, 0);
@@ -40,12 +43,19 @@ export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
     throw new Error('Invalid proof-of-work challenge');
   }
 
+  const expectedAttempts = 2 ** Math.min(28, Math.floor(targetDifficulty));
   const maxAttempts = Number.isFinite(options.maxAttempts)
     ? Math.max(1, Math.floor(options.maxAttempts))
-    : MAX_SOLVE_ATTEMPTS;
+    : Math.min(
+      MAX_DYNAMIC_SOLVE_ATTEMPTS,
+      Math.max(MAX_SOLVE_ATTEMPTS, expectedAttempts * EXPECTED_ATTEMPT_MULTIPLIER),
+    );
   const maxSolveMs = Number.isFinite(options.timeoutMs)
     ? Math.max(1000, Math.floor(options.timeoutMs))
-    : MAX_SOLVE_MS;
+    : Math.min(
+      MAX_DYNAMIC_SOLVE_MS,
+      targetDifficulty >= 22 ? MAX_DYNAMIC_SOLVE_MS : MAX_SOLVE_MS,
+    );
   const startedAt = Date.now();
   let nonce = 0;
   let checked = 0;
