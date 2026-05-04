@@ -391,3 +391,42 @@ No security vulnerability advisories found
 4. 持续硬化（季度）：P3 全部，配合架构决策（HttpOnly 会话、CSP、token 版本机制、文件管道单一化）。
 
 > 本报告由 `audit/security-web-20260504` 分支基于 `origin/dev@de70df87` 静态扫描产出，未对生产数据库或正在运行的服务做任何主动测试，亦未修改任何业务代码。
+
+---
+
+## 9. 修复追踪 (Remediation Log)
+
+> 此节记录本审计 P0/P1 条目在分支 `audit/security-web-20260504` 上的处置情况。每条仅追加，不修改原条目正文。验证基线：`composer test`（725 用例，8 跳过，0 失败）、`pnpm lint`、`pnpm build` 均通过。
+
+| ID | 状态 | 修复提交 | 备注 |
+| --- | --- | --- | --- |
+| W-001 | 已修复 | `e02461c1 fix(frontend): 同源以归，斥外跳之患` | 抽出 `frontend/src/lib/safeReturn.js`，`getReturnUrl` / `LoginForm` / `VerifyEmailPage` 三处 navigate 站点全部经此筛；`//`、`/\\`、`://`、控制符、超长（>1024）皆退回默认。受测试基础设施缺位限制，前端测试以后端 PHPUnit 同步验证（W-001 不直接落后端，残留风险已经强校验消除）。 |
+| B-101 | 已修复 | `c48039c0 fix(backend): 缚账于锁，以拒爆破` | `AuthController::login` 在密码核验前调用 `AuthService::isAccountLocked`；锁定返 429 `ACCOUNT_LOCKED` 并写 `auth_login_locked` 审计；密码错与成功均调用 `recordLoginAttempt`。OpenAPI 添 429 响应。 |
+| B-102 / B-205 | 已修复 | `fb8cf699 chore(backend): 添置 token_version 列，渐进强化凭据生命` + `d9c5d94b fix(backend): 涤日志机敏，递归而无遗` | 新立 `backend/src/Support/SensitiveDataRedactor.php` 共用脱敏字典（密码 / 令牌 / OTP / 验证码 / 重置 / Turnstile / PoW / Cron / SLA / `HTTP_X_DEBUG_*`）；`SystemLogService` / `AuditLogService` / `ErrorLogService` 全部递归走查。`RequestLoggingMiddleware` 对 `/api/v1/auth/(login|register|change-password|reset-password|verify-email|send-verification-code|forgot-password)` 之 `request_body` / `response_body` 直接写 `[REDACTED]`，仅留 status 与 duration。 |
+| B-103 / B-304 | 已修复 | `698adacc fix(backend): 测纵之径需显，恕不再默放` + `3ea2c64a test(backend): 测纵之配显出，免新关闭旧测` | `AuthMiddleware` / `AdminMiddleware` 之 testing fallback 改为必须并配 `ALLOW_TEST_AUTH_FALLBACK=true` 方启；`backend/public/index.php` 默认 `APP_ENV` 由 `development` 改 `production`；`phpunit.xml` 与 `tests/bootstrap.php` 显式置 `ALLOW_TEST_AUTH_FALLBACK=true` 以续旧测。 |
+| B-104 | 已修复 | `698adacc fix(backend): 测纵之径需显，恕不再默放` | `TurnstileService::verify` 与 `TurnstileMiddleware::process` 改为依 `ALLOW_TURNSTILE_BYPASS`（兼容旧 `TURNSTILE_BYPASS`）显式开关，且 `APP_ENV=production` 永不放过；生产模式下若 `TURNSTILE_SECRET_KEY` 为空或 `your-turnstile-secret-key` 占位值，径返 `secret_unconfigured` 并写 audit + error 日志。 |
+| B-105 | 已修复 | `b63d1cc8 fix(backend): 移端 PoW 验，必持令以行` | `shouldUseMobileProofOfWork` 加 `MOBILE_CLIENT_TOKEN` + `X-Mobile-Client-Token`（`hash_equals`）核验，env 未配则全关；`ProofOfWorkService::createChallenge` 增 IP 频次限流（默认 10/分钟），逾限抛 `RuntimeException`，控制器以 429 `POW_RATE_LIMITED` 响应；`pow_attempts` 表已建。`POW_DIFFICULTY` 推荐默认升至 22（`.env.example`）。 |
+| B-106 | 已修复 | `44174bbf fix(backend): 幂等之钥绑用户，禁跨户重放` + `fb8cf699` | 新增 `idempotency_records.composite_key` 列与 `(composite_key, user_id)` 唯一键，并去除旧 `idempotency_key` 单列唯一锁；中间件以 `sha256(user_id\|method\|path\|sha256(body))` 为复合指纹，跨户复用 UUID 视为新请求；写入与回放均按 `user_id` 联校。 |
+| W-201 | 已修复（过渡路径） | `fb8cf699 chore(backend): 添置 token_version 列` + `31de5306 fix(backend): 凭据有版以衡，岁月易凿之` + `d4052d57 fix(frontend): 凭据生命短而分明，开发钥不入正版` | 后端：`users.token_version` 列已建；`AuthService::generateToken` 写入 `tv` 声明，`validateToken` 校验失配抛 `Token version mismatch`，`AuthMiddleware` 翻译为 401 + `TOKEN_VERSION_MISMATCH`；`changePassword` 与 `resetPassword` 即时调 `AuthService::incrementTokenVersion`；`JWT_LEEWAY` 加 300 上限（同收 B-302）；`.env.example` 默认 `JWT_EXPIRATION` 由 86400 缩为 7200。前端：`initAuth` 在 `main.jsx` 启动期挂载（同时关合 W-206），401 拦截识别 `TOKEN_VERSION_MISMATCH` 并强制重登；refresh 与 `getCurrentUser` 错日志改摘要式，不再印 `error` 全对象。**残留风险**：本批未做完整 HttpOnly cookie 迁移；XSS 仍可读 `auth_token`，但 token TTL 缩短 + 服务端版本吊销 + 显式撤销机制，已显著缩短被劫持窗口；HttpOnly + CSRF 改造留作后续架构决策。 |
+| W-202 | 已修复 | `9cf7f7ff fix(frontend): 诊断之具，外域不送凭` | `Diagnostics.jsx` `RequestTester`：以 `new URL(API_BASE_URL).origin` 为白名单，目标非此 origin 时强制 `confirm` 对话；纵勾选自动鉴权或手填 `Authorization` 头，外域请求一律剥离并以 banner 告知；zh / en `admin` 命名空间补两键。 |
+| W-203 | 已修复 | `d4052d57 fix(frontend): 凭据生命短而分明，开发钥不入正版` | `bootstrapDevAuthFromEnv` 顶部加 `import.meta.env.PROD` 早返；`vite.config.js` 在 `mode === 'production'` 下以 `define: 'undefined'` 清除 `VITE_DEV_AUTH_TOKEN` / `VITE_DEV_AUTH_USER_INFO_JSON|BASE64` / `VITE_DEV_AUTH_FORCE_SYNC` / `VITE_ENABLE_DEV_AUTH_FROM_ENV` 五键。 |
+
+未变动：`mobile/` 目录依任务约束未触；仓库根的 `.agent/`、`.clinerules/`、`.cursor/`、`.cursorrules`、`.github/copilot-instructions.md`、`.windsurfrules`、`CLAUDE.md`、`mobile/eas.json` 等审计前已存在的脏文件未一并提交。
+
+提交序列（自旧而新）：
+
+```
+f6c37ba8 docs(audit): 巡web安危，列疑漏以待修              # 审计基线（修复前）
+e02461c1 fix(frontend): 同源以归，斥外跳之患              # W-001
+fb8cf699 chore(backend): 添置 token_version 列，渐进强化凭据生命  # 迁移与 .env.example
+c48039c0 fix(backend): 缚账于锁，以拒爆破                # B-101
+d9c5d94b fix(backend): 涤日志机敏，递归而无遗            # B-102 / B-205
+698adacc fix(backend): 测纵之径需显，恕不再默放          # B-103 / B-104 / B-304
+b63d1cc8 fix(backend): 移端 PoW 验，必持令以行          # B-105
+44174bbf fix(backend): 幂等之钥绑用户，禁跨户重放        # B-106
+31de5306 fix(backend): 凭据有版以衡，岁月易凿之          # W-201 backend / B-302
+9cf7f7ff fix(frontend): 诊断之具，外域不送凭            # W-202
+d4052d57 fix(frontend): 凭据生命短而分明，开发钥不入正版  # W-201 frontend + W-203
+3ea2c64a test(backend): 测纵之配显出，免新关闭旧测      # phpunit.xml / bootstrap 显式 opt-in
+f2db366d style(frontend): 修订安全返回助手以过 lint 之关  # ESLint no-control-regex
+```
