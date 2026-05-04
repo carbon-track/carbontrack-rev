@@ -52,10 +52,32 @@ class IdempotencyMiddleware implements MiddlewareInterface
             $response = $this->badRequestResponse('X-Request-ID must be a valid UUID');
         } else {
             try {
-                // Check if this request has been processed before
-                $existingRecord = IdempotencyRecord::where('idempotency_key', $idempotencyKey)
-                    ->where('created_at', '>', date('Y-m-d H:i:s', strtotime('-24 hours'))) // Only check last 24 hours
-                    ->first();
+                // B-106: bind replay lookup to the authenticated user identity (or
+                // the literal "anonymous" bucket on auth-less routes) AND to the
+                // request fingerprint (method + path + sha256(body)). Two users
+                // colliding on the same UUID, or the same user replaying the UUID
+                // against a different endpoint/body, must NOT see each other's
+                // cached response.
+                $userIdentity = $this->resolveUserIdentity($request);
+                $compositeKey = $this->buildCompositeKey($userIdentity, $method, $uri, $request);
+
+                $query = IdempotencyRecord::where('idempotency_key', $idempotencyKey)
+                    ->where('created_at', '>', date('Y-m-d H:i:s', strtotime('-24 hours'))); // Only check last 24 hours
+
+                // user_id may be int (auth user) or null (anonymous). NULL must use IS NULL.
+                if ($userIdentity === null) {
+                    $query->whereNull('user_id');
+                } else {
+                    $query->where('user_id', $userIdentity);
+                }
+
+                $existingRecord = $query->first();
+
+                // Belt-and-braces: if the row exists but the composite fingerprint
+                // does not match, treat it as a brand new request (do not replay).
+                if ($existingRecord && (string) ($existingRecord->composite_key ?? '') !== '' && $existingRecord->composite_key !== $compositeKey) {
+                    $existingRecord = null;
+                }
 
                 if ($existingRecord) {
                     $this->logger->info('Idempotent request detected', [
@@ -73,7 +95,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 } else {
                     // Process the request and store result for future replays
                     $response = $handler->handle($request);
-                    $this->storeIdempotencyRecord($idempotencyKey, $request, $response);
+                    $this->storeIdempotencyRecord($idempotencyKey, $compositeKey, $request, $response);
                 }
             } catch (\Throwable $e) {
                 $this->logger->error('Idempotency middleware error', [
@@ -88,6 +110,38 @@ class IdempotencyMiddleware implements MiddlewareInterface
         }
 
         return $response;
+    }
+
+    /**
+     * Resolve the authenticated user identifier used for binding idempotency rows.
+     * Returns an int when AuthMiddleware has populated user_id, otherwise null
+     * (handled as the "anonymous" bucket).
+     */
+    private function resolveUserIdentity(ServerRequestInterface $request): ?int
+    {
+        $userId = $request->getAttribute('user_id');
+        if (is_int($userId) && $userId > 0) {
+            return $userId;
+        }
+        if (is_string($userId) && ctype_digit($userId)) {
+            $parsed = (int) $userId;
+            return $parsed > 0 ? $parsed : null;
+        }
+        return null;
+    }
+
+    private function buildCompositeKey(?int $userIdentity, string $method, string $path, ServerRequestInterface $request): string
+    {
+        $bucket = $userIdentity === null ? 'anonymous' : (string) $userIdentity;
+        $bodyJson = '';
+        try {
+            $body = $request->getParsedBody();
+            $bodyJson = json_encode($body, JSON_UNESCAPED_UNICODE) ?: '';
+        } catch (\Throwable $e) {
+            $bodyJson = '';
+        }
+        $bodyHash = hash('sha256', $bodyJson);
+        return hash('sha256', $bucket . '|' . strtoupper($method) . '|' . $path . '|' . $bodyHash);
     }
 
     private function isSensitiveRoute(string $uri): bool
@@ -105,17 +159,18 @@ class IdempotencyMiddleware implements MiddlewareInterface
         return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $uuid) === 1;
     }
 
-    private function storeIdempotencyRecord(string $idempotencyKey, ServerRequestInterface $request, ResponseInterface $response): void
+    private function storeIdempotencyRecord(string $idempotencyKey, string $compositeKey, ServerRequestInterface $request, ResponseInterface $response): void
     {
     try {
-            $userId = $request->getAttribute('user_id');
+            $userId = $this->resolveUserIdentity($request);
             $responseBody = (string) $response->getBody();
-            
+
             // Reset body stream position for subsequent reads
             $response->getBody()->rewind();
-            
+
             IdempotencyRecord::create([
                 'idempotency_key' => $idempotencyKey,
+                'composite_key' => $compositeKey,
                 'user_id' => $userId,
                 'request_method' => $request->getMethod(),
                 'request_uri' => $request->getUri()->getPath(),
@@ -125,7 +180,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 'ip_address' => $this->getClientIp($request),
                 'user_agent' => $request->getHeaderLine('User-Agent')
             ]);
-            
+
     } catch (\Throwable $e) {
             $this->logger->error('Failed to store idempotency record', [
                 'error' => $e->getMessage(),
