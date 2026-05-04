@@ -68,6 +68,76 @@ class AuthMiddlewareTest extends TestCase
         $resp = $mw->process($request, $handler);
         $this->assertEquals(401, $resp->getStatusCode());
     }
+
+    public function testTestingEnvDoesNotFallbackWithoutExplicitAllowFlag(): void
+    {
+        $previousEnv = $_ENV['APP_ENV'] ?? null;
+        $previousAllow = $_ENV['ALLOW_TEST_AUTH_FALLBACK'] ?? null;
+        $_ENV['APP_ENV'] = 'testing';
+        $_ENV['ALLOW_TEST_AUTH_FALLBACK'] = 'false';
+
+        try {
+            $auth = $this->createMock(AuthService::class);
+            $auth->method('validateToken')->willThrowException(new \RuntimeException('Invalid token'));
+            $audit = $this->createMock(AuditLogService::class);
+
+            $mw = new AuthMiddleware($auth, $audit);
+            $request = makeRequest('GET', '/', null, null, ['Authorization' => 'Bearer junk']);
+            $handler = $this->createMock(\Psr\Http\Server\RequestHandlerInterface::class);
+            $handler->expects($this->never())->method('handle');
+
+            $resp = $mw->process($request, $handler);
+            $this->assertSame(401, $resp->getStatusCode());
+        } finally {
+            if ($previousEnv === null) {
+                unset($_ENV['APP_ENV']);
+            } else {
+                $_ENV['APP_ENV'] = $previousEnv;
+            }
+            if ($previousAllow === null) {
+                unset($_ENV['ALLOW_TEST_AUTH_FALLBACK']);
+            } else {
+                $_ENV['ALLOW_TEST_AUTH_FALLBACK'] = $previousAllow;
+            }
+        }
+    }
+
+    public function testTestingEnvFallbackOnlyWhenExplicitlyAllowed(): void
+    {
+        $previousEnv = $_ENV['APP_ENV'] ?? null;
+        $previousAllow = $_ENV['ALLOW_TEST_AUTH_FALLBACK'] ?? null;
+        $_ENV['APP_ENV'] = 'testing';
+        $_ENV['ALLOW_TEST_AUTH_FALLBACK'] = 'true';
+
+        try {
+            $auth = $this->createMock(AuthService::class);
+            $auth->method('validateToken')->willThrowException(new \RuntimeException('Invalid token'));
+            $audit = $this->createMock(AuditLogService::class);
+
+            $mw = new AuthMiddleware($auth, $audit);
+            $request = makeRequest('GET', '/', null, null, ['Authorization' => 'Bearer junk']);
+            $handler = new class implements \Psr\Http\Server\RequestHandlerInterface {
+                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {
+                    TestCase::assertSame('admin', $request->getAttribute('user_role'));
+                    return new \Slim\Psr7\Response(200);
+                }
+            };
+
+            $resp = $mw->process($request, $handler);
+            $this->assertSame(200, $resp->getStatusCode());
+        } finally {
+            if ($previousEnv === null) {
+                unset($_ENV['APP_ENV']);
+            } else {
+                $_ENV['APP_ENV'] = $previousEnv;
+            }
+            if ($previousAllow === null) {
+                unset($_ENV['ALLOW_TEST_AUTH_FALLBACK']);
+            } else {
+                $_ENV['ALLOW_TEST_AUTH_FALLBACK'] = $previousAllow;
+            }
+        }
+    }
 }
 
 

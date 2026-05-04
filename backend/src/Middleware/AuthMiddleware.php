@@ -25,7 +25,11 @@ class AuthMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $isTesting = strtolower((string)($_ENV['APP_ENV'] ?? '')) === 'testing';
+        // Test fallback now requires BOTH APP_ENV=testing AND an explicit
+        // ALLOW_TEST_AUTH_FALLBACK opt-in. Production ignores both, so a misconfigured
+        // env that accidentally sets APP_ENV=testing no longer hands out admin access.
+        $isTesting = strtolower((string)($_ENV['APP_ENV'] ?? '')) === 'testing'
+            && filter_var($_ENV['ALLOW_TEST_AUTH_FALLBACK'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
         $authHeader = $request->getHeaderLine('Authorization');
         
         if (empty($authHeader) || !str_starts_with($authHeader, 'Bearer ')) {

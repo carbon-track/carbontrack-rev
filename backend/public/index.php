@@ -35,8 +35,10 @@ try {
     // If .env file doesn't exist, Dotenv will throw; fall back to defaults below.
 }
 
-$resolvedAppEnv = $_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? getenv('APP_ENV') ?? 'development';
-$resolvedAppEnv = is_string($resolvedAppEnv) ? strtolower($resolvedAppEnv) : 'development';
+// Default-deny: when APP_ENV is not configured, treat the deploy as production so
+// missing config never lands in the lax development branch (B-103/B-304).
+$resolvedAppEnv = $_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? getenv('APP_ENV') ?? 'production';
+$resolvedAppEnv = is_string($resolvedAppEnv) ? strtolower($resolvedAppEnv) : 'production';
 $_ENV['APP_ENV'] = $resolvedAppEnv;
 $_SERVER['APP_ENV'] = $resolvedAppEnv;
 putenv('APP_ENV=' . $resolvedAppEnv);
