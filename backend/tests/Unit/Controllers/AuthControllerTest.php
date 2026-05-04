@@ -594,6 +594,122 @@ class AuthControllerTest extends TestCase
         $this->assertSame('TURNSTILE_FAILED', $json['code']);
     }
 
+    public function testLoginReturns429WhenAccountIsLockedBeforeAnyVerification(): void
+    {
+        $mockAuthService = $this->createMock(AuthService::class);
+        $mockEmailService = $this->createMock(EmailService::class);
+        $mockTurnstileService = $this->createMock(TurnstileService::class);
+        $mockAuditLogService = $this->createMock(AuditLogService::class);
+        $mockMessageService = $this->createMock(MessageService::class);
+        $mockR2Service = $this->createMock(CloudflareR2Service::class);
+        $mockLogger = $this->createMock(\Monolog\Logger::class);
+        $mockPdo = $this->createMock(\PDO::class);
+        $mockRegion = $this->createMock(RegionService::class);
+
+        $mockAuthService->expects($this->once())
+            ->method('isAccountLocked')
+            ->with('locked@example.com', $this->isType('string'))
+            ->willReturn(true);
+        $mockAuthService->expects($this->never())->method('recordLoginAttempt');
+        $mockAuthService->expects($this->never())->method('generateToken');
+        $mockTurnstileService->expects($this->never())->method('verify');
+        // Lockout audit must be persisted so operators can see brute-force shaping.
+        $mockAuditLogService->expects($this->atLeastOnce())
+            ->method('log')
+            ->with($this->callback(function ($payload): bool {
+                return is_array($payload)
+                    && ($payload['action'] ?? null) === 'auth_login_locked';
+            }));
+
+        $controller = new AuthController(
+            $mockAuthService,
+            $mockEmailService,
+            $mockTurnstileService,
+            $mockAuditLogService,
+            $mockMessageService,
+            $mockR2Service,
+            $mockLogger,
+            $mockPdo,
+            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $mockRegion
+        );
+
+        $request = makeRequest('POST', '/auth/login', [
+            'identifier' => 'locked@example.com',
+            'password' => 'secret123',
+            'cf_turnstile_response' => 'tk',
+        ]);
+        $response = new \Slim\Psr7\Response();
+
+        $resp = $controller->login($request, $response);
+        $this->assertSame(429, $resp->getStatusCode());
+        $json = json_decode((string) $resp->getBody(), true);
+        $this->assertFalse($json['success']);
+        $this->assertSame('ACCOUNT_LOCKED', $json['code']);
+    }
+
+    public function testLoginRecordsFailedAttemptAndReturns401OnWrongPassword(): void
+    {
+        $mockAuthService = $this->createMock(AuthService::class);
+        $mockEmailService = $this->createMock(EmailService::class);
+        $mockTurnstileService = $this->createMock(TurnstileService::class);
+        $mockAuditLogService = $this->createMock(AuditLogService::class);
+        $mockMessageService = $this->createMock(MessageService::class);
+        $mockR2Service = $this->createMock(CloudflareR2Service::class);
+        $mockLogger = $this->createMock(\Monolog\Logger::class);
+        $mockRegion = $this->createMock(RegionService::class);
+
+        $mockAuthService->expects($this->once())->method('isAccountLocked')->willReturn(false);
+        $mockAuthService->expects($this->once())
+            ->method('recordLoginAttempt')
+            ->with('john', $this->isType('string'), false);
+        $mockTurnstileService->method('verify')->with('tk')->willReturn(['success' => true]);
+
+        $selectStmt = $this->createMock(\PDOStatement::class);
+        $selectStmt->method('execute')->willReturn(true);
+        $selectStmt->method('fetch')->willReturn([
+            'id' => 11,
+            'uuid' => 'u-11',
+            'username' => 'john',
+            'email' => 'john@example.com',
+            'password_hash' => password_hash('correct-pass', PASSWORD_DEFAULT),
+            'is_admin' => 0,
+            'school_id' => null,
+            'school_name' => null,
+            'avatar_path' => null,
+            'lastlgn' => null,
+            'email_verified_at' => '2026-01-01 00:00:00',
+        ]);
+        $mockPdo = $this->createMock(\PDO::class);
+        $mockPdo->method('prepare')->willReturn($selectStmt);
+
+        $controller = new AuthController(
+            $mockAuthService,
+            $mockEmailService,
+            $mockTurnstileService,
+            $mockAuditLogService,
+            $mockMessageService,
+            $mockR2Service,
+            $mockLogger,
+            $mockPdo,
+            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $mockRegion
+        );
+
+        $request = makeRequest('POST', '/auth/login', [
+            'identifier' => 'john',
+            'password' => 'wrong-pass',
+            'cf_turnstile_response' => 'tk',
+        ]);
+        $response = new \Slim\Psr7\Response();
+
+        $resp = $controller->login($request, $response);
+        $this->assertSame(401, $resp->getStatusCode());
+        $json = json_decode((string) $resp->getBody(), true);
+        $this->assertFalse($json['success']);
+        $this->assertSame('INVALID_CREDENTIALS', $json['code']);
+    }
+
     public function testLoginRequiresProofOfWorkForMobileRequests(): void
     {
         $mockAuthService = $this->createMock(AuthService::class);

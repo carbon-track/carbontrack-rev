@@ -298,6 +298,34 @@ class AuthController
                     'code' => 'MISSING_CREDENTIALS'
                 ], 400);
             }
+            $clientIp = $this->getClientIP($request);
+            // Account/IP lockout precedes any credential check so brute-force traffic
+            // cannot probe whether a user exists or burn through Turnstile capacity.
+            try {
+                if ($this->authService->isAccountLocked((string) $identifier, (string) $clientIp)) {
+                    $this->auditLogService->log([
+                        'action' => 'auth_login_locked',
+                        'operation_category' => 'authentication',
+                        'actor_type' => 'system',
+                        'status' => 'failed',
+                        'data' => [
+                            'identifier' => $identifier,
+                            'ip_address' => $clientIp,
+                            'user_agent' => $request->getHeaderLine('User-Agent'),
+                        ],
+                    ]);
+                    return $this->jsonResponse($response, [
+                        'success' => false,
+                        'message' => 'Account temporarily locked. Try again later.',
+                        'code' => 'ACCOUNT_LOCKED',
+                    ], 429);
+                }
+            } catch (\Throwable $lockCheckError) {
+                // Lock-check failures must never collapse the login flow open; log and continue.
+                $this->logger->warning('Login lockout check failed', [
+                    'error' => $lockCheckError->getMessage(),
+                ]);
+            }
             $challenge = $this->verifyClientChallenge($request, $data, 'auth.login');
             if (!$challenge['success']) {
                 return $this->jsonResponse($response, [
@@ -320,9 +348,16 @@ class AuthController
                 }
             }
             if (!$user || !$passwordField || !password_verify((string)$data['password'], (string)$user[$passwordField])) {
+                try {
+                    $this->authService->recordLoginAttempt((string) $identifier, (string) $clientIp, false);
+                } catch (\Throwable $recordError) {
+                    $this->logger->warning('Login attempt record failed (failed branch)', [
+                        'error' => $recordError->getMessage(),
+                    ]);
+                }
                 $this->auditLogService->logAuthOperation('login', null, false, [
                     'identifier' => $identifier,
-                    'ip_address' => $this->getClientIP($request),
+                    'ip_address' => $clientIp,
                     'user_agent' => $request->getHeaderLine('User-Agent')
                 ]);
                 return $this->jsonResponse($response, [
@@ -330,6 +365,13 @@ class AuthController
                     'message' => 'Invalid credentials',
                     'code' => 'INVALID_CREDENTIALS'
                 ], 401);
+            }
+            try {
+                $this->authService->recordLoginAttempt((string) $identifier, (string) $clientIp, true);
+            } catch (\Throwable $recordError) {
+                $this->logger->warning('Login attempt record failed (success branch)', [
+                    'error' => $recordError->getMessage(),
+                ]);
             }
             try {
                 $upd = $this->db->prepare('UPDATE users SET lastlgn = NOW() WHERE id = ?');

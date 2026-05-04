@@ -9838,11 +9838,49 @@
             }
           },
           "401": {
-            "description": "账号或密码无效。",
+            "description": "账号或密码无效，或令牌版本不匹配（密码已变更）。",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "invalidCredentials": {
+                    "summary": "Invalid credentials",
+                    "value": {
+                      "success": false,
+                      "message": "Invalid credentials",
+                      "code": "INVALID_CREDENTIALS"
+                    }
+                  },
+                  "tokenVersionMismatch": {
+                    "summary": "Stale token after password change",
+                    "value": {
+                      "success": false,
+                      "message": "Token version mismatch",
+                      "code": "TOKEN_VERSION_MISMATCH"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "登录尝试过于频繁，账号或来源 IP 临时锁定。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "accountLocked": {
+                    "summary": "Account locked",
+                    "value": {
+                      "success": false,
+                      "message": "Account temporarily locked. Try again later.",
+                      "code": "ACCOUNT_LOCKED"
+                    }
+                  }
                 }
               }
             }
