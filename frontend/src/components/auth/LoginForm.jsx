@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, LogIn, Fingerprint } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
-import { authAPI, getReturnUrl, getValidationRules } from '../../lib/auth';
+import { authAPI, getReturnUrl, getValidationRules, getDefaultAuthenticatedRoute } from '../../lib/auth';
+import { safeReturnPath } from '../../lib/safeReturn';
 import { 
   IS_PASSKEY_ENABLED, 
   getPasskeySupport,
@@ -74,7 +75,7 @@ export function LoginForm() {
       });
 
       if (result.success) {
-        const returnUrl = getReturnUrl();
+        const returnUrl = safeReturnPath(getReturnUrl(), getDefaultAuthenticatedRoute());
         navigate(returnUrl);
       } else {
         setError(resolveErrorMessage(result));
@@ -126,7 +127,7 @@ export function LoginForm() {
       });
 
       if (result.success) {
-        const returnUrl = getReturnUrl();
+        const returnUrl = safeReturnPath(getReturnUrl(), getDefaultAuthenticatedRoute());
         navigate(returnUrl);
       } else {
         setError(resolveErrorMessage(result));

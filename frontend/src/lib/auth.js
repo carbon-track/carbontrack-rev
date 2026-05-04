@@ -1,3 +1,5 @@
+import { safeReturnPath } from './safeReturn';
+
 const DEV_AUTH_TRUTHY_VALUES = new Set(['1', 'true', 'yes', 'on']);
 
 let apiPromise;
@@ -427,7 +429,12 @@ export const redirectToLogin = (returnUrl = null) => {
 // 获取返回URL
 export const getReturnUrl = () => {
   const params = new URLSearchParams(window.location.search);
-  return params.get('return') || getDefaultAuthenticatedRoute();
+  const fallback = getDefaultAuthenticatedRoute();
+  const raw = params.get('return');
+  if (raw === null || raw === undefined) {
+    return fallback;
+  }
+  return safeReturnPath(raw, fallback);
 };
 
 // 权限检查
