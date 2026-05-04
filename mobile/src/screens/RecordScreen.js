@@ -28,6 +28,7 @@ import { carbonApi } from '../api/carbon';
 import ThermalReceiptCard from '../components/ThermalReceiptCard';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
+import { getApiErrorMessage } from '../lib/apiError';
 
 const { createReceiptFromSubmission } = require('../lib/thermalReceipt');
 
@@ -36,12 +37,6 @@ const todayString = (value = new Date()) => (
   `${value.getFullYear()}-${padDatePart(value.getMonth() + 1)}-${padDatePart(value.getDate())}`
 );
 const formatNumber = (value) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(Number(value || 0));
-const getApiErrorMessage = (error, fallback) => (
-  error?.response?.data?.message
-  || error?.response?.data?.error
-  || fallback
-);
-
 const normalizeAmountInput = (value) => {
   const asciiValue = String(value || '')
     .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))

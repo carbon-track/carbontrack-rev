@@ -29,6 +29,7 @@ import { schoolApi } from '../api/schools';
 import useAuthStore from '../store/authStore';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
+import { getApiErrorMessage as apiError } from '../lib/apiError';
 import { registerWithPasskey } from '../lib/passkey';
 
 const { validatePasswordDraft } = require('../lib/userContent');
@@ -43,8 +44,6 @@ const extractList = (payload, key) => {
   return Array.isArray(source) ? source : (source?.[key] || source?.items || source?.data || []);
 };
 
-const apiError = (error, fallback) => error?.response?.data?.message || error?.message || fallback;
-
 function SectionPills({ active, onChange, options, prefix }) {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -55,7 +54,7 @@ function SectionPills({ active, onChange, options, prefix }) {
           <GlassPressable
             key={value}
             onPress={() => onChange(value)}
-            style={[styles.pill, active === value ? { borderColor: colors.primary } : null]}
+            style={[styles.pill, active === value ? { borderColor: colors.primary, borderWidth: 1 } : null]}
           >
             <Text style={[styles.pillText, { color: active === value ? colors.primary : colors.text }]}>
               {t(`${prefix}.${value}`)}
@@ -98,9 +97,9 @@ function ProfileEditor({ user }) {
 
   const save = () => {
     const payload = {};
-    if (countryCode && stateCode) {
+    if (countryCode) {
       payload.country_code = countryCode;
-      payload.state_code = stateCode;
+      payload.state_code = stateCode || '';
     }
     if (selectedSchool?.id) {
       payload.school_id = selectedSchool.id;
@@ -152,7 +151,7 @@ function ProfileEditor({ user }) {
                 setSelectedSchool(school);
                 setSchoolQuery(school.name || '');
               }}
-              style={[styles.schoolRow, selectedSchool?.id === school.id ? { borderColor: colors.primary } : null]}
+              style={[styles.schoolRow, selectedSchool?.id === school.id ? { borderColor: colors.primary, borderWidth: 1 } : null]}
             >
               <Text style={[styles.rowTitle, { color: colors.text }]}>{school.name}</Text>
             </GlassPressable>

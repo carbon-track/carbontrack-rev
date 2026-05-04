@@ -32,6 +32,7 @@ import { messageApi } from '../api/messages';
 import { ticketApi } from '../api/tickets';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
+import { getApiErrorMessage as apiError } from '../lib/apiError';
 
 const { validateTicketDraft } = require('../lib/userContent');
 
@@ -41,8 +42,6 @@ const ticketPriorities = ['low', 'normal', 'high', 'urgent'];
 
 const displayDateTime = (value) => String(value || '').replace('T', ' ').slice(0, 16) || '--';
 const messageTone = (message) => (message.isRead ? 'read' : 'unread');
-
-const apiError = (error, fallback) => error?.response?.data?.message || error?.message || fallback;
 
 function EmptyState({ icon, text }) {
   const { colors } = useTheme();
@@ -68,7 +67,7 @@ function MessageList({ messages, onDelete, onOpen }) {
           <GlassPressable
             key={message.id}
             onPress={() => onOpen(message)}
-            style={[styles.rowPressable, tone === 'unread' ? { borderColor: colors.primary } : null]}
+            style={[styles.rowPressable, tone === 'unread' ? { borderColor: colors.primary, borderWidth: 1 } : null]}
           >
             <View style={styles.rowHeader}>
               <View style={styles.rowTitleBox}>
@@ -125,7 +124,7 @@ function FilterPills({ active, options, prefix, onChange }) {
           <GlassPressable
             key={value}
             onPress={() => onChange(value)}
-            style={[styles.pill, active === value ? { borderColor: colors.primary } : null]}
+            style={[styles.pill, active === value ? { borderColor: colors.primary, borderWidth: 1 } : null]}
           >
             <Text style={[styles.pillText, { color: active === value ? colors.primary : colors.text }]}>
               {t(`${prefix}.${value}`)}

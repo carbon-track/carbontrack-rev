@@ -30,6 +30,7 @@ import { rewardsApi } from '../api/rewards';
 import useAuthStore from '../store/authStore';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
+import { getApiErrorMessage } from '../lib/apiError';
 
 const numberFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 const formatNumber = (value) => numberFormatter.format(Number(value || 0));
@@ -75,13 +76,6 @@ const resolveProductName = (exchange, t) => (
   || exchange.product_name
   || exchange.product?.name
   || t('store.history.unknownProduct')
-);
-
-const getApiErrorMessage = (error, fallback) => (
-  error?.response?.data?.message
-  || error?.response?.data?.error
-  || error?.message
-  || fallback
 );
 
 function PointsCard({ points }) {

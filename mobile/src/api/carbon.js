@@ -37,7 +37,16 @@ export const carbonApi = {
     unit,
   })),
 
-  submitRecord: async ({ activityId, amount, date, description, image, unit, checkinDate }) => {
+  submitRecord: async (options) => {
+    const {
+      activityId,
+      amount,
+      date,
+      description,
+      image,
+      unit,
+      checkinDate,
+    } = options;
     const formData = new FormData();
     formData.append('activity_id', String(activityId));
     formData.append('amount', String(amount));
