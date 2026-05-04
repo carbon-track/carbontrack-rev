@@ -1,6 +1,9 @@
 import apiClient from './client';
 
-const { normalizeNotificationPreferences } = require('../lib/userContent');
+const {
+  normalizeNotificationPreferences,
+  serializeNotificationPreferences,
+} = require('../lib/userContent');
 
 const unwrap = (response) => response.data?.data ?? response.data;
 
@@ -10,7 +13,9 @@ export const profileApi = {
   changePassword: async (payload) => unwrap(await apiClient.post('/auth/change-password', payload)),
   getNotificationPreferences: async () => normalizeNotificationPreferences(unwrap(await apiClient.get('/users/me/notification-preferences'))),
   updateNotificationPreferences: async (preferences) => normalizeNotificationPreferences(
-    unwrap(await apiClient.put('/users/me/notification-preferences', { preferences })),
+    unwrap(await apiClient.put('/users/me/notification-preferences', {
+      preferences: serializeNotificationPreferences(preferences),
+    })),
   ),
   sendNotificationTestEmail: async (category) => unwrap(await apiClient.post('/users/me/notification-preferences/test-email', { category })),
   getSecurityActivity: async (params = {}) => unwrap(await apiClient.get('/users/me/security-activity', { params })),

@@ -5,6 +5,7 @@ const {
   normalizeMessagesPayload,
   normalizeNotificationPreferences,
   normalizeTicketDetail,
+  serializeNotificationPreferences,
   validateTicketDraft,
 } = require('./userContent');
 
@@ -68,6 +69,20 @@ test('normalizeNotificationPreferences gives stable editable rows', () => {
   assert.deepEqual(preferences, [
     { category: 'system', enabled: true, locked: true },
     { category: 'review', enabled: false, locked: false },
+  ]);
+});
+
+test('serializeNotificationPreferences sends backend email_enabled flags', () => {
+  const preferences = normalizeNotificationPreferences({
+    preferences: [
+      { category: 'review', email_enabled: false },
+      { category: 'system', enabled: true, locked: true },
+    ],
+  });
+
+  assert.deepEqual(serializeNotificationPreferences(preferences), [
+    { category: 'review', email_enabled: false },
+    { category: 'system', email_enabled: true },
   ]);
 });
 

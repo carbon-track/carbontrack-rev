@@ -116,6 +116,19 @@ function normalizeNotificationPreferences(payload) {
   })).filter((item) => item.category);
 }
 
+function serializeNotificationPreferences(preferences) {
+  const source = Array.isArray(preferences)
+    ? preferences
+    : asArray(preferences?.preferences || preferences?.items || preferences?.data);
+
+  return source.map((item = {}) => ({
+    category: item.category || '',
+    email_enabled: item.email_enabled !== undefined
+      ? asBoolean(item.email_enabled)
+      : asBoolean(item.enabled),
+  })).filter((item) => item.category);
+}
+
 function validateTicketDraft({ subject, content } = {}) {
   const errors = {};
   if (!String(subject || '').trim()) {
@@ -150,6 +163,7 @@ module.exports = {
   normalizeTicket,
   normalizeTicketDetail,
   normalizeTicketsPayload,
+  serializeNotificationPreferences,
   validatePasswordDraft,
   validateTicketDraft,
 };
