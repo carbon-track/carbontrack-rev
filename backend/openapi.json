@@ -9785,6 +9785,26 @@
               }
             }
           },
+          "429": {
+            "description": "Too many proof-of-work challenges issued from this client recently.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-IP issuance rate limited",
+                    "value": {
+                      "success": false,
+                      "message": "Too many proof-of-work challenges from this client",
+                      "code": "POW_RATE_LIMITED"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "500": {
             "description": "Challenge creation failed.",
             "content": {

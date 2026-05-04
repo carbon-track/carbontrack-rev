@@ -93,10 +93,23 @@ class AuthController
                 ], 400);
             }
 
+            try {
+                $challenge = $this->proofOfWorkService->createChallenge($scope, $this->getClientIP($request));
+            } catch (\RuntimeException $rateLimitError) {
+                if (strpos($rateLimitError->getMessage(), 'rate limit') !== false) {
+                    return $this->jsonResponse($response, [
+                        'success' => false,
+                        'message' => 'Too many proof-of-work challenges from this client',
+                        'code' => 'POW_RATE_LIMITED',
+                    ], 429);
+                }
+                throw $rateLimitError;
+            }
+
             return $this->jsonResponse($response, [
                 'success' => true,
                 'message' => 'Proof-of-work challenge created',
-                'data' => $this->proofOfWorkService->createChallenge($scope),
+                'data' => $challenge,
             ]);
         } catch (\Throwable $e) {
             $this->logger->error('Proof-of-work challenge creation failed', ['error' => $e->getMessage()]);
@@ -1442,8 +1455,26 @@ class AuthController
         }
 
         // Browser-originated requests must stay on Turnstile even if a caller spoofs mobile markers.
-        return trim($request->getHeaderLine('Origin')) === ''
-            && trim($request->getHeaderLine('Sec-Fetch-Site')) === '';
+        $browserAttempt = trim($request->getHeaderLine('Origin')) !== ''
+            || trim($request->getHeaderLine('Sec-Fetch-Site')) !== '';
+        if ($browserAttempt) {
+            return false;
+        }
+
+        // Require a shared client token that real mobile builds pin via X-Mobile-Client-Token.
+        // If the env value is unset we *disable* the bypass entirely so misconfigured deploys
+        // can never let an arbitrary HTTP client onto the cheaper PoW path (B-105).
+        $expected = (string) ($_ENV['MOBILE_CLIENT_TOKEN'] ?? '');
+        if (trim($expected) === '') {
+            return false;
+        }
+
+        $supplied = trim($request->getHeaderLine('X-Mobile-Client-Token'));
+        if ($supplied === '') {
+            return false;
+        }
+
+        return hash_equals($expected, $supplied);
     }
 
     private function logChallengeFailure(string $action, Request $request, string $scope, ?string $reason = null): void

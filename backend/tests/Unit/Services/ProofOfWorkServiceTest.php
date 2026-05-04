@@ -99,6 +99,34 @@ class ProofOfWorkServiceTest extends TestCase
         }
     }
 
+    public function testCreateChallengeRateLimitsPerIpAtConfiguredThreshold(): void
+    {
+        $db = $this->makeChallengeDatabase();
+        $service = $this->makeService(8, $db);
+
+        for ($i = 0; $i < ProofOfWorkService::ISSUANCE_RATE_LIMIT_PER_MINUTE; $i++) {
+            $service->createChallenge('auth.login', '203.0.113.7');
+        }
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('rate limit');
+        $service->createChallenge('auth.login', '203.0.113.7');
+    }
+
+    public function testCreateChallengeRateLimitDoesNotApplyAcrossIps(): void
+    {
+        $db = $this->makeChallengeDatabase();
+        $service = $this->makeService(8, $db);
+
+        for ($i = 0; $i < ProofOfWorkService::ISSUANCE_RATE_LIMIT_PER_MINUTE; $i++) {
+            $service->createChallenge('auth.login', '203.0.113.7');
+        }
+
+        // Different IP must still be allowed even when the first IP is exhausted.
+        $other = $service->createChallenge('auth.login', '203.0.113.8');
+        $this->assertNotEmpty($other['challenge']);
+    }
+
     private function makeService(int $difficulty, ?PDO $db = null): ProofOfWorkService
     {
         $logger = new Logger('test');
@@ -122,6 +150,14 @@ class ProofOfWorkServiceTest extends TestCase
                 used_at TEXT DEFAULT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
+            )'
+        );
+        $db->exec(
+            'CREATE TABLE pow_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ip_address TEXT NOT NULL,
+                scope TEXT NOT NULL,
+                attempted_at TEXT NOT NULL
             )'
         );
 

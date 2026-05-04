@@ -710,54 +710,281 @@ class AuthControllerTest extends TestCase
         $this->assertSame('INVALID_CREDENTIALS', $json['code']);
     }
 
-    public function testLoginRequiresProofOfWorkForMobileRequests(): void
+    public function testMobilePoWBypassDisabledWhenClientTokenEnvUnset(): void
+    {
+        $previousToken = $_ENV['MOBILE_CLIENT_TOKEN'] ?? null;
+        unset($_ENV['MOBILE_CLIENT_TOKEN']);
+
+        try {
+            $mockAuthService = $this->createMock(AuthService::class);
+            $mockTurnstileService = $this->createMock(TurnstileService::class);
+            $mockTurnstileService->expects($this->once())
+                ->method('verify')
+                ->with('the-turnstile-token')
+                ->willReturn(['success' => true]);
+            $mockPowService = $this->createMock(ProofOfWorkService::class);
+            $mockPowService->expects($this->never())->method('verify');
+
+            $mockAuditLogService = $this->createMock(AuditLogService::class);
+            $mockEmailService = $this->createMock(EmailService::class);
+            $mockMessageService = $this->createMock(MessageService::class);
+            $mockR2Service = $this->createMock(CloudflareR2Service::class);
+            $mockLogger = $this->createMock(\Monolog\Logger::class);
+            $mockRegion = $this->createMock(RegionService::class);
+
+            $selectStmt = $this->createMock(\PDOStatement::class);
+            $selectStmt->method('execute')->willReturn(true);
+            $selectStmt->method('fetch')->willReturn(false);
+            $mockPdo = $this->createMock(\PDO::class);
+            $mockPdo->method('prepare')->willReturn($selectStmt);
+
+            $controller = new AuthController(
+                $mockAuthService,
+                $mockEmailService,
+                $mockTurnstileService,
+                $mockAuditLogService,
+                $mockMessageService,
+                $mockR2Service,
+                $mockLogger,
+                $mockPdo,
+                $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+                $mockRegion,
+                null,
+                null,
+                $mockPowService
+            );
+
+            $request = makeRequest('POST', '/auth/login', [
+                'identifier' => 'mobile@example.com',
+                'password' => 'pw',
+                'client_type' => 'mobile',
+                'cf_turnstile_response' => 'the-turnstile-token',
+            ], null, [
+                'X-Client-Platform' => ['mobile'],
+                'X-Mobile-Client-Token' => ['anything'],
+            ]);
+            $response = new \Slim\Psr7\Response();
+
+            $resp = $controller->login($request, $response);
+            // Identifier doesn't exist, so we expect 401 INVALID_CREDENTIALS — this proves
+            // that the mobile-PoW bypass was *not* taken (the controller went through the
+            // turnstile path and on into the user lookup).
+            $this->assertSame(401, $resp->getStatusCode());
+        } finally {
+            if ($previousToken === null) {
+                unset($_ENV['MOBILE_CLIENT_TOKEN']);
+            } else {
+                $_ENV['MOBILE_CLIENT_TOKEN'] = $previousToken;
+            }
+        }
+    }
+
+    public function testMobilePoWBypassDisabledWhenClientTokenWrong(): void
+    {
+        $previousToken = $_ENV['MOBILE_CLIENT_TOKEN'] ?? null;
+        $_ENV['MOBILE_CLIENT_TOKEN'] = 'expected-secret';
+
+        try {
+            $mockAuthService = $this->createMock(AuthService::class);
+            $mockTurnstileService = $this->createMock(TurnstileService::class);
+            $mockTurnstileService->expects($this->once())
+                ->method('verify')
+                ->willReturn(['success' => false, 'error' => 'invalid-input-secret']);
+            $mockPowService = $this->createMock(ProofOfWorkService::class);
+            $mockPowService->expects($this->never())->method('verify');
+
+            $controller = new AuthController(
+                $mockAuthService,
+                $this->createMock(EmailService::class),
+                $mockTurnstileService,
+                $this->createMock(AuditLogService::class),
+                $this->createMock(MessageService::class),
+                $this->createMock(CloudflareR2Service::class),
+                $this->createMock(\Monolog\Logger::class),
+                $this->createMock(\PDO::class),
+                $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+                $this->createMock(RegionService::class),
+                null,
+                null,
+                $mockPowService
+            );
+
+            $request = makeRequest('POST', '/auth/login', [
+                'identifier' => 'mobile@example.com',
+                'password' => 'pw',
+                'client_type' => 'mobile',
+                'cf_turnstile_response' => 'tk',
+            ], null, [
+                'X-Client-Platform' => ['mobile'],
+                'X-Mobile-Client-Token' => ['wrong-secret'],
+            ]);
+            $resp = $controller->login($request, new \Slim\Psr7\Response());
+            $this->assertSame(400, $resp->getStatusCode());
+            $json = json_decode((string) $resp->getBody(), true);
+            $this->assertSame('TURNSTILE_FAILED', $json['code']);
+        } finally {
+            if ($previousToken === null) {
+                unset($_ENV['MOBILE_CLIENT_TOKEN']);
+            } else {
+                $_ENV['MOBILE_CLIENT_TOKEN'] = $previousToken;
+            }
+        }
+    }
+
+    public function testMobilePoWBypassUsedWhenClientTokenMatches(): void
+    {
+        $previousToken = $_ENV['MOBILE_CLIENT_TOKEN'] ?? null;
+        $_ENV['MOBILE_CLIENT_TOKEN'] = 'expected-secret';
+
+        try {
+            $mockAuthService = $this->createMock(AuthService::class);
+            $mockTurnstileService = $this->createMock(TurnstileService::class);
+            $mockTurnstileService->expects($this->never())->method('verify');
+            $mockPowService = $this->createMock(ProofOfWorkService::class);
+            $mockPowService->expects($this->once())
+                ->method('verify')
+                ->with('challenge', '12345', 'auth.login')
+                ->willReturn(['success' => true]);
+
+            $selectStmt = $this->createMock(\PDOStatement::class);
+            $selectStmt->method('execute')->willReturn(true);
+            $selectStmt->method('fetch')->willReturn(false);
+            $mockPdo = $this->createMock(\PDO::class);
+            $mockPdo->method('prepare')->willReturn($selectStmt);
+
+            $controller = new AuthController(
+                $mockAuthService,
+                $this->createMock(EmailService::class),
+                $mockTurnstileService,
+                $this->createMock(AuditLogService::class),
+                $this->createMock(MessageService::class),
+                $this->createMock(CloudflareR2Service::class),
+                $this->createMock(\Monolog\Logger::class),
+                $mockPdo,
+                $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+                $this->createMock(RegionService::class),
+                null,
+                null,
+                $mockPowService
+            );
+
+            $request = makeRequest('POST', '/auth/login', [
+                'identifier' => 'mobile@example.com',
+                'password' => 'pw',
+                'client_type' => 'mobile',
+                'pow_challenge' => 'challenge',
+                'pow_nonce' => '12345',
+            ], null, [
+                'X-Client-Platform' => ['mobile'],
+                'X-Mobile-Client-Token' => ['expected-secret'],
+            ]);
+
+            $resp = $controller->login($request, new \Slim\Psr7\Response());
+            // Identifier won't be found in our stubbed PDO, so we expect a 401 from the
+            // existing INVALID_CREDENTIALS branch - but reaching it proves PoW path ran.
+            $this->assertSame(401, $resp->getStatusCode());
+        } finally {
+            if ($previousToken === null) {
+                unset($_ENV['MOBILE_CLIENT_TOKEN']);
+            } else {
+                $_ENV['MOBILE_CLIENT_TOKEN'] = $previousToken;
+            }
+        }
+    }
+
+    public function testCreateProofOfWorkChallengeReturns429WhenIpRateLimited(): void
     {
         $mockAuthService = $this->createMock(AuthService::class);
-        $mockEmailService = $this->createMock(EmailService::class);
         $mockTurnstileService = $this->createMock(TurnstileService::class);
-        $mockAuditLogService = $this->createMock(AuditLogService::class);
-        $mockMessageService = $this->createMock(MessageService::class);
-        $mockR2Service = $this->createMock(CloudflareR2Service::class);
-        $mockLogger = $this->createMock(\Monolog\Logger::class);
-        $mockPdo = $this->createMock(\PDO::class);
-        $mockRegion = $this->createMock(RegionService::class);
         $mockPowService = $this->createMock(ProofOfWorkService::class);
-
-        $mockTurnstileService->expects($this->never())->method('verify');
         $mockPowService->expects($this->once())
-            ->method('verify')
-            ->with(null, null, 'auth.login')
-            ->willReturn(['success' => false, 'error' => 'missing-proof']);
+            ->method('createChallenge')
+            ->willThrowException(new \RuntimeException('Proof-of-work challenge rate limit exceeded'));
 
         $controller = new AuthController(
             $mockAuthService,
-            $mockEmailService,
+            $this->createMock(EmailService::class),
             $mockTurnstileService,
-            $mockAuditLogService,
-            $mockMessageService,
-            $mockR2Service,
-            $mockLogger,
-            $mockPdo,
+            $this->createMock(AuditLogService::class),
+            $this->createMock(MessageService::class),
+            $this->createMock(CloudflareR2Service::class),
+            $this->createMock(\Monolog\Logger::class),
+            $this->createMock(\PDO::class),
             $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
-            $mockRegion,
+            $this->createMock(RegionService::class),
             null,
             null,
             $mockPowService
         );
 
-        $request = makeRequest('POST', '/auth/login', [
-            'identifier' => 'john@example.com',
-            'password' => 'secret123',
-            'client_type' => 'mobile',
-        ], null, [
-            'X-Client-Platform' => ['mobile'],
-        ]);
-        $response = new \Slim\Psr7\Response();
-
-        $resp = $controller->login($request, $response);
-        $this->assertSame(400, $resp->getStatusCode());
+        $request = makeRequest('POST', '/auth/pow/challenge', ['scope' => 'auth.login']);
+        $resp = $controller->createProofOfWorkChallenge($request, new \Slim\Psr7\Response());
+        $this->assertSame(429, $resp->getStatusCode());
         $json = json_decode((string) $resp->getBody(), true);
         $this->assertFalse($json['success']);
-        $this->assertSame('POW_FAILED', $json['code']);
+        $this->assertSame('POW_RATE_LIMITED', $json['code']);
+    }
+
+    public function testLoginRequiresProofOfWorkForMobileRequests(): void
+    {
+        $previousToken = $_ENV['MOBILE_CLIENT_TOKEN'] ?? null;
+        $_ENV['MOBILE_CLIENT_TOKEN'] = 'expected-secret';
+
+        try {
+            $mockAuthService = $this->createMock(AuthService::class);
+            $mockEmailService = $this->createMock(EmailService::class);
+            $mockTurnstileService = $this->createMock(TurnstileService::class);
+            $mockAuditLogService = $this->createMock(AuditLogService::class);
+            $mockMessageService = $this->createMock(MessageService::class);
+            $mockR2Service = $this->createMock(CloudflareR2Service::class);
+            $mockLogger = $this->createMock(\Monolog\Logger::class);
+            $mockPdo = $this->createMock(\PDO::class);
+            $mockRegion = $this->createMock(RegionService::class);
+            $mockPowService = $this->createMock(ProofOfWorkService::class);
+
+            $mockTurnstileService->expects($this->never())->method('verify');
+            $mockPowService->expects($this->once())
+                ->method('verify')
+                ->with(null, null, 'auth.login')
+                ->willReturn(['success' => false, 'error' => 'missing-proof']);
+
+            $controller = new AuthController(
+                $mockAuthService,
+                $mockEmailService,
+                $mockTurnstileService,
+                $mockAuditLogService,
+                $mockMessageService,
+                $mockR2Service,
+                $mockLogger,
+                $mockPdo,
+                $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+                $mockRegion,
+                null,
+                null,
+                $mockPowService
+            );
+
+            $request = makeRequest('POST', '/auth/login', [
+                'identifier' => 'john@example.com',
+                'password' => 'secret123',
+                'client_type' => 'mobile',
+            ], null, [
+                'X-Client-Platform' => ['mobile'],
+                'X-Mobile-Client-Token' => ['expected-secret'],
+            ]);
+            $response = new \Slim\Psr7\Response();
+
+            $resp = $controller->login($request, $response);
+            $this->assertSame(400, $resp->getStatusCode());
+            $json = json_decode((string) $resp->getBody(), true);
+            $this->assertFalse($json['success']);
+            $this->assertSame('POW_FAILED', $json['code']);
+        } finally {
+            if ($previousToken === null) {
+                unset($_ENV['MOBILE_CLIENT_TOKEN']);
+            } else {
+                $_ENV['MOBILE_CLIENT_TOKEN'] = $previousToken;
+            }
+        }
     }
 }
