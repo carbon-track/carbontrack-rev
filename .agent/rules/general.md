@@ -74,7 +74,7 @@ The frontend is a modern SPA.
 - **Data Fetching**: Use the pre-configured `axios` instance for API requests, integrated with TanStack Query.
 - **Forms**: Use **React Hook Form** with **Zod** for schema-based validation.
 - **I18n**: The frontend uses **i18next** with namespace-based locale files. Treat `frontend/public/locales/<lng>/<namespace>.json` as the runtime translation source, keep translation keys namespaced (for example `home.hero.title`), and use page/component-specific `useTranslation([...])` calls instead of relying on a single global namespace. The previous monolithic locale layout is no longer the maintenance target.
-- **Bundled Critical Language Namespaces**: The homepage-critical namespaces (`home`, `nav`) are mirrored under `frontend/src/locales-generated/<lng>/` for supported languages and may be preloaded during i18n bootstrap for both the detected current language and, when different, the fallback/default language. Keep those generated mirrors aligned with `frontend/public/locales/<lng>/`.
+- **Bundled Critical Language Namespaces**: The homepage-critical namespaces (`home`, `nav`) are mirrored under `frontend/src/locales-generated/<lng>/` for supported languages and may be preloaded during i18n bootstrap for the detected current language and, when different, the fallback/default language to avoid extra fallback HTTP requests. Keep those generated mirrors aligned with `frontend/public/locales/<lng>/`.
 
 ### Developer Workflow
 - **Setup**: Run `pnpm install` in the `frontend` directory.
@@ -97,6 +97,7 @@ The mobile app is a React Native client built with Expo and lives under `mobile/
 - **Setup**: Run `pnpm install` in the `mobile` directory.
 - **Validate**: Run `pnpm exec expo config --type public` to verify Expo metadata and config parsing.
 - **Run Locally**: Use `pnpm start`, `pnpm android`, `pnpm ios`, or `pnpm web` from `mobile/` as appropriate.
+- **Keyboard-safe forms**: Any mobile screen, modal, or bottom sheet that contains `TextInput` must use an explicit keyboard-avoidance strategy (`KeyboardAvoidingView` with platform-specific behavior or an equivalent tested approach). Check exchange/confirmation modals as well as full-page forms so lower inputs remain visible when the keyboard is open.
 - **After Mobile Changes (Required)**: After modifying mobile components, navigation, API clients, state, or Expo config:
     - Run `pnpm install --frozen-lockfile` and `pnpm exec expo config --type public`.
     - Keep `mobile/pnpm-lock.yaml` committed and do not add `mobile/package-lock.json`.
@@ -106,6 +107,9 @@ The mobile app is a React Native client built with Expo and lives under `mobile/
 
 - The admin AI is a single multi-turn assistant entry. Do not introduce or document a separate long-lived `intent` product flow as the primary path.
 - The primary admin AI UX lives in the dedicated `/admin/ai` workspace. If you change workspace navigation, starter prompts, quick actions, or bootstrap payloads, update the backend catalogue, OpenAPI contract, and frontend workspace together.
+- The admin AI chat surface supports both the legacy JSON endpoint and `/api/v1/admin/ai/chat/stream` SSE. Keep stream event names, OpenAPI, frontend fetch parsing, and conversation timeline persistence aligned when changing agent run behavior.
+- Agent runs are persisted as run/step timelines and must render inline in the main `/admin/ai` conversation, not only in the inspector panel. Write actions must carry policy metadata (`approval_policy`, `autonomy_min_mode`, `rollback_strategy`, `side_effects`, `rollback_window_minutes`) in `backend/config/admin_ai_commands.json`, and rollback must create an inline confirmation proposal before executing a compensating action.
+- Text-mode tool result replay in `backend/config/admin_ai_commands.json` is explicitly configured with `tool_result_replay_max_bytes: 0` to preserve full tool payloads; LLM context capacity and audit log capture limits are separate concerns.
 - Cron management is part of the admin AI surface. If you add or rename cron read/write actions, sync `backend/config/admin_ai_commands.json`, `AdminAiReadModelService`, `AdminAiWriteActionService`, `/admin/cron`, and the documented admin cron APIs in one change.
 - Keep task-template prompts and action labels in `/admin/ai` operational and locale-aware. Prefer direct admin phrasing that reliably maps to backend `managementActions`, especially for Chinese prompts used by administrators in production.
 - Conversation history is reconstructed from logs. If you change admin AI message/audit semantics, keep `llm_logs`, `audit_logs`, and any conversation aggregation responses compatible.
@@ -129,3 +133,42 @@ The mobile app is a React Native client built with Expo and lives under `mobile/
         - Refactor: `重构代码，去芜存菁` (Refactor code)
         - Docs: `修订文档，文以载道` (Update documentation)
     - **Format**: Use the conventional `<type>(<scope>): <文言文主题>` pattern as in `fix(admin): 修复管理布局引用，兼修规约`; keep scope concise (e.g., `frontend`, `backend`, `ci`, `i18n`, `admin`, etc.).
+
+<!-- code-review-graph MCP tools -->
+## MCP Tools: code-review-graph
+
+**IMPORTANT: This project has a knowledge graph. ALWAYS use the
+code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
+the codebase.** The graph is faster, cheaper (fewer tokens), and gives
+you structural context (callers, dependents, test coverage) that file
+scanning cannot.
+
+### When to use graph tools FIRST
+
+- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
+- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
+- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
+- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
+- **Architecture questions**: `get_architecture_overview` + `list_communities`
+
+Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
+
+### Key Tools
+
+| Tool | Use when |
+|------|----------|
+| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
+| `get_review_context` | Need source snippets for review — token-efficient |
+| `get_impact_radius` | Understanding blast radius of a change |
+| `get_affected_flows` | Finding which execution paths are impacted |
+| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
+| `semantic_search_nodes` | Finding functions/classes by name or keyword |
+| `get_architecture_overview` | Understanding high-level codebase structure |
+| `refactor_tool` | Planning renames, finding dead code |
+
+### Workflow
+
+1. The graph auto-updates on file changes (via hooks).
+2. Use `detect_changes` for code review.
+3. Use `get_affected_flows` to understand impact.
+4. Use `query_graph` pattern="tests_for" to check coverage.
