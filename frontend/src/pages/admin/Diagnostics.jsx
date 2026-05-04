@@ -50,6 +50,27 @@ const REMOTE_SPEC_FALLBACK =
 const API_TEST_BASE_URL = API_BASE_URL;
 const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+// Origins for which the tester is allowed to attach the admin Bearer token.
+// Extending this list requires explicit security review (W-202).
+const TRUSTED_AUTH_ORIGINS = (() => {
+  try {
+    return new Set([new URL(API_BASE_URL).origin]);
+  } catch {
+    return new Set();
+  }
+})();
+
+const isTrustedAuthOrigin = (rawUrl) => {
+  if (typeof rawUrl !== 'string' || !rawUrl) {
+    return false;
+  }
+  try {
+    return TRUSTED_AUTH_ORIGINS.has(new URL(rawUrl).origin);
+  } catch {
+    return false;
+  }
+};
+
 const HTTP_METHOD_STYLES = {
   GET: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300',
   POST: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-300',
@@ -892,6 +913,20 @@ function RequestTester({ operation }) {
     }
 
     const url = buildFinalUrl(baseUrl, resolvedPath, queryObject);
+    const targetIsTrusted = isTrustedAuthOrigin(url);
+
+    // Cross-origin guard (W-202): never blindly send the admin bearer token to
+    // arbitrary URLs (eg. webhook.site) and require an explicit confirmation
+    // before issuing requests outside the API origin allowlist.
+    if (!targetIsTrusted) {
+      const confirmed = typeof window !== 'undefined' && typeof window.confirm === 'function'
+        ? window.confirm(t('admin.diagnostics.tester.messages.crossOriginConfirm', { url }))
+        : false;
+      if (!confirmed) {
+        return;
+      }
+    }
+
     setIsSending(true);
     try {
       const headers = Object.entries(headerObject).reduce((acc, [key, value]) => {
@@ -900,11 +935,26 @@ function RequestTester({ operation }) {
         return acc;
       }, {});
 
+      let stripped = false;
       if (includeAuth && typeof window !== 'undefined') {
-        const token = window.localStorage?.getItem('auth_token');
-        if (token) {
-          headers.Authorization = `Bearer ${token}`;
+        if (targetIsTrusted) {
+          const token = window.localStorage?.getItem('auth_token');
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+        } else {
+          // Strip every author-supplied Authorization-style header so a confirmed
+          // cross-origin probe still cannot leak the admin bearer token.
+          stripped = true;
+          Object.keys(headers).forEach((key) => {
+            if (/^authorization$/i.test(key)) {
+              delete headers[key];
+            }
+          });
         }
+      }
+      if (stripped) {
+        setError(t('admin.diagnostics.tester.messages.crossOriginAuthStripped'));
       }
 
       let bodyPayload;
