@@ -451,13 +451,14 @@ function PasskeySettings() {
   );
 }
 
-export default function ProfileSettingsScreen({ navigation, route }) {
+export default function ProfileSettingsScreen({ navigation, route, swipeBack: providedSwipeBack }) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const user = useAuthStore((state) => state.user);
   const [section, setSection] = useState(route?.params?.section || 'profile');
   const refreshQueries = useQueryClient();
-  const swipeBackHandlers = useEdgeSwipeBack(navigation);
+  const localSwipeBack = useEdgeSwipeBack(navigation);
+  const swipeBack = providedSwipeBack || localSwipeBack;
 
   const refresh = () => {
     refreshQueries.invalidateQueries({ queryKey: ['mobile-notification-preferences'] });
@@ -466,7 +467,7 @@ export default function ProfileSettingsScreen({ navigation, route }) {
   };
 
   return (
-    <ScreenBackground {...swipeBackHandlers}>
+    <ScreenBackground {...swipeBack.panHandlers} animatedStyle={swipeBack.animatedStyle}>
       <FrostedBackButton accessibilityLabel={t('record.back')} onPress={() => navigation?.goBack?.()} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <ScrollView

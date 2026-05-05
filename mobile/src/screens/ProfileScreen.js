@@ -260,12 +260,13 @@ function BadgeRow({ item, locked = false }) {
   const { colors } = useTheme();
   const badge = item.badge || item;
   const imageUri = resolveBadgeImage(badge);
+  const imageSource = imageUri ? { uri: imageUri, cache: 'force-cache' } : null;
   return (
     <GlassListItemSurface contentStyle={styles.badgeRowContent} style={styles.badgeRow}>
       <View style={[styles.badgeIcon, { backgroundColor: colors.surfaceStrong, borderColor: colors.borderStrong }]}>
-        {imageUri ? (
-          <ImageLightbox uri={imageUri} title={badgeName(badge, resolvedLanguage, t('profile.badges.unknown'))} style={styles.badgeImageButton} contentStyle={styles.badgeImageContent}>
-            <Image source={{ uri: imageUri }} style={[styles.badgeImage, locked ? styles.lockedImage : null]} />
+        {imageSource ? (
+          <ImageLightbox source={imageSource} uri={imageUri} style={styles.badgeImageButton} contentStyle={styles.badgeImageContent}>
+            <Image resizeMode="contain" source={imageSource} style={[styles.badgeImage, locked ? styles.lockedImage : null]} />
           </ImageLightbox>
         ) : (
           <Ionicons color={locked ? colors.textMuted : colors.primary} name={locked ? 'lock-closed-outline' : 'ribbon-outline'} size={26} />

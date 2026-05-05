@@ -179,7 +179,11 @@
     "permissionTitle": "需要照片权限",
     "permissionMessage": "请允许访问照片以保存图片。",
     "saveUnsupportedTitle": "当前平台不支持",
-    "saveUnsupportedMessage": "Web 端无法直接保存到系统相册，请在移动端使用。"
+    "saveUnsupportedMessage": "Web 端无法直接保存到系统相册，请在移动端使用。",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "rotateLeft": "逆时针旋转",
+    "rotateRight": "顺时针旋转"
   },
   "units": {
     "points": "积分",

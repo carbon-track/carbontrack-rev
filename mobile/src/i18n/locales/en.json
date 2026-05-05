@@ -179,7 +179,11 @@
     "permissionTitle": "Photo permission needed",
     "permissionMessage": "Allow photo access to save this image.",
     "saveUnsupportedTitle": "Unsupported here",
-    "saveUnsupportedMessage": "Web cannot save directly to the system photo library. Use the mobile app."
+    "saveUnsupportedMessage": "Web cannot save directly to the system photo library. Use the mobile app.",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "rotateLeft": "Rotate left",
+    "rotateRight": "Rotate right"
   },
   "units": {
     "points": "pts",

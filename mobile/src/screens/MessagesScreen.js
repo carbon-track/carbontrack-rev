@@ -244,8 +244,19 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
     <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalKeyboard}>
         <View style={styles.modalBackdrop}>
-          <GlassSurface style={styles.modalSheet} contentStyle={styles.modalContent}>
-            <View style={styles.modalHeader}>
+          <View
+            style={[
+              styles.modalSheet,
+              styles.ticketModalSheet,
+              styles.ticketModalFrame,
+              {
+                backgroundColor: colors.surfaceStrong,
+                borderColor: colors.border,
+              },
+              makeShadow(colors, colors.dark ? 0.32 : 0.16, 14),
+            ]}
+          >
+            <View style={[styles.modalHeader, styles.ticketModalHeader]}>
               <View style={styles.modalTitleBox}>
                 <Text style={[styles.modalTitle, { color: colors.text }]}>{t('support.newTicket')}</Text>
                 <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{t('support.newTicketSubtitle')}</Text>
@@ -254,7 +265,12 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
                 <Ionicons color={colors.text} name="close" size={20} />
               </GlassButtonSurface>
             </View>
-            <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              contentContainerStyle={[styles.ticketDetailContent, styles.ticketEditorContent]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              style={styles.ticketDetailScroll}
+            >
               <Field error={errors.subject ? t(errors.subject) : null} label={t('support.subject')} onChangeText={setSubject} value={subject} />
               <Field
                 error={errors.content ? t(errors.content) : null}
@@ -277,7 +293,7 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
               />
               <PrimaryButton loading={loading} onPress={submit} title={t('support.submitTicket')} />
             </ScrollView>
-          </GlassSurface>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -319,15 +335,16 @@ function TicketThreadMessage({ message }) {
       <Text style={[styles.bodyText, outgoing ? styles.threadTextOutgoing : null, { color: colors.text }]}>
         {message.body}
       </Text>
-      {message.attachments?.map((item) => (
-        item.isImage ? (
-          <ImageLightbox key={item.id} uri={item.url} title={item.name} style={styles.threadImageButton}>
-            <Image source={{ uri: item.url }} style={styles.threadImage} />
+      {message.attachments?.map((item) => {
+        const source = item.url ? { uri: item.url, cache: 'force-cache' } : null;
+        return item.isImage ? (
+          <ImageLightbox key={item.id} source={source} uri={item.url} style={styles.threadImageButton}>
+            <Image resizeMode="contain" source={source} style={styles.threadImage} />
           </ImageLightbox>
         ) : (
           <Text key={item.id} style={[styles.rowMeta, outgoing ? styles.threadTextOutgoing : null, { color: colors.textMuted }]}>{item.name}</Text>
-        )
-      ))}
+        );
+      })}
     </GlassListItemSurface>
   );
 
@@ -996,6 +1013,10 @@ const styles = StyleSheet.create({
   },
   ticketDetailScroll: {
     flexGrow: 0,
+  },
+  ticketEditorContent: {
+    gap: 13,
+    paddingTop: 12,
   },
   ticketModalFrame: {
     borderCurve: 'continuous',

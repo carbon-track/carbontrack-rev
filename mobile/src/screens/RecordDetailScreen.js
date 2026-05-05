@@ -51,12 +51,13 @@ function DetailRow({ label, value }) {
   );
 }
 
-export default function RecordDetailScreen({ route, navigation }) {
+export default function RecordDetailScreen({ route, navigation, swipeBack: providedSwipeBack }) {
   const { t, resolvedLanguage } = useI18n();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const isWide = width >= 720;
-  const swipeBackHandlers = useEdgeSwipeBack(navigation);
+  const localSwipeBack = useEdgeSwipeBack(navigation);
+  const swipeBack = providedSwipeBack || localSwipeBack;
   const id = route.params?.id;
   const initialRecord = route.params?.record;
 
@@ -71,9 +72,10 @@ export default function RecordDetailScreen({ route, navigation }) {
   const images = Array.isArray(record.images) ? record.images : [];
   const firstImage = images.find((item) => item?.url || item?.public_url);
   const imageUrl = firstImage?.url || firstImage?.public_url;
+  const imageSource = imageUrl ? { uri: imageUrl, cache: 'force-cache' } : null;
 
   return (
-    <ScreenBackground {...swipeBackHandlers}>
+    <ScreenBackground {...swipeBack.panHandlers} animatedStyle={swipeBack.animatedStyle}>
       <FrostedBackButton accessibilityLabel={t('record.back')} onPress={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={[styles.container, isWide ? styles.containerWide : null]}>
         <PageHeader
@@ -84,9 +86,9 @@ export default function RecordDetailScreen({ route, navigation }) {
 
         <GlassSurface contentStyle={styles.content}>
           {detailQuery.isFetching ? <ActivityIndicator color={colors.primary} /> : null}
-          {imageUrl ? (
-            <ImageLightbox uri={imageUrl} title={getRecordName(record, resolvedLanguage) || t('record.activityFallback')} style={styles.imageSurface} contentStyle={styles.imageContent}>
-              <Image source={{ uri: imageUrl }} style={styles.image} />
+          {imageSource ? (
+            <ImageLightbox source={imageSource} uri={imageUrl} style={styles.imageSurface} contentStyle={styles.imageContent}>
+              <Image resizeMode="contain" source={imageSource} style={styles.image} />
             </ImageLightbox>
           ) : null}
           <View style={[styles.metricGrid, isWide ? styles.metricGridWide : null]}>

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, UIManager, View } from 'react-native';
+import { ActivityIndicator, Animated, Platform, StyleSheet, UIManager, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,6 +7,7 @@ import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/
 import useAuthStore from '../store/authStore';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
+import { useEdgeSwipeBack } from '../lib/navigationGestures';
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -91,6 +92,7 @@ const tabIcons = {
 };
 
 function RecordStackNavigator({ navigation: tabNavigation, route }) {
+  const { colors, isDark } = useTheme();
   const [detailParams, setDetailParams] = React.useState(null);
   const navigation = React.useMemo(() => ({
     navigate: (name, params) => {
@@ -102,6 +104,7 @@ function RecordStackNavigator({ navigation: tabNavigation, route }) {
     },
     goBack: () => setDetailParams(null),
   }), [tabNavigation]);
+  const detailSwipeBack = useEdgeSwipeBack(navigation);
 
   React.useEffect(() => {
     if (route?.params?.detailRecord) {
@@ -110,13 +113,33 @@ function RecordStackNavigator({ navigation: tabNavigation, route }) {
   }, [route?.params?.detailRecord]);
 
   if (detailParams) {
-    return <RecordDetailScreen navigation={navigation} route={makeRoute(detailParams)} />;
+    return (
+      <View style={styles.stackHost}>
+        <View pointerEvents="none" style={styles.stackLayer}>
+          <RecordScreen navigation={navigation} route={makeRoute(route?.params || {})} />
+        </View>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.returnBackdrop,
+            { backgroundColor: isDark ? 'rgba(3, 12, 8, 0.62)' : 'rgba(231, 248, 239, 0.72)' },
+            detailSwipeBack.backdropStyle,
+          ]}
+        >
+          <View style={[styles.returnBackdropHighlight, { backgroundColor: colors.primarySoft }]} />
+        </Animated.View>
+        <View style={styles.stackLayer}>
+          <RecordDetailScreen navigation={navigation} route={makeRoute(detailParams)} swipeBack={detailSwipeBack} />
+        </View>
+      </View>
+    );
   }
 
   return <RecordScreen navigation={navigation} route={makeRoute(route?.params || {})} />;
 }
 
 function ProfileStackNavigator({ navigation: tabNavigation, route }) {
+  const { colors, isDark } = useTheme();
   const [settingsParams, setSettingsParams] = React.useState(null);
   const navigation = React.useMemo(() => ({
     navigate: (name, params) => {
@@ -128,6 +151,7 @@ function ProfileStackNavigator({ navigation: tabNavigation, route }) {
     },
     goBack: () => setSettingsParams(null),
   }), [tabNavigation]);
+  const settingsSwipeBack = useEdgeSwipeBack(navigation);
 
   React.useEffect(() => {
     if (route?.params?.settings) {
@@ -136,7 +160,26 @@ function ProfileStackNavigator({ navigation: tabNavigation, route }) {
   }, [route?.params?.settings]);
 
   if (settingsParams) {
-    return <ProfileSettingsScreen navigation={navigation} route={makeRoute(settingsParams)} />;
+    return (
+      <View style={styles.stackHost}>
+        <View pointerEvents="none" style={styles.stackLayer}>
+          <ProfileScreen navigation={navigation} route={makeRoute(route?.params || {})} />
+        </View>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.returnBackdrop,
+            { backgroundColor: isDark ? 'rgba(3, 12, 8, 0.62)' : 'rgba(231, 248, 239, 0.72)' },
+            settingsSwipeBack.backdropStyle,
+          ]}
+        >
+          <View style={[styles.returnBackdropHighlight, { backgroundColor: colors.primarySoft }]} />
+        </Animated.View>
+        <View style={styles.stackLayer}>
+          <ProfileSettingsScreen navigation={navigation} route={makeRoute(settingsParams)} swipeBack={settingsSwipeBack} />
+        </View>
+      </View>
+    );
   }
 
   return <ProfileScreen navigation={navigation} route={makeRoute(route?.params || {})} />;
@@ -273,5 +316,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
+  },
+  returnBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+    zIndex: 5,
+  },
+  returnBackdropHighlight: {
+    borderRadius: 260,
+    height: 420,
+    opacity: 0.34,
+    position: 'absolute',
+    right: -120,
+    top: 80,
+    width: 420,
+  },
+  stackHost: {
+    flex: 1,
+  },
+  stackLayer: {
+    ...StyleSheet.absoluteFillObject,
   },
 });

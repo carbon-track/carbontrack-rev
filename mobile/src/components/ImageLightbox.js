@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Platform, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Modal, Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassButtonSurface, GlassPressable, GlassSurface } from './Glass';
+import { GlassButtonSurface, GlassPressable } from './Glass';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
 
@@ -27,14 +27,20 @@ export default function ImageLightbox({
   contentStyle,
   disabled,
   imageStyle,
+  source,
   style,
-  title,
   uri,
 }) {
   const { t } = useI18n();
   const { colors } = useTheme();
+  const { height, width } = useWindowDimensions();
   const [visible, setVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const imageSource = useMemo(() => (
+    source || (uri ? { uri, cache: 'force-cache' } : null)
+  ), [source, uri]);
 
   const open = () => {
     if (uri && !disabled) {
@@ -76,6 +82,14 @@ export default function ImageLightbox({
       setSaving(false);
     }
   };
+  const close = () => {
+    setVisible(false);
+    setRotation(0);
+    setZoom(1);
+  };
+  const rotate = (step) => setRotation((value) => value + step);
+  const zoomIn = () => setZoom((value) => Math.min(4, Number((value + 0.25).toFixed(2))));
+  const zoomOut = () => setZoom((value) => Math.max(1, Number((value - 0.25).toFixed(2))));
 
   return (
     <>
@@ -90,30 +104,65 @@ export default function ImageLightbox({
         {children}
       </GlassPressable>
 
-      <Modal animationType="fade" onRequestClose={() => setVisible(false)} transparent visible={visible}>
+      <Modal animationType="fade" onRequestClose={close} statusBarTranslucent transparent visible={visible}>
         <View style={styles.backdrop}>
-          <GlassSurface effect="regular" style={styles.sheet} contentStyle={styles.content}>
-            <View style={styles.header}>
-              <View style={styles.titleBox}>
-                <Text style={[styles.title, { color: colors.text }]}>{title || t('media.previewTitle')}</Text>
-                <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t('media.previewSubtitle')}</Text>
-              </View>
-              <GlassButtonSurface contentStyle={styles.iconButtonContent} onPress={() => setVisible(false)} style={styles.iconButton}>
-                <Ionicons color={colors.text} name="close" size={22} />
-              </GlassButtonSurface>
-            </View>
+          <GlassButtonSurface
+            accessibilityLabel={t('messages.close')}
+            contentStyle={styles.iconButtonContent}
+            effect="regular"
+            onPress={close}
+            style={[styles.iconButton, styles.closeButton, { backgroundColor: colors.surfaceStrong }]}
+            tintColor={colors.surfaceStrong}
+          >
+            <Ionicons color={colors.text} name="close" size={22} />
+          </GlassButtonSurface>
 
-            {uri ? <Image resizeMode="contain" source={{ uri }} style={[styles.preview, imageStyle]} /> : null}
+          <ScrollView
+            alwaysBounceHorizontal={false}
+            alwaysBounceVertical={false}
+            centerContent
+            contentContainerStyle={[styles.viewerContent, { minHeight: height, minWidth: width }]}
+            maximumZoomScale={4}
+            minimumZoomScale={1}
+            pinchGestureEnabled
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            style={styles.viewer}
+          >
+            {imageSource ? (
+              <Image
+                resizeMode="contain"
+                source={imageSource}
+                style={[
+                  styles.preview,
+                  {
+                    height: height,
+                    transform: [{ rotate: `${rotation}deg` }, { scale: zoom }],
+                    width: width,
+                  },
+                  imageStyle,
+                ]}
+              />
+            ) : null}
+          </ScrollView>
 
-            <View style={styles.actions}>
-              <GlassButtonSurface onPress={save} disabled={saving} variant="primary">
-                <View style={styles.actionContent}>
-                  {saving ? <ActivityIndicator color={colors.primary} /> : <Ionicons color={colors.primary} name="download-outline" size={18} />}
-                  <Text style={[styles.actionText, { color: colors.primary }]}>{t('media.saveToLibrary')}</Text>
-                </View>
-              </GlassButtonSurface>
-            </View>
-          </GlassSurface>
+          <View style={styles.toolbar}>
+            <GlassButtonSurface accessibilityLabel={t('media.zoomOut')} contentStyle={styles.toolButtonContent} effect="regular" onPress={zoomOut} style={styles.toolButton} tintColor={colors.surfaceStrong}>
+              <Ionicons color={colors.text} name="remove" size={20} />
+            </GlassButtonSurface>
+            <GlassButtonSurface accessibilityLabel={t('media.zoomIn')} contentStyle={styles.toolButtonContent} effect="regular" onPress={zoomIn} style={styles.toolButton} tintColor={colors.surfaceStrong}>
+              <Ionicons color={colors.text} name="add" size={20} />
+            </GlassButtonSurface>
+            <GlassButtonSurface accessibilityLabel={t('media.rotateLeft')} contentStyle={styles.toolButtonContent} effect="regular" onPress={() => rotate(-90)} style={styles.toolButton} tintColor={colors.surfaceStrong}>
+              <Ionicons color={colors.text} name="return-up-back-outline" size={20} />
+            </GlassButtonSurface>
+            <GlassButtonSurface accessibilityLabel={t('media.rotateRight')} contentStyle={styles.toolButtonContent} effect="regular" onPress={() => rotate(90)} style={styles.toolButton} tintColor={colors.surfaceStrong}>
+              <Ionicons color={colors.text} name="return-up-forward-outline" size={20} />
+            </GlassButtonSurface>
+            <GlassButtonSurface accessibilityLabel={t('media.saveToLibrary')} contentStyle={styles.toolButtonContent} disabled={saving} effect="regular" onPress={save} style={[styles.toolButton, styles.saveButton]} tintColor={colors.primarySoft}>
+              {saving ? <ActivityIndicator color={colors.primary} /> : <Ionicons color={colors.primary} name="download-outline" size={20} />}
+            </GlassButtonSurface>
+          </View>
         </View>
       </Modal>
     </>
@@ -121,32 +170,9 @@ export default function ImageLightbox({
 }
 
 const styles = StyleSheet.create({
-  actionContent: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionText: {
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  actions: {
-    gap: 10,
-  },
   backdrop: {
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
     flex: 1,
-    justifyContent: 'center',
-    padding: 18,
-  },
-  content: {
-    gap: 14,
-    padding: 16,
-  },
-  header: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: 12,
   },
   iconButton: {
     borderRadius: 18,
@@ -162,26 +188,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 44,
   },
+  closeButton: {
+    position: 'absolute',
+    right: 16,
+    top: 54,
+    zIndex: 20,
+  },
   preview: {
-    aspectRatio: 1,
-    width: '100%',
+    alignSelf: 'center',
   },
-  sheet: {
-    borderRadius: 28,
-    maxHeight: '88%',
+  saveButton: {
+    borderColor: 'rgba(125, 245, 176, 0.7)',
   },
-  subtitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 18,
-    marginTop: 2,
+  toolbar: {
+    bottom: 28,
+    flexDirection: 'row',
+    gap: 8,
+    position: 'absolute',
+    right: 16,
+    zIndex: 20,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '900',
+  toolButton: {
+    borderRadius: 20,
+    height: 44,
+    minHeight: 44,
+    paddingHorizontal: 0,
+    width: 44,
   },
-  titleBox: {
+  toolButtonContent: {
+    alignItems: 'center',
+    flex: 0,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  viewer: {
     flex: 1,
-    minWidth: 0,
+  },
+  viewerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

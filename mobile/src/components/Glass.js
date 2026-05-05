@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { makeShadow, useTheme } from '../theme';
 
+const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
+
 const loadLiquidGlass = () => {
   try {
     const module = require('@callstack/liquid-glass');
@@ -65,22 +67,24 @@ function GlassLayer({
   );
 }
 
-export function ScreenBackground({ children, centered = false, style, ...safeAreaProps }) {
+export function ScreenBackground({ animatedStyle, children, centered = false, contentStyle, style, ...safeAreaProps }) {
   const { colors } = useTheme();
   return (
-    <SafeAreaView
+    <AnimatedSafeAreaView
       {...safeAreaProps}
       style={[
         styles.screen,
         { backgroundColor: colors.background },
-        centered ? styles.centered : null,
+        animatedStyle,
         style,
       ]}
     >
       <View pointerEvents="none" style={[styles.glowOne, { backgroundColor: colors.primarySoft }]} />
       <View pointerEvents="none" style={[styles.glowTwo, { backgroundColor: colors.surfaceStrong }]} />
-      {children}
-    </SafeAreaView>
+      <Animated.View style={[styles.screenContent, centered ? styles.centered : null, contentStyle]}>
+        {children}
+      </Animated.View>
+    </AnimatedSafeAreaView>
   );
 }
 
@@ -392,6 +396,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     overflow: 'hidden',
+  },
+  screenContent: {
+    flex: 1,
   },
   centered: {
     alignItems: 'center',
