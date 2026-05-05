@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassButtonSurface, GlassPressable } from './Glass';
@@ -111,8 +111,9 @@ export default function ImageLightbox({
             contentStyle={styles.iconButtonContent}
             effect="regular"
             onPress={close}
-            style={[styles.iconButton, styles.closeButton, { backgroundColor: colors.surfaceStrong }]}
+            style={[styles.iconButton, { backgroundColor: colors.surfaceStrong }]}
             tintColor={colors.surfaceStrong}
+            wrapperStyle={styles.closeButton}
           >
             <Ionicons color={colors.text} name="close" size={22} />
           </GlassButtonSurface>
@@ -189,6 +190,7 @@ const styles = StyleSheet.create({
     width: 44,
   },
   closeButton: {
+    elevation: 30,
     position: 'absolute',
     right: 16,
     top: 54,

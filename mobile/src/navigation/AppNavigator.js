@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Animated, Platform, StyleSheet, UIManager, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, UIManager, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -92,7 +92,6 @@ const tabIcons = {
 };
 
 function RecordStackNavigator({ navigation: tabNavigation, route }) {
-  const { colors, isDark } = useTheme();
   const [detailParams, setDetailParams] = React.useState(null);
   const navigation = React.useMemo(() => ({
     navigate: (name, params) => {
@@ -118,16 +117,6 @@ function RecordStackNavigator({ navigation: tabNavigation, route }) {
         <View pointerEvents="none" style={styles.stackLayer}>
           <RecordScreen navigation={navigation} route={makeRoute(route?.params || {})} />
         </View>
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.returnBackdrop,
-            { backgroundColor: isDark ? 'rgba(3, 12, 8, 0.62)' : 'rgba(231, 248, 239, 0.72)' },
-            detailSwipeBack.backdropStyle,
-          ]}
-        >
-          <View style={[styles.returnBackdropHighlight, { backgroundColor: colors.primarySoft }]} />
-        </Animated.View>
         <View style={styles.stackLayer}>
           <RecordDetailScreen navigation={navigation} route={makeRoute(detailParams)} swipeBack={detailSwipeBack} />
         </View>
@@ -139,7 +128,6 @@ function RecordStackNavigator({ navigation: tabNavigation, route }) {
 }
 
 function ProfileStackNavigator({ navigation: tabNavigation, route }) {
-  const { colors, isDark } = useTheme();
   const [settingsParams, setSettingsParams] = React.useState(null);
   const navigation = React.useMemo(() => ({
     navigate: (name, params) => {
@@ -165,16 +153,6 @@ function ProfileStackNavigator({ navigation: tabNavigation, route }) {
         <View pointerEvents="none" style={styles.stackLayer}>
           <ProfileScreen navigation={navigation} route={makeRoute(route?.params || {})} />
         </View>
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.returnBackdrop,
-            { backgroundColor: isDark ? 'rgba(3, 12, 8, 0.62)' : 'rgba(231, 248, 239, 0.72)' },
-            settingsSwipeBack.backdropStyle,
-          ]}
-        >
-          <View style={[styles.returnBackdropHighlight, { backgroundColor: colors.primarySoft }]} />
-        </Animated.View>
         <View style={styles.stackLayer}>
           <ProfileSettingsScreen navigation={navigation} route={makeRoute(settingsParams)} swipeBack={settingsSwipeBack} />
         </View>
@@ -191,6 +169,7 @@ function MainTabs() {
   const { Navigator: Tab, nativeTabsEnabled } = React.useMemo(createTabs, []);
 
   const sharedTabOptions = {
+    lazy: false,
     sceneStyle: {
       backgroundColor: colors.background,
     },
@@ -296,7 +275,7 @@ export default function AppNavigator() {
               ...navigationTheme.colors,
               background: colors.background,
               border: colors.border,
-              card: colors.surfaceStrong,
+              card: colors.background,
               notification: colors.primary,
               primary: colors.primary,
               text: colors.text,
@@ -323,21 +302,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  returnBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-    zIndex: 5,
-  },
-  returnBackdropHighlight: {
-    borderRadius: 260,
-    height: 420,
-    opacity: 0.34,
-    position: 'absolute',
-    right: -120,
-    top: 80,
-    width: 420,
-  },
   stackHost: {
+    backgroundColor: 'transparent',
     flex: 1,
   },
   stackLayer: {

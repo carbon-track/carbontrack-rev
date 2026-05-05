@@ -61,6 +61,11 @@ export function useEdgeSwipeBack(navigation) {
   }).panHandlers, [navigation, translateX]);
 
   const animatedStyle = React.useMemo(() => ({
+    opacity: translateX.interpolate({
+      inputRange: [0, (Dimensions.get('window').width || 360) / 2, Dimensions.get('window').width || 360],
+      outputRange: [1, 0.58, 0],
+      extrapolate: 'clamp',
+    }),
     transform: [{ translateX }],
   }), [translateX]);
   const backdropStyle = React.useMemo(() => ({

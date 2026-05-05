@@ -303,6 +303,7 @@ export default function RecordScreen({ navigation, route }) {
                   onPress={() => setDate(todayString())}
                   style={styles.todayButton}
                   contentStyle={styles.todayButtonContent}
+                  wrapperStyle={styles.todayButtonWrapper}
                 >
                   <Ionicons color={colors.primary} name="calendar-outline" size={17} />
                   <Text style={[styles.todayButtonText, { color: colors.text }]}>{t('record.useToday')}</Text>
@@ -409,19 +410,24 @@ const styles = StyleSheet.create({
   },
   todayButton: {
     borderRadius: 16,
-    minHeight: 50,
+    height: 54,
+    minHeight: 54,
   },
   todayButtonContent: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 6,
     justifyContent: 'center',
-    minHeight: 50,
+    height: 54,
+    minHeight: 54,
     paddingHorizontal: 12,
   },
   todayButtonText: {
     fontSize: 13,
     fontWeight: '800',
+  },
+  todayButtonWrapper: {
+    alignSelf: 'flex-end',
   },
   descriptionInput: {
     minHeight: 86,
