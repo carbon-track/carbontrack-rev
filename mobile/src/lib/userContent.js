@@ -1,4 +1,14 @@
 const DEFAULT_PAGINATION = { page: 1, pages: 1, total: 0 };
+const DEFAULT_NOTIFICATION_CATEGORIES = [
+  'verification',
+  'security',
+  'system',
+  'transaction',
+  'activity',
+  'announcement',
+  'message',
+  'support',
+];
 
 const unwrapPayload = (payload) => {
   if (payload && typeof payload === 'object' && 'data' in payload && !Array.isArray(payload)) {
@@ -12,9 +22,9 @@ const asArray = (value) => (Array.isArray(value) ? value : []);
 const asBoolean = (value) => value === true || value === 1 || value === '1';
 
 const normalizePagination = (pagination, fallbackTotal = 0) => ({
-  page: Number(pagination?.page ?? DEFAULT_PAGINATION.page),
+  page: Number(pagination?.page ?? pagination?.current_page ?? DEFAULT_PAGINATION.page),
   pages: Number(pagination?.pages ?? pagination?.total_pages ?? DEFAULT_PAGINATION.pages),
-  total: Number(pagination?.total ?? fallbackTotal),
+  total: Number(pagination?.total ?? pagination?.total_items ?? fallbackTotal),
 });
 
 const normalizeMessage = (message = {}) => ({
@@ -105,15 +115,60 @@ function normalizeTicketDetail(payload) {
 
 function normalizeNotificationPreferences(payload) {
   const source = unwrapPayload(payload) || {};
+  const preferences = source.preferences || source.items || source.data || source;
+  const byCategory = {};
+  if (Array.isArray(preferences)) {
+    preferences.forEach((item = {}) => {
+      if (item.category) {
+        byCategory[item.category] = item;
+      }
+    });
+  } else if (preferences && typeof preferences === 'object') {
+    Object.entries(preferences).forEach(([category, value]) => {
+      byCategory[category] = { category, ...(value && typeof value === 'object' ? value : { enabled: value }) };
+    });
+  }
+
+  const categories = Array.from(new Set([...DEFAULT_NOTIFICATION_CATEGORIES, ...Object.keys(byCategory)]));
+  return categories.map((category) => {
+    const item = byCategory[category] || {};
+    const emailEnabled = item.email_enabled ?? item.emailEnabled ?? item.enabled ?? item.is_enabled ?? true;
+    return {
+      category,
+      label: item.label || '',
+      emailEnabled: asBoolean(emailEnabled),
+      pushEnabled: asBoolean(item.push_enabled ?? item.pushEnabled),
+      enabled: asBoolean(emailEnabled),
+      locked: asBoolean(item.locked || item.is_locked),
+    };
+  }).filter((item) => item.category);
+}
+
+function normalizeSecurityActivityPayload(payload) {
+  const source = unwrapPayload(payload) || {};
   const list = Array.isArray(source)
     ? source
-    : asArray(source.preferences || source.items || source.data);
+    : asArray(source.items || source.activities || source.data);
 
-  return list.map((item = {}) => ({
-    category: item.category || '',
-    enabled: item.enabled !== undefined ? asBoolean(item.enabled) : asBoolean(item.email_enabled),
+  return {
+    filters: source.filters || {},
+    items: list,
+    pagination: normalizePagination(source.pagination || payload?.pagination, list.length),
+  };
+}
+
+function normalizePasskeysPayload(payload) {
+  const source = unwrapPayload(payload) || {};
+  return (Array.isArray(source)
+    ? source
+    : asArray(source.passkeys || source.items || source.data)).map((item = {}) => ({
+    ...item,
+    id: item.id,
+    label: item.label || '',
+    last_used_at: item.last_used_at || item.lastUsedAt || '',
+    created_at: item.created_at || item.createdAt || '',
     locked: asBoolean(item.locked || item.is_locked),
-  })).filter((item) => item.category);
+  }));
 }
 
 function serializeNotificationPreferences(preferences) {
@@ -125,7 +180,7 @@ function serializeNotificationPreferences(preferences) {
     category: item.category || '',
     email_enabled: item.email_enabled !== undefined
       ? asBoolean(item.email_enabled)
-      : asBoolean(item.enabled),
+      : asBoolean(item.emailEnabled ?? item.enabled),
   })).filter((item) => item.category);
 }
 
@@ -160,6 +215,8 @@ module.exports = {
   normalizeMessagesPayload,
   normalizeNotificationPreferences,
   normalizePagination,
+  normalizePasskeysPayload,
+  normalizeSecurityActivityPayload,
   normalizeTicket,
   normalizeTicketDetail,
   normalizeTicketsPayload,

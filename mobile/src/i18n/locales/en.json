@@ -380,11 +380,17 @@
       "testSent": "Sent",
       "testSentMessage": "The test email was sent.",
       "testFailed": "Test email failed",
+      "defaultDescription": "This email category follows the same web notification preference.",
       "categories": {
+        "verification": { "label": "Account verification", "description": "Registration, email verification, and account confirmation emails." },
         "system": { "label": "System notices", "description": "Account, security, and platform updates." },
         "security": { "label": "Security alerts", "description": "Sign-ins, passwords, and passkey changes." },
-        "review": { "label": "Review results", "description": "Low-carbon record review progress and results." },
+        "transaction": { "label": "Points and exchanges", "description": "Point changes, reward exchanges, and order status updates." },
+        "activity": { "label": "Low-carbon records", "description": "Record submissions, review progress, and review results." },
+        "announcement": { "label": "Announcements", "description": "Platform announcements, campaigns, and operational messages." },
+        "message": { "label": "In-app messages", "description": "Admin direct messages and important message alerts." },
         "support": { "label": "Support replies", "description": "Ticket replies and status updates." },
+        "review": { "label": "Review results", "description": "Low-carbon record review progress and results." },
         "achievement": { "label": "Achievements", "description": "Badge awards and point rewards." },
         "marketing": { "label": "Campaign updates", "description": "Activity, store, and product announcements." }
       }
@@ -458,6 +464,9 @@
     "detailTitle": "Message detail",
     "noContent": "No content.",
     "markAllRead": "Mark all read",
+    "markRead": "Mark read",
+    "delete": "Delete message",
+    "close": "Close",
     "deleteFailed": "Failed to delete message",
     "filters": {
       "all": "All",
@@ -475,6 +484,8 @@
     "submitTicket": "Submit ticket",
     "createFailed": "Ticket creation failed",
     "ticketDetail": "Ticket detail",
+    "conversation": "Conversation",
+    "messagesCount": "{{count}} messages",
     "reply": "Reply",
     "addImage": "Add image attachment",
     "submitReply": "Send reply",

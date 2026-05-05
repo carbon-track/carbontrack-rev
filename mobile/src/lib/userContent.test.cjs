@@ -4,6 +4,8 @@ const test = require('node:test');
 const {
   normalizeMessagesPayload,
   normalizeNotificationPreferences,
+  normalizePasskeysPayload,
+  normalizeSecurityActivityPayload,
   normalizeTicketDetail,
   serializeNotificationPreferences,
   validateTicketDraft,
@@ -58,32 +60,73 @@ test('normalizeTicketDetail preserves thread messages and image attachment metad
   assert.equal(detail.messages[0].attachments[0].url, 'https://cdn.example/proof.png');
 });
 
-test('normalizeNotificationPreferences gives stable editable rows', () => {
+test('normalizeNotificationPreferences gives stable editable rows with defaults and switch fields', () => {
   const preferences = normalizeNotificationPreferences({
-    preferences: [
-      { category: 'system', enabled: 1, locked: true },
-      { category: 'review', email_enabled: false },
-    ],
+    preferences: {
+      system: { email_enabled: 1, locked: true },
+      transaction: { email_enabled: false },
+    },
   });
 
-  assert.deepEqual(preferences, [
-    { category: 'system', enabled: true, locked: true },
-    { category: 'review', enabled: false, locked: false },
+  assert.deepEqual(preferences.map((item) => item.category), [
+    'verification',
+    'security',
+    'system',
+    'transaction',
+    'activity',
+    'announcement',
+    'message',
+    'support',
   ]);
+  assert.equal(preferences[2].emailEnabled, true);
+  assert.equal(preferences[2].enabled, true);
+  assert.equal(preferences[2].locked, true);
+  assert.equal(preferences[3].emailEnabled, false);
+  assert.equal(preferences[7].emailEnabled, true);
+});
+
+test('normalizeSecurityActivityPayload accepts backend timeline envelopes', () => {
+  const payload = normalizeSecurityActivityPayload({
+    items: [{ id: 3, action: 'password_changed' }],
+    pagination: { current_page: 1, total_items: 1, total_pages: 1 },
+  });
+
+  assert.equal(payload.items.length, 1);
+  assert.equal(payload.items[0].action, 'password_changed');
+  assert.deepEqual(payload.pagination, { page: 1, pages: 1, total: 1 });
+});
+
+test('normalizePasskeysPayload accepts current-user passkey envelopes', () => {
+  const passkeys = normalizePasskeysPayload({
+    passkeys: [{ id: 5, label: 'Phone', last_used_at: '2026-05-04 10:00:00' }],
+  });
+
+  assert.equal(passkeys.length, 1);
+  assert.equal(passkeys[0].label, 'Phone');
+  assert.equal(passkeys[0].last_used_at, '2026-05-04 10:00:00');
 });
 
 test('serializeNotificationPreferences sends backend email_enabled flags', () => {
   const preferences = normalizeNotificationPreferences({
     preferences: [
-      { category: 'review', email_enabled: false },
+      { category: 'transaction', email_enabled: false },
       { category: 'system', enabled: true, locked: true },
     ],
   });
 
-  assert.deepEqual(serializeNotificationPreferences(preferences), [
-    { category: 'review', email_enabled: false },
-    { category: 'system', email_enabled: true },
+  const serialized = serializeNotificationPreferences(preferences);
+  assert.deepEqual(serialized.map((item) => item.category), [
+    'verification',
+    'security',
+    'system',
+    'transaction',
+    'activity',
+    'announcement',
+    'message',
+    'support',
   ]);
+  assert.equal(serialized.find((item) => item.category === 'transaction').email_enabled, false);
+  assert.equal(serialized.find((item) => item.category === 'system').email_enabled, true);
 });
 
 test('validateTicketDraft returns localized validation keys before submitting', () => {

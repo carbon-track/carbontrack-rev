@@ -2,6 +2,8 @@ import apiClient from './client';
 
 const {
   normalizeNotificationPreferences,
+  normalizePasskeysPayload,
+  normalizeSecurityActivityPayload,
   serializeNotificationPreferences,
 } = require('../lib/userContent');
 
@@ -18,8 +20,8 @@ export const profileApi = {
     })),
   ),
   sendNotificationTestEmail: async (category) => unwrap(await apiClient.post('/users/me/notification-preferences/test-email', { category })),
-  getSecurityActivity: async (params = {}) => unwrap(await apiClient.get('/users/me/security-activity', { params })),
-  listPasskeys: async () => unwrap(await apiClient.get('/users/me/passkeys')),
+  getSecurityActivity: async (params = {}) => normalizeSecurityActivityPayload(unwrap(await apiClient.get('/users/me/security-activity', { params }))),
+  listPasskeys: async () => normalizePasskeysPayload(unwrap(await apiClient.get('/users/me/passkeys'))),
   getPasskeyRegistrationOptions: async () => unwrap(await apiClient.post('/users/me/passkeys/registration/options')),
   registerPasskey: async (payload) => unwrap(await apiClient.post('/users/me/passkeys/registration/verify', payload)),
   updatePasskey: async (id, payload) => unwrap(await apiClient.patch(`/users/me/passkeys/${id}`, payload)),

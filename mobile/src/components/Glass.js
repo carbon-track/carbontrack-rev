@@ -317,21 +317,28 @@ export function GlassPressable({
 
 export function GlassButtonSurface({
   children,
+  wrapperStyle,
   contentStyle,
   disabled,
   effect = 'clear',
   onPress,
+  onPressIn,
   style,
+  tintColor,
   variant = 'secondary',
+  ...pressableProps
 }) {
   const { colors } = useTheme();
   const primary = variant === 'primary';
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={onPressIn}
       disabled={disabled}
+      {...pressableProps}
       style={({ pressed }) => [
         styles.pressableWrapper,
+        wrapperStyle,
         pressed ? { opacity: 0.78 } : null,
         disabled ? { opacity: 0.55 } : null,
       ]}
@@ -348,7 +355,7 @@ export function GlassButtonSurface({
           },
           style,
         ]}
-        tintColor={primary ? colors.primarySoft : colors.surfaceMuted}
+        tintColor={tintColor || (primary ? colors.primarySoft : colors.surfaceMuted)}
       >
         {children}
       </GlassLayer>
@@ -419,7 +426,7 @@ const styles = StyleSheet.create({
   },
   segmentedContent: {
     flexDirection: 'row',
-    minHeight: 48,
+    minHeight: 52,
     padding: 4,
     position: 'relative',
   },
@@ -442,13 +449,18 @@ const styles = StyleSheet.create({
   },
   segmentOption: {
     alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: 10,
   },
   segmentText: {
     fontSize: 13,
     fontWeight: '900',
+    includeFontPadding: false,
+    lineHeight: 17,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   fieldSurface: {
     borderRadius: 18,
@@ -473,6 +485,7 @@ const styles = StyleSheet.create({
   },
   buttonContentSurface: {
     alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
   },
   buttonSurface: {

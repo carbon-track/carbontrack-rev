@@ -98,7 +98,7 @@ export default function ImageLightbox({
                 <Text style={[styles.title, { color: colors.text }]}>{title || t('media.previewTitle')}</Text>
                 <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t('media.previewSubtitle')}</Text>
               </View>
-              <GlassButtonSurface onPress={() => setVisible(false)} style={styles.iconButton}>
+              <GlassButtonSurface contentStyle={styles.iconButtonContent} onPress={() => setVisible(false)} style={styles.iconButton}>
                 <Ionicons color={colors.text} name="close" size={22} />
               </GlassButtonSurface>
             </View>
@@ -150,9 +150,17 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     borderRadius: 18,
-    height: 42,
+    height: 44,
+    minHeight: 44,
     paddingHorizontal: 0,
-    width: 42,
+    width: 44,
+  },
+  iconButtonContent: {
+    alignItems: 'center',
+    flex: 0,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
   },
   preview: {
     aspectRatio: 1,

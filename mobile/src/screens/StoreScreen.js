@@ -251,7 +251,7 @@ function ProductFilterMenu({
                   {t('store.filters.menuSubtitle', { category: activeCategoryLabel, sort: sortLabel })}
                 </Text>
               </View>
-              <GlassButtonSurface onPress={() => setVisible(false)} style={styles.closeButton}>
+              <GlassButtonSurface contentStyle={styles.closeButtonContent} onPress={() => setVisible(false)} style={styles.closeButton}>
                 <Ionicons color={colors.text} name="close" size={22} />
               </GlassButtonSurface>
             </View>
@@ -325,7 +325,7 @@ function OptionMenu({ icon = 'filter-outline', label, onChange, options, title, 
                 <Text style={[styles.menuTitle, { color: colors.text }]}>{title}</Text>
                 <Text style={[styles.menuSubtitle, { color: colors.textMuted }]}>{label || selected?.label}</Text>
               </View>
-              <GlassButtonSurface onPress={() => setVisible(false)} style={styles.closeButton}>
+              <GlassButtonSurface contentStyle={styles.closeButtonContent} onPress={() => setVisible(false)} style={styles.closeButton}>
                 <Ionicons color={colors.text} name="close" size={22} />
               </GlassButtonSurface>
             </View>
@@ -421,7 +421,7 @@ function ExchangeModal({ product, visible, onClose, onConfirm, loading, userEmai
                 <Text style={[styles.modalTitle, { color: colors.text }]}>{t('store.exchange.title')}</Text>
                 <Text style={[styles.modalSubtitle, { color: colors.textMuted }]}>{t('store.exchange.subtitle')}</Text>
               </View>
-              <GlassButtonSurface onPress={onClose} style={styles.closeButton}>
+              <GlassButtonSurface contentStyle={styles.closeButtonContent} onPress={onClose} style={styles.closeButton}>
                 <Ionicons color={colors.text} name="close" size={22} />
               </GlassButtonSurface>
             </View>
@@ -1213,10 +1213,17 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     borderRadius: 19,
-    height: 38,
-    minHeight: 38,
+    height: 44,
+    minHeight: 44,
     paddingHorizontal: 0,
-    width: 38,
+    width: 44,
+  },
+  closeButtonContent: {
+    alignItems: 'center',
+    flex: 0,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
   },
   exchangeProduct: {
     borderRadius: 18,

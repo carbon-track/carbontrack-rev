@@ -28,7 +28,7 @@ import { profileApi } from '../api/profile';
 import { schoolApi } from '../api/schools';
 import useAuthStore from '../store/authStore';
 import { useI18n } from '../i18n';
-import { useTheme } from '../theme';
+import { makeShadow, useTheme } from '../theme';
 import { getApiErrorMessage as apiError } from '../lib/apiError';
 import { registerWithPasskey } from '../lib/passkey';
 
@@ -39,10 +39,32 @@ const securityTypes = ['all', 'sign_ins', 'passkey_changes', 'password_changes',
 const securityPeriods = ['all', '7d', '30d', '90d'];
 
 const displayDateTime = (value) => String(value || '').replace('T', ' ').slice(0, 16) || '--';
+const securityActivityTime = (item = {}) => (
+  item.occurred_at || item.occurredAt || item.created_at || item.createdAt || item.timestamp || item.time || item.attempted_at || item.attemptedAt || item.logged_at || item.loggedAt
+);
+const securityActivityIp = (item = {}) => (
+  item.ip_address || item.ipAddress || item.ip || item.client_ip || item.clientIp || item.remote_ip || item.remoteIp || item.metadata?.ip_address || item.metadata?.ipAddress
+);
+const securityActivityMeta = (item = {}) => [
+  displayDateTime(securityActivityTime(item)),
+  securityActivityIp(item),
+].filter((value) => value && value !== '--').join(' / ') || '--';
 const extractList = (payload, key) => {
   const source = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
   return Array.isArray(source) ? source : (source?.[key] || source?.items || source?.data || []);
 };
+const humanizeKey = (value) => String(value || '')
+  .split(/[_-]+/)
+  .filter(Boolean)
+  .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+  .join(' ');
+const translatedOrFallback = (t, key, fallback) => {
+  const value = t(key);
+  return value === key ? fallback : value;
+};
+const notificationCategoryText = (t, category, field, fallback) => (
+  translatedOrFallback(t, `profile.notifications.categories.${category}.${field}`, fallback || humanizeKey(category))
+);
 
 function SectionPills({ active, onChange, options, prefix }) {
   const { colors } = useTheme();
@@ -53,10 +75,12 @@ function SectionPills({ active, onChange, options, prefix }) {
         {options.map((value) => (
           <GlassPressable
             key={value}
+            contentStyle={styles.pillContent}
             onPress={() => onChange(value)}
+            wrapperStyle={styles.pillWrapper}
             style={[styles.pill, active === value ? { borderColor: colors.primary, borderWidth: 1 } : null]}
           >
-            <Text style={[styles.pillText, { color: active === value ? colors.primary : colors.text }]}>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.pillText, { color: active === value ? colors.primary : colors.text }]}>
               {t(`${prefix}.${value}`)}
             </Text>
           </GlassPressable>
@@ -242,9 +266,12 @@ function NotificationSettings() {
 
   const toggle = (category) => {
     setDraft((current) => current.map((item) => (
-      item.category === category && !item.locked ? { ...item, enabled: !item.enabled } : item
+      item.category === category && !item.locked
+        ? { ...item, emailEnabled: !item.emailEnabled, enabled: !item.emailEnabled }
+        : item
     )));
   };
+  const testCategory = draft.find((item) => !item.locked)?.category || draft[0]?.category;
 
   return (
     <GlassSurface contentStyle={styles.card}>
@@ -254,22 +281,26 @@ function NotificationSettings() {
         {draft.map((item) => (
           <GlassListItemSurface key={item.category} contentStyle={styles.switchRow}>
             <View style={styles.rowTitleBox}>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>{t(`profile.notifications.categories.${item.category}.label`)}</Text>
-              <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{t(`profile.notifications.categories.${item.category}.description`)}</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>
+                {notificationCategoryText(t, item.category, 'label', item.label)}
+              </Text>
+              <Text style={[styles.rowMeta, { color: colors.textMuted }]}>
+                {notificationCategoryText(t, item.category, 'description', t('profile.notifications.defaultDescription'))}
+              </Text>
             </View>
             <Switch
               disabled={item.locked}
               onValueChange={() => toggle(item.category)}
-              thumbColor={item.enabled ? colors.primary : colors.textMuted}
-              value={item.enabled}
+              thumbColor={item.emailEnabled ? colors.primary : colors.textMuted}
+              value={item.emailEnabled}
             />
           </GlassListItemSurface>
         ))}
       </View>
       <View style={styles.actions}>
         <PrimaryButton loading={saveMutation.isPending} onPress={() => saveMutation.mutate(draft)} title={t('profile.notifications.save')} />
-        {draft[0] ? (
-          <SecondaryButton loading={testMutation.isPending} onPress={() => testMutation.mutate(draft[0].category)} title={t('profile.notifications.testEmail')} />
+        {testCategory ? (
+          <SecondaryButton loading={testMutation.isPending} onPress={() => testMutation.mutate(testCategory)} title={t('profile.notifications.testEmail')} />
         ) : null}
       </View>
     </GlassSurface>
@@ -287,8 +318,7 @@ function SecurityActivity() {
     queryKey: ['mobile-security-activity', period, type],
   });
 
-  const payload = query.data?.data && typeof query.data.data === 'object' ? query.data.data : query.data;
-  const items = Array.isArray(payload?.items) ? payload.items : [];
+  const items = Array.isArray(query.data?.items) ? query.data.items : [];
 
   return (
     <GlassSurface contentStyle={styles.card}>
@@ -302,7 +332,7 @@ function SecurityActivity() {
             <Ionicons color={colors.primary} name="shield-checkmark-outline" size={20} />
             <View style={styles.rowTitleBox}>
               <Text style={[styles.rowTitle, { color: colors.text }]}>{item.action || item.event_type || item.type || t('profile.security.unknownActivity')}</Text>
-              <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{displayDateTime(item.created_at || item.createdAt)} / {item.ip_address || item.ip || '--'}</Text>
+              <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{securityActivityMeta(item)}</Text>
             </View>
           </GlassListItemSurface>
         )) : (
@@ -324,7 +354,7 @@ function PasskeySettings() {
     queryFn: profileApi.listPasskeys,
     queryKey: ['mobile-passkeys'],
   });
-  const passkeys = extractList(query.data, 'passkeys');
+  const passkeys = Array.isArray(query.data) ? query.data : extractList(query.data, 'passkeys');
 
   const registerMutation = useMutation({
     mutationFn: async () => {
@@ -426,6 +456,7 @@ export default function ProfileSettingsScreen({ navigation, route }) {
   const user = useAuthStore((state) => state.user);
   const [section, setSection] = useState(route?.params?.section || 'profile');
   const refreshQueries = useQueryClient();
+  const backButtonGlass = colors.dark ? 'rgba(18, 44, 32, 0.96)' : 'rgba(248, 251, 248, 0.96)';
 
   const refresh = () => {
     refreshQueries.invalidateQueries({ queryKey: ['mobile-notification-preferences'] });
@@ -435,16 +466,31 @@ export default function ProfileSettingsScreen({ navigation, route }) {
 
   return (
     <ScreenBackground>
+      <GlassButtonSurface
+        contentStyle={styles.backButtonContent}
+        effect="regular"
+        onPress={() => navigation?.goBack?.()}
+        style={[
+          styles.backButton,
+          {
+            backgroundColor: backButtonGlass,
+            borderColor: colors.borderStrong,
+            borderWidth: 1.5,
+          },
+          makeShadow(colors, colors.dark ? 0.34 : 0.18, 12),
+        ]}
+        tintColor={backButtonGlass}
+        wrapperStyle={styles.floatingBackButton}
+      >
+        <Ionicons color={colors.primary} name="chevron-back" size={18} />
+        <Text style={[styles.backText, { color: colors.primary }]}>{t('record.back')}</Text>
+      </GlassButtonSurface>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} tintColor={colors.primary} />}
         >
-          <GlassButtonSurface onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-            <Ionicons color={colors.primary} name="chevron-back" size={18} />
-            <Text style={[styles.backText, { color: colors.primary }]}>{t('record.back')}</Text>
-          </GlassButtonSurface>
           <PageHeader eyebrow={t('profile.settings.eyebrow')} title={t('profile.settings.title')} subtitle={t('profile.settings.subtitle')} />
           <SegmentedControl
             onChange={setSection}
@@ -477,17 +523,22 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   backButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
     borderRadius: 999,
-    flexDirection: 'row',
-    gap: 5,
     minHeight: 38,
     paddingHorizontal: 12,
+    width: 'auto',
+  },
+  backButtonContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+    justifyContent: 'center',
   },
   backText: {
     fontSize: 14,
     fontWeight: '900',
+    includeFontPadding: false,
+    lineHeight: 18,
   },
   card: {
     gap: 14,
@@ -496,6 +547,7 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 18,
     paddingBottom: 110,
+    paddingTop: 82,
   },
   emptyText: {
     fontSize: 14,
@@ -505,6 +557,12 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  floatingBackButton: {
+    left: 18,
+    position: 'absolute',
+    top: 54,
+    zIndex: 20,
   },
   identityGrid: {
     gap: 10,
@@ -530,8 +588,16 @@ const styles = StyleSheet.create({
   },
   pill: {
     borderRadius: 999,
-    minHeight: 38,
+    minHeight: 42,
     paddingHorizontal: 14,
+  },
+  pillContent: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  pillWrapper: {
+    alignSelf: 'flex-start',
   },
   pills: {
     flexDirection: 'row',
@@ -541,6 +607,11 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: 13,
     fontWeight: '900',
+    includeFontPadding: false,
+    lineHeight: 17,
+    minWidth: 0,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   rowHeader: {
     alignItems: 'center',

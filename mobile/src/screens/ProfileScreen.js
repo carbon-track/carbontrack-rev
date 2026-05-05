@@ -632,11 +632,16 @@ const styles = StyleSheet.create({
   },
   dayCellContent: {
     alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
   },
   dayText: {
     fontSize: 12,
     fontWeight: '900',
+    includeFontPadding: false,
+    lineHeight: 16,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   selectedBox: {
     gap: 9,

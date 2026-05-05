@@ -31,7 +31,7 @@ import { filesApi } from '../api/files';
 import { messageApi } from '../api/messages';
 import { ticketApi } from '../api/tickets';
 import { useI18n } from '../i18n';
-import { useTheme } from '../theme';
+import { makeShadow, useTheme } from '../theme';
 import { getApiErrorMessage as apiError } from '../lib/apiError';
 
 const { validateTicketDraft } = require('../lib/userContent');
@@ -53,7 +53,7 @@ function EmptyState({ icon, text }) {
   );
 }
 
-function MessageList({ messages, onDelete, onOpen }) {
+function MessageList({ messages, onDelete, onMarkRead, onOpen }) {
   const { t } = useI18n();
   const { colors } = useTheme();
   if (!messages.length) {
@@ -78,9 +78,32 @@ function MessageList({ messages, onDelete, onOpen }) {
             </View>
             <View style={styles.rowFooter}>
               <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{displayDateTime(message.createdAt)}</Text>
-              <GlassButtonSurface onPress={() => onDelete(message.id)} style={styles.iconButton}>
-                <Ionicons color={colors.danger} name="trash-outline" size={18} />
-              </GlassButtonSurface>
+              <View style={styles.rowActions}>
+                {!message.isRead ? (
+                  <GlassButtonSurface
+                    accessibilityLabel={t('messages.markRead')}
+                    contentStyle={styles.iconButtonContent}
+                    onPress={(event) => {
+                      event?.stopPropagation?.();
+                      onMarkRead(message.id);
+                    }}
+                    style={styles.iconButton}
+                  >
+                    <Ionicons color={colors.primary} name="mail-open-outline" size={20} />
+                  </GlassButtonSurface>
+                ) : null}
+                <GlassButtonSurface
+                  accessibilityLabel={t('messages.delete')}
+                  contentStyle={styles.iconButtonContent}
+                  onPress={(event) => {
+                    event?.stopPropagation?.();
+                    onDelete(message.id);
+                  }}
+                  style={styles.iconButton}
+                >
+                  <Ionicons color={colors.danger} name="trash-outline" size={20} />
+                </GlassButtonSurface>
+              </View>
             </View>
           </GlassPressable>
         );
@@ -93,19 +116,19 @@ function MessageDetailModal({ message, onClose }) {
   const { colors } = useTheme();
   const { t } = useI18n();
   return (
-    <Modal animationType="slide" onRequestClose={onClose} transparent visible={Boolean(message)}>
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={Boolean(message)}>
       <View style={styles.modalBackdrop}>
-        <GlassSurface style={styles.modalSheet} contentStyle={styles.modalContent}>
+        <GlassSurface style={[styles.modalSheet, styles.messageDetailSheet]} contentStyle={[styles.modalContent, styles.messageDetailContent]}>
           <View style={styles.modalHeader}>
             <View style={styles.modalTitleBox}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>{message?.title || t('messages.detailTitle')}</Text>
               <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{displayDateTime(message?.createdAt)}</Text>
             </View>
-            <GlassButtonSurface onPress={onClose} style={styles.iconButton}>
+            <GlassButtonSurface accessibilityLabel={t('messages.close')} contentStyle={styles.iconButtonContent} onPress={onClose} style={styles.iconButton}>
               <Ionicons color={colors.text} name="close" size={20} />
             </GlassButtonSurface>
           </View>
-          <ScrollView>
+          <ScrollView contentContainerStyle={styles.messageDetailScrollContent} style={styles.messageDetailScroll}>
             <Text style={[styles.bodyText, { color: colors.text }]}>{message?.content || t('messages.noContent')}</Text>
           </ScrollView>
         </GlassSurface>
@@ -123,10 +146,12 @@ function FilterPills({ active, options, prefix, onChange }) {
         {options.map((value) => (
           <GlassPressable
             key={value}
+            contentStyle={styles.pillContent}
             onPress={() => onChange(value)}
+            wrapperStyle={styles.pillWrapper}
             style={[styles.pill, active === value ? { borderColor: colors.primary, borderWidth: 1 } : null]}
           >
-            <Text style={[styles.pillText, { color: active === value ? colors.primary : colors.text }]}>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.pillText, { color: active === value ? colors.primary : colors.text }]}>
               {t(`${prefix}.${value}`)}
             </Text>
           </GlassPressable>
@@ -169,7 +194,7 @@ function AttachmentPreview({ image, onRemove }) {
     <GlassListItemSurface contentStyle={styles.attachmentRow}>
       <Image source={{ uri: image.uri }} style={styles.attachmentImage} />
       <Text numberOfLines={1} style={[styles.attachmentName, { color: colors.text }]}>{image.fileName || image.uri?.split('/').pop()}</Text>
-      <GlassButtonSurface onPress={onRemove} style={styles.iconButton}>
+      <GlassButtonSurface contentStyle={styles.iconButtonContent} onPress={onRemove} style={styles.iconButton}>
         <Ionicons color={colors.danger} name="close-circle-outline" size={20} />
       </GlassButtonSurface>
     </GlassListItemSurface>
@@ -216,7 +241,7 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
   };
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalKeyboard}>
         <View style={styles.modalBackdrop}>
           <GlassSurface style={styles.modalSheet} contentStyle={styles.modalContent}>
@@ -225,7 +250,7 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
                 <Text style={[styles.modalTitle, { color: colors.text }]}>{t('support.newTicket')}</Text>
                 <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{t('support.newTicketSubtitle')}</Text>
               </View>
-              <GlassButtonSurface onPress={onClose} style={styles.iconButton}>
+              <GlassButtonSurface accessibilityLabel={t('messages.close')} contentStyle={styles.iconButtonContent} onPress={onClose} style={styles.iconButton}>
                 <Ionicons color={colors.text} name="close" size={20} />
               </GlassButtonSurface>
             </View>
@@ -256,6 +281,61 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
         </View>
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+function TicketThreadMessage({ message }) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const outgoing = message.senderRole === 'user';
+  const senderRole = message.senderRole || 'user';
+  const sender = message.senderName || t(`support.senderRoles.${senderRole}`);
+  const avatar = (
+    <View
+      style={[
+        styles.threadAvatar,
+        { backgroundColor: outgoing ? colors.primarySoft : colors.surfaceStrong },
+      ]}
+    >
+      <Ionicons color={outgoing ? colors.primary : colors.textMuted} name={outgoing ? 'person-outline' : 'headset-outline'} size={16} />
+    </View>
+  );
+  const bubble = (
+    <GlassListItemSurface
+      contentStyle={styles.threadMessage}
+      style={[
+        styles.threadBubble,
+        outgoing ? { borderColor: colors.primary } : null,
+      ]}
+    >
+      <View style={[styles.threadMetaRow, outgoing ? styles.threadMetaRowOutgoing : null]}>
+        <Text style={[styles.threadSender, outgoing ? styles.threadTextOutgoing : null, { color: colors.text }]}>
+          {sender}
+        </Text>
+        <Text style={[styles.threadTime, outgoing ? styles.threadTextOutgoing : null, { color: colors.textMuted }]}>
+          {displayDateTime(message.createdAt)}
+        </Text>
+      </View>
+      <Text style={[styles.bodyText, outgoing ? styles.threadTextOutgoing : null, { color: colors.text }]}>
+        {message.body}
+      </Text>
+      {message.attachments?.map((item) => (
+        item.isImage ? (
+          <ImageLightbox key={item.id} uri={item.url} title={item.name} style={styles.threadImageButton}>
+            <Image source={{ uri: item.url }} style={styles.threadImage} />
+          </ImageLightbox>
+        ) : (
+          <Text key={item.id} style={[styles.rowMeta, outgoing ? styles.threadTextOutgoing : null, { color: colors.textMuted }]}>{item.name}</Text>
+        )
+      ))}
+    </GlassListItemSurface>
+  );
+
+  return (
+    <View style={[styles.threadMessageRow, outgoing ? styles.threadMessageRowOutgoing : styles.threadMessageRowIncoming]}>
+      {outgoing ? bubble : avatar}
+      {outgoing ? avatar : bubble}
+    </View>
   );
 }
 
@@ -343,47 +423,79 @@ function TicketDetailModal({ ticketId, onClose }) {
   const ticket = ticketQuery.data;
   const canFeedback = ['resolved', 'closed'].includes(ticket?.status);
   const feedbackCandidate = ticket?.feedbackCandidates?.[0];
+  const threadMessages = ticket?.messages || [];
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} transparent visible={Boolean(ticketId)}>
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={Boolean(ticketId)}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalKeyboard}>
         <View style={styles.modalBackdrop}>
-          <GlassSurface style={styles.modalSheet} contentStyle={styles.modalContent}>
-            <View style={styles.modalHeader}>
+          <View
+            style={[
+              styles.modalSheet,
+              styles.ticketModalSheet,
+              styles.ticketModalFrame,
+              {
+                backgroundColor: colors.surfaceStrong,
+                borderColor: colors.border,
+              },
+              makeShadow(colors, colors.dark ? 0.32 : 0.16, 14),
+            ]}
+          >
+            <View style={[styles.modalHeader, styles.ticketModalHeader]}>
               <View style={styles.modalTitleBox}>
                 <Text style={[styles.modalTitle, { color: colors.text }]}>{ticket?.subject || t('support.ticketDetail')}</Text>
-                {ticket ? (
-                  <Text style={[styles.rowMeta, { color: colors.textMuted }]}>
-                    {t(`support.statuses.${ticket.status}`)} / {t(`support.priorities.${ticket.priority}`)}
-                  </Text>
-                ) : null}
               </View>
-              <GlassButtonSurface onPress={onClose} style={styles.iconButton}>
+              <GlassButtonSurface accessibilityLabel={t('messages.close')} contentStyle={styles.iconButtonContent} onPress={onClose} style={styles.iconButton}>
                 <Ionicons color={colors.text} name="close" size={20} />
               </GlassButtonSurface>
             </View>
             {ticketQuery.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
-            <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
-              {ticket?.messages?.map((message) => (
-                <GlassListItemSurface key={message.id} contentStyle={styles.threadMessage}>
-                  <Text style={[styles.rowTitle, { color: colors.text }]}>{message.senderName || t(`support.senderRoles.${message.senderRole}`)}</Text>
-                  <Text style={[styles.bodyText, { color: colors.text }]}>{message.body}</Text>
-                  {message.attachments?.map((item) => (
-                    item.isImage ? (
-                      <ImageLightbox key={item.id} uri={item.url} title={item.name} style={styles.threadImageButton}>
-                        <Image source={{ uri: item.url }} style={styles.threadImage} />
-                      </ImageLightbox>
-                    ) : (
-                      <Text key={item.id} style={[styles.rowMeta, { color: colors.textMuted }]}>{item.name}</Text>
-                    )
-                  ))}
-                  <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{displayDateTime(message.createdAt)}</Text>
-                </GlassListItemSurface>
+            <ScrollView
+              contentContainerStyle={styles.ticketDetailContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              style={styles.ticketDetailScroll}
+            >
+              {ticket ? (
+                <View style={[styles.ticketSummary, { backgroundColor: colors.surfaceMuted, borderColor: colors.borderStrong }]}>
+                  <View style={[styles.ticketSummaryIcon, { backgroundColor: colors.primarySoft }]}>
+                    <Ionicons color={colors.primary} name="ticket-outline" size={22} />
+                  </View>
+                  <View style={styles.ticketSummaryBody}>
+                    <View style={styles.ticketChipRow}>
+                      <View style={[styles.ticketChip, { borderColor: colors.borderStrong }]}>
+                        <Ionicons color={colors.primary} name="ellipse" size={8} />
+                        <Text style={[styles.ticketChipText, { color: colors.text }]}>{t(`support.statuses.${ticket.status}`)}</Text>
+                      </View>
+                      <View style={[styles.ticketChip, { borderColor: colors.borderStrong }]}>
+                        <Ionicons color={colors.warning} name="flag-outline" size={13} />
+                        <Text style={[styles.ticketChipText, { color: colors.text }]}>{t(`support.priorities.${ticket.priority}`)}</Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.ticketSummaryMeta, { color: colors.textMuted }]}>
+                      {t('support.messagesCount', { count: threadMessages.length })}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+              {threadMessages.length > 0 ? (
+                <View style={styles.conversationHeader}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('support.conversation')}</Text>
+                  <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{t('support.messagesCount', { count: threadMessages.length })}</Text>
+                </View>
+              ) : null}
+              {threadMessages.map((message) => (
+                <TicketThreadMessage key={message.id} message={message} />
               ))}
               {ticket && ticket.status !== 'closed' ? (
-                <GlassSurface contentStyle={styles.form}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('support.reply')}</Text>
-                  <Field label={t('support.content')} multiline onChangeText={setReply} style={styles.textArea} textAlignVertical="top" value={reply} />
+                <GlassSurface contentStyle={[styles.form, styles.compactForm]} style={styles.replyComposer}>
+                  <View style={styles.panelTitleRow}>
+                    <View style={[styles.panelTitleIcon, { backgroundColor: colors.primarySoft }]}>
+                      <Ionicons color={colors.primary} name="chatbubble-ellipses-outline" size={18} />
+                    </View>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('support.reply')}</Text>
+                  </View>
+                  <Field label={t('support.content')} multiline onChangeText={setReply} style={styles.replyTextArea} textAlignVertical="top" value={reply} />
                   {attachment ? <AttachmentPreview image={attachment} onRemove={() => setAttachment(null)} /> : null}
                   <SecondaryButton icon="image-outline" onPress={pickAttachment} title={t('support.addImage')} />
                   <TurnstileWidget
@@ -396,11 +508,22 @@ function TicketDetailModal({ ticketId, onClose }) {
                 </GlassSurface>
               ) : null}
               {canFeedback && feedbackCandidate ? (
-                <GlassSurface contentStyle={styles.form}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('support.feedbackTitle')}</Text>
+                <GlassSurface contentStyle={[styles.form, styles.compactForm]} style={styles.feedbackPanel}>
+                  <View style={styles.panelTitleRow}>
+                    <View style={[styles.panelTitleIcon, { backgroundColor: colors.primarySoft }]}>
+                      <Ionicons color={colors.primary} name="sparkles-outline" size={18} />
+                    </View>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('support.feedbackTitle')}</Text>
+                  </View>
                   <View style={styles.stars}>
                     {[1, 2, 3, 4, 5].map((value) => (
-                      <GlassButtonSurface key={value} onPress={() => setRating(value)} style={styles.starButton}>
+                      <GlassButtonSurface
+                        key={value}
+                        contentStyle={styles.starButtonContent}
+                        onPress={() => setRating(value)}
+                        onPressIn={() => setRating(value)}
+                        style={styles.starButton}
+                      >
                         <Ionicons color={value <= rating ? colors.warning : colors.textMuted} name={value <= rating ? 'star' : 'star-outline'} size={24} />
                       </GlassButtonSurface>
                     ))}
@@ -415,7 +538,7 @@ function TicketDetailModal({ ticketId, onClose }) {
                 </GlassSurface>
               ) : null}
             </ScrollView>
-          </GlassSurface>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -507,7 +630,17 @@ export default function MessagesScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
       >
         <PageHeader eyebrow={t('messages.eyebrow')} title={t('messages.title')} subtitle={t('messages.subtitle')} />
-        <GlassSurface contentStyle={styles.section}>
+        <View
+          style={[
+            styles.section,
+            styles.sectionPanel,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            },
+            makeShadow(colors, colors.dark ? 0.28 : 0.12, 10),
+          ]}
+        >
           <SegmentedControl
             onChange={setView}
             options={[
@@ -528,7 +661,12 @@ export default function MessagesScreen() {
                 />
               </View>
               {messagesQuery.isLoading ? <ActivityIndicator color={colors.primary} /> : null}
-              <MessageList messages={messages} onDelete={(id) => deleteMutation.mutate(id)} onOpen={openMessage} />
+              <MessageList
+                messages={messages}
+                onDelete={(id) => deleteMutation.mutate(id)}
+                onMarkRead={(id) => markReadMutation.mutate(id)}
+                onOpen={openMessage}
+              />
             </>
           ) : (
             <>
@@ -542,7 +680,7 @@ export default function MessagesScreen() {
               />
             </>
           )}
-        </GlassSurface>
+        </View>
       </ScrollView>
       <MessageDetailModal message={selectedMessage} onClose={() => setSelectedMessage(null)} />
       <TicketEditorModal
@@ -578,10 +716,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 23,
   },
+  compactForm: {
+    gap: 11,
+    paddingBottom: 4,
+  },
   container: {
     gap: 16,
     padding: 18,
     paddingBottom: 110,
+  },
+  conversationHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
   },
   emptyState: {
     alignItems: 'center',
@@ -602,11 +750,18 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   iconButton: {
-    alignItems: 'center',
     borderRadius: 999,
-    height: 38,
+    height: 44,
+    minHeight: 44,
+    paddingHorizontal: 0,
+    width: 44,
+  },
+  iconButtonContent: {
+    alignItems: 'center',
+    flex: 0,
+    height: 44,
     justifyContent: 'center',
-    width: 38,
+    width: 44,
   },
   list: {
     gap: 11,
@@ -618,13 +773,26 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     gap: 14,
-    maxHeight: '88%',
-    padding: 18,
+    maxHeight: '84%',
+    padding: 16,
   },
   modalHeader: {
     alignItems: 'flex-start',
     flexDirection: 'row',
     gap: 12,
+  },
+  messageDetailContent: {
+    maxHeight: '100%',
+  },
+  messageDetailScroll: {
+    flexGrow: 0,
+    maxHeight: 520,
+  },
+  messageDetailScrollContent: {
+    paddingBottom: 4,
+  },
+  messageDetailSheet: {
+    maxHeight: '92%',
   },
   modalKeyboard: {
     flex: 1,
@@ -645,8 +813,16 @@ const styles = StyleSheet.create({
   },
   pill: {
     borderRadius: 999,
-    minHeight: 38,
+    minHeight: 42,
     paddingHorizontal: 14,
+  },
+  pillContent: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  pillWrapper: {
+    alignSelf: 'flex-start',
   },
   pills: {
     flexDirection: 'row',
@@ -656,11 +832,43 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: 13,
     fontWeight: '900',
+    includeFontPadding: false,
+    lineHeight: 17,
+    minWidth: 0,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+  },
+  feedbackPanel: {
+    borderRadius: 22,
+  },
+  panelTitleIcon: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  panelTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  replyComposer: {
+    borderRadius: 22,
+  },
+  replyTextArea: {
+    minHeight: 88,
+    paddingTop: 12,
   },
   rowFooter: {
     alignItems: 'center',
     flexDirection: 'row',
+    gap: 10,
     justifyContent: 'space-between',
+  },
+  rowActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   rowHeader: {
     alignItems: 'flex-start',
@@ -689,24 +897,51 @@ const styles = StyleSheet.create({
   section: {
     gap: 14,
   },
+  sectionPanel: {
+    borderCurve: 'continuous',
+    borderRadius: 24,
+    borderWidth: 1,
+    overflow: 'hidden',
+    padding: 18,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '900',
   },
   starButton: {
-    alignItems: 'center',
     borderRadius: 999,
-    height: 42,
+    height: 48,
+    minHeight: 48,
+    paddingHorizontal: 0,
+    width: 48,
+  },
+  starButtonContent: {
+    alignItems: 'center',
+    flex: 0,
+    height: 48,
     justifyContent: 'center',
-    width: 42,
+    width: 48,
   },
   stars: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 7,
+    justifyContent: 'space-between',
   },
   textArea: {
     minHeight: 116,
     paddingTop: 14,
+  },
+  threadBubble: {
+    borderRadius: 20,
+    maxWidth: '82%',
+  },
+  threadAvatar: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 32,
+    justifyContent: 'center',
+    marginTop: 4,
+    width: 32,
   },
   threadImage: {
     aspectRatio: 1.5,
@@ -719,8 +954,105 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   threadMessage: {
-    gap: 8,
+    gap: 9,
+    padding: 13,
+  },
+  threadMessageRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 9,
+    width: '100%',
+  },
+  threadMessageRowIncoming: {
+    justifyContent: 'flex-start',
+  },
+  threadMessageRowOutgoing: {
+    justifyContent: 'flex-end',
+  },
+  threadMetaRow: {
+    alignItems: 'flex-start',
+    gap: 2,
+  },
+  threadMetaRowOutgoing: {
+    alignItems: 'flex-end',
+  },
+  threadSender: {
+    fontSize: 15,
+    fontWeight: '900',
+    lineHeight: 21,
+  },
+  threadTime: {
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
+  },
+  threadTextOutgoing: {
+    textAlign: 'right',
+  },
+  ticketDetailContent: {
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 2,
+  },
+  ticketDetailScroll: {
+    flexGrow: 0,
+  },
+  ticketModalFrame: {
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    overflow: 'hidden',
+    paddingBottom: 4,
+    paddingTop: 16,
+  },
+  ticketModalHeader: {
+    paddingHorizontal: 18,
+  },
+  ticketModalSheet: {
+    maxHeight: '82%',
+  },
+  ticketChip: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 30,
+    paddingHorizontal: 10,
+  },
+  ticketChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  ticketChipText: {
+    fontSize: 12,
+    fontWeight: '900',
+    lineHeight: 16,
+  },
+  ticketSummary: {
+    alignItems: 'center',
+    borderRadius: 22,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
     padding: 12,
+  },
+  ticketSummaryBody: {
+    flex: 1,
+    gap: 7,
+    minWidth: 0,
+  },
+  ticketSummaryIcon: {
+    alignItems: 'center',
+    borderRadius: 18,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  ticketSummaryMeta: {
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
   },
   toolbar: {
     gap: 11,
