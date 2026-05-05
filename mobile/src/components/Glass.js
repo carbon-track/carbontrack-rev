@@ -371,18 +371,18 @@ export function GlassButtonSurface({
 
 export function FrostedBackButton({ accessibilityLabel = 'Back', onPress, wrapperStyle }) {
   const { colors } = useTheme();
-  const tint = colors.dark ? 'rgba(5, 18, 12, 0.62)' : 'rgba(255, 255, 255, 0.54)';
-  const borderColor = colors.dark ? 'rgba(210, 255, 226, 0.26)' : 'rgba(255, 255, 255, 0.86)';
+  const tint = colors.dark ? 'rgba(5, 18, 12, 0.31)' : 'rgba(255, 255, 255, 0.27)';
+  const borderColor = colors.dark ? 'rgba(210, 255, 226, 0.18)' : 'rgba(255, 255, 255, 0.58)';
   return (
     <GlassButtonSurface
       accessibilityLabel={accessibilityLabel}
       contentStyle={styles.frostedBackContent}
-      effect="regular"
+      effect="clear"
       onPress={onPress}
       style={[
         styles.frostedBackButton,
         { backgroundColor: tint, borderColor },
-        makeShadow(colors, colors.dark ? 0.5 : 0.22, 16),
+        makeShadow(colors, colors.dark ? 0.25 : 0.11, 8),
       ]}
       tintColor={tint}
       wrapperStyle={[styles.frostedBackWrapper, wrapperStyle]}

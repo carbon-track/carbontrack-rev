@@ -1,9 +1,16 @@
 import React from 'react';
 import { Animated, Dimensions, PanResponder } from 'react-native';
 
-const EDGE_WIDTH = 34;
-const ACTIVATE_DX = 4;
-const MAX_VERTICAL_DRIFT = 24;
+const EDGE_WIDTH = 56;
+const ACTIVATE_DX = 2;
+const MAX_VERTICAL_DRIFT = 42;
+
+const isEdgeSwipe = (event, gestureState) => {
+  const startX = event.nativeEvent.pageX ?? event.nativeEvent.locationX ?? 0;
+  return startX <= EDGE_WIDTH
+    && gestureState.dx > ACTIVATE_DX
+    && Math.abs(gestureState.dy) < MAX_VERTICAL_DRIFT;
+};
 
 export function useEdgeSwipeBack(navigation) {
   const translateX = React.useRef(new Animated.Value(0)).current;
@@ -12,12 +19,8 @@ export function useEdgeSwipeBack(navigation) {
     onPanResponderGrant: () => {
       translateX.stopAnimation();
     },
-    onMoveShouldSetPanResponder: (event, gestureState) => {
-      const startX = event.nativeEvent.pageX ?? event.nativeEvent.locationX ?? 0;
-      return startX <= EDGE_WIDTH
-        && gestureState.dx > ACTIVATE_DX
-        && Math.abs(gestureState.dy) < MAX_VERTICAL_DRIFT;
-    },
+    onMoveShouldSetPanResponder: isEdgeSwipe,
+    onMoveShouldSetPanResponderCapture: isEdgeSwipe,
     onPanResponderMove: (_, gestureState) => {
       const width = Dimensions.get('window').width || 360;
       translateX.setValue(Math.max(0, Math.min(gestureState.dx, width)));

@@ -191,6 +191,9 @@ function MainTabs() {
   const { Navigator: Tab, nativeTabsEnabled } = React.useMemo(createTabs, []);
 
   const sharedTabOptions = {
+    sceneStyle: {
+      backgroundColor: colors.background,
+    },
     tabBarActiveTintColor: colors.primary,
     tabBarInactiveTintColor: colors.textMuted,
     tabBarLabelStyle: {
@@ -283,7 +286,7 @@ export default function AppNavigator() {
   }
 
   return (
-    <>
+    <View style={[styles.appRoot, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {isAuthenticated && !requiresEmailVerification ? (
         <NavigationContainer
@@ -307,11 +310,14 @@ export default function AppNavigator() {
       ) : (
         <AuthFlow />
       )}
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  appRoot: {
+    flex: 1,
+  },
   loading: {
     alignItems: 'center',
     flex: 1,
