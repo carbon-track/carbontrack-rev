@@ -64,7 +64,7 @@ test('normalizeNotificationPreferences gives stable editable rows with defaults 
   const preferences = normalizeNotificationPreferences({
     preferences: {
       system: { email_enabled: 1, locked: true },
-      transaction: { email_enabled: false },
+      review: { email_enabled: false },
     },
   });
 
@@ -81,8 +81,22 @@ test('normalizeNotificationPreferences gives stable editable rows with defaults 
   assert.equal(preferences[2].emailEnabled, true);
   assert.equal(preferences[2].enabled, true);
   assert.equal(preferences[2].locked, true);
-  assert.equal(preferences[3].emailEnabled, false);
+  assert.equal(preferences[4].category, 'activity');
+  assert.equal(preferences[4].emailEnabled, false);
   assert.equal(preferences[7].emailEnabled, true);
+});
+
+test('normalizeNotificationPreferences folds carbon record aliases into activity', () => {
+  const preferences = normalizeNotificationPreferences({
+    preferences: [
+      { category: 'carbon_records', email_enabled: false },
+      { category: 'activity', email_enabled: true },
+    ],
+  });
+  const categories = preferences.map((item) => item.category);
+  assert.equal(categories.filter((category) => category === 'activity').length, 1);
+  assert.equal(categories.includes('carbon_records'), false);
+  assert.equal(preferences.find((item) => item.category === 'activity').emailEnabled, false);
 });
 
 test('normalizeSecurityActivityPayload accepts backend timeline envelopes', () => {
@@ -110,7 +124,7 @@ test('serializeNotificationPreferences sends backend email_enabled flags', () =>
   const preferences = normalizeNotificationPreferences({
     preferences: [
       { category: 'transaction', email_enabled: false },
-      { category: 'system', enabled: true, locked: true },
+      { category: 'review', enabled: true },
     ],
   });
 
@@ -126,7 +140,8 @@ test('serializeNotificationPreferences sends backend email_enabled flags', () =>
     'support',
   ]);
   assert.equal(serialized.find((item) => item.category === 'transaction').email_enabled, false);
-  assert.equal(serialized.find((item) => item.category === 'system').email_enabled, true);
+  assert.equal(serialized.find((item) => item.category === 'activity').email_enabled, true);
+  assert.equal(serialized.some((item) => item.category === 'review'), false);
 });
 
 test('validateTicketDraft returns localized validation keys before submitting', () => {

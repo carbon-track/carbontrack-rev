@@ -1,5 +1,6 @@
 import React from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { makeShadow, useTheme } from '../theme';
 
@@ -64,10 +65,11 @@ function GlassLayer({
   );
 }
 
-export function ScreenBackground({ children, centered = false, style }) {
+export function ScreenBackground({ children, centered = false, style, ...safeAreaProps }) {
   const { colors } = useTheme();
   return (
     <SafeAreaView
+      {...safeAreaProps}
       style={[
         styles.screen,
         { backgroundColor: colors.background },
@@ -363,6 +365,29 @@ export function GlassButtonSurface({
   );
 }
 
+export function FrostedBackButton({ accessibilityLabel = 'Back', onPress, wrapperStyle }) {
+  const { colors } = useTheme();
+  const tint = colors.dark ? 'rgba(5, 18, 12, 0.62)' : 'rgba(255, 255, 255, 0.54)';
+  const borderColor = colors.dark ? 'rgba(210, 255, 226, 0.26)' : 'rgba(255, 255, 255, 0.86)';
+  return (
+    <GlassButtonSurface
+      accessibilityLabel={accessibilityLabel}
+      contentStyle={styles.frostedBackContent}
+      effect="regular"
+      onPress={onPress}
+      style={[
+        styles.frostedBackButton,
+        { backgroundColor: tint, borderColor },
+        makeShadow(colors, colors.dark ? 0.5 : 0.22, 16),
+      ]}
+      tintColor={tint}
+      wrapperStyle={[styles.frostedBackWrapper, wrapperStyle]}
+    >
+      <Ionicons color={colors.text} name="chevron-back" size={25} />
+    </GlassButtonSurface>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -371,6 +396,28 @@ const styles = StyleSheet.create({
   centered: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  frostedBackButton: {
+    borderRadius: 24,
+    borderWidth: 1.2,
+    height: 48,
+    minHeight: 48,
+    overflow: 'hidden',
+    paddingHorizontal: 0,
+    width: 48,
+  },
+  frostedBackContent: {
+    alignItems: 'center',
+    flex: 0,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  frostedBackWrapper: {
+    left: 16,
+    position: 'absolute',
+    top: 12,
+    zIndex: 30,
   },
   glowOne: {
     borderRadius: 220,

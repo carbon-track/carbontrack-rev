@@ -9,6 +9,14 @@ const DEFAULT_NOTIFICATION_CATEGORIES = [
   'message',
   'support',
 ];
+const NOTIFICATION_CATEGORY_ALIASES = {
+  activity_review: 'activity',
+  activity_reviews: 'activity',
+  carbon_record: 'activity',
+  carbon_records: 'activity',
+  review: 'activity',
+  reviews: 'activity',
+};
 
 const unwrapPayload = (payload) => {
   if (payload && typeof payload === 'object' && 'data' in payload && !Array.isArray(payload)) {
@@ -20,6 +28,11 @@ const unwrapPayload = (payload) => {
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
 const asBoolean = (value) => value === true || value === 1 || value === '1';
+
+const normalizeNotificationCategory = (category) => {
+  const key = String(category || '').trim().toLowerCase();
+  return NOTIFICATION_CATEGORY_ALIASES[key] || key;
+};
 
 const normalizePagination = (pagination, fallbackTotal = 0) => ({
   page: Number(pagination?.page ?? pagination?.current_page ?? DEFAULT_PAGINATION.page),
@@ -119,13 +132,20 @@ function normalizeNotificationPreferences(payload) {
   const byCategory = {};
   if (Array.isArray(preferences)) {
     preferences.forEach((item = {}) => {
-      if (item.category) {
-        byCategory[item.category] = item;
+      const category = normalizeNotificationCategory(item.category);
+      if (category && !byCategory[category]) {
+        byCategory[category] = { ...item, category };
       }
     });
   } else if (preferences && typeof preferences === 'object') {
     Object.entries(preferences).forEach(([category, value]) => {
-      byCategory[category] = { category, ...(value && typeof value === 'object' ? value : { enabled: value }) };
+      const normalizedCategory = normalizeNotificationCategory(category);
+      if (normalizedCategory && !byCategory[normalizedCategory]) {
+        byCategory[normalizedCategory] = {
+          category: normalizedCategory,
+          ...(value && typeof value === 'object' ? value : { enabled: value }),
+        };
+      }
     });
   }
 
@@ -177,7 +197,7 @@ function serializeNotificationPreferences(preferences) {
     : asArray(preferences?.preferences || preferences?.items || preferences?.data);
 
   return source.map((item = {}) => ({
-    category: item.category || '',
+    category: normalizeNotificationCategory(item.category),
     email_enabled: item.email_enabled !== undefined
       ? asBoolean(item.email_enabled)
       : asBoolean(item.emailEnabled ?? item.enabled),

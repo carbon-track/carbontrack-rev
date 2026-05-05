@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Field, PrimaryButton, SecondaryButton } from '../components/FormControls';
 import {
-  GlassButtonSurface,
+  FrostedBackButton,
   GlassListItemSurface,
   GlassPressable,
   GlassSurface,
@@ -28,8 +28,9 @@ import { profileApi } from '../api/profile';
 import { schoolApi } from '../api/schools';
 import useAuthStore from '../store/authStore';
 import { useI18n } from '../i18n';
-import { makeShadow, useTheme } from '../theme';
+import { useTheme } from '../theme';
 import { getApiErrorMessage as apiError } from '../lib/apiError';
+import { useEdgeSwipeBack } from '../lib/navigationGestures';
 import { registerWithPasskey } from '../lib/passkey';
 
 const { validatePasswordDraft } = require('../lib/userContent');
@@ -456,7 +457,7 @@ export default function ProfileSettingsScreen({ navigation, route }) {
   const user = useAuthStore((state) => state.user);
   const [section, setSection] = useState(route?.params?.section || 'profile');
   const refreshQueries = useQueryClient();
-  const backButtonGlass = colors.dark ? 'rgba(18, 44, 32, 0.96)' : 'rgba(248, 251, 248, 0.96)';
+  const swipeBackHandlers = useEdgeSwipeBack(navigation);
 
   const refresh = () => {
     refreshQueries.invalidateQueries({ queryKey: ['mobile-notification-preferences'] });
@@ -465,26 +466,8 @@ export default function ProfileSettingsScreen({ navigation, route }) {
   };
 
   return (
-    <ScreenBackground>
-      <GlassButtonSurface
-        contentStyle={styles.backButtonContent}
-        effect="regular"
-        onPress={() => navigation?.goBack?.()}
-        style={[
-          styles.backButton,
-          {
-            backgroundColor: backButtonGlass,
-            borderColor: colors.borderStrong,
-            borderWidth: 1.5,
-          },
-          makeShadow(colors, colors.dark ? 0.34 : 0.18, 12),
-        ]}
-        tintColor={backButtonGlass}
-        wrapperStyle={styles.floatingBackButton}
-      >
-        <Ionicons color={colors.primary} name="chevron-back" size={18} />
-        <Text style={[styles.backText, { color: colors.primary }]}>{t('record.back')}</Text>
-      </GlassButtonSurface>
+    <ScreenBackground {...swipeBackHandlers}>
+      <FrostedBackButton accessibilityLabel={t('record.back')} onPress={() => navigation?.goBack?.()} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <ScrollView
           contentContainerStyle={styles.container}
@@ -522,24 +505,6 @@ const styles = StyleSheet.create({
     gap: 11,
     padding: 12,
   },
-  backButton: {
-    borderRadius: 999,
-    minHeight: 38,
-    paddingHorizontal: 12,
-    width: 'auto',
-  },
-  backButtonContent: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 5,
-    justifyContent: 'center',
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: '900',
-    includeFontPadding: false,
-    lineHeight: 18,
-  },
   card: {
     gap: 14,
   },
@@ -557,12 +522,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  floatingBackButton: {
-    left: 18,
-    position: 'absolute',
-    top: 54,
-    zIndex: 20,
   },
   identityGrid: {
     gap: 10,

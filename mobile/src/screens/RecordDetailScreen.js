@@ -1,12 +1,12 @@
 import React from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { GlassButtonSurface, GlassListItemSurface, GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
+import { FrostedBackButton, GlassListItemSurface, GlassSurface, PageHeader, ScreenBackground } from '../components/Glass';
 import ImageLightbox from '../components/ImageLightbox';
 import { carbonApi } from '../api/carbon';
 import { useI18n } from '../i18n';
-import { makeShadow, useTheme } from '../theme';
+import { useTheme } from '../theme';
+import { useEdgeSwipeBack } from '../lib/navigationGestures';
 
 const formatNumber = (value) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(Number(value || 0));
 const formatSubmittedDate = (record) => {
@@ -56,7 +56,7 @@ export default function RecordDetailScreen({ route, navigation }) {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const isWide = width >= 720;
-  const backButtonGlass = colors.dark ? 'rgba(18, 44, 32, 0.96)' : 'rgba(248, 251, 248, 0.96)';
+  const swipeBackHandlers = useEdgeSwipeBack(navigation);
   const id = route.params?.id;
   const initialRecord = route.params?.record;
 
@@ -73,26 +73,8 @@ export default function RecordDetailScreen({ route, navigation }) {
   const imageUrl = firstImage?.url || firstImage?.public_url;
 
   return (
-    <ScreenBackground>
-      <GlassButtonSurface
-        contentStyle={styles.backButtonContent}
-        effect="regular"
-        onPress={() => navigation.goBack()}
-        style={[
-          styles.backButton,
-          {
-            backgroundColor: backButtonGlass,
-            borderColor: colors.borderStrong,
-            borderWidth: 1.5,
-          },
-          makeShadow(colors, colors.dark ? 0.34 : 0.18, 12),
-        ]}
-        tintColor={backButtonGlass}
-        wrapperStyle={styles.floatingBackButton}
-      >
-        <Ionicons color={colors.primary} name="chevron-back" size={18} />
-        <Text style={[styles.backText, { color: colors.primary }]}>{t('record.back')}</Text>
-      </GlassButtonSurface>
+    <ScreenBackground {...swipeBackHandlers}>
+      <FrostedBackButton accessibilityLabel={t('record.back')} onPress={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={[styles.container, isWide ? styles.containerWide : null]}>
         <PageHeader
           eyebrow={t('record.detailEyebrow')}
@@ -137,32 +119,8 @@ const styles = StyleSheet.create({
     maxWidth: 860,
     width: '100%',
   },
-  backButton: {
-    borderRadius: 999,
-    minHeight: 38,
-    paddingHorizontal: 12,
-    width: 'auto',
-  },
-  backButtonContent: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 5,
-    justifyContent: 'center',
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: '900',
-    includeFontPadding: false,
-    lineHeight: 18,
-  },
   content: {
     gap: 16,
-  },
-  floatingBackButton: {
-    left: 20,
-    position: 'absolute',
-    top: 54,
-    zIndex: 20,
   },
   image: {
     aspectRatio: 1.65,
