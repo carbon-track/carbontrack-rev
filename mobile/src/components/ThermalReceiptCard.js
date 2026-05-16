@@ -13,8 +13,7 @@ import { PrimaryButton, SecondaryButton } from './FormControls';
 import { GlassSurface } from './Glass';
 import { makeShadow, useTheme } from '../theme';
 import { useI18n } from '../i18n';
-
-const { buildThermalReceiptSummary } = require('../lib/thermalReceipt');
+import { buildThermalReceiptSummary } from '../lib/thermalReceipt';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const textureLines = Array.from({ length: 26 }, (_, index) => index);

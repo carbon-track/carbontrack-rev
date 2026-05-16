@@ -49,16 +49,36 @@ const normalizeMessage = (message = {}) => ({
   createdAt: message.created_at || message.createdAt || '',
 });
 
+const normalizeUnreadCount = (payload) => Number(
+  payload?.total_unread
+    ?? payload?.unread_count
+    ?? payload?.count
+    ?? payload
+    ?? 0,
+);
+
+const messageFilterParams = (filter) => (
+  filter === 'unread' ? { status: 'unread' } : {}
+);
+
 function normalizeMessagesPayload(payload) {
   const source = unwrapPayload(payload) || {};
   const list = Array.isArray(source)
     ? source
     : asArray(source.messages || source.items || source.data);
+  const unreadCount = source.total_unread
+    ?? source.unread_count
+    ?? source.count
+    ?? payload?.total_unread
+    ?? payload?.unread_count
+    ?? payload?.count;
 
   return {
     messages: list.map(normalizeMessage),
     pagination: normalizePagination(source.pagination || payload?.pagination, list.length),
-    unreadCount: Number(source.unread_count ?? payload?.unread_count ?? list.filter((item) => !normalizeMessage(item).isRead).length),
+    unreadCount: unreadCount === undefined
+      ? list.filter((item) => !normalizeMessage(item).isRead).length
+      : normalizeUnreadCount(unreadCount),
   };
 }
 
@@ -230,6 +250,7 @@ function validatePasswordDraft({ currentPassword, newPassword, confirmPassword }
 }
 
 module.exports = {
+  messageFilterParams,
   normalizeAttachment,
   normalizeMessage,
   normalizeMessagesPayload,
@@ -240,6 +261,7 @@ module.exports = {
   normalizeTicket,
   normalizeTicketDetail,
   normalizeTicketsPayload,
+  normalizeUnreadCount,
   serializeNotificationPreferences,
   validatePasswordDraft,
   validateTicketDraft,

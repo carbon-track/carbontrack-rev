@@ -3,10 +3,12 @@ const test = require('node:test');
 
 const {
   normalizeMessagesPayload,
+  normalizeUnreadCount,
   normalizeNotificationPreferences,
   normalizePasskeysPayload,
   normalizeSecurityActivityPayload,
   normalizeTicketDetail,
+  messageFilterParams,
   serializeNotificationPreferences,
   validateTicketDraft,
 } = require('./userContent');
@@ -28,6 +30,27 @@ test('normalizeMessagesPayload accepts CarbonTrack paginated message responses',
   assert.equal(payload.messages[1].isRead, true);
   assert.deepEqual(payload.pagination, { page: 2, pages: 5, total: 42 });
   assert.equal(payload.unreadCount, 7);
+});
+
+test('normalizeMessagesPayload preserves explicit zero unread count', () => {
+  const payload = normalizeMessagesPayload({
+    data: [{ id: 1, title: 'Already counted', is_read: false }],
+    total_unread: 0,
+  });
+
+  assert.equal(payload.unreadCount, 0);
+});
+
+test('normalizeUnreadCount accepts the current unread-count response shape', () => {
+  assert.equal(normalizeUnreadCount({ total_unread: 12 }), 12);
+  assert.equal(normalizeUnreadCount({ unread_count: 4 }), 4);
+  assert.equal(normalizeUnreadCount({ count: 2 }), 2);
+  assert.equal(normalizeUnreadCount(3), 3);
+});
+
+test('messageFilterParams sends the backend status filter name', () => {
+  assert.deepEqual(messageFilterParams('unread'), { status: 'unread' });
+  assert.deepEqual(messageFilterParams('all'), {});
 });
 
 test('normalizeTicketDetail preserves thread messages and image attachment metadata', () => {

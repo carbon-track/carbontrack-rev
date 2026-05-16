@@ -1,16 +1,22 @@
 import apiClient from './client';
-
-const {
+import { withMobileProofOfWork } from './pow';
+import {
   normalizeTicketDetail,
   normalizeTicketsPayload,
-} = require('../lib/userContent');
+} from '../lib/userContent';
 
 const unwrap = (response) => response.data?.data ?? response.data;
 
 export const ticketApi = {
   list: async (params = {}) => normalizeTicketsPayload(unwrap(await apiClient.get('/tickets', { params }))),
-  create: async (payload) => normalizeTicketDetail(unwrap(await apiClient.post('/tickets', payload))),
+  create: async (payload) => normalizeTicketDetail(unwrap(await apiClient.post(
+    '/tickets',
+    await withMobileProofOfWork('support.ticket.create', payload),
+  ))),
   get: async (ticketId) => normalizeTicketDetail(unwrap(await apiClient.get(`/tickets/${ticketId}`))),
-  reply: async (ticketId, payload) => normalizeTicketDetail(unwrap(await apiClient.post(`/tickets/${ticketId}/messages`, payload))),
+  reply: async (ticketId, payload) => normalizeTicketDetail(unwrap(await apiClient.post(
+    `/tickets/${ticketId}/messages`,
+    await withMobileProofOfWork('support.ticket.reply', payload),
+  ))),
   submitFeedback: async (ticketId, payload) => unwrap(await apiClient.post(`/tickets/${ticketId}/feedback`, payload)),
 };

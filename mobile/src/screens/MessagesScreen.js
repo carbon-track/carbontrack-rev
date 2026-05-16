@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -33,8 +33,7 @@ import { ticketApi } from '../api/tickets';
 import { useI18n } from '../i18n';
 import { makeShadow, useTheme } from '../theme';
 import { getApiErrorMessage as apiError } from '../lib/apiError';
-
-const { validateTicketDraft } = require('../lib/userContent');
+import { messageFilterParams, validateTicketDraft } from '../lib/userContent';
 
 const ticketStatuses = ['all', 'open', 'in_progress', 'waiting_user', 'resolved', 'closed'];
 const ticketCategories = ['website_bug', 'business_issue', 'feature_request', 'account', 'other'];
@@ -213,6 +212,7 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
   const reset = () => {
+    setCategory('website_bug');
     setContent('');
     setErrors({});
     setPriority('normal');
@@ -366,6 +366,15 @@ function TicketDetailModal({ ticketId, onClose }) {
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+
+  useEffect(() => {
+    setAttachment(null);
+    setReply('');
+    setTurnstileToken('');
+    setTurnstileResetKey((value) => value + 1);
+    setRating(0);
+    setComment('');
+  }, [ticketId]);
 
   const ticketQuery = useQuery({
     enabled: Boolean(ticketId),
@@ -574,7 +583,7 @@ export default function MessagesScreen() {
   const [view, setView] = useState('messages');
 
   const messageParams = useMemo(() => (
-    messageFilter === 'unread' ? { read_status: 'unread' } : {}
+    messageFilterParams(messageFilter)
   ), [messageFilter]);
 
   const messagesQuery = useQuery({

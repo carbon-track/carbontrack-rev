@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -32,8 +32,7 @@ import { useTheme } from '../theme';
 import { getApiErrorMessage as apiError } from '../lib/apiError';
 import { useEdgeSwipeBack } from '../lib/navigationGestures';
 import { registerWithPasskey } from '../lib/passkey';
-
-const { validatePasswordDraft } = require('../lib/userContent');
+import { validatePasswordDraft } from '../lib/userContent';
 
 const settingsSections = ['profile', 'notifications', 'security', 'passkeys'];
 const securityTypes = ['all', 'sign_ins', 'passkey_changes', 'password_changes', 'logouts'];
@@ -97,14 +96,20 @@ function ProfileEditor({ user }) {
   const queryClient = useQueryClient();
   const setUser = useAuthStore((state) => state.setUser);
   const [countryCode, setCountryCode] = useState(user?.country_code || '');
+  const [debouncedSchoolQuery, setDebouncedSchoolQuery] = useState(user?.school_name || '');
   const [schoolQuery, setSchoolQuery] = useState(user?.school_name || '');
   const [selectedSchool, setSelectedSchool] = useState(user?.school_id ? { id: user.school_id, name: user.school_name || '' } : null);
   const [stateCode, setStateCode] = useState(user?.state_code || '');
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSchoolQuery(schoolQuery.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [schoolQuery]);
+
   const schoolsQuery = useQuery({
-    enabled: schoolQuery.trim().length > 1,
-    queryFn: () => schoolApi.list({ search: schoolQuery.trim(), limit: 8, page: 1 }),
-    queryKey: ['mobile-school-search', schoolQuery],
+    enabled: debouncedSchoolQuery.length > 1,
+    queryFn: () => schoolApi.list({ search: debouncedSchoolQuery, limit: 8, page: 1 }),
+    queryKey: ['mobile-school-search', debouncedSchoolQuery],
   });
 
   const updateMutation = useMutation({
@@ -215,7 +220,7 @@ function PasswordEditor() {
       return;
     }
     mutation.mutate({
-      confirm_new_password: confirmPassword,
+      confirm_password: confirmPassword,
       current_password: currentPassword,
       new_password: newPassword,
     });
@@ -390,13 +395,17 @@ function PasskeySettings() {
       setEditingId(null);
       setLabelDraft('');
       queryClient.invalidateQueries({ queryKey: ['mobile-passkeys'] });
+      queryClient.invalidateQueries({ queryKey: ['mobile-security-activity'] });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: profileApi.deletePasskey,
     onError: (error) => Alert.alert(t('profile.passkeys.deleteFailed'), apiError(error, t('profile.passkeys.deleteFailed'))),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['mobile-passkeys'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mobile-passkeys'] });
+      queryClient.invalidateQueries({ queryKey: ['mobile-security-activity'] });
+    },
   });
 
   const confirmDelete = (id) => {

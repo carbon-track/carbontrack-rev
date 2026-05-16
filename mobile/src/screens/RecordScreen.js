@@ -29,8 +29,7 @@ import ThermalReceiptCard from '../components/ThermalReceiptCard';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
 import { getApiErrorMessage } from '../lib/apiError';
-
-const { createReceiptFromSubmission } = require('../lib/thermalReceipt');
+import { createReceiptFromSubmission } from '../lib/thermalReceipt';
 
 const padDatePart = (value) => String(value).padStart(2, '0');
 const todayString = (value = new Date()) => (

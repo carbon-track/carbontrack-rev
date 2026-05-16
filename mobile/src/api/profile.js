@@ -1,17 +1,23 @@
 import apiClient from './client';
-
-const {
+import { withMobileProofOfWork } from './pow';
+import {
   normalizeNotificationPreferences,
   normalizePasskeysPayload,
   normalizeSecurityActivityPayload,
   serializeNotificationPreferences,
-} = require('../lib/userContent');
+} from '../lib/userContent';
 
 const unwrap = (response) => response.data?.data ?? response.data;
 
 export const profileApi = {
   getCurrentUser: async () => unwrap(await apiClient.get('/users/me')),
-  updateProfile: async (payload) => unwrap(await apiClient.put('/users/me/profile', payload)),
+  updateProfile: async (payload) => {
+    const needsSchoolProof = Boolean(payload?.school_id || payload?.new_school_name);
+    const requestPayload = needsSchoolProof
+      ? await withMobileProofOfWork('user.profile.school_change', payload)
+      : payload;
+    return unwrap(await apiClient.put('/users/me/profile', requestPayload));
+  },
   changePassword: async (payload) => unwrap(await apiClient.post('/auth/change-password', payload)),
   getNotificationPreferences: async () => normalizeNotificationPreferences(unwrap(await apiClient.get('/users/me/notification-preferences'))),
   updateNotificationPreferences: async (preferences) => normalizeNotificationPreferences(
