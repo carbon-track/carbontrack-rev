@@ -4,7 +4,10 @@ import { normalizeMessagesPayload, normalizeMessage, normalizeUnreadCount } from
 const unwrap = (response) => response.data?.data ?? response.data;
 
 export const messageApi = {
-  getMessages: async (params = {}) => normalizeMessagesPayload(unwrap(await apiClient.get('/messages', { params }))),
+  getMessages: async (params = {}) => {
+    const response = await apiClient.get('/messages', { params });
+    return normalizeMessagesPayload(response.data);
+  },
   getMessage: async (id) => normalizeMessage(unwrap(await apiClient.get(`/messages/${id}`))),
   getUnreadCount: async () => {
     const payload = unwrap(await apiClient.get('/messages/unread-count'));

@@ -36,7 +36,15 @@ const normalizeNotificationCategory = (category) => {
 
 const normalizePagination = (pagination, fallbackTotal = 0) => ({
   page: Number(pagination?.page ?? pagination?.current_page ?? DEFAULT_PAGINATION.page),
-  pages: Number(pagination?.pages ?? pagination?.total_pages ?? DEFAULT_PAGINATION.pages),
+  pages: Number(
+    pagination?.pages
+      ?? pagination?.total_pages
+      ?? (
+        Number(pagination?.limit) > 0
+          ? Math.max(DEFAULT_PAGINATION.pages, Math.ceil(Number(pagination?.total ?? pagination?.total_items ?? fallbackTotal) / Number(pagination.limit)))
+          : DEFAULT_PAGINATION.pages
+      ),
+  ),
   total: Number(pagination?.total ?? pagination?.total_items ?? fallbackTotal),
 });
 

@@ -42,6 +42,17 @@ test('createReceiptFromSubmission keeps submission details needed by the mobile 
   assert.equal(receipt.activity.name_zh, '骑行');
 });
 
+test('createReceiptFromSubmission prefers server submission timestamps', () => {
+  const receipt = createReceiptFromSubmission({
+    result: {
+      record_id: 'rec-43',
+      created_at: '2026-05-03T09:00:00.000Z',
+    },
+  });
+
+  assert.equal(receipt.submitted_at, '2026-05-03T09:00:00.000Z');
+});
+
 test('buildThermalReceiptSummary mirrors the web receipt copy and formula in Chinese', () => {
   const summary = buildThermalReceiptSummary({
     receipt: {

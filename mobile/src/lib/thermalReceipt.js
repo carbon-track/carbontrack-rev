@@ -107,7 +107,7 @@ const getImageCount = (receipt) => {
 function createReceiptFromSubmission({
   activity,
   result,
-  submittedAt = new Date().toISOString(),
+  submittedAt,
   variables,
 } = {}) {
   const payload = result?.data && typeof result.data === 'object' ? result.data : (result || {});
@@ -126,7 +126,7 @@ function createReceiptFromSubmission({
     description: variables?.description || payload.description || '',
     images,
     image_count: images.length || safeNumber(payload.image_count),
-    submitted_at: submittedAt,
+    submitted_at: submittedAt || payload.submitted_at || payload.created_at || new Date().toISOString(),
     status: payload.status || 'pending',
     activity: activity ? { ...activity } : (payload.activity || null),
   };

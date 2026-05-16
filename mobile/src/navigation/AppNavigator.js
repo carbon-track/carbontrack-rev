@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, UIManager, View } from 'react-native';
+import { ActivityIndicator, BackHandler, Platform, StyleSheet, UIManager, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -111,6 +111,17 @@ function RecordStackNavigator({ navigation: tabNavigation, route }) {
     }
   }, [route?.params?.detailRecord]);
 
+  React.useEffect(() => {
+    if (!detailParams) {
+      return undefined;
+    }
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      navigation.goBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [detailParams, navigation]);
+
   if (detailParams) {
     return (
       <View style={styles.stackHost}>
@@ -146,6 +157,17 @@ function ProfileStackNavigator({ navigation: tabNavigation, route }) {
       setSettingsParams(route.params.settings);
     }
   }, [route?.params?.settings]);
+
+  React.useEffect(() => {
+    if (!settingsParams) {
+      return undefined;
+    }
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      navigation.goBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [navigation, settingsParams]);
 
   if (settingsParams) {
     return (

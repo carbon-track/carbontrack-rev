@@ -8,7 +8,10 @@ import {
 const unwrap = (response) => response.data?.data ?? response.data;
 
 export const ticketApi = {
-  list: async (params = {}) => normalizeTicketsPayload(unwrap(await apiClient.get('/tickets', { params }))),
+  list: async (params = {}) => {
+    const response = await apiClient.get('/tickets', { params });
+    return normalizeTicketsPayload(response.data);
+  },
   create: async (payload) => normalizeTicketDetail(unwrap(await apiClient.post(
     '/tickets',
     await withMobileProofOfWork('support.ticket.create', payload),

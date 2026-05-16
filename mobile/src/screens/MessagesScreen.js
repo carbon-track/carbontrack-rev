@@ -83,8 +83,7 @@ function MessageList({ messages, onDelete, onMarkRead, onOpen }) {
                   <GlassButtonSurface
                     accessibilityLabel={t('messages.markRead')}
                     contentStyle={styles.iconButtonContent}
-                    onPress={(event) => {
-                      event?.stopPropagation?.();
+                    onPress={() => {
                       onMarkRead(message.id);
                     }}
                     style={styles.iconButton}
@@ -95,8 +94,7 @@ function MessageList({ messages, onDelete, onMarkRead, onOpen }) {
                 <GlassButtonSurface
                   accessibilityLabel={t('messages.delete')}
                   contentStyle={styles.iconButtonContent}
-                  onPress={(event) => {
-                    event?.stopPropagation?.();
+                  onPress={() => {
                     onDelete(message.id);
                   }}
                   style={styles.iconButton}

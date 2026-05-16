@@ -8,6 +8,7 @@ const {
   normalizePasskeysPayload,
   normalizeSecurityActivityPayload,
   normalizeTicketDetail,
+  normalizeTicketsPayload,
   messageFilterParams,
   serializeNotificationPreferences,
   validateTicketDraft,
@@ -81,6 +82,19 @@ test('normalizeTicketDetail preserves thread messages and image attachment metad
   assert.equal(detail.messages[0].senderRole, 'support');
   assert.equal(detail.messages[0].attachments[0].isImage, true);
   assert.equal(detail.messages[0].attachments[0].url, 'https://cdn.example/proof.png');
+});
+
+test('normalizeTicketsPayload derives page count from total and limit', () => {
+  const payload = normalizeTicketsPayload({
+    data: [{ id: 1, subject: 'First ticket' }],
+    pagination: { page: 1, limit: 20, total: 41 },
+  });
+
+  assert.deepEqual(payload.pagination, {
+    page: 1,
+    pages: 3,
+    total: 41,
+  });
 });
 
 test('normalizeNotificationPreferences gives stable editable rows with defaults and switch fields', () => {
