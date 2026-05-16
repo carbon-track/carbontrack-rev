@@ -254,16 +254,12 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
     if (Object.keys(nextErrors).length > 0) {
       return;
     }
-    if (!turnstileToken) {
-      Alert.alert(t('support.turnstileRequiredTitle'), t('support.turnstileRequired'));
-      return;
-    }
     onSubmit({
       category,
       content: content.trim(),
       priority,
       subject: subject.trim(),
-      cf_turnstile_response: turnstileToken,
+      ...(turnstileToken ? { cf_turnstile_response: turnstileToken } : {}),
     }, reset);
   };
 
@@ -439,7 +435,7 @@ function TicketDetailModal({ ticketId, onClose }) {
       return ticketApi.reply(ticketId, {
         attachments,
         content: reply.trim(),
-        cf_turnstile_response: turnstileToken,
+        ...(turnstileToken ? { cf_turnstile_response: turnstileToken } : {}),
       });
     },
     onError: (error) => Alert.alert(t('support.replyFailed'), apiError(error, t('support.replyFailed'))),
@@ -480,10 +476,6 @@ function TicketDetailModal({ ticketId, onClose }) {
   const submitReply = () => {
     if (!reply.trim()) {
       Alert.alert(t('support.replyFailed'), t('support.validation.contentRequired'));
-      return;
-    }
-    if (!turnstileToken) {
-      Alert.alert(t('support.turnstileRequiredTitle'), t('support.turnstileRequired'));
       return;
     }
     replyMutation.mutate();
@@ -724,7 +716,7 @@ export default function MessagesScreen() {
   const messagePagination = messagesQuery.data?.pagination;
   const tickets = ticketsQuery.data?.tickets || [];
   const ticketPagination = ticketsQuery.data?.pagination;
-  const unreadCount = Number(unreadQuery.data || messagesQuery.data?.unreadCount || 0);
+  const unreadCount = Number(unreadQuery.data ?? messagesQuery.data?.unreadCount ?? 0);
   const refreshing = messagesQuery.isFetching || ticketsQuery.isFetching || unreadQuery.isFetching;
 
   return (

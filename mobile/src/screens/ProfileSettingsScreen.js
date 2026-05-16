@@ -364,14 +364,15 @@ function PasskeySettings() {
 
   const registerMutation = useMutation({
     mutationFn: async () => {
-      const options = await profileApi.getPasskeyRegistrationOptions();
+      const defaultLabel = t('profile.passkeys.defaultLabel');
+      const options = await profileApi.getPasskeyRegistrationOptions({ label: defaultLabel });
       const data = options?.data && typeof options.data === 'object' ? options.data : options;
       const publicKey = data?.public_key || data?.publicKey || data;
       const credential = await registerWithPasskey(publicKey);
       return profileApi.registerPasskey({
         challenge_id: data?.challenge_id,
         credential,
-        label: t('profile.passkeys.defaultLabel'),
+        label: defaultLabel,
       });
     },
     onError: (error) => {
