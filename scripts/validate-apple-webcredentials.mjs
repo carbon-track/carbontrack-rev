@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = process.env.PROJECT_ROOT || process.cwd();
+const root = process.env.PROJECT_ROOT || fileURLToPath(new URL('..', import.meta.url));
 const appConfigPath = join(root, 'mobile', 'app.json');
 const associationPath = join(root, 'frontend', 'public', '.well-known', 'apple-app-site-association');
 const testflightPath = join(root, 'mobile', 'TESTFLIGHT.md');
@@ -15,7 +16,8 @@ const associatedDomains = appConfig?.expo?.ios?.associatedDomains || [];
 const webcredentialApps = association?.webcredentials?.apps || [];
 const expectedDomain = 'webcredentials:carbontrackapp.com';
 const expectedBundleIdentifier = 'CarbonTrackOrg.CarbonTrackApp';
-const expectedAppleAppId = `YT85VSXYAF.${expectedBundleIdentifier}`;
+const expectedTeamId = 'YT85VSXYAF';
+const expectedAppleAppId = `${expectedTeamId}.${expectedBundleIdentifier}`;
 
 if (bundleIdentifier !== expectedBundleIdentifier) {
   throw new Error(
@@ -33,6 +35,10 @@ if (!webcredentialApps.includes(expectedAppleAppId)) {
 
 if (!testflightGuide.includes(`iOS bundle identifier: \`${bundleIdentifier}\``)) {
   throw new Error(`mobile/TESTFLIGHT.md must document iOS bundle identifier ${bundleIdentifier}.`);
+}
+
+if (!testflightGuide.includes(`Associated Domain: \`${expectedDomain}\``)) {
+  throw new Error(`mobile/TESTFLIGHT.md must document Associated Domain ${expectedDomain}.`);
 }
 
 if (!testflightGuide.includes(`覆盖 \`${bundleIdentifier}\` 所属 Team ID`)) {
