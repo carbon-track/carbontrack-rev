@@ -38,6 +38,7 @@ import { messageFilterParams, validateTicketDraft } from '../lib/userContent';
 const ticketStatuses = ['all', 'open', 'in_progress', 'waiting_user', 'resolved', 'closed'];
 const ticketCategories = ['website_bug', 'business_issue', 'feature_request', 'account', 'other'];
 const ticketPriorities = ['low', 'normal', 'high', 'urgent'];
+const PAGE_SIZE = 20;
 
 const displayDateTime = (value) => String(value || '').replace('T', ' ').slice(0, 16) || '--';
 const messageTone = (message) => (message.isRead ? 'read' : 'unread');
@@ -157,6 +158,32 @@ function FilterPills({ active, options, prefix, onChange }) {
         ))}
       </View>
     </ScrollView>
+  );
+}
+
+function PaginationControls({ onPageChange, pagination, prefix }) {
+  const { t } = useI18n();
+  const page = Number(pagination?.page || 1);
+  const pages = Number(pagination?.pages || 1);
+  if (!Number.isFinite(pages) || pages <= 1) {
+    return null;
+  }
+  return (
+    <View style={styles.paginationRow}>
+      <SecondaryButton
+        disabled={page <= 1}
+        icon="chevron-back-outline"
+        onPress={() => onPageChange(Math.max(1, page - 1))}
+        title={t(`${prefix}.previous`)}
+      />
+      <Text style={styles.paginationText}>{t(`${prefix}.pageStatus`, { page, pages })}</Text>
+      <SecondaryButton
+        disabled={page >= pages}
+        icon="chevron-forward-outline"
+        onPress={() => onPageChange(Math.min(pages, page + 1))}
+        title={t(`${prefix}.next`)}
+      />
+    </View>
   );
 }
 
@@ -366,6 +393,7 @@ function TicketDetailModal({ ticketId, onClose }) {
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [selectedFeedbackUserId, setSelectedFeedbackUserId] = useState(null);
 
   useEffect(() => {
     setAttachment(null);
@@ -374,6 +402,7 @@ function TicketDetailModal({ ticketId, onClose }) {
     setTurnstileResetKey((value) => value + 1);
     setRating(0);
     setComment('');
+    setSelectedFeedbackUserId(null);
   }, [ticketId]);
 
   const ticketQuery = useQuery({
@@ -381,6 +410,20 @@ function TicketDetailModal({ ticketId, onClose }) {
     queryFn: () => ticketApi.get(ticketId),
     queryKey: ['mobile-ticket-detail', ticketId],
   });
+  const ticket = ticketQuery.data;
+  const feedbackCandidates = ticket?.feedbackCandidates || [];
+
+  useEffect(() => {
+    if (!feedbackCandidates.length) {
+      setSelectedFeedbackUserId(null);
+      return;
+    }
+    setSelectedFeedbackUserId((current) => (
+      feedbackCandidates.some((candidate) => candidate.id === current)
+        ? current
+        : feedbackCandidates[0].id
+    ));
+  }, [feedbackCandidates]);
 
   const replyMutation = useMutation({
     mutationFn: async () => {
@@ -446,9 +489,8 @@ function TicketDetailModal({ ticketId, onClose }) {
     replyMutation.mutate();
   };
 
-  const ticket = ticketQuery.data;
   const canFeedback = ['resolved', 'closed'].includes(ticket?.status);
-  const feedbackCandidate = ticket?.feedbackCandidates?.[0];
+  const feedbackCandidate = feedbackCandidates.find((candidate) => candidate.id === selectedFeedbackUserId) || feedbackCandidates[0];
   const threadMessages = ticket?.messages || [];
 
   return (
@@ -541,6 +583,25 @@ function TicketDetailModal({ ticketId, onClose }) {
                     </View>
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('support.feedbackTitle')}</Text>
                   </View>
+                  {feedbackCandidates.length > 1 ? (
+                    <View style={styles.list}>
+                      <Text style={[styles.formLabel, { color: colors.text }]}>{t('support.feedbackResponder')}</Text>
+                      {feedbackCandidates.map((candidate) => (
+                        <GlassPressable
+                          key={candidate.id}
+                          onPress={() => setSelectedFeedbackUserId(candidate.id)}
+                          style={[
+                            styles.feedbackCandidateRow,
+                            selectedFeedbackUserId === candidate.id ? { borderColor: colors.primary, borderWidth: 1 } : null,
+                          ]}
+                        >
+                          <Text style={[styles.rowTitle, { color: colors.text }]}>
+                            {candidate.name || candidate.username || candidate.email || `#${candidate.id}`}
+                          </Text>
+                        </GlassPressable>
+                      ))}
+                    </View>
+                  ) : null}
                   <View style={styles.stars}>
                     {[1, 2, 3, 4, 5].map((value) => (
                       <GlassButtonSurface
@@ -576,15 +637,30 @@ export default function MessagesScreen() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [messageFilter, setMessageFilter] = useState('all');
+  const [messagePage, setMessagePage] = useState(1);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [selectedTicketId, setSelectedTicketId] = useState(null);
   const [showTicketEditor, setShowTicketEditor] = useState(false);
+  const [ticketPage, setTicketPage] = useState(1);
   const [ticketStatus, setTicketStatus] = useState('all');
   const [view, setView] = useState('messages');
 
+  useEffect(() => {
+    setMessagePage(1);
+  }, [messageFilter]);
+
+  useEffect(() => {
+    setTicketPage(1);
+  }, [ticketStatus]);
+
   const messageParams = useMemo(() => (
-    messageFilterParams(messageFilter)
-  ), [messageFilter]);
+    { ...messageFilterParams(messageFilter), limit: PAGE_SIZE, page: messagePage }
+  ), [messageFilter, messagePage]);
+  const ticketParams = useMemo(() => (
+    ticketStatus === 'all'
+      ? { limit: PAGE_SIZE, page: ticketPage }
+      : { limit: PAGE_SIZE, page: ticketPage, status: ticketStatus }
+  ), [ticketPage, ticketStatus]);
 
   const messagesQuery = useQuery({
     queryFn: () => messageApi.getMessages(messageParams),
@@ -595,8 +671,8 @@ export default function MessagesScreen() {
     queryKey: ['mobile-messages-unread'],
   });
   const ticketsQuery = useQuery({
-    queryFn: () => ticketApi.list(ticketStatus === 'all' ? { limit: 20 } : { limit: 20, status: ticketStatus }),
-    queryKey: ['mobile-tickets', ticketStatus],
+    queryFn: () => ticketApi.list(ticketParams),
+    queryKey: ['mobile-tickets', ticketParams],
   });
 
   const markReadMutation = useMutation({
@@ -645,7 +721,9 @@ export default function MessagesScreen() {
   };
 
   const messages = messagesQuery.data?.messages || [];
+  const messagePagination = messagesQuery.data?.pagination;
   const tickets = ticketsQuery.data?.tickets || [];
+  const ticketPagination = ticketsQuery.data?.pagination;
   const unreadCount = Number(unreadQuery.data || messagesQuery.data?.unreadCount || 0);
   const refreshing = messagesQuery.isFetching || ticketsQuery.isFetching || unreadQuery.isFetching;
 
@@ -693,6 +771,7 @@ export default function MessagesScreen() {
                 onMarkRead={(id) => markReadMutation.mutate(id)}
                 onOpen={openMessage}
               />
+              <PaginationControls onPageChange={setMessagePage} pagination={messagePagination} prefix="messages" />
             </>
           ) : (
             <>
@@ -704,6 +783,7 @@ export default function MessagesScreen() {
                 status={ticketStatus}
                 tickets={tickets}
               />
+              <PaginationControls onPageChange={setTicketPage} pagination={ticketPagination} prefix="support" />
             </>
           )}
         </View>
@@ -867,6 +947,10 @@ const styles = StyleSheet.create({
   feedbackPanel: {
     borderRadius: 22,
   },
+  feedbackCandidateRow: {
+    borderRadius: 16,
+    padding: 12,
+  },
   panelTitleIcon: {
     alignItems: 'center',
     borderRadius: 999,
@@ -878,6 +962,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 10,
+  },
+  paginationRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+  },
+  paginationText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '800',
+    textAlign: 'center',
   },
   replyComposer: {
     borderRadius: 22,

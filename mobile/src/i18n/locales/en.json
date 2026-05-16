@@ -472,6 +472,9 @@
     "delete": "Delete message",
     "close": "Close",
     "deleteFailed": "Failed to delete message",
+    "previous": "Previous",
+    "next": "Next",
+    "pageStatus": "Page {{page}} / {{pages}}",
     "filters": {
       "all": "All",
       "unread": "Unread"
@@ -495,11 +498,15 @@
     "submitReply": "Send reply",
     "replyFailed": "Reply failed",
     "feedbackTitle": "Service feedback",
+    "feedbackResponder": "Responder",
     "feedbackComment": "Feedback note",
     "submitFeedback": "Submit feedback",
     "feedbackFailed": "Feedback failed",
     "turnstileRequiredTitle": "Verification required",
     "turnstileRequired": "Complete the human check first.",
+    "previous": "Previous",
+    "next": "Next",
+    "pageStatus": "Page {{page}} / {{pages}}",
     "validation": {
       "subjectRequired": "Enter a ticket subject.",
       "contentRequired": "Enter content."

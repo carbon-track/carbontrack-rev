@@ -472,6 +472,9 @@
     "delete": "删除消息",
     "close": "关闭",
     "deleteFailed": "删除消息失败",
+    "previous": "上一页",
+    "next": "下一页",
+    "pageStatus": "第 {{page}} / {{pages}} 页",
     "filters": {
       "all": "全部",
       "unread": "未读"
@@ -495,11 +498,15 @@
     "submitReply": "发送回复",
     "replyFailed": "回复失败",
     "feedbackTitle": "服务评价",
+    "feedbackResponder": "评价对象",
     "feedbackComment": "评价备注",
     "submitFeedback": "提交评价",
     "feedbackFailed": "评价提交失败",
     "turnstileRequiredTitle": "需要验证",
     "turnstileRequired": "请先完成人机验证。",
+    "previous": "上一页",
+    "next": "下一页",
+    "pageStatus": "第 {{page}} / {{pages}} 页",
     "validation": {
       "subjectRequired": "请输入工单主题。",
       "contentRequired": "请输入内容。"
