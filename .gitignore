@@ -11,6 +11,7 @@
 .agent/
 .wrangler/
 /.worktrees/
+/.cursor/hooks/state/continual-learning.json
 
 # AI Agent Instructions
 

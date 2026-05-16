@@ -74,6 +74,7 @@
     "home": "首页",
     "record": "记录",
     "store": "商城",
+    "messages": "消息",
     "profile": "我的"
   },
   "home": {
@@ -130,6 +131,29 @@
     "calculatedPoints": "预计获得 {{value}} 积分",
     "submitSuccessTitle": "已提交",
     "submitSuccessMessage": "记录已提交，等待审核。",
+    "receipt": {
+      "title": "减碳核算回执",
+      "successEyebrow": "热敏小票",
+      "successDescription": "核算详情已生成热敏小票，你可以直接查看完整记录。",
+      "untitledActivity": "未命名活动",
+      "uncategorized": "未分类",
+      "activityLabel": "活动项目",
+      "categoryLabel": "分类",
+      "amountLabel": "提交数值",
+      "factorLabel": "减排系数",
+      "activityDateLabel": "活动日期",
+      "checkinLabel": "补签日期",
+      "submittedAtLabel": "提交时间",
+      "imageCountLabel": "凭证张数",
+      "files": "{{count}} 张",
+      "formulaLabel": "核算公式",
+      "descriptionLabel": "备注 / 审核提示",
+      "descriptionFallback": "无附加备注。",
+      "footerLineOne": "此回执已进入人工审核队列，请保留凭证。",
+      "footerLineTwo": "CarbonTrack · 热敏记录快照",
+      "recordAnother": "继续记录下一条",
+      "goHome": "返回首页"
+    },
     "history": "记录历史",
     "emptyHistory": "暂无碳记录历史。",
     "detailEyebrow": "记录详情",
@@ -157,7 +181,11 @@
     "permissionTitle": "需要照片权限",
     "permissionMessage": "请允许访问照片以保存图片。",
     "saveUnsupportedTitle": "当前平台不支持",
-    "saveUnsupportedMessage": "Web 端无法直接保存到系统相册，请在移动端使用。"
+    "saveUnsupportedMessage": "Web 端无法直接保存到系统相册，请在移动端使用。",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "rotateLeft": "逆时针旋转",
+    "rotateRight": "顺时针旋转"
   },
   "units": {
     "points": "积分",
@@ -320,6 +348,109 @@
       "timelineTitle": "获得时间线",
       "timelineEmpty": "暂无徽章获得记录。"
     },
+    "username": "用户名",
+    "email": "邮箱",
+    "account": {
+      "title": "账户与安全",
+      "subtitle": "同步网页端的资料、通知、安全活动和 Passkey 管理。",
+      "profile": "资料与密码",
+      "notifications": "通知偏好",
+      "security": "安全活动",
+      "passkeys": "Passkey"
+    },
+    "settings": {
+      "eyebrow": "账户设置",
+      "title": "资料与安全",
+      "subtitle": "管理个人资料、通知、安全记录和登录凭据。",
+      "sections": {
+        "profile": "资料",
+        "notifications": "通知",
+        "security": "安全",
+        "passkeys": "Passkey"
+      },
+      "profileTitle": "个人资料",
+      "school": "学校",
+      "schoolPlaceholder": "搜索或输入学校名称",
+      "saveProfile": "保存资料",
+      "saved": "已保存",
+      "savedMessage": "资料已同步。",
+      "saveFailed": "保存失败"
+    },
+    "notifications": {
+      "title": "邮件通知",
+      "save": "保存偏好",
+      "saved": "已保存",
+      "savedMessage": "通知偏好已更新。",
+      "saveFailed": "通知偏好保存失败",
+      "testEmail": "发送测试邮件",
+      "testSent": "已发送",
+      "testSentMessage": "测试邮件已发送。",
+      "testFailed": "测试邮件发送失败",
+      "defaultDescription": "此类邮件通知会同步网页端偏好。",
+      "categories": {
+        "verification": { "label": "账号验证", "description": "注册、邮箱验证和账号确认邮件。" },
+        "system": { "label": "系统通知", "description": "账号、安全和平台状态更新。" },
+        "security": { "label": "安全提醒", "description": "登录、密码和 Passkey 变更。" },
+        "transaction": { "label": "积分与兑换", "description": "积分变动、商品兑换和订单状态。" },
+        "activity": { "label": "低碳记录", "description": "低碳记录提交、审核进度与结果。" },
+        "announcement": { "label": "公告消息", "description": "平台公告、活动通知和运营消息。" },
+        "message": { "label": "站内消息", "description": "管理员私信和重要消息提醒。" },
+        "support": { "label": "工单回复", "description": "客服回复和工单状态变化。" },
+        "review": { "label": "审核结果", "description": "低碳记录审核进度与结果。" },
+        "achievement": { "label": "成就徽章", "description": "徽章授予和积分奖励提醒。" },
+        "marketing": { "label": "活动消息", "description": "活动、商城和运营消息。" }
+      }
+    },
+    "security": {
+      "passwordTitle": "修改密码",
+      "currentPassword": "当前密码",
+      "newPassword": "新密码",
+      "confirmPassword": "确认新密码",
+      "changePassword": "修改密码",
+      "currentPasswordRequired": "请输入当前密码。",
+      "newPasswordTooShort": "新密码至少需要 8 位。",
+      "passwordMismatch": "两次输入的新密码不一致。",
+      "passwordSaved": "已修改",
+      "passwordSavedMessage": "密码已更新。",
+      "passwordFailed": "密码修改失败",
+      "activityTitle": "安全活动",
+      "unknownActivity": "安全事件",
+      "emptyActivity": "暂无安全活动。",
+      "types": {
+        "all": "全部",
+        "sign_ins": "登录",
+        "passkey_changes": "Passkey",
+        "password_changes": "密码",
+        "logouts": "退出"
+      },
+      "periods": {
+        "all": "全部",
+        "7d": "近 7 天",
+        "30d": "近 30 天",
+        "90d": "近 90 天"
+      }
+    },
+    "passkeys": {
+      "title": "Passkey 管理",
+      "registrationHint": "注册、查看、改名和删除会同步到网页端同一组 Passkey。",
+      "register": "注册 Passkey",
+      "defaultLabel": "移动端 Passkey",
+      "registered": "已注册",
+      "registeredMessage": "Passkey 已添加到当前账号。",
+      "registerCancelled": "已取消 Passkey 注册。",
+      "registerFailed": "注册失败",
+      "label": "名称",
+      "unnamed": "未命名 Passkey",
+      "lastUsed": "最近使用",
+      "edit": "改名",
+      "save": "保存名称",
+      "empty": "暂无已注册 Passkey。",
+      "delete": "删除",
+      "deleteTitle": "删除 Passkey",
+      "deleteMessage": "确认删除这个 Passkey？",
+      "deleteFailed": "删除失败",
+      "updateFailed": "更新失败"
+    },
     "appearance": "外观",
     "theme": "主题",
     "language": "语言",
@@ -328,6 +459,86 @@
     "logoutMessage": "确认退出当前账号？",
     "cancel": "取消",
     "confirmLogout": "退出"
+  },
+  "messages": {
+    "eyebrow": "消息",
+    "title": "消息与工单",
+    "subtitle": "查看站内消息，跟进用户工单和客服回复。",
+    "tabMessages": "站内消息",
+    "tabTickets": "工单",
+    "empty": "暂无消息。",
+    "detailTitle": "消息详情",
+    "noContent": "暂无内容。",
+    "markAllRead": "全部已读",
+    "markRead": "标记已读",
+    "delete": "删除消息",
+    "close": "关闭",
+    "deleteFailed": "删除消息失败",
+    "previous": "上一页",
+    "next": "下一页",
+    "pageStatus": "第 {{page}} / {{pages}} 页",
+    "filters": {
+      "all": "全部",
+      "unread": "未读"
+    }
+  },
+  "support": {
+    "newTicket": "新建工单",
+    "newTicketSubtitle": "说明问题后提交给客服团队。",
+    "empty": "暂无工单。",
+    "subject": "主题",
+    "content": "内容",
+    "category": "分类",
+    "priority": "优先级",
+    "submitTicket": "提交工单",
+    "createFailed": "工单创建失败",
+    "ticketDetail": "工单详情",
+    "conversation": "对话记录",
+    "messagesCount": "{{count}} 条消息",
+    "reply": "回复工单",
+    "addImage": "添加图片附件",
+    "submitReply": "发送回复",
+    "replyFailed": "回复失败",
+    "feedbackTitle": "服务评价",
+    "feedbackResponder": "评价对象",
+    "feedbackComment": "评价备注",
+    "submitFeedback": "提交评价",
+    "feedbackFailed": "评价提交失败",
+    "turnstileRequiredTitle": "需要验证",
+    "turnstileRequired": "请先完成人机验证。",
+    "previous": "上一页",
+    "next": "下一页",
+    "pageStatus": "第 {{page}} / {{pages}} 页",
+    "validation": {
+      "subjectRequired": "请输入工单主题。",
+      "contentRequired": "请输入内容。"
+    },
+    "statuses": {
+      "all": "全部",
+      "open": "待处理",
+      "in_progress": "处理中",
+      "waiting_user": "待用户回复",
+      "resolved": "已解决",
+      "closed": "已关闭"
+    },
+    "priorities": {
+      "low": "低",
+      "normal": "普通",
+      "high": "高",
+      "urgent": "紧急"
+    },
+    "categories": {
+      "website_bug": "网站问题",
+      "business_issue": "业务问题",
+      "feature_request": "功能建议",
+      "account": "账号",
+      "other": "其他"
+    },
+    "senderRoles": {
+      "user": "用户",
+      "support": "客服",
+      "admin": "管理员"
+    }
   },
   "appearance": {
     "system": "跟随系统",
