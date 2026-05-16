@@ -193,7 +193,7 @@ function buildThermalReceiptSummary({ language = 'en', receipt, t } = {}) {
   }
 
   return {
-    successEyebrow: 'THERMAL RECEIPT',
+    successEyebrow: translate(t, 'record.receipt.successEyebrow', 'THERMAL RECEIPT'),
     successTitle: translate(t, 'record.submitSuccessTitle', isZh ? '已提交' : 'Submitted'),
     successDescription: translate(
       t,
@@ -221,7 +221,7 @@ function buildThermalReceiptSummary({ language = 'en', receipt, t } = {}) {
       'record.receipt.footerLineOne',
       isZh ? '此回执已进入人工审核队列，请保留凭证。' : 'This receipt is queued for manual review. Keep your proof ready.',
     ),
-    footerLineTwo: 'CarbonTrack · thermal log snapshot',
+    footerLineTwo: translate(t, 'record.receipt.footerLineTwo', 'CarbonTrack · thermal log snapshot'),
     labels,
     actions: {
       restart: translate(t, 'record.receipt.recordAnother', isZh ? '继续记录下一条' : 'Record another'),

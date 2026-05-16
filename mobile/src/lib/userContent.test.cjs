@@ -123,6 +123,19 @@ test('normalizeNotificationPreferences gives stable editable rows with defaults 
   assert.equal(preferences[7].emailEnabled, true);
 });
 
+test('normalizeNotificationPreferences accepts string true booleans from APIs', () => {
+  const preferences = normalizeNotificationPreferences({
+    preferences: [
+      { category: 'security', email_enabled: 'true', push_enabled: 'true', locked: 'true' },
+    ],
+  });
+
+  const security = preferences.find((item) => item.category === 'security');
+  assert.equal(security.emailEnabled, true);
+  assert.equal(security.pushEnabled, true);
+  assert.equal(security.locked, true);
+});
+
 test('normalizeNotificationPreferences folds carbon record aliases into activity', () => {
   const preferences = normalizeNotificationPreferences({
     preferences: [

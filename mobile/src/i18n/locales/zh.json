@@ -133,6 +133,7 @@
     "submitSuccessMessage": "记录已提交，等待审核。",
     "receipt": {
       "title": "减碳核算回执",
+      "successEyebrow": "热敏小票",
       "successDescription": "核算详情已生成热敏小票，你可以直接查看完整记录。",
       "untitledActivity": "未命名活动",
       "uncategorized": "未分类",
@@ -149,6 +150,7 @@
       "descriptionLabel": "备注 / 审核提示",
       "descriptionFallback": "无附加备注。",
       "footerLineOne": "此回执已进入人工审核队列，请保留凭证。",
+      "footerLineTwo": "CarbonTrack · 热敏记录快照",
       "recordAnother": "继续记录下一条",
       "goHome": "返回首页"
     },

@@ -133,6 +133,7 @@
     "submitSuccessMessage": "Your record was submitted for review.",
     "receipt": {
       "title": "Carbon Reduction Receipt",
+      "successEyebrow": "THERMAL RECEIPT",
       "successDescription": "The calculation details are now printed on a thermal-style receipt for review.",
       "untitledActivity": "Untitled activity",
       "uncategorized": "Uncategorized",
@@ -149,6 +150,7 @@
       "descriptionLabel": "Notes / review memo",
       "descriptionFallback": "No extra note.",
       "footerLineOne": "This receipt is queued for manual review. Keep your proof ready.",
+      "footerLineTwo": "CarbonTrack · thermal log snapshot",
       "recordAnother": "Record another",
       "goHome": "Go home"
     },

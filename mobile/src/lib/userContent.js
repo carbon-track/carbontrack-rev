@@ -27,7 +27,12 @@ const unwrapPayload = (payload) => {
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
-const asBoolean = (value) => value === true || value === 1 || value === '1';
+const asBoolean = (value) => (
+  value === true
+  || value === 1
+  || value === '1'
+  || String(value).trim().toLowerCase() === 'true'
+);
 
 const normalizeNotificationCategory = (category) => {
   const key = String(category || '').trim().toLowerCase();
