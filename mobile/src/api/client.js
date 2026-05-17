@@ -1,14 +1,40 @@
 import axios from 'axios';
+import * as Crypto from 'expo-crypto';
 import { jwtDecode } from 'jwt-decode';
 import useAuthStore from '../store/authStore';
 import { mobileClientHeaders } from './mobileClientConfig';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dev-api.carbontrackapp.com/api/v1';
 const REFRESH_THRESHOLD_SECONDS = 10 * 60;
+const IDEMPOTENT_METHODS = new Set(['post', 'put', 'patch']);
 export const API_REQUEST_TIMEOUT_MS = 15000;
 export const NETWORK_TIMEOUT_CODE = 'NETWORK_TIMEOUT';
 
 const refreshPromises = new Map();
+
+const generateRequestId = () => {
+  if (typeof Crypto.randomUUID === 'function') {
+    return Crypto.randomUUID();
+  }
+
+  const bytes = Crypto.getRandomBytes(16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
+
+const ensureRequestId = (config) => {
+  const method = String(config.method || 'get').toLowerCase();
+  if (!IDEMPOTENT_METHODS.has(method)) {
+    return;
+  }
+
+  config.headers = config.headers || {};
+  if (!config.headers['X-Request-ID'] && !config.headers['x-request-id']) {
+    config.headers['X-Request-ID'] = generateRequestId();
+  }
+};
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -73,6 +99,8 @@ const refreshToken = async (token) => {
 };
 
 apiClient.interceptors.request.use(async (config) => {
+  ensureRequestId(config);
+
   const token = useAuthStore.getState().token;
   if (token) {
     let nextToken = token;
