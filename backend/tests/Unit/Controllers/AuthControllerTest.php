@@ -972,6 +972,11 @@ class AuthControllerTest extends TestCase
 
     public function testCreateProofOfWorkChallengePrefersCloudflareIpOverForwardedFor(): void
     {
+        $previousTrustedProxies = $_ENV['TRUSTED_PROXY_CIDRS'] ?? null;
+        $previousRemoteAddr = $_SERVER['REMOTE_ADDR'] ?? null;
+        $_ENV['TRUSTED_PROXY_CIDRS'] = '198.51.100.0/24';
+        $_SERVER['REMOTE_ADDR'] = '198.51.100.10';
+
         $mockAuthService = $this->createMock(AuthService::class);
         $mockTurnstileService = $this->createMock(TurnstileService::class);
         $mockPowService = $this->createMock(ProofOfWorkService::class);
@@ -1000,13 +1005,26 @@ class AuthControllerTest extends TestCase
             $mockPowService
         );
 
-        $request = makeRequest('POST', '/auth/pow/challenge', ['scope' => 'auth.login'], null, [
-            'X-Forwarded-For' => ['198.51.100.77'],
-            'CF-Connecting-IP' => ['203.0.113.9'],
-        ]);
-        $resp = $controller->createProofOfWorkChallenge($request, new \Slim\Psr7\Response());
+        try {
+            $request = makeRequest('POST', '/auth/pow/challenge', ['scope' => 'auth.login'], null, [
+                'X-Forwarded-For' => ['198.51.100.77'],
+                'CF-Connecting-IP' => ['203.0.113.9'],
+            ]);
+            $resp = $controller->createProofOfWorkChallenge($request, new \Slim\Psr7\Response());
 
-        $this->assertSame(200, $resp->getStatusCode());
+            $this->assertSame(200, $resp->getStatusCode());
+        } finally {
+            if ($previousTrustedProxies === null) {
+                unset($_ENV['TRUSTED_PROXY_CIDRS']);
+            } else {
+                $_ENV['TRUSTED_PROXY_CIDRS'] = $previousTrustedProxies;
+            }
+            if ($previousRemoteAddr === null) {
+                unset($_SERVER['REMOTE_ADDR']);
+            } else {
+                $_SERVER['REMOTE_ADDR'] = $previousRemoteAddr;
+            }
+        }
     }
 
     public function testLoginRequiresProofOfWorkForMobileRequests(): void

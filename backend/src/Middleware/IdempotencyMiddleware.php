@@ -21,6 +21,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
     private const FINGERPRINT_MAX_ARRAY_ITEMS = 200;
     private const FINGERPRINT_MAX_STRING_BYTES = 8192;
     private const STREAM_HASH_CHUNK_BYTES = 8192;
+    private const STREAM_HASH_MAX_BYTES = 1048576;
 
     private DatabaseService $db;
     private Logger $logger;
@@ -74,7 +75,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 $query = IdempotencyRecord::where('idempotency_key', $idempotencyKey)
                     ->where('composite_key', $compositeKey)
                     ->where('user_id', $userIdentity)
-                    ->where('created_at', '>', date('Y-m-d H:i:s', strtotime('-24 hours'))); // Only check last 24 hours
+                    ->where('created_at', '>', gmdate('Y-m-d H:i:s', strtotime('-24 hours'))); // Only check last 24 hours
 
                 $existingRecord = $query->first();
 
@@ -94,7 +95,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 } else {
                     // Process the request and store result for future replays
                     $response = $handler->handle($request);
-                    $this->storeIdempotencyRecord($idempotencyKey, $compositeKey, $request, $response);
+                    $this->storeIdempotencyRecord($idempotencyKey, $compositeKey, $userIdentity, $request, $response);
                 }
             } catch (\Throwable $e) {
                 $this->logger->error('Idempotency middleware error', [
@@ -199,7 +200,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
 
         if (is_array($value)) {
             hash_update($context, 'array:' . count($value) . ':{');
-            if (!array_is_list($value)) {
+            if (!$this->isListArray($value)) {
                 ksort($value);
             }
             $count = 0;
@@ -329,11 +330,12 @@ class IdempotencyMiddleware implements MiddlewareInterface
             'client_media_type' => $file->getClientMediaType(),
             'size' => $file->getSize(),
             'error' => $file->getError(),
-            'sha256' => $this->hashUploadedFile($file),
+            'sha256_prefix' => $this->hashUploadedFilePrefix($file),
+            'hash_bytes' => self::STREAM_HASH_MAX_BYTES,
         ];
     }
 
-    private function hashUploadedFile(UploadedFileInterface $file): ?string
+    private function hashUploadedFilePrefix(UploadedFileInterface $file): ?string
     {
         if ($file->getError() !== UPLOAD_ERR_OK) {
             return null;
@@ -352,11 +354,14 @@ class IdempotencyMiddleware implements MiddlewareInterface
             }
 
             $context = hash_init('sha256');
-            while (!$stream->eof()) {
-                $chunk = $stream->read(self::STREAM_HASH_CHUNK_BYTES);
+            $bytesRead = 0;
+            while (!$stream->eof() && $bytesRead < self::STREAM_HASH_MAX_BYTES) {
+                $remaining = self::STREAM_HASH_MAX_BYTES - $bytesRead;
+                $chunk = $stream->read(min(self::STREAM_HASH_CHUNK_BYTES, $remaining));
                 if ($chunk === '') {
                     break;
                 }
+                $bytesRead += strlen($chunk);
                 hash_update($context, $chunk);
             }
 
@@ -385,10 +390,26 @@ class IdempotencyMiddleware implements MiddlewareInterface
         return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $uuid) === 1;
     }
 
-    private function storeIdempotencyRecord(string $idempotencyKey, string $compositeKey, ServerRequestInterface $request, ResponseInterface $response): void
+    private function isListArray(array $value): bool
+    {
+        $expectedKey = 0;
+        foreach ($value as $key => $_) {
+            if ($key !== $expectedKey) {
+                return false;
+            }
+            $expectedKey++;
+        }
+        return true;
+    }
+
+    private function storeIdempotencyRecord(string $idempotencyKey, string $compositeKey, int $userId, ServerRequestInterface $request, ResponseInterface $response): void
     {
         try {
-            $userId = $this->resolveUserIdentity($request);
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 500) {
+                return;
+            }
+
             $responseBody = (string) $response->getBody();
 
             // Reset body stream position for subsequent reads
@@ -401,7 +422,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 'request_method' => $request->getMethod(),
                 'request_uri' => $request->getUri()->getPath(),
                 'request_body' => $this->encodeForFingerprint($this->normalizeForFingerprint($request->getParsedBody())),
-                'response_status' => $response->getStatusCode(),
+                'response_status' => $statusCode,
                 'response_body' => $responseBody,
                 'ip_address' => $this->getClientIp($request),
                 'user_agent' => $request->getHeaderLine('User-Agent')
