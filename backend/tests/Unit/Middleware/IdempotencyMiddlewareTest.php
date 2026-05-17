@@ -7,6 +7,7 @@ namespace CarbonTrack\Tests\Unit\Middleware;
 use PHPUnit\Framework\TestCase;
 use CarbonTrack\Middleware\IdempotencyMiddleware;
 use CarbonTrack\Models\IdempotencyRecord;
+use CarbonTrack\Services\AuthService;
 use CarbonTrack\Services\DatabaseService;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Schema\Blueprint;
@@ -180,6 +181,48 @@ class IdempotencyMiddlewareTest extends TestCase
         $this->assertStringContainsString('"B"', $bodyB);
         $this->assertStringNotContainsString('only-for-A', $bodyB);
         $this->assertNotSame('true', $respB->getHeaderLine('X-Idempotent-Replay'));
+    }
+
+    public function testBearerTokenIdentityIsUsedWhenAuthMiddlewareHasNotRunYet(): void
+    {
+        $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $authService = $this->getMockBuilder(AuthService::class)->disableOriginalConstructor()->getMock();
+        $authService->method('validateToken')->willReturnCallback(function (string $token): array {
+            return match ($token) {
+                'token-a' => ['user_id' => 101, 'user' => ['id' => 101]],
+                'token-b' => ['user_id' => 202, 'user' => ['id' => 202]],
+                default => throw new \RuntimeException('Invalid token'),
+            };
+        });
+        $mw = new IdempotencyMiddleware($db, $logger, $authService);
+
+        $uuid = '123e4567-e89b-12d3-a456-426614174005';
+        $callCounter = 0;
+        $handler = new class($callCounter) implements \Psr\Http\Server\RequestHandlerInterface {
+            public function __construct(public int &$count)
+            {
+            }
+            public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $this->count++;
+                $resp = new \Slim\Psr7\Response(200);
+                $resp->getBody()->write(json_encode(['count' => $this->count]));
+                return $resp->withHeader('Content-Type', 'application/json');
+            }
+        };
+
+        $headersA = ['X-Request-ID' => [$uuid], 'Authorization' => ['Bearer token-a']];
+        $headersB = ['X-Request-ID' => [$uuid], 'Authorization' => ['Bearer token-b']];
+        $first = makeRequest('POST', '/api/v1/carbon-track/record', ['amount' => 1], null, $headersA);
+        $second = makeRequest('POST', '/api/v1/carbon-track/record', ['amount' => 1], null, $headersB);
+
+        $mw->process($first, $handler);
+        $resp2 = $mw->process($second, $handler);
+
+        $this->assertSame(2, $callCounter);
+        $this->assertNotSame('true', $resp2->getHeaderLine('X-Idempotent-Replay'));
+        $this->assertSame(2, IdempotencyRecord::query()->count());
     }
 
     public function testSameUserReplayingSameUuidStillReturnsCachedResponse(): void

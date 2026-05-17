@@ -208,14 +208,13 @@ class AuthService
         // reset / explicit revocation must be rejected. Skip enforcement when the
         // local DB does not (yet) carry the column; the migration applies on
         // production deployments.
-        $tokenTv = $decoded['tv'] ?? null;
-        if ($tokenTv !== null && is_numeric($tokenTv)) {
-            $userId = $this->normalizeUserId($normalizedUser['id'] ?? null);
-            if ($userId !== null) {
-                $current = $this->fetchTokenVersionForUserId($userId);
-                if ((int) $tokenTv !== $current) {
-                    throw new \RuntimeException('Token version mismatch');
-                }
+        $tokenTv = $decoded['tv'] ?? 0;
+        $userId = $this->normalizeUserId($normalizedUser['id'] ?? null);
+        if ($userId !== null) {
+            $current = $this->fetchTokenVersionForUserId($userId);
+            $tokenVersion = is_numeric($tokenTv) ? (int) $tokenTv : 0;
+            if ($tokenVersion !== $current) {
+                throw new \RuntimeException('Token version mismatch');
             }
         }
 

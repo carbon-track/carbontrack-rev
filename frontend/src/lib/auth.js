@@ -567,7 +567,10 @@ export const initAuth = async () => {
         try {
           await refreshAuthToken();
         } catch (error) {
-          console.warn('Token refresh failed; continuing with the current valid token:', error);
+          console.warn('Token refresh failed; continuing with the current valid token:', {
+            status: error?.response?.status ?? null,
+            message: error?.response?.data?.message ?? error?.message ?? 'unknown',
+          });
         }
       }
 

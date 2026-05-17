@@ -378,6 +378,36 @@ class AuthServiceTest extends TestCase
         $service->validateToken($token);
     }
 
+    public function testValidateTokenTreatsMissingTokenVersionAsZero(): void
+    {
+        $pdo = $this->makeSqliteUsersPdo();
+        $pdo->exec(
+            "INSERT INTO users (uuid, username, email, password, status, points, is_admin, token_version, created_at, updated_at)
+             VALUES ('550e8400-e29b-41d4-a716-44665544aa04', 'legacy-tv', 'legacy-tv@example.com', 'hash', 'active', 0, 0, 1, '2026-04-01 00:00:00', '2026-04-01 00:00:00')"
+        );
+
+        $service = new AuthService($this->jwtSecret, 'HS256', 86400, $this->auditLogService, $this->errorLogService);
+        $service->setDatabase($pdo);
+        $now = time();
+        $legacyToken = JWT::encode([
+            'iss' => 'carbontrack',
+            'aud' => 'carbontrack-users',
+            'iat' => $now,
+            'exp' => $now + 3600,
+            'sub' => '550e8400-e29b-41d4-a716-44665544aa04',
+            'user' => [
+                'id' => 1,
+                'uuid' => '550e8400-e29b-41d4-a716-44665544aa04',
+                'username' => 'legacy-tv',
+                'email' => 'legacy-tv@example.com',
+            ],
+        ], $this->jwtSecret, 'HS256');
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Token version mismatch');
+        $service->validateToken($legacyToken);
+    }
+
     public function testGenerateTokenStampsCurrentTokenVersionFromDatabase(): void
     {
         $pdo = $this->makeSqliteUsersPdo();

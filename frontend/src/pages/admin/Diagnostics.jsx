@@ -936,21 +936,21 @@ function RequestTester({ operation }) {
       }, {});
 
       let stripped = false;
+      if (!targetIsTrusted) {
+        Object.keys(headers).forEach((key) => {
+          if (/^(proxy-)?authorization$/i.test(key)) {
+            delete headers[key];
+            stripped = true;
+          }
+        });
+      }
+
       if (includeAuth && typeof window !== 'undefined') {
         if (targetIsTrusted) {
           const token = window.localStorage?.getItem('auth_token');
           if (token) {
             headers.Authorization = `Bearer ${token}`;
           }
-        } else {
-          // Strip every author-supplied Authorization-style header so a confirmed
-          // cross-origin probe still cannot leak the admin bearer token.
-          stripped = true;
-          Object.keys(headers).forEach((key) => {
-            if (/^authorization$/i.test(key)) {
-              delete headers[key];
-            }
-          });
         }
       }
       if (stripped) {

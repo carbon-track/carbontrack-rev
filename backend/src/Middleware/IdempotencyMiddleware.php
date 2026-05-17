@@ -10,6 +10,7 @@ use Psr\Http\Message\UploadedFileInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use CarbonTrack\Services\DatabaseService;
+use CarbonTrack\Services\AuthService;
 use CarbonTrack\Models\IdempotencyRecord;
 use Slim\Psr7\Response;
 use Monolog\Logger;
@@ -23,6 +24,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
 
     private DatabaseService $db;
     private Logger $logger;
+    private ?AuthService $authService;
     private array $idempotentMethods = ['POST', 'PUT', 'PATCH'];
     private array $sensitiveRoutes = [
         '/api/v1/auth/register',
@@ -33,10 +35,11 @@ class IdempotencyMiddleware implements MiddlewareInterface
         '/api/v1/admin/messages'
     ];
 
-    public function __construct(DatabaseService $db, Logger $logger)
+    public function __construct(DatabaseService $db, Logger $logger, ?AuthService $authService = null)
     {
         $this->db = $db;
         $this->logger = $logger;
+        $this->authService = $authService;
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -58,8 +61,9 @@ class IdempotencyMiddleware implements MiddlewareInterface
             $response = $this->badRequestResponse('X-Request-ID must be a valid UUID');
         } else {
             try {
-                // B-106: bind replay lookup to the authenticated user identity (or
-                // the literal "anonymous" bucket on auth-less routes) AND to the
+                // B-106: bind replay lookup to the authenticated user identity
+                // resolved from the bearer token (or the literal "anonymous"
+                // bucket on auth-less routes) AND to the
                 // request fingerprint (method + path + sha256(body/files)). Two users
                 // colliding on the same UUID, or the same user replaying the UUID
                 // against a different endpoint/body, must NOT see each other's
@@ -126,6 +130,34 @@ class IdempotencyMiddleware implements MiddlewareInterface
         }
         if (is_string($userId) && ctype_digit($userId)) {
             $parsed = (int) $userId;
+            return $parsed > 0 ? $parsed : null;
+        }
+
+        $authHeader = $request->getHeaderLine('Authorization');
+        if ($this->authService !== null && str_starts_with($authHeader, 'Bearer ')) {
+            try {
+                $payload = $this->authService->validateToken(trim(substr($authHeader, 7)));
+                $tokenUserId = $this->normalizeUserId($payload['user_id'] ?? $payload['user']['id'] ?? null);
+                if ($tokenUserId !== null) {
+                    return $tokenUserId;
+                }
+            } catch (\Throwable $e) {
+                // Let route-level auth middleware own the eventual 401. For the
+                // idempotency key, an invalid/absent token falls back to the
+                // anonymous bucket rather than sharing a cached authenticated row.
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeUserId($value): ?int
+    {
+        if (is_int($value) && $value > 0) {
+            return $value;
+        }
+        if (is_string($value) && ctype_digit($value)) {
+            $parsed = (int) $value;
             return $parsed > 0 ? $parsed : null;
         }
         return null;
