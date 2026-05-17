@@ -99,7 +99,7 @@ class AuthService
                 return;
             }
             $stmt->execute([
-                'updated_at' => date('Y-m-d H:i:s'),
+                'updated_at' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
                 'id' => $userId,
             ]);
         } catch (\Throwable $e) {

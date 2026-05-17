@@ -44,6 +44,7 @@ class IdempotencyMiddlewareTest extends TestCase
             $t->string('user_agent', 512)->nullable();
             $t->timestamps();
             $t->index(['idempotency_key', 'user_id'], 'idx_idempotency_key_user');
+            $t->unique(['idempotency_key', 'composite_key', 'user_id'], 'uniq_idempotency_key_composite_user');
         });
 
         self::$capsule = $capsule;
@@ -302,6 +303,84 @@ class IdempotencyMiddlewareTest extends TestCase
         $this->assertNotSame('true', $respA1->getHeaderLine('X-Idempotent-Replay'));
         $this->assertSame('true', $respA2->getHeaderLine('X-Idempotent-Replay'));
         $this->assertStringContainsString('"A"', (string) $respA2->getBody());
+    }
+
+    public function testSamePayloadWithDifferentRequestIdsEachGetsCached(): void
+    {
+        $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $mw = new IdempotencyMiddleware($db, $logger);
+
+        $callCounter = 0;
+        $handler = new class($callCounter) implements \Psr\Http\Server\RequestHandlerInterface {
+            public function __construct(public int &$count)
+            {
+            }
+            public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $this->count++;
+                $resp = new \Slim\Psr7\Response(200);
+                $resp->getBody()->write(json_encode(['count' => $this->count]));
+                return $resp->withHeader('Content-Type', 'application/json');
+            }
+        };
+
+        $payload = ['amount' => 1, 'meta' => ['b' => 2, 'a' => 1]];
+        $uuidA = '123e4567-e89b-12d3-a456-426614174006';
+        $uuidB = '123e4567-e89b-12d3-a456-426614174007';
+        $requestA = makeRequest('POST', '/api/v1/carbon-track/record', $payload, null, [
+            'X-Request-ID' => [$uuidA],
+        ])->withAttribute('user_id', 123);
+        $requestB = makeRequest('POST', '/api/v1/carbon-track/record', $payload, null, [
+            'X-Request-ID' => [$uuidB],
+        ])->withAttribute('user_id', 123);
+        $retryB = makeRequest('POST', '/api/v1/carbon-track/record', $payload, null, [
+            'X-Request-ID' => [$uuidB],
+        ])->withAttribute('user_id', 123);
+
+        $mw->process($requestA, $handler);
+        $mw->process($requestB, $handler);
+        $respRetryB = $mw->process($retryB, $handler);
+
+        $this->assertSame(2, $callCounter);
+        $this->assertSame('true', $respRetryB->getHeaderLine('X-Idempotent-Replay'));
+        $this->assertSame(2, IdempotencyRecord::query()->count());
+    }
+
+    public function testAssociativePayloadOrderDoesNotChangeCompositeFingerprint(): void
+    {
+        $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $mw = new IdempotencyMiddleware($db, $logger);
+
+        $uuid = '123e4567-e89b-12d3-a456-426614174008';
+        $callCounter = 0;
+        $handler = new class($callCounter) implements \Psr\Http\Server\RequestHandlerInterface {
+            public function __construct(public int &$count)
+            {
+            }
+            public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $this->count++;
+                $resp = new \Slim\Psr7\Response(200);
+                $resp->getBody()->write('{"ok":true}');
+                return $resp->withHeader('Content-Type', 'application/json');
+            }
+        };
+
+        $headers = ['X-Request-ID' => [$uuid]];
+        $first = makeRequest('POST', '/api/v1/carbon-track/record', [
+            'meta' => ['b' => 2, 'a' => 1],
+        ], null, $headers)->withAttribute('user_id', 321);
+        $retry = makeRequest('POST', '/api/v1/carbon-track/record', [
+            'meta' => ['a' => 1, 'b' => 2],
+        ], null, $headers)->withAttribute('user_id', 321);
+
+        $mw->process($first, $handler);
+        $respRetry = $mw->process($retry, $handler);
+
+        $this->assertSame(1, $callCounter);
+        $this->assertSame('true', $respRetry->getHeaderLine('X-Idempotent-Replay'));
     }
 
     public function testMultipartUploadsWithDifferentFilesUseDifferentCompositeKeys(): void

@@ -73,14 +73,8 @@ class IdempotencyMiddleware implements MiddlewareInterface
 
                 $query = IdempotencyRecord::where('idempotency_key', $idempotencyKey)
                     ->where('composite_key', $compositeKey)
+                    ->where('user_id', $userIdentity)
                     ->where('created_at', '>', date('Y-m-d H:i:s', strtotime('-24 hours'))); // Only check last 24 hours
-
-                // user_id may be int (auth user) or null (anonymous). NULL must use IS NULL.
-                if ($userIdentity === null) {
-                    $query->whereNull('user_id');
-                } else {
-                    $query->where('user_id', $userIdentity);
-                }
 
                 $existingRecord = $query->first();
 
@@ -119,10 +113,10 @@ class IdempotencyMiddleware implements MiddlewareInterface
 
     /**
      * Resolve the authenticated user identifier used for binding idempotency rows.
-     * Returns an int when AuthMiddleware has populated user_id, otherwise null
-     * (handled as the "anonymous" bucket).
+     * Returns a positive int for authenticated users, otherwise 0 for the
+     * non-null "anonymous" bucket.
      */
-    private function resolveUserIdentity(ServerRequestInterface $request): ?int
+    private function resolveUserIdentity(ServerRequestInterface $request): int
     {
         $userId = $request->getAttribute('user_id');
         if (is_int($userId) && $userId > 0) {
@@ -130,7 +124,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
         }
         if (is_string($userId) && ctype_digit($userId)) {
             $parsed = (int) $userId;
-            return $parsed > 0 ? $parsed : null;
+            return $parsed > 0 ? $parsed : 0;
         }
 
         $authHeader = $request->getHeaderLine('Authorization');
@@ -148,7 +142,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
             }
         }
 
-        return null;
+        return 0;
     }
 
     private function normalizeUserId($value): ?int
@@ -163,9 +157,9 @@ class IdempotencyMiddleware implements MiddlewareInterface
         return null;
     }
 
-    private function buildCompositeKey(?int $userIdentity, string $method, string $path, ServerRequestInterface $request): string
+    private function buildCompositeKey(int $userIdentity, string $method, string $path, ServerRequestInterface $request): string
     {
-        $bucket = $userIdentity === null ? 'anonymous' : (string) $userIdentity;
+        $bucket = $userIdentity === 0 ? 'anonymous' : (string) $userIdentity;
         $bodyHash = $this->fingerprintValue($request->getParsedBody());
         $filesHash = hash('sha256', $this->encodeForFingerprint(
             $this->normalizeUploadedFiles($request->getUploadedFiles())
@@ -205,6 +199,9 @@ class IdempotencyMiddleware implements MiddlewareInterface
 
         if (is_array($value)) {
             hash_update($context, 'array:' . count($value) . ':{');
+            if (!array_is_list($value)) {
+                ksort($value);
+            }
             foreach ($value as $key => $child) {
                 hash_update($context, 'key:' . (is_int($key) ? 'i' : 's') . ':' . (string) $key . ';');
                 $this->updateFingerprintHash($context, $child, $depth + 1);

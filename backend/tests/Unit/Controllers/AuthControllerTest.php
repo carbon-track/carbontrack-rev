@@ -272,6 +272,51 @@ class AuthControllerTest extends TestCase
         $this->assertNotEmpty($json['data']['verification_expires_at']);
     }
 
+    public function testLoginRejectsNonStringCredentialsBeforeLockoutChecks(): void
+    {
+        $mockAuthService = $this->createMock(AuthService::class);
+        $mockEmailService = $this->createMock(EmailService::class);
+        $mockTurnstileService = $this->createMock(TurnstileService::class);
+        $mockAuditLogService = $this->createMock(AuditLogService::class);
+        $mockMessageService = $this->createMock(MessageService::class);
+        $mockR2Service = $this->createMock(CloudflareR2Service::class);
+        $mockLogger = $this->createMock(\Monolog\Logger::class);
+        $mockPdo = $this->createMock(\PDO::class);
+        $mockRegion = $this->createMock(RegionService::class);
+
+        $mockAuthService->expects($this->never())->method('isAccountLocked');
+        $mockTurnstileService->expects($this->never())->method('verify');
+
+        $controller = new AuthController(
+            $mockAuthService,
+            $mockEmailService,
+            $mockTurnstileService,
+            $mockAuditLogService,
+            $mockMessageService,
+            $mockR2Service,
+            $mockLogger,
+            $mockPdo,
+            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $mockRegion
+        );
+
+        $cases = [
+            ['identifier' => ['john@example.com'], 'password' => 'secret123'],
+            ['identifier' => 'john@example.com', 'password' => ['secret123']],
+        ];
+
+        foreach ($cases as $payload) {
+            $request = makeRequest('POST', '/auth/login', $payload);
+            $response = new \Slim\Psr7\Response();
+
+            $resp = $controller->login($request, $response);
+            $this->assertSame(400, $resp->getStatusCode());
+            $json = json_decode((string) $resp->getBody(), true);
+            $this->assertFalse($json['success']);
+            $this->assertSame('MISSING_CREDENTIALS', $json['code']);
+        }
+    }
+
     public function testLoginDoesNotResendWhenVerificationStillValid(): void
     {
         $mockAuthService = $this->createMock(AuthService::class);

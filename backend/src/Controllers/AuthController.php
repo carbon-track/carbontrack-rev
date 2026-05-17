@@ -302,15 +302,18 @@ class AuthController
     {
         try {
             $data = $request->getParsedBody();
+            $data = is_array($data) ? $data : [];
             // 兼容 identifier / username / email 三种输入
-            $identifier = $data['identifier'] ?? ($data['username'] ?? ($data['email'] ?? null));
-            if (empty($identifier) || empty($data['password'])) {
+            $rawIdentifier = $data['identifier'] ?? ($data['username'] ?? ($data['email'] ?? null));
+            $rawPassword = $data['password'] ?? null;
+            if (!is_string($rawIdentifier) || trim($rawIdentifier) === '' || !is_string($rawPassword) || $rawPassword === '') {
                 return $this->jsonResponse($response, [
                     'success' => false,
                     'message' => 'Identifier and password are required',
                     'code' => 'MISSING_CREDENTIALS'
                 ], 400);
             }
+            $identifier = trim($rawIdentifier);
             $clientIp = $this->getClientIP($request);
             // Account/IP lockout precedes any credential check so brute-force traffic
             // cannot probe whether a user exists or burn through Turnstile capacity.

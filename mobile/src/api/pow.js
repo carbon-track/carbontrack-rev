@@ -38,12 +38,12 @@ const sha256Hex = (message) => Crypto.digestStringAsync(
 );
 
 export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
-  const targetDifficulty = Number(difficulty);
-  if (!challenge || !Number.isFinite(targetDifficulty) || targetDifficulty < 1) {
+  const normalizedDifficulty = Number(difficulty);
+  if (!challenge || !Number.isFinite(normalizedDifficulty) || normalizedDifficulty < 1) {
     throw new Error('Invalid proof-of-work challenge');
   }
 
-  const expectedAttempts = 2 ** Math.min(28, Math.floor(targetDifficulty));
+  const expectedAttempts = 2 ** Math.min(28, Math.floor(normalizedDifficulty));
   const maxAttempts = Number.isFinite(options.maxAttempts)
     ? Math.max(1, Math.floor(options.maxAttempts))
     : Math.min(
@@ -54,7 +54,7 @@ export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
     ? Math.max(1000, Math.floor(options.timeoutMs))
     : Math.min(
       MAX_DYNAMIC_SOLVE_MS,
-      targetDifficulty >= 22 ? MAX_DYNAMIC_SOLVE_MS : MAX_SOLVE_MS,
+      normalizedDifficulty >= 22 ? MAX_DYNAMIC_SOLVE_MS : MAX_SOLVE_MS,
     );
   const startedAt = Date.now();
   let nonce = 0;
@@ -71,7 +71,7 @@ export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
     const hashes = await Promise.all(batch.map((candidate) => sha256Hex(`${challenge}:${candidate}`)));
 
     for (let index = 0; index < hashes.length; index += 1) {
-      if (hasLeadingZeroBits(hashes[index], targetDifficulty)) {
+      if (hasLeadingZeroBits(hashes[index], normalizedDifficulty)) {
         return String(batch[index]);
       }
     }

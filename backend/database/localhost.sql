@@ -1400,7 +1400,7 @@ ALTER TABLE `multipart_uploads`
 ALTER TABLE `idempotency_records`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_idempotency_key_user` (`idempotency_key`,`user_id`),
-  ADD UNIQUE KEY `uniq_idempotency_composite_user` (`composite_key`,`user_id`),
+  ADD UNIQUE KEY `uniq_idempotency_key_composite_user` (`idempotency_key`,`composite_key`,`user_id`),
   ADD KEY `idx_user_id` (`user_id`),
   ADD KEY `idx_created_at` (`created_at`),
   ADD KEY `idx_request_uri` (`request_uri`(191));
