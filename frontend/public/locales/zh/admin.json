@@ -305,7 +305,9 @@
           "requestFailed": "请求失败",
           "duration": "耗时 {{value}} 毫秒",
           "invalidJsonObject": "{{field}} 必须是合法的 JSON 对象。",
-          "invalidJsonValue": "{{field}} 必须是合法的 JSON 内容。"
+          "invalidJsonValue": "{{field}} 必须是合法的 JSON 内容。",
+          "crossOriginConfirm": "目标 {{url}} 不在 API Origin 白名单中。继续将不会附带管理员凭据。是否继续？",
+          "crossOriginAuthStripped": "请求目标非 API Origin，Bearer Token 已被剥离，不会随请求发送。"
         },
         "results": {
           "headers": "响应头信息",

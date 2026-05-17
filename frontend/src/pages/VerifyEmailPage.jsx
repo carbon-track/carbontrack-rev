@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { Loader2, MailCheck } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 import { authAPI, tokenManager, userManager } from '../lib/auth';
+import { safeReturnPath } from '../lib/safeReturn';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
@@ -84,10 +85,11 @@ const VerifyEmailPage = () => {
       sessionStorage.removeItem('verification_resend_available_at');
       const storedReturn = sessionStorage.getItem('verification_return_path');
       sessionStorage.removeItem('verification_return_path');
-      const target = returnParam || storedReturn || '/dashboard';
+      const candidate = returnParam || storedReturn || '/dashboard';
+      const target = safeReturnPath(candidate, '/dashboard');
       navigate(target, { replace: true });
     } else {
-      navigate(returnParam || '/dashboard', { replace: true });
+      navigate(safeReturnPath(returnParam, '/dashboard'), { replace: true });
     }
   }, [navigate, returnParam]);
 

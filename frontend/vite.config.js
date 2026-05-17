@@ -97,6 +97,19 @@ export default defineConfig(async ({ mode }) => {
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(apiBaseUrl),
       'import.meta.env.VITE_BUILD_ID': JSON.stringify(buildId),
+      // W-203: physically erase any dev-only auth bootstrap envs from the
+      // production bundle so they cannot survive even if the build environment
+      // accidentally exports them. `undefined` here lets terser/dead-code
+      // elimination prune the dev fallback path entirely.
+      ...(mode === 'production'
+        ? {
+            'import.meta.env.VITE_DEV_AUTH_TOKEN': 'undefined',
+            'import.meta.env.VITE_DEV_AUTH_USER_INFO_JSON': 'undefined',
+            'import.meta.env.VITE_DEV_AUTH_USER_INFO_BASE64': 'undefined',
+            'import.meta.env.VITE_DEV_AUTH_FORCE_SYNC': 'undefined',
+            'import.meta.env.VITE_ENABLE_DEV_AUTH_FROM_ENV': 'undefined',
+          }
+        : {}),
     },
   }
 })
