@@ -312,6 +312,80 @@ class IdempotencyMiddlewareTest extends TestCase
         $this->assertSame(2, IdempotencyRecord::query()->count());
     }
 
+    public function testBearerTokenNestedUserIdIsWrittenToRequestAttribute(): void
+    {
+        $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $authService = $this->getMockBuilder(AuthService::class)->disableOriginalConstructor()->getMock();
+        $authService->method('validateToken')->willReturn([
+            'user' => ['id' => 303],
+            'uuid' => '550e8400-e29b-41d4-a716-446655443303',
+            'email' => 'nested@example.com',
+            'role' => 'user',
+        ]);
+        $mw = new IdempotencyMiddleware($db, $logger, $authService);
+
+        $seenUserId = null;
+        $handler = new class($seenUserId) implements \Psr\Http\Server\RequestHandlerInterface {
+            public function __construct(public ?int &$seenUserId)
+            {
+            }
+
+            public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $this->seenUserId = $request->getAttribute('user_id');
+                $resp = new \Slim\Psr7\Response(200);
+                $resp->getBody()->write('{"ok":true}');
+                return $resp->withHeader('Content-Type', 'application/json');
+            }
+        };
+
+        $request = makeRequest('POST', '/api/v1/carbon-track/record', ['amount' => 1], null, [
+            'X-Request-ID' => ['123e4567-e89b-12d3-a456-426614174014'],
+            'Authorization' => ['Bearer nested-token'],
+        ]);
+
+        $mw->process($request, $handler);
+
+        $this->assertSame(303, $seenUserId);
+        $this->assertSame(303, IdempotencyRecord::query()->first()?->user_id);
+    }
+
+    public function testCanonicalCarbonRecordsEndpointIsIdempotent(): void
+    {
+        $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $mw = new IdempotencyMiddleware($db, $logger);
+
+        $uuid = '123e4567-e89b-12d3-a456-426614174015';
+        $callCounter = 0;
+        $handler = new class($callCounter) implements \Psr\Http\Server\RequestHandlerInterface {
+            public function __construct(public int &$count)
+            {
+            }
+
+            public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $this->count++;
+                $resp = new \Slim\Psr7\Response(201);
+                $resp->getBody()->write(json_encode(['count' => $this->count]));
+                return $resp->withHeader('Content-Type', 'application/json');
+            }
+        };
+
+        $headers = ['X-Request-ID' => [$uuid]];
+        $first = makeRequest('POST', '/api/v1/carbon-records', ['amount' => 1], null, $headers)
+            ->withAttribute('user_id', 123);
+        $retry = makeRequest('POST', '/api/v1/carbon-records', ['amount' => 1], null, $headers)
+            ->withAttribute('user_id', 123);
+
+        $mw->process($first, $handler);
+        $respRetry = $mw->process($retry, $handler);
+
+        $this->assertSame(1, $callCounter);
+        $this->assertSame('true', $respRetry->getHeaderLine('X-Idempotent-Replay'));
+    }
+
     public function testSameUserReplayingSameUuidStillReturnsCachedResponse(): void
     {
         $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
@@ -538,6 +612,44 @@ class IdempotencyMiddlewareTest extends TestCase
 
         $this->assertSame(1, $callCounter);
         $this->assertSame('true', $respRetry->getHeaderLine('X-Idempotent-Replay'));
+    }
+
+    public function testLongStringsWithSamePrefixButDifferentSuffixUseDifferentCompositeKeys(): void
+    {
+        $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $mw = new IdempotencyMiddleware($db, $logger);
+
+        $uuid = '123e4567-e89b-12d3-a456-426614174016';
+        $callCounter = 0;
+        $handler = new class($callCounter) implements \Psr\Http\Server\RequestHandlerInterface {
+            public function __construct(public int &$count)
+            {
+            }
+
+            public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $this->count++;
+                $resp = new \Slim\Psr7\Response(200);
+                $resp->getBody()->write(json_encode(['count' => $this->count]));
+                return $resp->withHeader('Content-Type', 'application/json');
+            }
+        };
+
+        $headers = ['X-Request-ID' => [$uuid]];
+        $prefix = str_repeat('a', 8192);
+        $first = makeRequest('POST', '/api/v1/carbon-track/record', [
+            'note' => $prefix . 'x',
+        ], null, $headers)->withAttribute('user_id', 321);
+        $second = makeRequest('POST', '/api/v1/carbon-track/record', [
+            'note' => $prefix . 'y',
+        ], null, $headers)->withAttribute('user_id', 321);
+
+        $mw->process($first, $handler);
+        $resp2 = $mw->process($second, $handler);
+
+        $this->assertSame(2, $callCounter);
+        $this->assertNotSame('true', $resp2->getHeaderLine('X-Idempotent-Replay'));
     }
 
     public function testMultipartUploadsWithDifferentFilesUseDifferentCompositeKeys(): void

@@ -31,6 +31,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
     private array $idempotentMethods = ['POST', 'PUT', 'PATCH'];
     private array $idempotencyRoutes = [
         '/api/v1/auth/register',
+        '/api/v1/carbon-records',
         '/api/v1/carbon-track/record',
         '/api/v1/exchange',
         '/api/v1/messages/broadcast',
@@ -136,7 +137,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 $tokenUserId = $this->normalizeUserId($payload['user_id'] ?? $payload['user']['id'] ?? null);
                 if ($tokenUserId !== null) {
                     $request = $request
-                        ->withAttribute('user_id', $payload['user_id'])
+                        ->withAttribute('user_id', $tokenUserId)
                         ->withAttribute('user_uuid', $payload['uuid'] ?? null)
                         ->withAttribute('user_email', $payload['email'] ?? null)
                         ->withAttribute('user_role', $payload['role'] ?? 'user')
@@ -205,10 +206,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
 
         if (is_string($value)) {
             $length = strlen($value);
-            $fingerprintValue = $length > self::FINGERPRINT_MAX_STRING_BYTES
-                ? substr($value, 0, self::FINGERPRINT_MAX_STRING_BYTES)
-                : $value;
-            hash_update($context, 'string:' . $length . ':' . hash('sha256', $fingerprintValue) . ';');
+            hash_update($context, 'string:' . $length . ':' . hash('sha256', $value) . ';');
             return;
         }
 

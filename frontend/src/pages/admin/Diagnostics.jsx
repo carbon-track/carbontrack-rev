@@ -50,25 +50,31 @@ const REMOTE_SPEC_FALLBACK =
 const API_TEST_BASE_URL = API_BASE_URL;
 const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+const resolveAgainstAppOrigin = (rawUrl) => {
+  if (typeof rawUrl !== 'string' || !rawUrl) {
+    return null;
+  }
+  const appOrigin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'http://localhost';
+  try {
+    return new URL(rawUrl, appOrigin);
+  } catch {
+    return null;
+  }
+};
+
 // Origins for which the tester is allowed to attach the admin Bearer token.
 // Extending this list requires explicit security review (W-202).
 const TRUSTED_AUTH_ORIGINS = (() => {
-  try {
-    return new Set([new URL(API_BASE_URL).origin]);
-  } catch {
-    return new Set();
-  }
+  const apiUrl = resolveAgainstAppOrigin(API_BASE_URL);
+  return apiUrl ? new Set([apiUrl.origin]) : new Set();
 })();
 
 const isTrustedAuthOrigin = (rawUrl) => {
-  if (typeof rawUrl !== 'string' || !rawUrl) {
-    return false;
-  }
-  try {
-    return TRUSTED_AUTH_ORIGINS.has(new URL(rawUrl).origin);
-  } catch {
-    return false;
-  }
+  const targetUrl = resolveAgainstAppOrigin(rawUrl);
+  return targetUrl !== null && TRUSTED_AUTH_ORIGINS.has(targetUrl.origin);
 };
 
 const HTTP_METHOD_STYLES = {

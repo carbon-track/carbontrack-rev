@@ -36,14 +36,15 @@ class RequestLoggingMiddleware implements MiddlewareInterface
      * @var string[]
      */
     private const SENSITIVE_BODY_PATH_PATTERNS = [
-        '#^/api/v1/auth/login(/.*)?$#',
-        '#^/api/v1/auth/register(/.*)?$#',
-        '#^/api/v1/auth/refresh(/.*)?$#',
-        '#^/api/v1/auth/change-password(/.*)?$#',
-        '#^/api/v1/auth/reset-password(/.*)?$#',
-        '#^/api/v1/auth/verify-email(/.*)?$#',
-        '#^/api/v1/auth/send-verification-code(/.*)?$#',
-        '#^/api/v1/auth/forgot-password(/.*)?$#',
+        '#^/api(?:/v1)?/auth/login(/.*)?$#',
+        '#^/api(?:/v1)?/auth/register(/.*)?$#',
+        '#^/api(?:/v1)?/auth/refresh(/.*)?$#',
+        '#^/api(?:/v1)?/auth/change-password(/.*)?$#',
+        '#^/api(?:/v1)?/auth/reset-password(/.*)?$#',
+        '#^/api(?:/v1)?/auth/verify-email(/.*)?$#',
+        '#^/api(?:/v1)?/auth/send-verification-code(/.*)?$#',
+        '#^/api(?:/v1)?/auth/forgot-password(/.*)?$#',
+        '#^/api/v1/auth/passkey/login/verify(/.*)?$#',
     ];
 
     public function __construct(

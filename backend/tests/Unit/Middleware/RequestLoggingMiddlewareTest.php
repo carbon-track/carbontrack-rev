@@ -231,6 +231,60 @@ class RequestLoggingMiddlewareTest extends TestCase
         $middleware->process(makeRequest('POST', '/api/v1/auth/refresh'), $handler);
     }
 
+    public function testDropsBodiesForLegacyAuthAliasRoutes(): void
+    {
+        $systemLog = $this->createMock(SystemLogService::class);
+        $systemLog->expects($this->once())
+            ->method('log')
+            ->with($this->callback(static function (array $context): bool {
+                return ($context['path'] ?? null) === '/api/auth/login'
+                    && ($context['request_body'] ?? null) === '[REDACTED]'
+                    && ($context['response_body'] ?? null) === '[REDACTED]';
+            }));
+
+        $authService = $this->createMock(AuthService::class);
+        $authService->method('getCurrentUser')->willReturn(null);
+        $middleware = new RequestLoggingMiddleware($systemLog, $authService, $this->createMock(Logger::class));
+
+        $handler = new class implements RequestHandlerInterface {
+            public function handle(ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $resp = new Response(200);
+                $resp->getBody()->write(json_encode(['token' => 'legacy.jwt']));
+                return $resp;
+            }
+        };
+
+        $middleware->process(makeRequest('POST', '/api/auth/login'), $handler);
+    }
+
+    public function testDropsBodiesForPasskeyLoginVerifyRoute(): void
+    {
+        $systemLog = $this->createMock(SystemLogService::class);
+        $systemLog->expects($this->once())
+            ->method('log')
+            ->with($this->callback(static function (array $context): bool {
+                return ($context['path'] ?? null) === '/api/v1/auth/passkey/login/verify'
+                    && ($context['request_body'] ?? null) === '[REDACTED]'
+                    && ($context['response_body'] ?? null) === '[REDACTED]';
+            }));
+
+        $authService = $this->createMock(AuthService::class);
+        $authService->method('getCurrentUser')->willReturn(null);
+        $middleware = new RequestLoggingMiddleware($systemLog, $authService, $this->createMock(Logger::class));
+
+        $handler = new class implements RequestHandlerInterface {
+            public function handle(ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $resp = new Response(200);
+                $resp->getBody()->write(json_encode(['data' => ['token' => 'passkey.jwt']]));
+                return $resp;
+            }
+        };
+
+        $middleware->process(makeRequest('POST', '/api/v1/auth/passkey/login/verify'), $handler);
+    }
+
     public function testCanDisableCronEndpointSystemLog(): void
     {
         $systemLog = $this->createMock(SystemLogService::class);
