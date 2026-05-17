@@ -1822,6 +1822,7 @@ class CarbonTrackController
             return false;
         }
 
+        // This token only gates access to the mobile PoW path; it is not app attestation.
         $expected = trim((string)($_ENV['MOBILE_CLIENT_TOKEN'] ?? ''));
         if ($expected === '') {
             return false;

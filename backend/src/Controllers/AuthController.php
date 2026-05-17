@@ -1480,11 +1480,13 @@ class AuthController
             return false;
         }
 
-        // Require a shared client token that real mobile builds pin via X-Mobile-Client-Token.
+        // Require a mobile distribution token as a coarse PoW path gate. This is not
+        // treated as app attestation; the security boundary remains PoW, Turnstile,
+        // and rate limiting.
         // If the env value is unset we *disable* the bypass entirely so misconfigured deploys
         // can never let an arbitrary HTTP client onto the cheaper PoW path (B-105).
-        $expected = (string) ($_ENV['MOBILE_CLIENT_TOKEN'] ?? '');
-        if (trim($expected) === '') {
+        $expected = trim((string) ($_ENV['MOBILE_CLIENT_TOKEN'] ?? ''));
+        if ($expected === '') {
             return false;
         }
 

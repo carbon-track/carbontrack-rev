@@ -220,6 +220,128 @@ class IdempotencyMiddlewareTest extends TestCase
         $this->assertSame(1, $callCounter, 'Handler should run only once when same user replays same UUID');
         $this->assertStringContainsString('first-only', (string) $resp2->getBody());
     }
+
+    public function testSameUserCanReplayEarlierPayloadAfterUuidWasUsedForDifferentBody(): void
+    {
+        $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $mw = new IdempotencyMiddleware($db, $logger);
+
+        $uuid = '123e4567-e89b-12d3-a456-426614174003';
+        $callCounter = 0;
+        $handler = new class($callCounter) implements \Psr\Http\Server\RequestHandlerInterface {
+            public function __construct(public int &$count)
+            {
+            }
+            public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $this->count++;
+                $body = $request->getParsedBody();
+                $resp = new \Slim\Psr7\Response(200);
+                $resp->getBody()->write(json_encode(['variant' => $body['variant'] ?? 'unknown']));
+                return $resp->withHeader('Content-Type', 'application/json');
+            }
+        };
+
+        $headers = ['X-Request-ID' => [$uuid]];
+        $firstB = makeRequest('POST', '/api/v1/messages/broadcast', ['variant' => 'B'], null, $headers)
+            ->withAttribute('user_id', 777);
+        $firstA = makeRequest('POST', '/api/v1/messages/broadcast', ['variant' => 'A'], null, $headers)
+            ->withAttribute('user_id', 777);
+        $retryA = makeRequest('POST', '/api/v1/messages/broadcast', ['variant' => 'A'], null, $headers)
+            ->withAttribute('user_id', 777);
+
+        $mw->process($firstB, $handler);
+        $respA1 = $mw->process($firstA, $handler);
+        $respA2 = $mw->process($retryA, $handler);
+
+        $this->assertSame(2, $callCounter, 'Retrying the second payload should replay its matching composite row');
+        $this->assertNotSame('true', $respA1->getHeaderLine('X-Idempotent-Replay'));
+        $this->assertSame('true', $respA2->getHeaderLine('X-Idempotent-Replay'));
+        $this->assertStringContainsString('"A"', (string) $respA2->getBody());
+    }
+
+    public function testMultipartUploadsWithDifferentFilesUseDifferentCompositeKeys(): void
+    {
+        $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $mw = new IdempotencyMiddleware($db, $logger);
+
+        $uuid = '123e4567-e89b-12d3-a456-426614174004';
+        $callCounter = 0;
+        $handler = new class($callCounter) implements \Psr\Http\Server\RequestHandlerInterface {
+            public function __construct(public int &$count)
+            {
+            }
+            public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $this->count++;
+                $resp = new \Slim\Psr7\Response(201);
+                $resp->getBody()->write(json_encode(['count' => $this->count]));
+                return $resp->withHeader('Content-Type', 'application/json');
+            }
+        };
+
+        $headers = ['X-Request-ID' => [$uuid]];
+        $first = makeRequest('POST', '/api/v1/carbon-track/record', ['amount' => 1], null, $headers)
+            ->withAttribute('user_id', 123)
+            ->withUploadedFiles(['proof' => $this->makeUploadedFile('proof-a.png', 'image-a')]);
+        $second = makeRequest('POST', '/api/v1/carbon-track/record', ['amount' => 1], null, $headers)
+            ->withAttribute('user_id', 123)
+            ->withUploadedFiles(['proof' => $this->makeUploadedFile('proof-a.png', 'image-b')]);
+
+        $mw->process($first, $handler);
+        $resp2 = $mw->process($second, $handler);
+
+        $this->assertSame(2, $callCounter);
+        $this->assertNotSame('true', $resp2->getHeaderLine('X-Idempotent-Replay'));
+        $this->assertStringContainsString('"count":2', (string) $resp2->getBody());
+    }
+
+    private function makeUploadedFile(string $clientFilename, string $contents): \Psr\Http\Message\UploadedFileInterface
+    {
+        return new class($clientFilename, $contents) implements \Psr\Http\Message\UploadedFileInterface {
+            private \Slim\Psr7\Stream $stream;
+
+            public function __construct(private string $clientFilename, string $contents)
+            {
+                $resource = fopen('php://temp', 'r+');
+                fwrite($resource, $contents);
+                rewind($resource);
+                $this->stream = new \Slim\Psr7\Stream($resource);
+            }
+
+            public function getStream(): \Psr\Http\Message\StreamInterface
+            {
+                return $this->stream;
+            }
+
+            public function moveTo($targetPath): void
+            {
+                throw new \RuntimeException('Not needed for tests');
+            }
+
+            public function getSize(): ?int
+            {
+                return $this->stream->getSize();
+            }
+
+            public function getError(): int
+            {
+                return UPLOAD_ERR_OK;
+            }
+
+            public function getClientFilename(): ?string
+            {
+                return $this->clientFilename;
+            }
+
+            public function getClientMediaType(): ?string
+            {
+                return 'image/png';
+            }
+        };
+    }
 }
 
 

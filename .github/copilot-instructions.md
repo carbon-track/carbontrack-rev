@@ -41,7 +41,7 @@ The backend is a lean API service. Avoid adding redundant database structure che
 - **Setup**: Run `composer install` in the `backend` directory.
 - **Run Server**: `composer start` (runs `php -S localhost:8080 -t public`).
 - **Run Tests**: `composer test` (runs `phpunit`). Tests are located in `backend/tests/`.
-- **Debugging API**: To bypass Cloudflare firewall protection when debugging backend APIs, add the `x-debug-token` header with value `9c0d4f1a-5a0b-4b2c-9c7e-a1e2f3d4b5c6` to your requests.
+- **Debugging API**: There is no repository-implemented `x-debug-token` bypass. When Cloudflare or edge policy blocks local API debugging, use the environment's approved proxy/firewall-bypass setup instead of documenting or adding a backend bypass header.
 - **Logging & Audit Baseline (Mandatory)**: Any backend feature you add or modify must be wired into the project’s custom observability stack so operations can troubleshoot and auditors can trace behavior.
     - **System logs**: HTTP endpoints must remain covered by the global `RequestLoggingMiddleware` + `SystemLogService`. Non-HTTP execution paths (jobs, CLI flows, async tasks) must add an equivalent explicit system-event record or documented fallback.
     - **Audit logs**: Business actions, admin operations, user-triggered mutations, sensitive reads, exports, AI operations, and batch/system actions must record structured entries through `AuditLogService`.

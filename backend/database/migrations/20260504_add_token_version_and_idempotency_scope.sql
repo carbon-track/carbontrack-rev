@@ -29,5 +29,6 @@ CREATE TABLE IF NOT EXISTS `pow_attempts` (
     `scope` VARCHAR(64) NOT NULL,
     `attempted_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    KEY `idx_pow_attempts_ip_attempted_at` (`ip_address`, `attempted_at`)
+    KEY `idx_pow_attempts_ip_attempted_at` (`ip_address`, `attempted_at`),
+    KEY `idx_pow_attempts_attempted_at` (`attempted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

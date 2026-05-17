@@ -37,6 +37,7 @@ class RequestLoggingMiddleware implements MiddlewareInterface
     private const SENSITIVE_BODY_PATH_PATTERNS = [
         '#^/api/v1/auth/login(/.*)?$#',
         '#^/api/v1/auth/register(/.*)?$#',
+        '#^/api/v1/auth/refresh(/.*)?$#',
         '#^/api/v1/auth/change-password(/.*)?$#',
         '#^/api/v1/auth/reset-password(/.*)?$#',
         '#^/api/v1/auth/verify-email(/.*)?$#',

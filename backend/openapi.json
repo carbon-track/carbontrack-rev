@@ -9858,7 +9858,7 @@
             }
           },
           "401": {
-            "description": "账号或密码无效，或令牌版本不匹配（密码已变更）。",
+            "description": "账号或密码无效。",
             "content": {
               "application/json": {
                 "schema": {
@@ -9871,14 +9871,6 @@
                       "success": false,
                       "message": "Invalid credentials",
                       "code": "INVALID_CREDENTIALS"
-                    }
-                  },
-                  "tokenVersionMismatch": {
-                    "summary": "Stale token after password change",
-                    "value": {
-                      "success": false,
-                      "message": "Token version mismatch",
-                      "code": "TOKEN_VERSION_MISMATCH"
                     }
                   }
                 }

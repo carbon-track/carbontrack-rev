@@ -1426,7 +1426,8 @@ ALTER TABLE `proof_of_work_challenges`
 --
 ALTER TABLE `pow_attempts`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_pow_attempts_ip_attempted_at` (`ip_address`,`attempted_at`);
+  ADD KEY `idx_pow_attempts_ip_attempted_at` (`ip_address`,`attempted_at`),
+  ADD KEY `idx_pow_attempts_attempted_at` (`attempted_at`);
 
 --
 -- 表的索引 `messages`

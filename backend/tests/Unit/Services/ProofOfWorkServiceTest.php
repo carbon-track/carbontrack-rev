@@ -127,6 +127,22 @@ class ProofOfWorkServiceTest extends TestCase
         $this->assertNotEmpty($other['challenge']);
     }
 
+    public function testCreateChallengeCleansStaleIssuanceAttempts(): void
+    {
+        $db = $this->makeChallengeDatabase();
+        $old = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
+            ->modify('-2 days')
+            ->format('Y-m-d H:i:s');
+        $insert = $db->prepare('INSERT INTO pow_attempts (ip_address, scope, attempted_at) VALUES (?, ?, ?)');
+        $insert->execute(['203.0.113.7', 'auth.login', $old]);
+
+        $service = $this->makeService(8, $db);
+        $service->createChallenge('auth.login', '203.0.113.7');
+
+        $this->assertSame(1, (int)$db->query('SELECT COUNT(*) FROM pow_attempts')->fetchColumn());
+        $this->assertSame(0, (int)$db->query("SELECT COUNT(*) FROM pow_attempts WHERE attempted_at = '$old'")->fetchColumn());
+    }
+
     private function makeService(int $difficulty, ?PDO $db = null): ProofOfWorkService
     {
         $logger = new Logger('test');

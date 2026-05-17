@@ -23,6 +23,8 @@ class ProofOfWorkService
     ];
 
     public const ISSUANCE_RATE_LIMIT_PER_MINUTE = 10;
+    public const RATE_LIMIT_WINDOW_SECONDS = 60;
+    public const ATTEMPT_RETENTION_SECONDS = 86400;
 
     private string $secret;
     private Logger $logger;
@@ -264,7 +266,8 @@ class ProofOfWorkService
         }
 
         try {
-            $threshold = $this->formatSql($this->now()->modify('-60 seconds'));
+            $this->cleanupStaleIssuanceAttempts();
+            $threshold = $this->formatSql($this->now()->modify('-' . self::RATE_LIMIT_WINDOW_SECONDS . ' seconds'));
             $stmt = $this->db->prepare(
                 'SELECT COUNT(*) FROM pow_attempts WHERE ip_address = ? AND attempted_at >= ?'
             );
@@ -286,6 +289,7 @@ class ProofOfWorkService
         }
 
         try {
+            $this->cleanupStaleIssuanceAttempts();
             $stmt = $this->db->prepare(
                 'INSERT INTO pow_attempts (ip_address, scope, attempted_at) VALUES (?, ?, ?)'
             );
@@ -293,6 +297,18 @@ class ProofOfWorkService
         } catch (\Throwable $e) {
             $this->logFailure('pow_attempt_record_failed', $e, ['ip_address' => $clientIp]);
         }
+    }
+
+    private function cleanupStaleIssuanceAttempts(): int
+    {
+        if ($this->db === null) {
+            return 0;
+        }
+
+        $threshold = $this->formatSql($this->now()->modify('-' . self::ATTEMPT_RETENTION_SECONDS . ' seconds'));
+        $stmt = $this->db->prepare('DELETE FROM pow_attempts WHERE attempted_at < ?');
+        $stmt->execute([$threshold]);
+        return $stmt->rowCount();
     }
 
     public function cleanupExpiredChallenges(): array
@@ -317,7 +333,8 @@ class ProofOfWorkService
                     OR (used_at IS NOT NULL AND used_at < ?)'
             );
             $stmt->execute([$threshold, $threshold]);
-            return ['deleted' => $deleted];
+            $attemptsDeleted = $this->cleanupStaleIssuanceAttempts();
+            return ['deleted' => $deleted, 'attempts_deleted' => $attemptsDeleted];
         } catch (\Throwable $e) {
             $this->logFailure('pow_challenge_cleanup_failed', $e);
             throw $e;

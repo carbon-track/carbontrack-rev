@@ -99,16 +99,26 @@ const styles = StyleSheet.create({
   },
   buttonContent: {
     alignItems: 'center',
+    flex: 1,
     flexDirection: 'row',
     gap: 8,
+    justifyContent: 'center',
   },
   buttonText: {
     fontSize: 16,
     fontWeight: '800',
+    includeFontPadding: false,
+    lineHeight: 20,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   secondaryText: {
     fontSize: 15,
     fontWeight: '800',
+    includeFontPadding: false,
+    lineHeight: 19,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   linkButton: {
     alignItems: 'center',

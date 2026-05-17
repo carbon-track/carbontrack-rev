@@ -156,6 +156,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate Apple webcredentials contract
+        run: node scripts/validate-apple-webcredentials.mjs
+
       - name: Enforce pnpm-only mobile lockfile
         run: |
           if [ -f mobile/package-lock.json ]; then
@@ -190,6 +193,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Validate Apple webcredentials contract
+        run: node scripts/validate-apple-webcredentials.mjs
 
       - name: Enforce pnpm-only mobile lockfile
         run: |

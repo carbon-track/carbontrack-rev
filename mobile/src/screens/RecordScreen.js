@@ -25,20 +25,17 @@ import {
   ScreenBackground,
 } from '../components/Glass';
 import { carbonApi } from '../api/carbon';
+import ThermalReceiptCard from '../components/ThermalReceiptCard';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
+import { getApiErrorMessage } from '../lib/apiError';
+import { createReceiptFromSubmission } from '../lib/thermalReceipt';
 
 const padDatePart = (value) => String(value).padStart(2, '0');
 const todayString = (value = new Date()) => (
   `${value.getFullYear()}-${padDatePart(value.getMonth() + 1)}-${padDatePart(value.getDate())}`
 );
 const formatNumber = (value) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(Number(value || 0));
-const getApiErrorMessage = (error, fallback) => (
-  error?.response?.data?.message
-  || error?.response?.data?.error
-  || fallback
-);
-
 const normalizeAmountInput = (value) => {
   const asciiValue = String(value || '')
     .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
@@ -89,7 +86,7 @@ const getActivityName = (item, language) => {
   return item.name_en || item.name_zh || item.combined_name || item.category || '';
 };
 
-export default function RecordScreen({ route }) {
+export default function RecordScreen({ navigation, route }) {
   const { t, resolvedLanguage } = useI18n();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
@@ -102,6 +99,7 @@ export default function RecordScreen({ route }) {
   const [description, setDescription] = useState('');
   const [image, setImage] = useState(null);
   const [calculation, setCalculation] = useState(null);
+  const [submittedReceipt, setSubmittedReceipt] = useState(null);
 
   useEffect(() => {
     const requestedDate = route?.params?.checkinDate;
@@ -133,7 +131,12 @@ export default function RecordScreen({ route }) {
 
   const submitMutation = useMutation({
     mutationFn: carbonApi.submitRecord,
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
+      setSubmittedReceipt(createReceiptFromSubmission({
+        activity: selectedActivity,
+        result,
+        variables,
+      }));
       setAmount('');
       setDescription('');
       setImage(null);
@@ -142,7 +145,6 @@ export default function RecordScreen({ route }) {
       queryClient.invalidateQueries({ queryKey: ['mobile-dashboard-stats'] });
       queryClient.invalidateQueries({ queryKey: ['mobile-dashboard-chart'] });
       queryClient.invalidateQueries({ queryKey: ['mobile-dashboard-activities'] });
-      Alert.alert(t('record.submitSuccessTitle'), t('record.submitSuccessMessage'));
     },
     onError: (error) => Alert.alert(t('record.submitFailed'), getApiErrorMessage(error, t('record.retryLater'))),
   });
@@ -191,10 +193,16 @@ export default function RecordScreen({ route }) {
       Alert.alert(t('record.submitFailed'), t('record.invalidDate'));
       return;
     }
+    const normalizedCheckinDate = route?.params?.checkinDate
+      ? normalizeDateInput(route.params.checkinDate)
+      : null;
     submitMutation.mutate({
       activityId,
       amount: parsedAmount,
       date: normalizedDate,
+      checkinDate: normalizedCheckinDate && isValidDateString(normalizedCheckinDate)
+        ? normalizedCheckinDate
+        : null,
       description,
       image,
       unit: selectedActivity?.unit,
@@ -202,6 +210,20 @@ export default function RecordScreen({ route }) {
   };
 
   const refreshing = factorsQuery.isFetching;
+
+  const restartRecord = () => {
+    setSubmittedReceipt(null);
+    setActivityId('');
+    setCalculation(null);
+    setDate(route?.params?.checkinDate && isValidDateString(normalizeDateInput(route.params.checkinDate))
+      ? normalizeDateInput(route.params.checkinDate)
+      : todayString());
+  };
+
+  const goHome = () => {
+    setSubmittedReceipt(null);
+    navigation?.navigate?.('Home');
+  };
 
   return (
     <ScreenBackground>
@@ -221,6 +243,13 @@ export default function RecordScreen({ route }) {
         >
           <PageHeader eyebrow={t('record.eyebrow')} title={t('record.title')} subtitle={t('record.subtitle')} />
 
+          {submittedReceipt ? (
+            <ThermalReceiptCard
+              receipt={submittedReceipt}
+              onRestart={restartRecord}
+              onGoHome={goHome}
+            />
+          ) : (
           <View style={[styles.grid, isWide ? styles.gridWide : null]}>
             <GlassSurface style={styles.gridItem} contentStyle={styles.form}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('record.newRecord')}</Text>
@@ -273,6 +302,7 @@ export default function RecordScreen({ route }) {
                   onPress={() => setDate(todayString())}
                   style={styles.todayButton}
                   contentStyle={styles.todayButtonContent}
+                  wrapperStyle={styles.todayButtonWrapper}
                 >
                   <Ionicons color={colors.primary} name="calendar-outline" size={17} />
                   <Text style={[styles.todayButtonText, { color: colors.text }]}>{t('record.useToday')}</Text>
@@ -322,6 +352,7 @@ export default function RecordScreen({ route }) {
             </GlassSurface>
 
           </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenBackground>
@@ -378,19 +409,24 @@ const styles = StyleSheet.create({
   },
   todayButton: {
     borderRadius: 16,
-    minHeight: 50,
+    height: 54,
+    minHeight: 54,
   },
   todayButtonContent: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 6,
     justifyContent: 'center',
-    minHeight: 50,
+    height: 54,
+    minHeight: 54,
     paddingHorizontal: 12,
   },
   todayButtonText: {
     fontSize: 13,
     fontWeight: '800',
+  },
+  todayButtonWrapper: {
+    alignSelf: 'flex-end',
   },
   descriptionInput: {
     minHeight: 86,

@@ -52,6 +52,8 @@ class SensitiveDataRedactorTest extends TestCase
             'cf_turnstile_response' => 'tk',
             'pow_nonce' => '123',
             'pow_challenge' => 'abc',
+            'mobile_client_token' => 'mobile-secret',
+            'x-mobile-client-token' => 'mobile-secret',
             'otp' => '000000',
             'code' => '654321',
             'x-cron-key' => 'k1',
@@ -84,6 +86,7 @@ class SensitiveDataRedactorTest extends TestCase
             'HTTP_AUTHORIZATION' => 'Bearer xyz',
             'HTTP_COOKIE' => 'a=b',
             'HTTP_X_TURNSTILE_TOKEN' => 'ttok',
+            'HTTP_X_MOBILE_CLIENT_TOKEN' => 'mobile-secret',
             'HTTP_X_CRON_KEY' => 'ckey',
             'HTTP_X_SLA_SWEEP_KEY' => 'skey',
             'HTTP_X_DEBUG_USER' => 'admin',
@@ -100,6 +103,7 @@ class SensitiveDataRedactorTest extends TestCase
             'HTTP_AUTHORIZATION',
             'HTTP_COOKIE',
             'HTTP_X_TURNSTILE_TOKEN',
+            'HTTP_X_MOBILE_CLIENT_TOKEN',
             'HTTP_X_CRON_KEY',
             'HTTP_X_SLA_SWEEP_KEY',
             'HTTP_X_DEBUG_USER',
@@ -119,5 +123,21 @@ class SensitiveDataRedactorTest extends TestCase
         $this->assertTrue(SensitiveDataRedactor::isSensitiveKey('PASSWORD'));
         $this->assertTrue(SensitiveDataRedactor::isSensitiveKey('  Token  '));
         $this->assertFalse(SensitiveDataRedactor::isSensitiveKey('username'));
+    }
+
+    public function testRedactHandlesCircularObjectsWithoutRecursingForever(): void
+    {
+        $first = new \stdClass();
+        $second = new \stdClass();
+        $first->name = 'root';
+        $first->child = $second;
+        $second->parent = $first;
+        $second->token = 'secret';
+
+        $sanitized = SensitiveDataRedactor::redact($first);
+
+        $this->assertSame('root', $sanitized['name']);
+        $this->assertSame(SensitiveDataRedactor::REDACTED, $sanitized['child']['token']);
+        $this->assertSame(SensitiveDataRedactor::REDACTED, $sanitized['child']['parent']);
     }
 }

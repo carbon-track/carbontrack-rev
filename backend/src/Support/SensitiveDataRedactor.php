@@ -16,6 +16,7 @@ namespace CarbonTrack\Support;
 final class SensitiveDataRedactor
 {
     public const REDACTED = '[REDACTED]';
+    private const MAX_RECURSION_DEPTH = 20;
 
     /**
      * Canonical lower-case set of body / param key names that must never be
@@ -47,6 +48,8 @@ final class SensitiveDataRedactor
         'cf_turnstile_response',
         'pow_nonce',
         'pow_challenge',
+        'mobile_client_token',
+        'x-mobile-client-token',
         'x-cron-key',
         'x-sla-sweep-key',
     ];
@@ -61,6 +64,7 @@ final class SensitiveDataRedactor
         'HTTP_AUTHORIZATION',
         'HTTP_COOKIE',
         'HTTP_X_TURNSTILE_TOKEN',
+        'HTTP_X_MOBILE_CLIENT_TOKEN',
         'HTTP_X_CRON_KEY',
         'HTTP_X_SLA_SWEEP_KEY',
     ];
@@ -82,6 +86,19 @@ final class SensitiveDataRedactor
      */
     public static function redact($value)
     {
+        return self::redactValue($value, 0, new \SplObjectStorage());
+    }
+
+    /**
+     * @param mixed $value
+     * @return mixed
+     */
+    private static function redactValue($value, int $depth, \SplObjectStorage $seenObjects)
+    {
+        if ($depth > self::MAX_RECURSION_DEPTH) {
+            return self::REDACTED;
+        }
+
         if (is_array($value)) {
             $out = [];
             foreach ($value as $k => $v) {
@@ -89,13 +106,17 @@ final class SensitiveDataRedactor
                     $out[$k] = self::REDACTED;
                     continue;
                 }
-                $out[$k] = self::redact($v);
+                $out[$k] = self::redactValue($v, $depth + 1, $seenObjects);
             }
             return $out;
         }
 
         if (is_object($value)) {
-            return self::redact((array) $value);
+            if ($seenObjects->contains($value)) {
+                return self::REDACTED;
+            }
+            $seenObjects->attach($value);
+            return self::redactValue((array) $value, $depth + 1, $seenObjects);
         }
 
         return $value;
@@ -117,7 +138,7 @@ final class SensitiveDataRedactor
                 $out[$key] = self::REDACTED;
                 continue;
             }
-            $out[$key] = is_array($value) ? self::redact($value) : $value;
+            $out[$key] = (is_array($value) || is_object($value)) ? self::redact($value) : $value;
         }
         return $out;
     }

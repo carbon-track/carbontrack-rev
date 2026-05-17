@@ -6,6 +6,7 @@ namespace CarbonTrack\Middleware;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UploadedFileInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use CarbonTrack\Services\DatabaseService;
@@ -62,6 +63,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 $compositeKey = $this->buildCompositeKey($userIdentity, $method, $uri, $request);
 
                 $query = IdempotencyRecord::where('idempotency_key', $idempotencyKey)
+                    ->where('composite_key', $compositeKey)
                     ->where('created_at', '>', date('Y-m-d H:i:s', strtotime('-24 hours'))); // Only check last 24 hours
 
                 // user_id may be int (auth user) or null (anonymous). NULL must use IS NULL.
@@ -72,12 +74,6 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 }
 
                 $existingRecord = $query->first();
-
-                // Belt-and-braces: if the row exists but the composite fingerprint
-                // does not match, treat it as a brand new request (do not replay).
-                if ($existingRecord && (string) ($existingRecord->composite_key ?? '') !== '' && $existingRecord->composite_key !== $compositeKey) {
-                    $existingRecord = null;
-                }
 
                 if ($existingRecord) {
                     $this->logger->info('Idempotent request detected', [
@@ -133,15 +129,90 @@ class IdempotencyMiddleware implements MiddlewareInterface
     private function buildCompositeKey(?int $userIdentity, string $method, string $path, ServerRequestInterface $request): string
     {
         $bucket = $userIdentity === null ? 'anonymous' : (string) $userIdentity;
-        $bodyJson = '';
-        try {
-            $body = $request->getParsedBody();
-            $bodyJson = json_encode($body, JSON_UNESCAPED_UNICODE) ?: '';
-        } catch (\Throwable $e) {
-            $bodyJson = '';
-        }
+        $bodyJson = $this->encodeForFingerprint($request->getParsedBody());
         $bodyHash = hash('sha256', $bodyJson);
-        return hash('sha256', $bucket . '|' . strtoupper($method) . '|' . $path . '|' . $bodyHash);
+        $filesHash = hash('sha256', $this->encodeForFingerprint(
+            $this->normalizeUploadedFiles($request->getUploadedFiles())
+        ));
+
+        return hash('sha256', $bucket . '|' . strtoupper($method) . '|' . $path . '|' . $bodyHash . '|' . $filesHash);
+    }
+
+    private function encodeForFingerprint($value): string
+    {
+        try {
+            $json = json_encode(
+                $value,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE
+            );
+            return $json === false ? 'null' : $json;
+        } catch (\Throwable $e) {
+            return 'null';
+        }
+    }
+
+    /**
+     * @param array<string|int, mixed> $files
+     * @return array<string|int, mixed>
+     */
+    private function normalizeUploadedFiles(array $files): array
+    {
+        $out = [];
+        foreach ($files as $key => $value) {
+            if ($value instanceof UploadedFileInterface) {
+                $out[$key] = $this->fingerprintUploadedFile($value);
+                continue;
+            }
+            if (is_array($value)) {
+                $out[$key] = $this->normalizeUploadedFiles($value);
+            }
+        }
+        ksort($out);
+        return $out;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function fingerprintUploadedFile(UploadedFileInterface $file): array
+    {
+        return [
+            'client_filename' => $file->getClientFilename(),
+            'client_media_type' => $file->getClientMediaType(),
+            'size' => $file->getSize(),
+            'error' => $file->getError(),
+            'sha256' => $this->hashUploadedFile($file),
+        ];
+    }
+
+    private function hashUploadedFile(UploadedFileInterface $file): ?string
+    {
+        if ($file->getError() !== UPLOAD_ERR_OK) {
+            return null;
+        }
+
+        try {
+            $stream = $file->getStream();
+            if (!$stream->isReadable()) {
+                return null;
+            }
+
+            $position = null;
+            if ($stream->isSeekable()) {
+                $position = $stream->tell();
+                $stream->rewind();
+            }
+
+            $contents = $stream->getContents();
+
+            if ($position !== null) {
+                $stream->seek($position);
+            }
+
+            return hash('sha256', $contents);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     private function isSensitiveRoute(string $uri): bool
@@ -161,7 +232,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
 
     private function storeIdempotencyRecord(string $idempotencyKey, string $compositeKey, ServerRequestInterface $request, ResponseInterface $response): void
     {
-    try {
+        try {
             $userId = $this->resolveUserIdentity($request);
             $responseBody = (string) $response->getBody();
 
@@ -174,14 +245,14 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 'user_id' => $userId,
                 'request_method' => $request->getMethod(),
                 'request_uri' => $request->getUri()->getPath(),
-                'request_body' => json_encode($request->getParsedBody()),
+                'request_body' => $this->encodeForFingerprint($request->getParsedBody()),
                 'response_status' => $response->getStatusCode(),
                 'response_body' => $responseBody,
                 'ip_address' => $this->getClientIp($request),
                 'user_agent' => $request->getHeaderLine('User-Agent')
             ]);
 
-    } catch (\Throwable $e) {
+        } catch (\Throwable $e) {
             $this->logger->error('Failed to store idempotency record', [
                 'error' => $e->getMessage(),
                 'idempotency_key' => $idempotencyKey
