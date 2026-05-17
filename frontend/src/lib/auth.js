@@ -60,6 +60,11 @@ const shouldRefreshToken = (token) => {
 };
 
 const isRefreshRequest = (url = '') => String(url).includes('/auth/refresh');
+const isLoginRequest = (url = '') => String(url).includes('/auth/login');
+const shouldPreserveAuthOnUnauthorized = (url = '') => (
+  isLoginRequest(url)
+  || (String(url).includes('/files/') && String(url).includes('/presigned-url'))
+);
 
 const hasMinimalDevUserInfoFields = (userInfo) => (
   userInfo
@@ -586,6 +591,10 @@ export const initAuth = async () => {
       const status = error?.response?.status;
       if (status === 401) {
         const code = error?.response?.data?.code;
+        const requestUrl = error?.config?.url ?? '';
+        if (shouldPreserveAuthOnUnauthorized(requestUrl)) {
+          return Promise.reject(error);
+        }
         // Token was server-side revoked (password change / "logout all"); log out
         // and force re-auth, but never echo the raw error object to the console.
         if (code === 'TOKEN_VERSION_MISMATCH') {
