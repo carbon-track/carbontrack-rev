@@ -1027,6 +1027,62 @@ class AuthControllerTest extends TestCase
         }
     }
 
+    public function testCreateProofOfWorkChallengeUsesFirstUntrustedForwardedIpFromTrustedProxyChain(): void
+    {
+        $previousTrustedProxies = $_ENV['TRUSTED_PROXY_CIDRS'] ?? null;
+        $previousRemoteAddr = $_SERVER['REMOTE_ADDR'] ?? null;
+        $_ENV['TRUSTED_PROXY_CIDRS'] = '198.51.100.0/24';
+        $_SERVER['REMOTE_ADDR'] = '198.51.100.10';
+
+        $mockAuthService = $this->createMock(AuthService::class);
+        $mockTurnstileService = $this->createMock(TurnstileService::class);
+        $mockPowService = $this->createMock(ProofOfWorkService::class);
+        $mockPowService->expects($this->once())
+            ->method('createChallenge')
+            ->with('auth.login', '203.0.113.77')
+            ->willReturn([
+                'challenge' => 'challenge',
+                'difficulty' => 20,
+                'expires_at' => '2026-05-17T00:00:00Z',
+            ]);
+
+        $controller = new AuthController(
+            $mockAuthService,
+            $this->createMock(EmailService::class),
+            $mockTurnstileService,
+            $this->createMock(AuditLogService::class),
+            $this->createMock(MessageService::class),
+            $this->createMock(CloudflareR2Service::class),
+            $this->createMock(\Monolog\Logger::class),
+            $this->createMock(\PDO::class),
+            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(RegionService::class),
+            null,
+            null,
+            $mockPowService
+        );
+
+        try {
+            $request = makeRequest('POST', '/auth/pow/challenge', ['scope' => 'auth.login'], null, [
+                'X-Forwarded-For' => ['203.0.113.250, 203.0.113.77, 198.51.100.20'],
+            ]);
+            $resp = $controller->createProofOfWorkChallenge($request, new \Slim\Psr7\Response());
+
+            $this->assertSame(200, $resp->getStatusCode());
+        } finally {
+            if ($previousTrustedProxies === null) {
+                unset($_ENV['TRUSTED_PROXY_CIDRS']);
+            } else {
+                $_ENV['TRUSTED_PROXY_CIDRS'] = $previousTrustedProxies;
+            }
+            if ($previousRemoteAddr === null) {
+                unset($_SERVER['REMOTE_ADDR']);
+            } else {
+                $_SERVER['REMOTE_ADDR'] = $previousRemoteAddr;
+            }
+        }
+    }
+
     public function testLoginRequiresProofOfWorkForMobileRequests(): void
     {
         $previousToken = $_ENV['MOBILE_CLIENT_TOKEN'] ?? null;

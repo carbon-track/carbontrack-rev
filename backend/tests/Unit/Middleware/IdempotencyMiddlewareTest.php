@@ -136,6 +136,92 @@ class IdempotencyMiddlewareTest extends TestCase
         $this->assertSame(1, IdempotencyRecord::query()->count());
     }
 
+    public function testStoredClientIpIgnoresForwardedHeadersFromUntrustedRemote(): void
+    {
+        $previousTrustedProxies = $_ENV['TRUSTED_PROXY_CIDRS'] ?? null;
+        $previousRemoteAddr = $_SERVER['REMOTE_ADDR'] ?? null;
+        unset($_ENV['TRUSTED_PROXY_CIDRS']);
+        $_SERVER['REMOTE_ADDR'] = '198.51.100.10';
+
+        try {
+            $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
+            $logger = $this->createMock(\Monolog\Logger::class);
+            $mw = new IdempotencyMiddleware($db, $logger);
+
+            $request = makeRequest('POST', '/api/v1/exchange', ['a' => 1], null, [
+                'X-Request-ID' => ['123e4567-e89b-12d3-a456-426614174010'],
+                'X-Forwarded-For' => ['203.0.113.200'],
+            ]);
+            $handler = new class implements \Psr\Http\Server\RequestHandlerInterface {
+                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+                {
+                    $resp = new \Slim\Psr7\Response(200);
+                    $resp->getBody()->write('{"ok":true}');
+                    return $resp->withHeader('Content-Type', 'application/json');
+                }
+            };
+
+            $mw->process($request, $handler);
+
+            $record = IdempotencyRecord::query()->first();
+            $this->assertSame('198.51.100.10', $record->ip_address);
+        } finally {
+            if ($previousTrustedProxies === null) {
+                unset($_ENV['TRUSTED_PROXY_CIDRS']);
+            } else {
+                $_ENV['TRUSTED_PROXY_CIDRS'] = $previousTrustedProxies;
+            }
+            if ($previousRemoteAddr === null) {
+                unset($_SERVER['REMOTE_ADDR']);
+            } else {
+                $_SERVER['REMOTE_ADDR'] = $previousRemoteAddr;
+            }
+        }
+    }
+
+    public function testStoredClientIpUsesFirstUntrustedForwardedAddressFromTrustedProxyChain(): void
+    {
+        $previousTrustedProxies = $_ENV['TRUSTED_PROXY_CIDRS'] ?? null;
+        $previousRemoteAddr = $_SERVER['REMOTE_ADDR'] ?? null;
+        $_ENV['TRUSTED_PROXY_CIDRS'] = '198.51.100.0/24';
+        $_SERVER['REMOTE_ADDR'] = '198.51.100.10';
+
+        try {
+            $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
+            $logger = $this->createMock(\Monolog\Logger::class);
+            $mw = new IdempotencyMiddleware($db, $logger);
+
+            $request = makeRequest('POST', '/api/v1/exchange', ['a' => 1], null, [
+                'X-Request-ID' => ['123e4567-e89b-12d3-a456-426614174011'],
+                'X-Forwarded-For' => ['203.0.113.250, 203.0.113.77, 198.51.100.20'],
+            ]);
+            $handler = new class implements \Psr\Http\Server\RequestHandlerInterface {
+                public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+                {
+                    $resp = new \Slim\Psr7\Response(200);
+                    $resp->getBody()->write('{"ok":true}');
+                    return $resp->withHeader('Content-Type', 'application/json');
+                }
+            };
+
+            $mw->process($request, $handler);
+
+            $record = IdempotencyRecord::query()->first();
+            $this->assertSame('203.0.113.77', $record->ip_address);
+        } finally {
+            if ($previousTrustedProxies === null) {
+                unset($_ENV['TRUSTED_PROXY_CIDRS']);
+            } else {
+                $_ENV['TRUSTED_PROXY_CIDRS'] = $previousTrustedProxies;
+            }
+            if ($previousRemoteAddr === null) {
+                unset($_SERVER['REMOTE_ADDR']);
+            } else {
+                $_SERVER['REMOTE_ADDR'] = $previousRemoteAddr;
+            }
+        }
+    }
+
     public function testReplayingSameUuidAcrossUsersDoesNotShareCachedResponse(): void
     {
         $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();

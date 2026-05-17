@@ -1670,14 +1670,35 @@ class AuthController
 
         $xff = $request->getHeaderLine('X-Forwarded-For');
         if ($xff) {
-            $parts = explode(',', $xff);
-            $candidate = trim($parts[0]);
-            if ($candidate !== '' && filter_var($candidate, FILTER_VALIDATE_IP)) {
+            $candidate = $this->resolveForwardedForClient($xff);
+            if ($candidate !== null) {
                 return $candidate;
             }
         }
 
         return $fallback;
+    }
+
+    private function resolveForwardedForClient(string $header): ?string
+    {
+        $parts = array_values(array_filter(array_map('trim', explode(',', $header)), static fn ($part) => $part !== ''));
+        if ($parts === []) {
+            return null;
+        }
+
+        $leftmostValid = null;
+        for ($i = count($parts) - 1; $i >= 0; $i--) {
+            $candidate = $parts[$i];
+            if (!filter_var($candidate, FILTER_VALIDATE_IP)) {
+                continue;
+            }
+            $leftmostValid = $candidate;
+            if (!$this->isTrustedProxyAddress($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return $leftmostValid;
     }
 
     private function isTrustedProxyAddress(string $remoteAddr): bool
