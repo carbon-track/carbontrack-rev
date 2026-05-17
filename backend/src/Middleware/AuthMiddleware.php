@@ -10,6 +10,7 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use CarbonTrack\Services\AuthService;
 use CarbonTrack\Services\AuditLogService;
+use CarbonTrack\Support\ClientIpResolver;
 use Slim\Psr7\Response;
 
 class AuthMiddleware implements MiddlewareInterface
@@ -137,31 +138,6 @@ class AuthMiddleware implements MiddlewareInterface
 
     private function getClientIp(ServerRequestInterface $request): string
     {
-        $serverParams = $request->getServerParams();
-        
-        // Check for IP from various headers (for load balancers, proxies)
-        $headers = [
-            'HTTP_CF_CONNECTING_IP',     // Cloudflare
-            'HTTP_X_FORWARDED_FOR',      // Load balancers
-            'HTTP_X_REAL_IP',            // Nginx proxy
-            'HTTP_CLIENT_IP',            // Proxy
-            'REMOTE_ADDR'                // Standard
-        ];
-        
-        foreach ($headers as $header) {
-            if (!empty($serverParams[$header])) {
-                $ip = $serverParams[$header];
-                // Handle comma-separated IPs (X-Forwarded-For)
-                if (strpos($ip, ',') !== false) {
-                    $ip = trim(explode(',', $ip)[0]);
-                }
-                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-                    return $ip;
-                }
-            }
-        }
-        
-        return $serverParams['REMOTE_ADDR'] ?? 'unknown';
+        return ClientIpResolver::fromRequest($request, '0.0.0.0');
     }
 }
-

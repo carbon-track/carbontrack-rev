@@ -17,6 +17,7 @@ use CarbonTrack\Services\CloudflareR2Service;
 use CarbonTrack\Services\RegionService;
 use CarbonTrack\Services\CheckinService;
 use CarbonTrack\Services\UserProfileViewService;
+use CarbonTrack\Support\ClientIpResolver;
 use CarbonTrack\Support\Uuid;
 use Monolog\Logger;
 use PDO;
@@ -1655,96 +1656,7 @@ class AuthController
 
     private function getClientIP(Request $request): string
     {
-        $server = $request->getServerParams();
-        $remoteAddr = (string)($server['REMOTE_ADDR'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''));
-        $fallback = ($remoteAddr !== '' && filter_var($remoteAddr, FILTER_VALIDATE_IP)) ? $remoteAddr : '0.0.0.0';
-
-        if (!$this->isTrustedProxyAddress($fallback)) {
-            return $fallback;
-        }
-
-        $cf = trim($request->getHeaderLine('CF-Connecting-IP'));
-        if ($cf !== '' && filter_var($cf, FILTER_VALIDATE_IP)) {
-            return $cf;
-        }
-
-        $xff = $request->getHeaderLine('X-Forwarded-For');
-        if ($xff) {
-            $candidate = $this->resolveForwardedForClient($xff);
-            if ($candidate !== null) {
-                return $candidate;
-            }
-        }
-
-        return $fallback;
-    }
-
-    private function resolveForwardedForClient(string $header): ?string
-    {
-        $parts = array_values(array_filter(array_map('trim', explode(',', $header)), static fn ($part) => $part !== ''));
-        if ($parts === []) {
-            return null;
-        }
-
-        $leftmostValid = null;
-        for ($i = count($parts) - 1; $i >= 0; $i--) {
-            $candidate = $parts[$i];
-            if (!filter_var($candidate, FILTER_VALIDATE_IP)) {
-                continue;
-            }
-            $leftmostValid = $candidate;
-            if (!$this->isTrustedProxyAddress($candidate)) {
-                return $candidate;
-            }
-        }
-
-        return $leftmostValid;
-    }
-
-    private function isTrustedProxyAddress(string $remoteAddr): bool
-    {
-        $trustedCidrs = trim((string)($_ENV['TRUSTED_PROXY_CIDRS'] ?? ''));
-        if ($trustedCidrs === '' || $remoteAddr === '0.0.0.0') {
-            return false;
-        }
-
-        foreach (preg_split('/\s*,\s*/', $trustedCidrs) ?: [] as $cidr) {
-            if ($cidr !== '' && $this->ipMatchesCidr($remoteAddr, $cidr)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private function ipMatchesCidr(string $ip, string $cidr): bool
-    {
-        if (strpos($cidr, '/') === false) {
-            return hash_equals($cidr, $ip);
-        }
-
-        [$network, $prefix] = explode('/', $cidr, 2);
-        $ipBytes = @inet_pton($ip);
-        $networkBytes = @inet_pton($network);
-        if ($ipBytes === false || $networkBytes === false || strlen($ipBytes) !== strlen($networkBytes)) {
-            return false;
-        }
-
-        $prefixLength = filter_var($prefix, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
-        if ($prefixLength === false || $prefixLength > strlen($ipBytes) * 8) {
-            return false;
-        }
-
-        $fullBytes = intdiv($prefixLength, 8);
-        $remainingBits = $prefixLength % 8;
-        if ($fullBytes > 0 && substr($ipBytes, 0, $fullBytes) !== substr($networkBytes, 0, $fullBytes)) {
-            return false;
-        }
-        if ($remainingBits === 0) {
-            return true;
-        }
-
-        $mask = (0xff << (8 - $remainingBits)) & 0xff;
-        return (ord($ipBytes[$fullBytes]) & $mask) === (ord($networkBytes[$fullBytes]) & $mask);
+        return ClientIpResolver::fromRequest($request, '0.0.0.0');
     }
 
 }

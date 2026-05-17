@@ -16,6 +16,7 @@ use CarbonTrack\Services\BadgeService;
 use CarbonTrack\Services\UserProfileViewService;
 use CarbonTrack\Services\TurnstileService;
 use CarbonTrack\Services\ProofOfWorkService;
+use CarbonTrack\Support\ClientIpResolver;
 use CarbonTrack\Models\CarbonActivity;
 use PDO;
 
@@ -1854,24 +1855,7 @@ class CarbonTrackController
 
     private function getClientIpAddress(Request $request): string
     {
-        $candidates = [
-            $request->getHeaderLine('CF-Connecting-IP'),
-            $request->getHeaderLine('X-Forwarded-For'),
-            $request->getHeaderLine('X-Real-IP'),
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (!$candidate) {
-                continue;
-            }
-            $parts = explode(',', $candidate);
-            $ip = trim($parts[0]);
-            if ($ip !== '') {
-                return $ip;
-            }
-        }
-
-        return (string)($request->getServerParams()['REMOTE_ADDR'] ?? '0.0.0.0');
+        return ClientIpResolver::fromRequest($request, '0.0.0.0');
     }
 
     private function normalizeCheckinDate(string $raw): ?string

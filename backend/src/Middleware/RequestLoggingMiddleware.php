@@ -10,6 +10,7 @@ use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use CarbonTrack\Services\SystemLogService;
 use CarbonTrack\Services\AuthService;
+use CarbonTrack\Support\ClientIpResolver;
 use CarbonTrack\Support\Uuid;
 use Monolog\Logger;
 
@@ -196,33 +197,6 @@ class RequestLoggingMiddleware implements MiddlewareInterface
      */
     private function resolveClientIp(array $serverParams): ?string
     {
-        $candidates = [
-            $serverParams['HTTP_CF_CONNNECTING_IP'] ?? null, // handle potential typo key
-            $serverParams['HTTP_CF_CONNECTING_IP'] ?? null,
-            $serverParams['CF_CONNECTING_IP'] ?? null,
-            $_SERVER['HTTP_CF_CONNNECTING_IP'] ?? null,
-            $_SERVER['HTTP_CF_CONNECTING_IP'] ?? null,
-            $_SERVER['CF_CONNECTING_IP'] ?? null,
-            $serverParams['REMOTE_ADDR'] ?? null,
-            $_SERVER['REMOTE_ADDR'] ?? null,
-        ];
-
-        foreach ($candidates as $raw) {
-            if (!is_string($raw)) {
-                continue;
-            }
-            $value = trim($raw);
-            if ($value === '') {
-                continue;
-            }
-            $first = trim(explode(',', $value)[0]);
-            if ($first === '') {
-                continue;
-            }
-            if (filter_var($first, FILTER_VALIDATE_IP)) {
-                return $first;
-            }
-        }
-        return null;
+        return ClientIpResolver::fromServerParams($serverParams);
     }
 }

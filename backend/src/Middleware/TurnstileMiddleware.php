@@ -10,6 +10,7 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use CarbonTrack\Services\TurnstileService;
 use CarbonTrack\Services\AuditLogService;
+use CarbonTrack\Support\ClientIpResolver;
 use Slim\Psr7\Response;
 
 class TurnstileMiddleware implements MiddlewareInterface
@@ -136,29 +137,6 @@ class TurnstileMiddleware implements MiddlewareInterface
 
     private function getClientIp(ServerRequestInterface $request): string
     {
-        $serverParams = $request->getServerParams();
-        
-        $headers = [
-            'HTTP_CF_CONNECTING_IP',
-            'HTTP_X_FORWARDED_FOR',
-            'HTTP_X_REAL_IP',
-            'HTTP_CLIENT_IP',
-            'REMOTE_ADDR'
-        ];
-        
-        foreach ($headers as $header) {
-            if (!empty($serverParams[$header])) {
-                $ip = $serverParams[$header];
-                if (strpos($ip, ',') !== false) {
-                    $ip = trim(explode(',', $ip)[0]);
-                }
-                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-                    return $ip;
-                }
-            }
-        }
-        
-        return $serverParams['REMOTE_ADDR'] ?? 'unknown';
+        return ClientIpResolver::fromRequest($request, '0.0.0.0');
     }
 }
-

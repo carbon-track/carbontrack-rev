@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Services;
 
+use CarbonTrack\Support\ClientIpResolver;
 use CarbonTrack\Support\SensitiveDataRedactor;
 use PDO;
 use Monolog\Logger;
@@ -150,35 +151,21 @@ class SystemLogService
 
     private function resolveSummaryIp(array $server, array $context): ?string
     {
-        $candidates = [
-            $server['HTTP_CF_CONNNECTING_IP'] ?? null, // common typo with double N
-            $_SERVER['HTTP_CF_CONNNECTING_IP'] ?? null,
-            $server['HTTP_CF_CONNECTING_IP'] ?? null,
-            $_SERVER['HTTP_CF_CONNECTING_IP'] ?? null,
-            $server['CF_CONNECTING_IP'] ?? null,
-            $_SERVER['CF_CONNECTING_IP'] ?? null,
-            $context['ip_address'] ?? null,
-            $server['REMOTE_ADDR'] ?? null,
-            $_SERVER['REMOTE_ADDR'] ?? null,
-        ];
+        return ClientIpResolver::fromServerParams($server)
+            ?? $this->firstValidIp([$context['ip_address'] ?? null]);
+    }
 
+    private function firstValidIp(array $candidates): ?string
+    {
         foreach ($candidates as $raw) {
             if (!is_string($raw)) {
                 continue;
             }
-            $trimmed = trim($raw);
-            if ($trimmed === '') {
-                continue;
-            }
-            $first = trim(explode(',', $trimmed)[0]);
-            if ($first === '') {
-                continue;
-            }
-            if (filter_var($first, FILTER_VALIDATE_IP)) {
+            $first = trim(explode(',', trim($raw))[0]);
+            if ($first !== '' && filter_var($first, FILTER_VALIDATE_IP)) {
                 return $first;
             }
         }
-
         return null;
     }
 
