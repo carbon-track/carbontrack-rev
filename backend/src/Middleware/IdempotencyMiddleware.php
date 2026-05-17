@@ -69,7 +69,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 // colliding on the same UUID, or the same user replaying the UUID
                 // against a different endpoint/body, must NOT see each other's
                 // cached response.
-                $userIdentity = $this->resolveUserIdentity($request);
+                [$userIdentity, $request] = $this->resolveUserIdentity($request);
                 $compositeKey = $this->buildCompositeKey($userIdentity, $method, $uri, $request);
 
                 $query = IdempotencyRecord::where('idempotency_key', $idempotencyKey)
@@ -117,15 +117,15 @@ class IdempotencyMiddleware implements MiddlewareInterface
      * Returns a positive int for authenticated users, otherwise 0 for the
      * non-null "anonymous" bucket.
      */
-    private function resolveUserIdentity(ServerRequestInterface $request): int
+    private function resolveUserIdentity(ServerRequestInterface $request): array
     {
         $userId = $request->getAttribute('user_id');
         if (is_int($userId) && $userId > 0) {
-            return $userId;
+            return [$userId, $request];
         }
         if (is_string($userId) && ctype_digit($userId)) {
             $parsed = (int) $userId;
-            return $parsed > 0 ? $parsed : 0;
+            return [$parsed > 0 ? $parsed : 0, $request];
         }
 
         $authHeader = $request->getHeaderLine('Authorization');
@@ -134,7 +134,15 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 $payload = $this->authService->validateToken(trim(substr($authHeader, 7)));
                 $tokenUserId = $this->normalizeUserId($payload['user_id'] ?? $payload['user']['id'] ?? null);
                 if ($tokenUserId !== null) {
-                    return $tokenUserId;
+                    $request = $request
+                        ->withAttribute('user_id', $payload['user_id'])
+                        ->withAttribute('user_uuid', $payload['uuid'] ?? null)
+                        ->withAttribute('user_email', $payload['email'] ?? null)
+                        ->withAttribute('user_role', $payload['role'] ?? 'user')
+                        ->withAttribute('authenticated_user', $payload['user'] ?? null)
+                        ->withAttribute('token_payload', $payload)
+                        ->withAttribute('idempotency_validated_token', true);
+                    return [$tokenUserId, $request];
                 }
             } catch (\Throwable $e) {
                 // Let route-level auth middleware own the eventual 401. For the
@@ -143,7 +151,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
             }
         }
 
-        return 0;
+        return [0, $request];
     }
 
     private function normalizeUserId($value): ?int
@@ -346,12 +354,12 @@ class IdempotencyMiddleware implements MiddlewareInterface
             if (!$stream->isReadable()) {
                 return null;
             }
-
-            $position = null;
-            if ($stream->isSeekable()) {
-                $position = $stream->tell();
-                $stream->rewind();
+            if (!$stream->isSeekable()) {
+                return null;
             }
+
+            $position = $stream->tell();
+            $stream->rewind();
 
             $context = hash_init('sha256');
             $bytesRead = 0;
@@ -365,9 +373,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 hash_update($context, $chunk);
             }
 
-            if ($position !== null) {
-                $stream->seek($position);
-            }
+            $stream->seek($position);
 
             return hash_final($context);
         } catch (\Throwable $e) {

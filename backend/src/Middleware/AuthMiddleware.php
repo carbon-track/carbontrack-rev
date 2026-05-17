@@ -39,7 +39,13 @@ class AuthMiddleware implements MiddlewareInterface
         $token = substr($authHeader, 7); // Remove 'Bearer ' prefix
         
         try {
-            $payload = $this->authService->validateToken($token);
+            $payload = $request->getAttribute('token_payload');
+            if (
+                $request->getAttribute('idempotency_validated_token') !== true
+                || !is_array($payload)
+            ) {
+                $payload = $this->authService->validateToken($token);
+            }
             
             // Add user info to request attributes
             $request = $request

@@ -74,12 +74,12 @@ $app->addRoutingMiddleware();
 // 3. Application-specific middleware
 try {
     $logger = $container->get(\Monolog\Logger::class);
-    $app->add(new LoggingMiddleware($logger));
     $app->add(new IdempotencyMiddleware(
         $container->get(DatabaseService::class),
         $logger,
         $container->get(AuthService::class)
     ));
+    $app->add(new LoggingMiddleware($logger));
 } catch (\Exception $e) {
     error_log('Failed to create application middleware: ' . $e->getMessage());
 }
