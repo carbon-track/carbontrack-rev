@@ -387,6 +387,41 @@ class IdempotencyMiddlewareTest extends TestCase
         $this->assertSame(0, IdempotencyRecord::query()->count());
     }
 
+    public function testTransientClientErrorsAreNotCached(): void
+    {
+        $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $mw = new IdempotencyMiddleware($db, $logger);
+
+        $uuid = '123e4567-e89b-12d3-a456-426614174012';
+        $callCounter = 0;
+        $handler = new class($callCounter) implements \Psr\Http\Server\RequestHandlerInterface {
+            public function __construct(public int &$count)
+            {
+            }
+            public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $this->count++;
+                $resp = new \Slim\Psr7\Response(429);
+                $resp->getBody()->write(json_encode(['count' => $this->count]));
+                return $resp->withHeader('Content-Type', 'application/json');
+            }
+        };
+
+        $headers = ['X-Request-ID' => [$uuid]];
+        $first = makeRequest('POST', '/api/v1/messages/broadcast', ['a' => 1], null, $headers)
+            ->withAttribute('user_id', 999);
+        $second = makeRequest('POST', '/api/v1/messages/broadcast', ['a' => 1], null, $headers)
+            ->withAttribute('user_id', 999);
+
+        $mw->process($first, $handler);
+        $resp2 = $mw->process($second, $handler);
+
+        $this->assertSame(2, $callCounter);
+        $this->assertNotSame('true', $resp2->getHeaderLine('X-Idempotent-Replay'));
+        $this->assertSame(0, IdempotencyRecord::query()->count());
+    }
+
     public function testSameUserCanReplayEarlierPayloadAfterUuidWasUsedForDifferentBody(): void
     {
         $db = $this->getMockBuilder(DatabaseService::class)->disableOriginalConstructor()->getMock();

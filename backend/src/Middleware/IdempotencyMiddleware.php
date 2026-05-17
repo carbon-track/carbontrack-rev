@@ -48,7 +48,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
         $method = $request->getMethod();
         $uri = $request->getUri()->getPath();
         // Only apply idempotency to specific methods and routes
-        if (!in_array($method, $this->idempotentMethods) || !$this->isSensitiveRoute($uri)) {
+        if (!in_array($method, $this->idempotentMethods) || !$this->requiresIdempotency($uri)) {
             return $handler->handle($request);
         }
 
@@ -386,7 +386,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
         }
     }
 
-    private function isSensitiveRoute(string $uri): bool
+    private function requiresIdempotency(string $uri): bool
     {
         foreach ($this->idempotencyRoutes as $route) {
             if (str_starts_with($uri, $route)) {
@@ -417,7 +417,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
     {
         try {
             $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 500) {
+            if ($statusCode < 200 || $statusCode >= 500 || $this->isTransientClientError($statusCode)) {
                 return;
             }
 
@@ -447,6 +447,11 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 'idempotency_key' => $idempotencyKey
             ]);
         }
+    }
+
+    private function isTransientClientError(int $statusCode): bool
+    {
+        return in_array($statusCode, [409, 423, 425, 429], true);
     }
 
     private function badRequestResponse(string $message): ResponseInterface

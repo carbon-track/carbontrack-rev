@@ -337,7 +337,7 @@ class AuthController
                     ], 429);
                 }
             } catch (\Throwable $lockCheckError) {
-                // Lock-check failures must never collapse the login flow open; log and continue.
+                // Infrastructure failures in the lockout check should not block all logins.
                 $this->logger->warning('Login lockout check failed', [
                     'error' => $lockCheckError->getMessage(),
                 ]);
