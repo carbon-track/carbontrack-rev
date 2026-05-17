@@ -16,6 +16,11 @@ use Monolog\Logger;
 
 class IdempotencyMiddleware implements MiddlewareInterface
 {
+    private const FINGERPRINT_MAX_DEPTH = 10;
+    private const FINGERPRINT_MAX_ARRAY_ITEMS = 200;
+    private const FINGERPRINT_MAX_STRING_BYTES = 8192;
+    private const STREAM_HASH_CHUNK_BYTES = 8192;
+
     private DatabaseService $db;
     private Logger $logger;
     private array $idempotentMethods = ['POST', 'PUT', 'PATCH'];
@@ -55,7 +60,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
             try {
                 // B-106: bind replay lookup to the authenticated user identity (or
                 // the literal "anonymous" bucket on auth-less routes) AND to the
-                // request fingerprint (method + path + sha256(body)). Two users
+                // request fingerprint (method + path + sha256(body/files)). Two users
                 // colliding on the same UUID, or the same user replaying the UUID
                 // against a different endpoint/body, must NOT see each other's
                 // cached response.
@@ -129,13 +134,121 @@ class IdempotencyMiddleware implements MiddlewareInterface
     private function buildCompositeKey(?int $userIdentity, string $method, string $path, ServerRequestInterface $request): string
     {
         $bucket = $userIdentity === null ? 'anonymous' : (string) $userIdentity;
-        $bodyJson = $this->encodeForFingerprint($request->getParsedBody());
-        $bodyHash = hash('sha256', $bodyJson);
+        $bodyHash = $this->fingerprintValue($request->getParsedBody());
         $filesHash = hash('sha256', $this->encodeForFingerprint(
             $this->normalizeUploadedFiles($request->getUploadedFiles())
         ));
 
         return hash('sha256', $bucket . '|' . strtoupper($method) . '|' . $path . '|' . $bodyHash . '|' . $filesHash);
+    }
+
+    /**
+     * Hash parsed body values incrementally so the composite key does not need
+     * to JSON-encode an arbitrary request body in one large allocation.
+     *
+     * @param mixed $value
+     */
+    private function fingerprintValue($value): string
+    {
+        $context = hash_init('sha256');
+        $this->updateFingerprintHash($context, $value, 0);
+        return hash_final($context);
+    }
+
+    /**
+     * @param mixed $context
+     * @param mixed $value
+     */
+    private function updateFingerprintHash($context, $value, int $depth): void
+    {
+        if ($depth > self::FINGERPRINT_MAX_DEPTH) {
+            hash_update($context, 'depth:truncated;');
+            return;
+        }
+
+        if (is_string($value)) {
+            hash_update($context, 'string:' . strlen($value) . ':' . hash('sha256', $value) . ';');
+            return;
+        }
+
+        if (is_array($value)) {
+            hash_update($context, 'array:' . count($value) . ':{');
+            foreach ($value as $key => $child) {
+                hash_update($context, 'key:' . (is_int($key) ? 'i' : 's') . ':' . (string) $key . ';');
+                $this->updateFingerprintHash($context, $child, $depth + 1);
+            }
+            hash_update($context, '}');
+            return;
+        }
+
+        if (is_object($value)) {
+            hash_update($context, 'object:' . get_class($value) . ':{');
+            $this->updateFingerprintHash($context, (array) $value, $depth + 1);
+            hash_update($context, '}');
+            return;
+        }
+
+        if (is_bool($value)) {
+            hash_update($context, 'bool:' . ($value ? '1' : '0') . ';');
+            return;
+        }
+
+        if ($value === null) {
+            hash_update($context, 'null;');
+            return;
+        }
+
+        hash_update($context, gettype($value) . ':' . (string) $value . ';');
+    }
+
+    /**
+     * Build a bounded, stable representation before JSON encoding so unusually
+     * large parsed bodies cannot make idempotency fingerprinting allocate
+     * unbounded memory.
+     *
+     * @param mixed $value
+     * @return mixed
+     */
+    private function normalizeForFingerprint($value, int $depth = 0)
+    {
+        if ($depth > self::FINGERPRINT_MAX_DEPTH) {
+            return ['__truncated_depth' => true];
+        }
+
+        if (is_string($value)) {
+            $length = strlen($value);
+            if ($length <= self::FINGERPRINT_MAX_STRING_BYTES) {
+                return $value;
+            }
+
+            return [
+                '__type' => 'string',
+                '__length' => $length,
+                '__sha256' => hash('sha256', $value),
+                '__prefix' => substr($value, 0, self::FINGERPRINT_MAX_STRING_BYTES),
+            ];
+        }
+
+        if (is_array($value)) {
+            $out = [];
+            $count = 0;
+            foreach ($value as $key => $child) {
+                if ($count >= self::FINGERPRINT_MAX_ARRAY_ITEMS) {
+                    $out['__truncated_items'] = count($value) - self::FINGERPRINT_MAX_ARRAY_ITEMS;
+                    break;
+                }
+                $out[$key] = $this->normalizeForFingerprint($child, $depth + 1);
+                $count++;
+            }
+            ksort($out);
+            return $out;
+        }
+
+        if (is_object($value)) {
+            return $this->normalizeForFingerprint((array) $value, $depth + 1);
+        }
+
+        return $value;
     }
 
     private function encodeForFingerprint($value): string
@@ -203,13 +316,20 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 $stream->rewind();
             }
 
-            $contents = $stream->getContents();
+            $context = hash_init('sha256');
+            while (!$stream->eof()) {
+                $chunk = $stream->read(self::STREAM_HASH_CHUNK_BYTES);
+                if ($chunk === '') {
+                    break;
+                }
+                hash_update($context, $chunk);
+            }
 
             if ($position !== null) {
                 $stream->seek($position);
             }
 
-            return hash('sha256', $contents);
+            return hash_final($context);
         } catch (\Throwable $e) {
             return null;
         }
@@ -245,7 +365,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 'user_id' => $userId,
                 'request_method' => $request->getMethod(),
                 'request_uri' => $request->getUri()->getPath(),
-                'request_body' => $this->encodeForFingerprint($request->getParsedBody()),
+                'request_body' => $this->encodeForFingerprint($this->normalizeForFingerprint($request->getParsedBody())),
                 'response_status' => $response->getStatusCode(),
                 'response_body' => $responseBody,
                 'ip_address' => $this->getClientIp($request),

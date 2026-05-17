@@ -127,7 +127,7 @@ class ProofOfWorkServiceTest extends TestCase
         $this->assertNotEmpty($other['challenge']);
     }
 
-    public function testCreateChallengeCleansStaleIssuanceAttempts(): void
+    public function testCleanupExpiredChallengesCleansStaleIssuanceAttempts(): void
     {
         $db = $this->makeChallengeDatabase();
         $old = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
@@ -137,9 +137,10 @@ class ProofOfWorkServiceTest extends TestCase
         $insert->execute(['203.0.113.7', 'auth.login', $old]);
 
         $service = $this->makeService(8, $db);
-        $service->createChallenge('auth.login', '203.0.113.7');
+        $result = $service->cleanupExpiredChallenges();
 
-        $this->assertSame(1, (int)$db->query('SELECT COUNT(*) FROM pow_attempts')->fetchColumn());
+        $this->assertSame(1, $result['attempts_deleted']);
+        $this->assertSame(0, (int)$db->query('SELECT COUNT(*) FROM pow_attempts')->fetchColumn());
         $this->assertSame(0, (int)$db->query("SELECT COUNT(*) FROM pow_attempts WHERE attempted_at = '$old'")->fetchColumn());
     }
 

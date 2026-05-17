@@ -102,11 +102,13 @@ final class SensitiveDataRedactor
         if (is_array($value)) {
             $out = [];
             foreach ($value as $k => $v) {
-                if (self::isSensitiveKey((string) $k)) {
-                    $out[$k] = self::REDACTED;
+                $normalizedKey = self::normalizeKeyName((string) $k);
+                $outputKey = is_string($k) && str_contains($k, "\0") ? $normalizedKey : $k;
+                if (self::isSensitiveKey($normalizedKey)) {
+                    $out[$outputKey] = self::REDACTED;
                     continue;
                 }
-                $out[$k] = self::redactValue($v, $depth + 1, $seenObjects);
+                $out[$outputKey] = self::redactValue($v, $depth + 1, $seenObjects);
             }
             return $out;
         }
@@ -145,11 +147,22 @@ final class SensitiveDataRedactor
 
     public static function isSensitiveKey(string $key): bool
     {
-        $needle = strtolower(trim($key));
+        $needle = strtolower(trim(self::normalizeKeyName($key)));
         if ($needle === '') {
             return false;
         }
         return in_array($needle, self::SENSITIVE_KEYS, true);
+    }
+
+    private static function normalizeKeyName(string $key): string
+    {
+        if (!str_contains($key, "\0")) {
+            return $key;
+        }
+
+        $parts = explode("\0", $key);
+        $last = end($parts);
+        return is_string($last) ? $last : $key;
     }
 
     public static function isSensitiveServerKey(string $key): bool

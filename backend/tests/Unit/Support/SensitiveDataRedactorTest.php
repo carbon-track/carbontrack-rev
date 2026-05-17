@@ -140,4 +140,19 @@ class SensitiveDataRedactorTest extends TestCase
         $this->assertSame(SensitiveDataRedactor::REDACTED, $sanitized['child']['token']);
         $this->assertSame(SensitiveDataRedactor::REDACTED, $sanitized['child']['parent']);
     }
+
+    public function testRedactDetectsSensitivePrivateAndProtectedObjectProperties(): void
+    {
+        $payload = new class {
+            private string $password = 'private-secret';
+            protected string $refresh_token = 'protected-secret';
+            public string $username = 'visible-user';
+        };
+
+        $sanitized = SensitiveDataRedactor::redact($payload);
+
+        $this->assertSame(SensitiveDataRedactor::REDACTED, $sanitized['password']);
+        $this->assertSame(SensitiveDataRedactor::REDACTED, $sanitized['refresh_token']);
+        $this->assertSame('visible-user', $sanitized['username']);
+    }
 }

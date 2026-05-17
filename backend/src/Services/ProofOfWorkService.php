@@ -266,7 +266,6 @@ class ProofOfWorkService
         }
 
         try {
-            $this->cleanupStaleIssuanceAttempts();
             $threshold = $this->formatSql($this->now()->modify('-' . self::RATE_LIMIT_WINDOW_SECONDS . ' seconds'));
             $stmt = $this->db->prepare(
                 'SELECT COUNT(*) FROM pow_attempts WHERE ip_address = ? AND attempted_at >= ?'
@@ -289,7 +288,6 @@ class ProofOfWorkService
         }
 
         try {
-            $this->cleanupStaleIssuanceAttempts();
             $stmt = $this->db->prepare(
                 'INSERT INTO pow_attempts (ip_address, scope, attempted_at) VALUES (?, ?, ?)'
             );
