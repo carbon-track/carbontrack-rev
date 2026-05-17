@@ -1656,16 +1656,25 @@ class AuthController
     private function getClientIP(Request $request): string
     {
         $server = $request->getServerParams();
+        $cf = trim($request->getHeaderLine('CF-Connecting-IP'));
+        if ($cf !== '' && filter_var($cf, FILTER_VALIDATE_IP)) {
+            return $cf;
+        }
+
         $xff = $request->getHeaderLine('X-Forwarded-For');
         if ($xff) {
             $parts = explode(',', $xff);
-            return trim($parts[0]);
+            $candidate = trim($parts[0]);
+            if ($candidate !== '' && filter_var($candidate, FILTER_VALIDATE_IP)) {
+                return $candidate;
+            }
         }
-        $cf = $request->getHeaderLine('CF-Connecting-IP');
-        if ($cf) {
-            return $cf;
+
+        $remoteAddr = (string)($server['REMOTE_ADDR'] ?? '');
+        if ($remoteAddr !== '' && filter_var($remoteAddr, FILTER_VALIDATE_IP)) {
+            return $remoteAddr;
         }
-        return $server['REMOTE_ADDR'] ?? '0.0.0.0';
+        return '0.0.0.0';
     }
 
 }

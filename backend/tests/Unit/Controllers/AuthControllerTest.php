@@ -970,6 +970,45 @@ class AuthControllerTest extends TestCase
         $this->assertSame('POW_RATE_LIMITED', $json['code']);
     }
 
+    public function testCreateProofOfWorkChallengePrefersCloudflareIpOverForwardedFor(): void
+    {
+        $mockAuthService = $this->createMock(AuthService::class);
+        $mockTurnstileService = $this->createMock(TurnstileService::class);
+        $mockPowService = $this->createMock(ProofOfWorkService::class);
+        $mockPowService->expects($this->once())
+            ->method('createChallenge')
+            ->with('auth.login', '203.0.113.9')
+            ->willReturn([
+                'challenge' => 'challenge',
+                'difficulty' => 20,
+                'expires_at' => '2026-05-17T00:00:00Z',
+            ]);
+
+        $controller = new AuthController(
+            $mockAuthService,
+            $this->createMock(EmailService::class),
+            $mockTurnstileService,
+            $this->createMock(AuditLogService::class),
+            $this->createMock(MessageService::class),
+            $this->createMock(CloudflareR2Service::class),
+            $this->createMock(\Monolog\Logger::class),
+            $this->createMock(\PDO::class),
+            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(RegionService::class),
+            null,
+            null,
+            $mockPowService
+        );
+
+        $request = makeRequest('POST', '/auth/pow/challenge', ['scope' => 'auth.login'], null, [
+            'X-Forwarded-For' => ['198.51.100.77'],
+            'CF-Connecting-IP' => ['203.0.113.9'],
+        ]);
+        $resp = $controller->createProofOfWorkChallenge($request, new \Slim\Psr7\Response());
+
+        $this->assertSame(200, $resp->getStatusCode());
+    }
+
     public function testLoginRequiresProofOfWorkForMobileRequests(): void
     {
         $previousToken = $_ENV['MOBILE_CLIENT_TOKEN'] ?? null;

@@ -202,9 +202,15 @@ class IdempotencyMiddleware implements MiddlewareInterface
             if (!array_is_list($value)) {
                 ksort($value);
             }
+            $count = 0;
             foreach ($value as $key => $child) {
+                if ($count >= self::FINGERPRINT_MAX_ARRAY_ITEMS) {
+                    hash_update($context, 'truncated_items:' . (count($value) - self::FINGERPRINT_MAX_ARRAY_ITEMS) . ';');
+                    break;
+                }
                 hash_update($context, 'key:' . (is_int($key) ? 'i' : 's') . ':' . (string) $key . ';');
                 $this->updateFingerprintHash($context, $child, $depth + 1);
+                $count++;
             }
             hash_update($context, '}');
             return;
