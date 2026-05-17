@@ -79,8 +79,8 @@ export function Footer({ summaryData = null, enableLiveSummary = true }) {
           {/* 品牌信息 */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <img src="/favicon.ico" alt="CarbonTrack logo" className="h-8 w-8" />
-              <span className="text-xl font-bold">CarbonTrack</span>
+              <img src="/favicon.ico" alt="CarbonRack logo" className="h-8 w-8" />
+              <span className="text-xl font-bold">CarbonRack</span>
             </div>
             <p className="text-gray-300 mb-6 text-sm leading-relaxed">
               {t('footer.description')}
@@ -210,7 +210,7 @@ export function Footer({ summaryData = null, enableLiveSummary = true }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-2 text-sm text-gray-400">
             <div>
-              © {currentYear} CarbonTrack. {t('footer.allRightsReserved')}
+              © {currentYear} CarbonRack. {t('footer.allRightsReserved')}
             </div>
             <div className="flex items-center gap-4">
               <span>{t('footer.versionLabel', { version: appVersion })}</span>

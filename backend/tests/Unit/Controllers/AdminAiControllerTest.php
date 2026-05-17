@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Controllers\AdminAiController;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\AdminAnnouncementAiUnavailableException;
-use CarbonTrack\Services\AdminAnnouncementAiService;
-use CarbonTrack\Services\AdminAiAgentService;
-use CarbonTrack\Services\AdminAiIntentService;
-use CarbonTrack\Services\AdminAiCommandRepository;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Controllers\AdminAiController;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\AdminAnnouncementAiUnavailableException;
+use CarbonRack\Services\AdminAnnouncementAiService;
+use CarbonRack\Services\AdminAiAgentService;
+use CarbonRack\Services\AdminAiIntentService;
+use CarbonRack\Services\AdminAiCommandRepository;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\ErrorLogService;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Slim\Psr7\Response;

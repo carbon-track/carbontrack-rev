@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Services\AuditLogService;
+use CarbonRack\Services\AuditLogService;
 
 class AuditLogServiceTest extends TestCase
 {

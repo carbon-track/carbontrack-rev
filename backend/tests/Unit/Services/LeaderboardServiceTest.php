@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\LeaderboardService;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\UserProfileViewService;
+use CarbonRack\Services\LeaderboardService;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\UserProfileViewService;
 use PHPUnit\Framework\TestCase;
 
 class LeaderboardServiceTest extends TestCase

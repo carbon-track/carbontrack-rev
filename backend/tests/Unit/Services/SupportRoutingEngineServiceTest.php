@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\SupportRoutingEngineService;
-use CarbonTrack\Services\SupportRoutingTriageService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\SupportRoutingEngineService;
+use CarbonRack\Services\SupportRoutingTriageService;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Schema\Blueprint;
 use PHPUnit\Framework\TestCase;

@@ -1925,7 +1925,7 @@ function MessageBubble({
           )}>
             {isUser ? <MessageSquare className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
           </span>
-          <span className={isUser ? 'order-1' : ''}>{isUser ? (isZh ? '管理员' : 'Admin') : 'CarbonTrack AI'}</span>
+          <span className={isUser ? 'order-1' : ''}>{isUser ? (isZh ? '管理员' : 'Admin') : 'CarbonRack AI'}</span>
           {message?.created_at ? <span className={cn('normal-case tracking-normal', isUser ? 'order-1' : '')}>{formatAbsoluteTime(message.created_at, locale)}</span> : null}
         </div>
 

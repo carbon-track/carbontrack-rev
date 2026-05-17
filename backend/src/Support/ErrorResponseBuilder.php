@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Support;
+namespace CarbonRack\Support;
 
 use Psr\Http\Message\ServerRequestInterface;
 use Throwable;

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\UserAiService;
-use CarbonTrack\Services\Ai\LlmClientInterface;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Services\UserAiService;
+use CarbonRack\Services\Ai\LlmClientInterface;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;

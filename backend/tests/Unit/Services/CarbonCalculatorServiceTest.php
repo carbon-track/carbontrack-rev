@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\AuditLogService;
+use CarbonRack\Services\AuditLogService;
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Services\CarbonCalculatorService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Services\CarbonCalculatorService;
+use CarbonRack\Services\ErrorLogService;
 
 class CarbonCalculatorServiceTest extends TestCase
 {

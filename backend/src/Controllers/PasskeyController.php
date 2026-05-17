@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\PasskeyOperationException;
-use CarbonTrack\Services\PasskeyService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\PasskeyOperationException;
+use CarbonRack\Services\PasskeyService;
 use Monolog\Logger;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;

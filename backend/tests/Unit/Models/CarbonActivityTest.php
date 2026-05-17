@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Models;
+namespace CarbonRack\Tests\Unit\Models;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Models\CarbonActivity;
+use CarbonRack\Models\CarbonActivity;
 
 class CarbonActivityTest extends TestCase
 {

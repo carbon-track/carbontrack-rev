@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Support\SyntheticRequestFactory;
-use CarbonTrack\Services\Ai\LlmClientInterface;
+use CarbonRack\Support\SyntheticRequestFactory;
+use CarbonRack\Services\Ai\LlmClientInterface;
 use JsonException;
 use Psr\Log\LoggerInterface;
 
@@ -519,7 +519,7 @@ class AdminAiIntentService
             $actionDescriptions[] = "- {$name}: {$desc} (Requires: " . implode(', ', $def['requires'] ?? []) . ")";
         }
 
-        $prompt = "You are CarbonTrack's admin AI command planner. Convert administrator natural language into precise instructions using the provided tools.\n\n";
+        $prompt = "You are CarbonRack's admin AI command planner. Convert administrator natural language into precise instructions using the provided tools.\n\n";
         
         if (!empty($navDescriptions)) {
             $prompt .= "Navigation Targets:\n" . implode("\n", $navDescriptions) . "\n\n";

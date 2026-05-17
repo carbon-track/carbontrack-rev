@@ -42,7 +42,7 @@
       "loadError": "无法加载最新的社区统计信息，请稍后重试。"
     },
     "features": {
-      "title": "为什么选择CarbonTrack？",
+      "title": "为什么选择CarbonRack？",
       "subtitle": "我们提供完整的碳足迹追踪解决方案，让环保行动变得简单有趣。",
       "calculate": {
         "title": "精准计算",
@@ -91,13 +91,13 @@
       "communityDescription": "活跃社区，共同成长"
     },
     "announcements": {
-      "title": "CarbonTrack 最新动态",
+      "title": "CarbonRack 最新动态",
       "subtitle": "关注平台公告，第一时间了解社区最新活动与功能。",
       "items": [
         {
           "id": "feedback",
           "title": "欢迎反馈建议",
-          "description": "发送邮件至 carbontrack666@gmail.com，与我们一起打造更好的减排工具。"
+          "description": "发送邮件至 carbonrack666@gmail.com，与我们一起打造更好的减排工具。"
         },
         {
           "id": "rewards",
@@ -124,7 +124,7 @@
           "id": "footprint",
           "title": "看见你的碳足迹",
           "subtitle": "日常行动可量化",
-          "description": "CarbonTrack 依据科学模型换算 CO₂ 减排量，让你明确哪类行动最有成效。",
+          "description": "CarbonRack 依据科学模型换算 CO₂ 减排量，让你明确哪类行动最有成效。",
           "highlights": [
             "针对校园场景优化的减排系数",
             "提交即反馈，及时看到效果",

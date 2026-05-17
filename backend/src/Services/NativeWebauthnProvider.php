@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Services\Webauthn\Base64Url;
-use CarbonTrack\Services\Webauthn\CborDecoder;
+use CarbonRack\Services\Webauthn\Base64Url;
+use CarbonRack\Services\Webauthn\CborDecoder;
 
 class NativeWebauthnProvider implements WebauthnProviderInterface
 {

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Controllers\StatsController;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\StatisticsService;
+use CarbonRack\Controllers\StatsController;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\StatisticsService;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Response;
 

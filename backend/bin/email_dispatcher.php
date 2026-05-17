@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use CarbonTrack\Jobs\EmailJobRunner;
-use CarbonTrack\Services\EmailService;
+use CarbonRack\Jobs\EmailJobRunner;
+use CarbonRack\Services\EmailService;
 use Dotenv\Dotenv;
 use DI\Container;
 use Monolog\Logger;

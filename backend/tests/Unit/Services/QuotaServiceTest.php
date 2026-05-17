@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Models\User;
-use CarbonTrack\Models\UserGroup;
-use CarbonTrack\Models\UserUsageStats;
-use CarbonTrack\Services\QuotaService;
+use CarbonRack\Models\User;
+use CarbonRack\Models\UserGroup;
+use CarbonRack\Models\UserUsageStats;
+use CarbonRack\Services\QuotaService;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;

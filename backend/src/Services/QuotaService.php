@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\User;
-use CarbonTrack\Models\UserUsageStats;
+use CarbonRack\Models\User;
+use CarbonRack\Models\UserUsageStats;
 use Illuminate\Support\Carbon;
 use PDO;
 

@@ -1,7 +1,7 @@
 {
   "about": {
     "hero": {
-      "title": "About CarbonTrack",
+      "title": "About CarbonRack",
       "subtitle": "We are a group of young people passionate about environmental protection and technology, teaming up to build a sustainable, low-carbon future."
     },
     "contactLinks": [
@@ -13,7 +13,7 @@
       {
         "type": "instagram",
         "label": "Follow Us",
-        "href": "https://www.instagram.com/carbontrackorg/",
+        "href": "https://www.instagram.com/carbonrackorg/",
         "external": true
       },
       {
@@ -25,26 +25,26 @@
       {
         "type": "partnership",
         "label": "Partnership",
-        "href": "https://carbontrack.org/partners",
+        "href": "https://carbonrack.org/partners",
         "external": true
       }
     ],
     "team": {
       "title": "Our Team",
-      "intro": "Meet the dedicated members behind CarbonTrack who pour their creativity, technical expertise, and passion for environmental action into everything we do.",
+      "intro": "Meet the dedicated members behind CarbonRack who pour their creativity, technical expertise, and passion for environmental action into everything we do.",
       "learnMore": "Learn More",
       "members": [
         {
           "name": "Yuanzheng (Jack) Yu",
           "role": "Founder & Project Lead",
-          "bio": "Jack leads CarbonTrack, coordinating collaboration, defining the roadmap, and keeping our product experience polished. He believes the internet can connect more people with meaningful climate action.",
+          "bio": "Jack leads CarbonRack, coordinating collaboration, defining the roadmap, and keeping our product experience polished. He believes the internet can connect more people with meaningful climate action.",
           "link": "https://yuanzhengjackyu.com/",
           "linkLabel": "Portfolio"
         },
         {
           "name": "Zining (Jeffery) Lyu",
           "role": "Co-founder & Full-stack Engineer",
-          "bio": "Jeffery is our core technology partner and full-stack engineer. He is responsible for the architecture, development, and maintenance of the CarbonTrack web experience.",
+          "bio": "Jeffery is our core technology partner and full-stack engineer. He is responsible for the architecture, development, and maintenance of the CarbonRack web experience.",
           "link": "https://github.com/Jeffery2008",
           "linkLabel": "GitHub"
         },
@@ -58,14 +58,14 @@
         {
           "name": "Smiley Ni",
           "role": "Creative Lead",
-          "bio": "Smiley drives our creative direction, from campaign visuals to community storytelling. A passionate dancer and artist, she wants CarbonTrack to spread joy along with climate awareness.",
+          "bio": "Smiley drives our creative direction, from campaign visuals to community storytelling. A passionate dancer and artist, she wants CarbonRack to spread joy along with climate awareness.",
           "link": "https://smileyn327.com/",
           "linkLabel": "Portfolio"
         },
         {
           "name": "Lan Liu",
           "role": "Product Designer",
-          "bio": "Lan shapes our product operations and interface flows. She loves hiking, pottery, and bringing sustainable lifestyle ideas to the CarbonTrack community."
+          "bio": "Lan shapes our product operations and interface flows. She loves hiking, pottery, and bringing sustainable lifestyle ideas to the CarbonRack community."
         },
         {
           "name": "Jack Shi",
@@ -75,7 +75,7 @@
         {
           "name": "Tony Li",
           "role": "Full-stack Engineer",
-          "bio": "Tony helps deliver new features, performance improvements, and smooth interactions that make CarbonTrack both powerful and approachable."
+          "bio": "Tony helps deliver new features, performance improvements, and smooth interactions that make CarbonRack both powerful and approachable."
         },
         {
           "name": "Eddie Peng",
@@ -132,7 +132,7 @@
         {
           "name": "Yangyang Zhou",
           "role": "Co-founder",
-          "bio": "Yangyang enjoys economics, mathematics, and basketball. He helped launch CarbonTrack and continues to advise on strategy."
+          "bio": "Yangyang enjoys economics, mathematics, and basketball. He helped launch CarbonRack and continues to advise on strategy."
         },
         {
           "name": "Dora Xu",
@@ -158,7 +158,7 @@
     },
     "mission": {
       "title": "Our Mission",
-      "description": "CarbonTrack uses digital carbon accounts to make climate action personal, trackable, and rewarding.",
+      "description": "CarbonRack uses digital carbon accounts to make climate action personal, trackable, and rewarding.",
       "items": [
         "Engage students and young people in conversations about climate change and carbon emissions.",
         "Offer simple tools to log daily carbon footprints and celebrate low-carbon habits.",
@@ -168,13 +168,13 @@
     },
     "achievements": {
       "title": "Our Achievements",
-      "description": "Together with the CarbonTrack community, we are turning carbon accounting into a shared, uplifting journey.",
+      "description": "Together with the CarbonRack community, we are turning carbon accounting into a shared, uplifting journey.",
       "stats": [
         {
           "label": "Carbon Reduction",
           "value": "12,000+ kg",
           "highlight": "CO₂ saved",
-          "description": "CarbonTrack members regularly record low-carbon actions, turning everyday decisions into measurable climate impact."
+          "description": "CarbonRack members regularly record low-carbon actions, turning everyday decisions into measurable climate impact."
         },
         {
           "label": "Community Growth",

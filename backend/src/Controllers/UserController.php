@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use CarbonTrack\Models\Avatar;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\CloudflareR2Service;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\LeaderboardService;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\StreakLeaderboardService;
-use CarbonTrack\Services\NotificationPreferenceService;
-use CarbonTrack\Services\TurnstileService;
-use CarbonTrack\Services\ProofOfWorkService;
-use CarbonTrack\Services\UserProfileViewService;
-use CarbonTrack\Models\Message;
+use CarbonRack\Models\Avatar;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\CloudflareR2Service;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\LeaderboardService;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\StreakLeaderboardService;
+use CarbonRack\Services\NotificationPreferenceService;
+use CarbonRack\Services\TurnstileService;
+use CarbonRack\Services\ProofOfWorkService;
+use CarbonRack\Services\UserProfileViewService;
+use CarbonRack\Models\Message;
 use Monolog\Logger;
 use PDO;
 
@@ -439,7 +439,7 @@ class UserController
 
         return [
             'title' => '[Test] Sample direct message preview',
-            'content' => "Hello,\n\nThis is a generated sample direct message to show how CarbonTrack forwards messages by email.\n\n— CarbonTrack (test preview)",
+            'content' => "Hello,\n\nThis is a generated sample direct message to show how CarbonRack forwards messages by email.\n\n— CarbonRack (test preview)",
             'created_at' => null,
             'generated' => true,
         ];
@@ -1069,7 +1069,7 @@ class UserController
                 $body = sprintf(
                     "Hello %s,\n\nThis is a test message to confirm that email notifications from %s are delivering successfully. "
                     . "If you received this message, your notification preferences are working as expected.\n\n"
-                    . "You can adjust your preferences at any time in the CarbonTrack app.\n\nThanks for staying connected!",
+                    . "You can adjust your preferences at any time in the CarbonRack app.\n\nThanks for staying connected!",
                     $displayName,
                     $appName
                 );

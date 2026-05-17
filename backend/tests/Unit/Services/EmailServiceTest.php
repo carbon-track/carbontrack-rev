@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\NotificationPreferenceService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\NotificationPreferenceService;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
@@ -68,7 +68,7 @@ class EmailServiceTest extends TestCase
             'from_name' => 'No Reply',
             'templates_path' => __DIR__ . '/',
             'force_simulation' => true,
-            'app_name' => 'CarbonTrack QA',
+            'app_name' => 'CarbonRack QA',
             'frontend_url' => 'https://app.example.com',
         ];
 
@@ -150,7 +150,7 @@ class EmailServiceTest extends TestCase
             'from_email' => 'noreply@example.com',
             'from_name' => 'No Reply',
             'force_simulation' => true,
-            'app_name' => 'CarbonTrack QA',
+            'app_name' => 'CarbonRack QA',
             'support_email' => 'help@example.com',
             'frontend_url' => 'https://app.example.com',
         ];
@@ -200,7 +200,7 @@ class EmailServiceTest extends TestCase
                 ],
                 'button_label' => 'Review ticket',
                 'button_path' => 'tickets/42',
-                'closing' => 'Open CarbonTrack to review the full thread.',
+                'closing' => 'Open CarbonRack to review the full thread.',
             ],
             NotificationPreferenceService::CATEGORY_SUPPORT,
             'high'
@@ -229,7 +229,7 @@ class EmailServiceTest extends TestCase
             'from_email' => 'noreply@example.com',
             'from_name' => 'No Reply',
             'force_simulation' => true,
-            'app_name' => 'CarbonTrack QA',
+            'app_name' => 'CarbonRack QA',
             'frontend_url' => 'https://app.example.com',
         ];
 
@@ -338,7 +338,7 @@ class EmailServiceTest extends TestCase
             'password' => 'pass',
             'port' => 465,
             'from_email' => 'noreply@example.com',
-            'from_name' => 'CarbonTrack',
+            'from_name' => 'CarbonRack',
             'force_simulation' => true,
             'frontend_url' => 'https://app.example.com',
         ];
@@ -395,7 +395,7 @@ class EmailServiceTest extends TestCase
             'password' => 'pass',
             'port' => 465,
             'from_email' => 'noreply@example.com',
-            'from_name' => 'CarbonTrack',
+            'from_name' => 'CarbonRack',
             'force_simulation' => true,
             'frontend_url' => 'https://app.example.com',
         ];
@@ -477,7 +477,7 @@ class EmailServiceTest extends TestCase
                 'exchange_status_update' => 'ESU',
             ],
             'force_simulation' => true,
-            'app_name' => 'CarbonTrack QA',
+            'app_name' => 'CarbonRack QA',
             'support_email' => 'help@example.com',
             'frontend_url' => 'https://app.example.com',
             'reset_link_base' => 'https://app.example.com',
@@ -553,7 +553,7 @@ class EmailServiceTest extends TestCase
             'from_email' => 'noreply@example.com',
             'from_name' => 'No Reply',
             'force_simulation' => true,
-            'app_name' => 'CarbonTrack QA',
+            'app_name' => 'CarbonRack QA',
             'frontend_url' => 'https://app.example.com',
         ];
 

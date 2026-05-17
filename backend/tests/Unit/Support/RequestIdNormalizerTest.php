@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Support;
+namespace CarbonRack\Tests\Unit\Support;
 
-use CarbonTrack\Support\RequestIdNormalizer;
+use CarbonRack\Support\RequestIdNormalizer;
 use PHPUnit\Framework\TestCase;
 
 class RequestIdNormalizerTest extends TestCase

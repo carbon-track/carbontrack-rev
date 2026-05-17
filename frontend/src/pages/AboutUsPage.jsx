@@ -413,7 +413,7 @@ const AboutUsPage = () => {
           <header className="relative px-4 py-24">
             <div className="max-w-5xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-                {hero.title || 'About CarbonTrack'}
+                {hero.title || 'About CarbonRack'}
               </h1>
               {hero.subtitle && (
                 <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8">

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\SupportAutomationService;
-use CarbonTrack\Services\UserProfileViewService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\SupportAutomationService;
+use CarbonRack\Services\UserProfileViewService;
 use DateTimeImmutable;
 use DateTimeZone;
 use Illuminate\Database\Capsule\Manager as Capsule;

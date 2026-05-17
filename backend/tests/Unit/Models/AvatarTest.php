@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Models;
+namespace CarbonRack\Tests\Unit\Models;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Models\Avatar;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Models\Avatar;
+use CarbonRack\Services\ErrorLogService;
 use Psr\Log\LoggerInterface;
 
 class AvatarTest extends TestCase
@@ -446,7 +446,7 @@ class AvatarTest extends TestCase
         $logger = $this->createMock(LoggerInterface::class);
         $model = new Avatar($pdo, $logger);
 
-        $this->expectException(\CarbonTrack\Models\AvatarFallbackUnavailableException::class);
+        $this->expectException(\CarbonRack\Models\AvatarFallbackUnavailableException::class);
 
         $model->updateAvatarAndReassignUsers(7, ['is_active' => false], null);
     }
@@ -491,7 +491,7 @@ class AvatarTest extends TestCase
         $logger = $this->createMock(LoggerInterface::class);
         $model = new Avatar($pdo, $logger);
 
-        $this->expectException(\CarbonTrack\Models\AvatarFallbackUnavailableException::class);
+        $this->expectException(\CarbonRack\Models\AvatarFallbackUnavailableException::class);
 
         $model->updateAvatarAndReassignUsers(7, ['is_active' => false], 1);
     }

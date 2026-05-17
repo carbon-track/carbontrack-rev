@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
 use Psr\Http\Message\ResponseInterface as Response;
 

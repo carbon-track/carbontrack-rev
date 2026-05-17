@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\MessageController;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\UserProfileViewService;
-use CarbonTrack\Models\Message;
+use CarbonRack\Controllers\MessageController;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\UserProfileViewService;
+use CarbonRack\Models\Message;
 
 class MessageControllerTest extends TestCase
 {

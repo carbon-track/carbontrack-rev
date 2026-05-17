@@ -10,83 +10,83 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Handler\ErrorLogHandler;
 use Illuminate\Database\Capsule\Manager as Capsule;
-use CarbonTrack\Services\DatabaseService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\CarbonCalculatorService;
-use CarbonTrack\Services\CloudflareR2Service;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\TurnstileService;
-use CarbonTrack\Services\ProofOfWorkService;
-use CarbonTrack\Services\SystemLogService;
-use CarbonTrack\Services\LlmLogService;
-use CarbonTrack\Services\NotificationPreferenceService;
-use CarbonTrack\Services\MultipartUploadService;
-use CarbonTrack\Services\SupportAutomationService;
-use CarbonTrack\Services\CronSchedulerService;
-use CarbonTrack\Services\SupportRoutingEngineService;
-use CarbonTrack\Services\SupportRoutingTriageService;
-use CarbonTrack\Services\SupportTicketService;
-use CarbonTrack\Controllers\SystemLogController;
-use CarbonTrack\Controllers\LogSearchController;
-use CarbonTrack\Services\FileMetadataService;
-use CarbonTrack\Models\Avatar;
-use CarbonTrack\Controllers\AvatarController;
-use CarbonTrack\Controllers\UserController;
-use CarbonTrack\Controllers\AuthController;
-use CarbonTrack\Controllers\CarbonTrackController;
-use CarbonTrack\Controllers\CarbonActivityController;
-use CarbonTrack\Controllers\ProductController;
-use CarbonTrack\Controllers\MessageController;
-use CarbonTrack\Controllers\SchoolController;
-use CarbonTrack\Controllers\AdminController;
-use CarbonTrack\Controllers\AdminLlmUsageController;
-use CarbonTrack\Controllers\FileUploadController;
-use CarbonTrack\Controllers\LeaderboardController;
-use CarbonTrack\Services\BadgeService;
-use CarbonTrack\Services\StatisticsService;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\UserProfileViewService;
-use CarbonTrack\Services\LeaderboardService;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\StreakLeaderboardService;
-use CarbonTrack\Services\AdminAiIntentService;
-use CarbonTrack\Services\AdminAiAgentService;
-use CarbonTrack\Services\AdminAiConversationStoreService;
-use CarbonTrack\Services\AdminAiReadModelService;
-use CarbonTrack\Services\AdminAiResultFormatterService;
-use CarbonTrack\Services\AdminAiRollbackService;
-use CarbonTrack\Services\AdminAiWriteActionService;
-use CarbonTrack\Services\AdminAnnouncementAiService;
-use CarbonTrack\Controllers\BadgeController;
-use CarbonTrack\Controllers\AdminBadgeController;
-use CarbonTrack\Middleware\RequestLoggingMiddleware;
-use CarbonTrack\Controllers\StatsController;
-use CarbonTrack\Services\Ai\OpenAiClientAdapter;
-use CarbonTrack\Controllers\AdminAiController;
-use CarbonTrack\Controllers\AdminSupportController;
-use CarbonTrack\Controllers\AdminCronController;
-use CarbonTrack\Controllers\CronController;
-use CarbonTrack\Controllers\UserAiController;
-use CarbonTrack\Controllers\SupportTicketController;
-use CarbonTrack\Services\AdminAiCommandRepository;
-use CarbonTrack\Services\UserAiService;
-use CarbonTrack\Services\QuotaService;
-use CarbonTrack\Services\QuotaConfigService;
-use CarbonTrack\Services\UserGroupService;
-use CarbonTrack\Services\PasskeyConfig;
-use CarbonTrack\Services\PasskeyService;
-use CarbonTrack\Services\WebauthnProviderInterface;
-use CarbonTrack\Services\NativeWebauthnProvider;
-use CarbonTrack\Services\NullWebauthnProvider;
-use CarbonTrack\Controllers\AdminUserGroupController;
-use CarbonTrack\Controllers\CheckinController;
-use CarbonTrack\Controllers\PasskeyController;
-use CarbonTrack\Models\UserPasskey;
-use CarbonTrack\Models\WebauthnChallenge;
-use CarbonTrack\Middleware\SupportMiddleware;
+use CarbonRack\Services\DatabaseService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\CarbonCalculatorService;
+use CarbonRack\Services\CloudflareR2Service;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\TurnstileService;
+use CarbonRack\Services\ProofOfWorkService;
+use CarbonRack\Services\SystemLogService;
+use CarbonRack\Services\LlmLogService;
+use CarbonRack\Services\NotificationPreferenceService;
+use CarbonRack\Services\MultipartUploadService;
+use CarbonRack\Services\SupportAutomationService;
+use CarbonRack\Services\CronSchedulerService;
+use CarbonRack\Services\SupportRoutingEngineService;
+use CarbonRack\Services\SupportRoutingTriageService;
+use CarbonRack\Services\SupportTicketService;
+use CarbonRack\Controllers\SystemLogController;
+use CarbonRack\Controllers\LogSearchController;
+use CarbonRack\Services\FileMetadataService;
+use CarbonRack\Models\Avatar;
+use CarbonRack\Controllers\AvatarController;
+use CarbonRack\Controllers\UserController;
+use CarbonRack\Controllers\AuthController;
+use CarbonRack\Controllers\CarbonRackController;
+use CarbonRack\Controllers\CarbonActivityController;
+use CarbonRack\Controllers\ProductController;
+use CarbonRack\Controllers\MessageController;
+use CarbonRack\Controllers\SchoolController;
+use CarbonRack\Controllers\AdminController;
+use CarbonRack\Controllers\AdminLlmUsageController;
+use CarbonRack\Controllers\FileUploadController;
+use CarbonRack\Controllers\LeaderboardController;
+use CarbonRack\Services\BadgeService;
+use CarbonRack\Services\StatisticsService;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\UserProfileViewService;
+use CarbonRack\Services\LeaderboardService;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\StreakLeaderboardService;
+use CarbonRack\Services\AdminAiIntentService;
+use CarbonRack\Services\AdminAiAgentService;
+use CarbonRack\Services\AdminAiConversationStoreService;
+use CarbonRack\Services\AdminAiReadModelService;
+use CarbonRack\Services\AdminAiResultFormatterService;
+use CarbonRack\Services\AdminAiRollbackService;
+use CarbonRack\Services\AdminAiWriteActionService;
+use CarbonRack\Services\AdminAnnouncementAiService;
+use CarbonRack\Controllers\BadgeController;
+use CarbonRack\Controllers\AdminBadgeController;
+use CarbonRack\Middleware\RequestLoggingMiddleware;
+use CarbonRack\Controllers\StatsController;
+use CarbonRack\Services\Ai\OpenAiClientAdapter;
+use CarbonRack\Controllers\AdminAiController;
+use CarbonRack\Controllers\AdminSupportController;
+use CarbonRack\Controllers\AdminCronController;
+use CarbonRack\Controllers\CronController;
+use CarbonRack\Controllers\UserAiController;
+use CarbonRack\Controllers\SupportTicketController;
+use CarbonRack\Services\AdminAiCommandRepository;
+use CarbonRack\Services\UserAiService;
+use CarbonRack\Services\QuotaService;
+use CarbonRack\Services\QuotaConfigService;
+use CarbonRack\Services\UserGroupService;
+use CarbonRack\Services\PasskeyConfig;
+use CarbonRack\Services\PasskeyService;
+use CarbonRack\Services\WebauthnProviderInterface;
+use CarbonRack\Services\NativeWebauthnProvider;
+use CarbonRack\Services\NullWebauthnProvider;
+use CarbonRack\Controllers\AdminUserGroupController;
+use CarbonRack\Controllers\CheckinController;
+use CarbonRack\Controllers\PasskeyController;
+use CarbonRack\Models\UserPasskey;
+use CarbonRack\Models\WebauthnChallenge;
+use CarbonRack\Middleware\SupportMiddleware;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
@@ -107,7 +107,7 @@ $__deps_initializer = function (Container $container) {
     // Logger
     $container->set(Logger::class, function () {
         try {
-            $logger = new Logger('carbontrack');
+            $logger = new Logger('carbonrack');
             
             // 检查环境变量是否设置，如果没有则使用默认值
             $appEnv = $_ENV['APP_ENV'] ?? 'development';
@@ -154,7 +154,7 @@ $__deps_initializer = function (Container $container) {
             return $logger;
         } catch (\Exception $e) {
             // 如果Logger创建失败，创建一个基本的Logger到标准错误输出
-            $fallbackLogger = new Logger('carbontrack');
+            $fallbackLogger = new Logger('carbonrack');
             $fallbackLogger->pushHandler(new StreamHandler('php://stderr', Logger::ERROR));
             $fallbackLogger->error('Failed to create logger with configured handlers: ' . $e->getMessage());
             return $fallbackLogger;
@@ -188,7 +188,7 @@ $__deps_initializer = function (Container $container) {
                 'driver' => 'mysql',
                 'host' => $_ENV['DB_HOST'] ?? 'localhost',
                 'port' => $_ENV['DB_PORT'] ?? 3306,
-                'database' => $_ENV['DB_DATABASE'] ?? 'carbontrack',
+                'database' => $_ENV['DB_DATABASE'] ?? 'carbonrack',
                 // Support both DB_USERNAME/DB_PASSWORD and legacy DB_USER/DB_PASS
                 'username' => $_ENV['DB_USERNAME'] ?? $_ENV['DB_USER'] ?? 'root',
                 'password' => $_ENV['DB_PASSWORD'] ?? $_ENV['DB_PASS'] ?? '',
@@ -470,7 +470,7 @@ $__deps_initializer = function (Container $container) {
     });
 
     $container->set(AdminAiIntentService::class, function (ContainerInterface $c) {
-        /** @var \CarbonTrack\Services\Ai\LlmClientInterface|null $llmClient */
+        /** @var \CarbonRack\Services\Ai\LlmClientInterface|null $llmClient */
         $llmClient = $c->get('ai.llmClient');
 
         $config = [
@@ -491,7 +491,7 @@ $__deps_initializer = function (Container $container) {
     });
 
     $container->set(AdminAnnouncementAiService::class, function (ContainerInterface $c) {
-        /** @var \CarbonTrack\Services\Ai\LlmClientInterface|null $llmClient */
+        /** @var \CarbonRack\Services\Ai\LlmClientInterface|null $llmClient */
         $llmClient = $c->get('ai.llmClient');
 
         $config = [
@@ -546,7 +546,7 @@ $__deps_initializer = function (Container $container) {
     });
 
     $container->set(UserAiService::class, function (ContainerInterface $c) {
-        /** @var \CarbonTrack\Services\Ai\LlmClientInterface|null $llmClient */
+        /** @var \CarbonRack\Services\Ai\LlmClientInterface|null $llmClient */
         $llmClient = $c->get('ai.llmClient');
 
         $config = [
@@ -569,7 +569,7 @@ $__deps_initializer = function (Container $container) {
     // Email Service
     $container->set(EmailService::class, function (ContainerInterface $c) {
         $frontendUrl = $_ENV['FRONTEND_URL'] ?? ($_ENV['APP_URL'] ?? '');
-        $supportEmail = $_ENV['SUPPORT_EMAIL'] ?? ($_ENV['MAIL_FROM_ADDRESS'] ?? 'support@carbontrackapp.com');
+        $supportEmail = $_ENV['SUPPORT_EMAIL'] ?? ($_ENV['MAIL_FROM_ADDRESS'] ?? 'support@carbonrackapp.com');
 
         return new EmailService([
             'host' => $_ENV['MAIL_HOST'],
@@ -577,8 +577,8 @@ $__deps_initializer = function (Container $container) {
             'username' => $_ENV['MAIL_USERNAME'],
             'password' => $_ENV['MAIL_PASSWORD'] ?? 'test',
             'encryption' => $_ENV['MAIL_ENCRYPTION'] ?? 'tls',
-            'from_address' => $_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@carbontrack.com',
-            'from_name' => $_ENV['MAIL_FROM_NAME'] ?? 'CarbonTrack',
+            'from_address' => $_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@carbonrack.com',
+            'from_name' => $_ENV['MAIL_FROM_NAME'] ?? 'CarbonRack',
             'debug' => (strtolower((string) ($_ENV['APP_ENV'] ?? 'development')) !== 'production'),
             'force_simulation' => $_ENV['MAIL_SIMULATE'] ?? false,
             'smtp_debug' => isset($_ENV['MAIL_SMTP_DEBUG']) ? (int) $_ENV['MAIL_SMTP_DEBUG'] : 0,
@@ -588,7 +588,7 @@ $__deps_initializer = function (Container $container) {
                 'activity_approved' => 'Your Carbon Activity Approved!'
             ],
             'templates_path' => __DIR__ . '/../templates/emails/',
-            'app_name' => $_ENV['APP_NAME'] ?? ($_ENV['MAIL_FROM_NAME'] ?? 'CarbonTrack'),
+            'app_name' => $_ENV['APP_NAME'] ?? ($_ENV['MAIL_FROM_NAME'] ?? 'CarbonRack'),
             'support_email' => $supportEmail,
             'frontend_url' => $frontendUrl,
             'reset_link_base' => $frontendUrl,
@@ -660,7 +660,7 @@ $__deps_initializer = function (Container $container) {
     });
 
     $container->set(AdminAiAgentService::class, function (ContainerInterface $c) {
-        /** @var \CarbonTrack\Services\Ai\LlmClientInterface|null $llmClient */
+        /** @var \CarbonRack\Services\Ai\LlmClientInterface|null $llmClient */
         $llmClient = $c->get('ai.llmClient');
 
         $config = [
@@ -749,7 +749,7 @@ $__deps_initializer = function (Container $container) {
     });
 
     $container->set(SupportRoutingTriageService::class, function (ContainerInterface $c) {
-        /** @var \CarbonTrack\Services\Ai\LlmClientInterface|null $llmClient */
+        /** @var \CarbonRack\Services\Ai\LlmClientInterface|null $llmClient */
         $llmClient = $c->has('ai.llmClient') ? $c->get('ai.llmClient') : null;
         $config = [
             'model' => $_ENV['LLM_API_MODEL'] ?? null,
@@ -946,9 +946,9 @@ $__deps_initializer = function (Container $container) {
         );
     });
 
-    $container->set(CarbonTrackController::class, function (ContainerInterface $c) {
+    $container->set(CarbonRackController::class, function (ContainerInterface $c) {
         $db = $c->get(DatabaseService::class)->getConnection()->getPdo();
-        return new CarbonTrackController(
+        return new CarbonRackController(
             $db,
             $c->get(CarbonCalculatorService::class),
             $c->get(MessageService::class),

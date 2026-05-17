@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\CarbonTrackController;
-use CarbonTrack\Services\{CarbonCalculatorService, MessageService, AuditLogService, AuthService, ErrorLogService, CloudflareR2Service};
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\UserProfileViewService;
+use CarbonRack\Controllers\CarbonRackController;
+use CarbonRack\Services\{CarbonCalculatorService, MessageService, AuditLogService, AuthService, ErrorLogService, CloudflareR2Service};
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\UserProfileViewService;
 use Slim\Psr7\Factory\ServerRequestFactory;
 use Slim\Psr7\UploadedFile;
 use Slim\Psr7\Response;
@@ -28,7 +28,7 @@ final class CarbonRecordImagePersistenceTest extends TestCase
     $this->pdo->exec("INSERT INTO users (id,username,email,is_admin,school_id,points) VALUES (2,'admin','admin@example.com',1,1,0);");
     }
 
-    private function makeController(array $uploadResults = []): CarbonTrackController
+    private function makeController(array $uploadResults = []): CarbonRackController
     {
     $calc = $this->getMockBuilder(CarbonCalculatorService::class)->disableOriginalConstructor()->getMock();
     $msg = $this->getMockBuilder(MessageService::class)->disableOriginalConstructor()->getMock();
@@ -42,7 +42,7 @@ final class CarbonRecordImagePersistenceTest extends TestCase
             $r2->method('uploadMultipleFiles')->willReturn(['results' => $uploadResults]);
             $r2->method('getPublicUrl')->willReturnCallback(fn(string $p) => 'https://cdn.example/' . ltrim($p,'/'));
         }
-        return new CarbonTrackController(
+        return new CarbonRackController(
             $this->pdo,
             $calc,
             $msg,

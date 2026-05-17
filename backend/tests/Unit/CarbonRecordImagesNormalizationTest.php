@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\CarbonTrackController;
-use CarbonTrack\Services\{CarbonCalculatorService, MessageService, AuditLogService, AuthService, ErrorLogService, CloudflareR2Service};
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\UserProfileViewService;
+use CarbonRack\Controllers\CarbonRackController;
+use CarbonRack\Services\{CarbonCalculatorService, MessageService, AuditLogService, AuthService, ErrorLogService, CloudflareR2Service};
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\UserProfileViewService;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Psr7\Factory\ServerRequestFactory;
 
@@ -45,7 +45,7 @@ final class CarbonRecordImagesNormalizationTest extends TestCase
             ('act-1','测试活动','Test Activity','daily',1.0,'times');");
     }
 
-    private function makeController(): CarbonTrackController
+    private function makeController(): CarbonRackController
     {
         // 创建最小可用的依赖 mock/stub
     $calc = $this->createMock(CarbonCalculatorService::class);
@@ -60,7 +60,7 @@ final class CarbonRecordImagesNormalizationTest extends TestCase
         $r2 = $this->createMock(CloudflareR2Service::class);
         $r2->method('getPublicUrl')->willReturnCallback(fn(string $p) => 'https://cdn.example/' . ltrim($p,'/'));
 
-        return new CarbonTrackController(
+        return new CarbonRackController(
             $this->pdo,
             $calc,
             $msg,

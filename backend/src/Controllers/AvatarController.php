@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
-use CarbonTrack\Models\Message;
+use CarbonRack\Models\Message;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use CarbonTrack\Models\Avatar;
-use CarbonTrack\Models\AvatarFallbackUnavailableException;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\CloudflareR2Service;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Support\InputValueNormalizer;
+use CarbonRack\Models\Avatar;
+use CarbonRack\Models\AvatarFallbackUnavailableException;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\CloudflareR2Service;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Support\InputValueNormalizer;
 use Monolog\Logger;
 
 class AvatarController
@@ -1101,7 +1101,7 @@ class AvatarController
 
         $title = '您选择的头像已停用 / Selected avatar unavailable';
         $content = sprintf(
-            "您当前使用的头像“%s”已被停用，系统已自动为您切换为默认头像“%s”。\n\n如需调整，请前往个人资料重新选择头像。\n\nThe avatar \"%s\" you selected has been disabled. CarbonTrack has automatically switched your profile to the default avatar \"%s\". You can choose a different avatar anytime from your profile.",
+            "您当前使用的头像“%s”已被停用，系统已自动为您切换为默认头像“%s”。\n\n如需调整，请前往个人资料重新选择头像。\n\nThe avatar \"%s\" you selected has been disabled. CarbonRack has automatically switched your profile to the default avatar \"%s\". You can choose a different avatar anytime from your profile.",
             $oldAvatarLabel,
             $fallbackAvatarLabel,
             $oldAvatarLabel,

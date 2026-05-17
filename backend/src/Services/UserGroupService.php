@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\UserGroup;
-use CarbonTrack\Support\InputValueNormalizer;
+use CarbonRack\Models\UserGroup;
+use CarbonRack\Support\InputValueNormalizer;
 
 class UserGroupService
 {

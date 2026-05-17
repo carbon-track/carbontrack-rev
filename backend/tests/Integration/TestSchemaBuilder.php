@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Integration;
+namespace CarbonRack\Tests\Integration;
 
 use PDO;
 

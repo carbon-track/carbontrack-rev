@@ -2,7 +2,7 @@
 
 ## Repository Roles
 
-`carbon-track/carbontrack-rev` is the only development repository.
+`carbon-track/carbonrack-rev` is the only development repository.
 
 - `main`: production source of truth
 - `dev`: integration source of truth
@@ -59,7 +59,7 @@ The workflow uses `actions/create-github-app-token` to mint short-lived installa
 
 Install the GitHub App on:
 
-- `carbon-track/carbontrack-rev`
+- `carbon-track/carbonrack-rev`
 - `carbon-track/frontend`
 - `carbon-track/backend`
 - `carbon-track/mobile`

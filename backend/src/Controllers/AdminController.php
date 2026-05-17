@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\CloudflareR2Service;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\BadgeService;
-use CarbonTrack\Services\StatisticsService;
-use CarbonTrack\Services\QuotaConfigService;
-use CarbonTrack\Services\UserProfileViewService;
-use CarbonTrack\Support\InputValueNormalizer;
-use CarbonTrack\Support\Uuid;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\CloudflareR2Service;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\BadgeService;
+use CarbonRack\Services\StatisticsService;
+use CarbonRack\Services\QuotaConfigService;
+use CarbonRack\Services\UserProfileViewService;
+use CarbonRack\Support\InputValueNormalizer;
+use CarbonRack\Support\Uuid;
 use PDO;
 use DateTimeImmutable;
 use DateTimeZone;

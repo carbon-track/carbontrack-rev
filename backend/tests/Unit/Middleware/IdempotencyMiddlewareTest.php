@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Middleware;
+namespace CarbonRack\Tests\Unit\Middleware;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Middleware\IdempotencyMiddleware;
-use CarbonTrack\Services\DatabaseService;
+use CarbonRack\Middleware\IdempotencyMiddleware;
+use CarbonRack\Services\DatabaseService;
 
 class IdempotencyMiddlewareTest extends TestCase
 {

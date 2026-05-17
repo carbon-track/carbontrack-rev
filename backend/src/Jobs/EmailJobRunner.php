@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Jobs;
+namespace CarbonRack\Jobs;
 
-use CarbonTrack\Support\SyntheticRequestFactory;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Support\SyntheticRequestFactory;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\ErrorLogService;
 use Monolog\Logger;
-use CarbonTrack\Services\NotificationPreferenceService;
-use CarbonTrack\Models\Message;
+use CarbonRack\Services\NotificationPreferenceService;
+use CarbonRack\Models\Message;
 
 class EmailJobRunner
 {

@@ -31,7 +31,7 @@ const SANITIZE_OPTIONS = {
   FORBID_TAGS: ['form', 'iframe', 'input', 'meta', 'object', 'script', 'style', 'textarea'],
 };
 
-const MESSAGE_SANITIZE_HOOK_SENTINEL = '__carbontrack_message_sanitize_hook_registered__';
+const MESSAGE_SANITIZE_HOOK_SENTINEL = '__carbonrack_message_sanitize_hook_registered__';
 
 function isMessageHookRegisteredGlobally() {
   return globalThis[MESSAGE_SANITIZE_HOOK_SENTINEL] === true;

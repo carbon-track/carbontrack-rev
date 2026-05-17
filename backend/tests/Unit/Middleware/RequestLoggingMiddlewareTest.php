@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Middleware;
+namespace CarbonRack\Tests\Unit\Middleware;
 
-use CarbonTrack\Middleware\RequestLoggingMiddleware;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\SystemLogService;
+use CarbonRack\Middleware\RequestLoggingMiddleware;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\SystemLogService;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;

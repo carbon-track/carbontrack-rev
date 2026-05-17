@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Middleware;
+namespace CarbonRack\Middleware;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\AuditLogService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\AuditLogService;
 use Slim\Psr7\Response;
 
 class AuthMiddleware implements MiddlewareInterface

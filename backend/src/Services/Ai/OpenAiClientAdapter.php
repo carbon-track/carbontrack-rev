@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services\Ai;
+namespace CarbonRack\Services\Ai;
 
 use GuzzleHttp\Psr7\Request;
 use OpenAI\Client;

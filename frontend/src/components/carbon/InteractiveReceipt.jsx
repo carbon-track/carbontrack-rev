@@ -421,7 +421,7 @@ export function InteractiveReceipt({ receipt, onRestart, onGoDashboard }) {
       footerLineOne: isZh
         ? '此回执已进入人工审核队列，请保留凭证。'
         : 'This receipt is queued for manual review. Keep your proof ready.',
-      footerLineTwo: 'CarbonTrack · thermal log snapshot',
+      footerLineTwo: 'CarbonRack · thermal log snapshot',
       actions: {
         restart: t('activities.form.recordAnother', {
           defaultValue: isZh ? '继续记录下一条' : 'Record another',

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\BaseController;
+use CarbonRack\Controllers\BaseController;
 
 class BaseControllerTest extends TestCase
 {

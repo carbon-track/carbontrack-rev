@@ -1,9 +1,9 @@
 -- Data migration from legacy v2 schema (old.sql) to current schema (localhost.sql)
 -- Source DB: 3kudvwa29i222
--- Target DB: carbontrack_v3
+-- Target DB: carbonrack_v3
 -- IMPORTANT:
 -- 1) This script migrates data only. It does NOT change target schema.
--- 2) Ensure carbontrack_v3 already uses the latest schema from backend/database/localhost.sql.
+-- 2) Ensure carbonrack_v3 already uses the latest schema from backend/database/localhost.sql.
 
 SET NAMES utf8mb4;
 
@@ -13,14 +13,14 @@ SET SQL_MODE = REPLACE(REPLACE(@@SQL_MODE, 'NO_ZERO_DATE', ''), 'NO_ZERO_IN_DATE
 SET @OLD_FOREIGN_KEY_CHECKS := @@FOREIGN_KEY_CHECKS;
 SET FOREIGN_KEY_CHECKS = 0;
 
-USE `carbontrack_v3`;
+USE `carbonrack_v3`;
 
 -- =========================================================
 -- 1) Migrate shared lookup/base tables
 -- =========================================================
 
 -- user_groups (same shape in old/new)
-INSERT INTO `carbontrack_v3`.`user_groups`
+INSERT INTO `carbonrack_v3`.`user_groups`
 (`id`, `name`, `code`, `config`, `is_default`, `notes`, `created_at`, `updated_at`)
 SELECT
     `id`,
@@ -40,7 +40,7 @@ ON DUPLICATE KEY UPDATE
     `updated_at` = VALUES(`updated_at`);
 
 -- avatars (old schema: filename/mime/active -> new schema fields)
-INSERT INTO `carbontrack_v3`.`avatars`
+INSERT INTO `carbonrack_v3`.`avatars`
 (`id`, `uuid`, `name`, `description`, `file_path`, `thumbnail_path`, `category`, `sort_order`, `is_active`, `is_default`, `created_at`, `updated_at`, `deleted_at`)
 SELECT
     oa.`id`,
@@ -73,7 +73,7 @@ ON DUPLICATE KEY UPDATE
     `updated_at` = VALUES(`updated_at`);
 
 -- schools
-INSERT INTO `carbontrack_v3`.`schools`
+INSERT INTO `carbonrack_v3`.`schools`
 (`id`, `name`, `deleted_at`, `location`, `is_active`, `created_at`, `updated_at`)
 SELECT
     s.`id`,
@@ -89,7 +89,7 @@ ON DUPLICATE KEY UPDATE
     `updated_at` = VALUES(`updated_at`);
 
 -- products (old product_id -> new id)
-INSERT INTO `carbontrack_v3`.`products`
+INSERT INTO `carbonrack_v3`.`products`
 (`name`, `category`, `category_slug`, `id`, `points_required`, `description`, `image_path`, `images`, `stock`, `status`, `sort_order`, `created_at`, `updated_at`, `deleted_at`)
 SELECT
     p.`name`,
@@ -182,7 +182,7 @@ FROM (
     CROSS JOIN (SELECT @prev_email := NULL, @dup_seq := 0) vars
 ) ranked;
 
-INSERT INTO `carbontrack_v3`.`schools`
+INSERT INTO `carbonrack_v3`.`schools`
 (`name`, `deleted_at`, `location`, `is_active`, `created_at`, `updated_at`)
 SELECT
     pending.`school_name`,
@@ -200,7 +200,7 @@ FROM (
 LEFT JOIN (
     SELECT
         LOWER(TRIM(ns.`name`)) AS `school_name_key`
-    FROM `carbontrack_v3`.`schools` ns
+    FROM `carbonrack_v3`.`schools` ns
     WHERE ns.`deleted_at` IS NULL
       AND NULLIF(TRIM(COALESCE(ns.`name`, '')), '') IS NOT NULL
     GROUP BY LOWER(TRIM(ns.`name`))
@@ -208,7 +208,7 @@ LEFT JOIN (
     ON existing.`school_name_key` = LOWER(pending.`school_name`)
 WHERE existing.`school_name_key` IS NULL;
 
-INSERT INTO `carbontrack_v3`.`users`
+INSERT INTO `carbonrack_v3`.`users`
 (`id`, `username`, `password`, `lastlgn`, `email`, `points`, `region_code`, `created_at`, `updated_at`, `deleted_at`, `status`, `is_admin`, `class_name`, `school_id`, `avatar_id`, `reset_token`, `reset_token_expires_at`, `email_verified_at`, `verification_code`, `verification_token`, `verification_code_expires_at`, `verification_attempts`, `verification_send_count`, `verification_last_sent_at`, `notification_email_mask`, `group_id`, `quota_override`, `admin_notes`)
 SELECT
     t.`id`,
@@ -266,7 +266,7 @@ SELECT
             SELECT
                 LOWER(TRIM(ns.`name`)) AS `school_name_key`,
                 MIN(ns.`id`) AS `school_id`
-            FROM `carbontrack_v3`.`schools` ns
+            FROM `carbonrack_v3`.`schools` ns
             WHERE ns.`deleted_at` IS NULL
               AND NULLIF(TRIM(COALESCE(ns.`name`, '')), '') IS NOT NULL
             GROUP BY LOWER(TRIM(ns.`name`))
@@ -315,7 +315,7 @@ ON DUPLICATE KEY UPDATE
 DROP TEMPORARY TABLE IF EXISTS `_tmp_old_users`;
 
 -- user_usage_stats (if any)
-INSERT INTO `carbontrack_v3`.`user_usage_stats`
+INSERT INTO `carbonrack_v3`.`user_usage_stats`
 (`user_id`, `resource_key`, `counter`, `last_updated_at`, `reset_at`)
 SELECT
     us.`user_id`,
@@ -334,7 +334,7 @@ ON DUPLICATE KEY UPDATE
 -- =========================================================
 
 -- messages (message_id -> id, send_time -> created_at/updated_at)
-INSERT INTO `carbontrack_v3`.`messages`
+INSERT INTO `carbonrack_v3`.`messages`
 (`id`, `sender_id`, `receiver_id`, `title`, `content`, `is_read`, `created_at`, `updated_at`, `deleted_at`)
 SELECT
     m.`message_id` AS `id`,
@@ -367,7 +367,7 @@ ON DUPLICATE KEY UPDATE
     `updated_at` = VALUES(`updated_at`);
 
 -- points_transactions (old auth + text time + huge values -> normalized fields)
-INSERT INTO `carbontrack_v3`.`points_transactions`
+INSERT INTO `carbonrack_v3`.`points_transactions`
 (`username`, `id`, `email`, `time`, `img`, `points`, `auth`, `raw`, `act`, `uid`, `activity_id`, `type`, `notes`, `activity_date`, `status`, `approved_by`, `approved_at`, `created_at`, `updated_at`, `deleted_at`)
 SELECT
     pt.`username`,
@@ -419,7 +419,7 @@ SELECT
     ) AS `updated_at`,
     NULL AS `deleted_at`
 FROM `3kudvwa29i222`.`points_transactions` pt
-LEFT JOIN `carbontrack_v3`.`users` u
+LEFT JOIN `carbonrack_v3`.`users` u
     ON LOWER(TRIM(u.`email`)) = LOWER(TRIM(pt.`email`))
 ON DUPLICATE KEY UPDATE
     `username` = VALUES(`username`),
@@ -439,7 +439,7 @@ ON DUPLICATE KEY UPDATE
     `updated_at` = VALUES(`updated_at`);
 
 -- spec_points_transactions (same structure)
-INSERT INTO `carbontrack_v3`.`spec_points_transactions`
+INSERT INTO `carbonrack_v3`.`spec_points_transactions`
 (`username`, `id`, `email`, `time`, `img`, `points`, `auth`, `raw`, `act`, `uid`)
 SELECT
     `username`, `id`, `email`, `time`, `img`, `points`, `auth`, `raw`, `act`, `uid`
@@ -456,7 +456,7 @@ ON DUPLICATE KEY UPDATE
     `uid` = VALUES(`uid`);
 
 -- transactions (legacy table still exists in new schema)
-INSERT INTO `carbontrack_v3`.`transactions`
+INSERT INTO `carbonrack_v3`.`transactions`
 (`id`, `points_spent`, `transaction_time`, `product_id`, `user_email`, `school`, `location`)
 SELECT
     t.`id`,
@@ -476,7 +476,7 @@ ON DUPLICATE KEY UPDATE
     `location` = VALUES(`location`);
 
 -- point_exchanges (new table) backfilled from legacy transactions
-INSERT INTO `carbontrack_v3`.`point_exchanges`
+INSERT INTO `carbonrack_v3`.`point_exchanges`
 (`id`, `user_id`, `product_id`, `quantity`, `points_used`, `product_name`, `product_price`, `delivery_address`, `contact_area_code`, `contact_phone`, `notes`, `status`, `tracking_number`, `created_at`, `updated_at`, `deleted_at`)
 SELECT
     LOWER(CONCAT(
@@ -510,9 +510,9 @@ SELECT
     ) AS `updated_at`,
     NULL AS `deleted_at`
 FROM `3kudvwa29i222`.`transactions` t
-LEFT JOIN `carbontrack_v3`.`users` u
+LEFT JOIN `carbonrack_v3`.`users` u
     ON LOWER(TRIM(u.`email`)) = LOWER(TRIM(t.`user_email`))
-LEFT JOIN `carbontrack_v3`.`products` p
+LEFT JOIN `carbonrack_v3`.`products` p
     ON p.`id` = t.`product_id`
 ON DUPLICATE KEY UPDATE
     `user_id` = VALUES(`user_id`),
@@ -524,7 +524,7 @@ ON DUPLICATE KEY UPDATE
     `updated_at` = VALUES(`updated_at`);
 
 -- error_logs (new adds request_id; legacy has none)
-INSERT INTO `carbontrack_v3`.`error_logs`
+INSERT INTO `carbonrack_v3`.`error_logs`
 (`id`, `error_type`, `error_message`, `error_file`, `error_line`, `error_time`, `script_name`, `request_id`, `client_get`, `client_post`, `client_files`, `client_cookie`, `client_session`, `client_server`)
 SELECT
     e.`id`,

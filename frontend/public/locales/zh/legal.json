@@ -3,12 +3,12 @@
     "lastUpdated": "最后更新：{{date}}",
     "privacy": {
       "title": "隐私政策",
-      "intro": "CarbonTrack 致力于保护您的隐私。本政策概述了我们如何根据<strong>香港《个人资料（私隐）条例》（第486章）（“PDPO”）</strong>和<strong>《欧盟通用数据保护条例》（“GDPR”）</strong>收集、使用和保护您的数据。",
+      "intro": "CarbonRack 致力于保护您的隐私。本政策概述了我们如何根据<strong>香港《个人资料（私隐）条例》（第486章）（“PDPO”）</strong>和<strong>《欧盟通用数据保护条例》（“GDPR”）</strong>收集、使用和保护您的数据。",
       "sections": {
         "identity": {
           "title": "1. 身份与范围",
-          "content1": "本隐私政策适用于由 <strong>中国香港特别行政区</strong> 的 CarbonTrack 运营的 CarbonTrack 平台（“服务”）。我们向全球用户提供服务。",
-          "content2": "根据 GDPR，CarbonTrack 是您个人信息的<strong>数据控制者</strong>。"
+          "content1": "本隐私政策适用于由 <strong>中国香港特别行政区</strong> 的 CarbonRack 运营的 CarbonRack 平台（“服务”）。我们向全球用户提供服务。",
+          "content2": "根据 GDPR，CarbonRack 是您个人信息的<strong>数据控制者</strong>。"
         },
         "collection": {
           "title": "2. 我们收集的信息",
@@ -31,7 +31,7 @@
         },
         "storage": {
           "title": "4. 数据存储与国际传输",
-          "content1": "CarbonTrack 总部位于香港。您的数据主要在位于<strong>香港</strong>的安全服务器以及全球云服务提供商（例如 Cloudflare）上进行处理和存储。",
+          "content1": "CarbonRack 总部位于香港。您的数据主要在位于<strong>香港</strong>的安全服务器以及全球云服务提供商（例如 Cloudflare）上进行处理和存储。",
           "content2": "对于国际数据传输（包括来自欧盟/欧洲经济区的传输），我们采取相应的防护措施以确保您的数据安全，符合适用法律的要求。",
           "items": []
         },
@@ -55,18 +55,18 @@
         "contact": {
           "title": "7. 联系我们",
           "intro": "如果您对本隐私政策或我们的数据实践有任何疑问，请联系我们：",
-          "details": "<strong>CarbonTrack 隐私团队</strong><br/>电子邮件：<a href=\"mailto:{{email}}\" class=\"text-blue-600 hover:underline\">{{email}}</a>"
+          "details": "<strong>CarbonRack 隐私团队</strong><br/>电子邮件：<a href=\"mailto:{{email}}\" class=\"text-blue-600 hover:underline\">{{email}}</a>"
         }
       }
     },
     "terms": {
       "title": "服务条款",
-      "intro": "使用 CarbonTrack 平台前请仔细阅读这些条款。访问或使用我们的服务即表示您同意受这些条款的约束。",
+      "intro": "使用 CarbonRack 平台前请仔细阅读这些条款。访问或使用我们的服务即表示您同意受这些条款的约束。",
       "sections": {
         "agreement": {
           "title": "1. 协议条款",
-          "content1": "这些服务条款（“条款”）构成您（无论是个人还是代表实体）与 <strong>CarbonTrack</strong>（“我们”）之间关于您访问和使用我们网站及服务的具有法律约束力的协议。",
-          "content2": "CarbonTrack 在<strong>中国香港特别行政区</strong>运营。"
+          "content1": "这些服务条款（“条款”）构成您（无论是个人还是代表实体）与 <strong>CarbonRack</strong>（“我们”）之间关于您访问和使用我们网站及服务的具有法律约束力的协议。",
+          "content2": "CarbonRack 在<strong>中国香港特别行政区</strong>运营。"
         },
         "responsibility": {
           "title": "2. 用户责任与行为规范",
@@ -80,11 +80,11 @@
         },
         "ip": {
           "title": "3. 知识产权",
-          "content": "本服务及其原始内容（不包括用户提供的内容）、功能和功能是并将继续是 CarbonTrack 及其许可方的专有财产。本服务受香港及外国的版权、商标和其他法律保护。"
+          "content": "本服务及其原始内容（不包括用户提供的内容）、功能和功能是并将继续是 CarbonRack 及其许可方的专有财产。本服务受香港及外国的版权、商标和其他法律保护。"
         },
         "liability": {
           "title": "4. 责任限制",
-          "content": "在适用法律允许的最大范围内，CarbonTrack 不对任何间接的、附带的、特殊的、后果性的或惩罚性的损害承担责任，包括但不限于因 (i) 您访问或使用或无法访问或使用本服务；(ii) 本服务上任何第三方的任何行为或内容而导致的利润、数据、使用、商誉或其他无形损失。"
+          "content": "在适用法律允许的最大范围内，CarbonRack 不对任何间接的、附带的、特殊的、后果性的或惩罚性的损害承担责任，包括但不限于因 (i) 您访问或使用或无法访问或使用本服务；(ii) 本服务上任何第三方的任何行为或内容而导致的利润、数据、使用、商誉或其他无形损失。"
         },
         "law": {
           "title": "5. 管辖法律与争议解决",
@@ -103,7 +103,7 @@
     },
     "cookies": {
       "title": "Cookie 政策",
-      "intro": "本 Cookie 政策解释了 CarbonTrack 如何在您访问我们的网站时使用 Cookie 和类似技术来识别您的身份。",
+      "intro": "本 Cookie 政策解释了 CarbonRack 如何在您访问我们的网站时使用 Cookie 和类似技术来识别您的身份。",
       "sections": {
         "what": {
           "title": "1. 什么是 Cookie？",
@@ -152,7 +152,7 @@
       "sections": {
         "commitment": {
           "title": "1. 我们的承诺",
-          "content": "CarbonTrack 致力于保护您的数据。我们采用行业标准的技术和组织措施来保护您的信息免受未经授权的访问、披露、篡改和破坏。"
+          "content": "CarbonRack 致力于保护您的数据。我们采用行业标准的技术和组织措施来保护您的信息免受未经授权的访问、披露、篡改和破坏。"
         },
         "infrastructure": {
           "title": "2. 基础设施安全",
@@ -173,7 +173,7 @@
         },
         "vuln": {
           "title": "4. 漏洞报告",
-          "intro": "如果您认为您在 CarbonTrack 中发现了安全漏洞，请立即告知我们。我们感谢您协助我们使平台更安全。",
+          "intro": "如果您认为您在 CarbonRack 中发现了安全漏洞，请立即告知我们。我们感谢您协助我们使平台更安全。",
           "policyTitle": "负责任披露政策",
           "contact": "请将您的报告提交至 <a href=\"mailto:{{email}}\" class=\"underline font-semibold\">{{email}}</a>。",
           "items": [

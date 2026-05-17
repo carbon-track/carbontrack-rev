@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\AdminAiReadModelService;
-use CarbonTrack\Services\StatisticsService;
-use CarbonTrack\Tests\Integration\TestSchemaBuilder;
+use CarbonRack\Services\AdminAiReadModelService;
+use CarbonRack\Services\StatisticsService;
+use CarbonRack\Tests\Integration\TestSchemaBuilder;
 use PHPUnit\Framework\TestCase;
 use PDO;
 

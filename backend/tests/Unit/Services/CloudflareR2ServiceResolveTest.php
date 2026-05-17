@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use CarbonTrack\Services\CloudflareR2Service;
-use CarbonTrack\Services\AuditLogService;
+use CarbonRack\Services\CloudflareR2Service;
+use CarbonRack\Services\AuditLogService;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
 

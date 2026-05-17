@@ -1,4 +1,4 @@
-# CarbonTrack 移动端 (React Native) 开发计划
+# CarbonRack 移动端 (React Native) 开发计划
 
 ## 1. 技术栈选型
 * **框架**: React Native (建议使用 Expo，便于快速整合相机、安全存储等原生功能)

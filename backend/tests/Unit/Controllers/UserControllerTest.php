@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Tests\Integration\TestSchemaBuilder;
+use CarbonRack\Tests\Integration\TestSchemaBuilder;
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\UserController;
+use CarbonRack\Controllers\UserController;
 
 class UserControllerTest extends TestCase
 {
@@ -17,10 +17,10 @@ class UserControllerTest extends TestCase
 
     public function testUpdateProfileSuccess(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1]);
@@ -75,10 +75,10 @@ class UserControllerTest extends TestCase
             $stmtJoined
         );
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
-        $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, $this->createMock(\CarbonTrack\Services\ErrorLogService::class), null, $region);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
+        $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, $this->createMock(\CarbonRack\Services\ErrorLogService::class), null, $region);
 
         $request = makeRequest('PUT', '/users/me/profile', ['avatar_id' => 10, 'school_id' => 5]);
         $response = new \Slim\Psr7\Response();
@@ -102,10 +102,10 @@ class UserControllerTest extends TestCase
         $_ENV['APP_ENV'] = 'production';
 
         try {
-            $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-            $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-            $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-            $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+            $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+            $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+            $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+            $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
             $logger = $this->createMock(\Monolog\Logger::class);
             $pdo = $this->createMock(\PDO::class);
 
@@ -122,12 +122,12 @@ class UserControllerTest extends TestCase
 
             $pdo->method('prepare')->willReturn($stmtSelectUser);
 
-            $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
-            $turnstile = $this->createMock(\CarbonTrack\Services\TurnstileService::class);
+            $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
+            $turnstile = $this->createMock(\CarbonRack\Services\TurnstileService::class);
             $turnstile->method('isConfigured')->willReturn(true);
             $turnstile->expects($this->never())->method('verify');
 
-            $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+            $region = $this->createMock(\CarbonRack\Services\RegionService::class);
             $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, null, null, $region);
 
             $request = makeRequest('PUT', '/users/me/profile', ['school_id' => 9]);
@@ -152,10 +152,10 @@ class UserControllerTest extends TestCase
         $_ENV['APP_ENV'] = 'production';
 
         try {
-            $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-            $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-            $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-            $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+            $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+            $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+            $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+            $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
             $logger = $this->createMock(\Monolog\Logger::class);
 
             $auth->method('getCurrentUser')->willReturn(['id' => 12]);
@@ -208,16 +208,16 @@ class UserControllerTest extends TestCase
             );
             $pdo->method('lastInsertId')->willReturn('42');
 
-            $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+            $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
 
-            $turnstile = $this->createMock(\CarbonTrack\Services\TurnstileService::class);
+            $turnstile = $this->createMock(\CarbonRack\Services\TurnstileService::class);
             $turnstile->method('isConfigured')->willReturn(true);
             $turnstile->expects($this->once())
                 ->method('verify')
                 ->with('token-123', $this->anything())
                 ->willReturn(['success' => true]);
 
-            $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+            $region = $this->createMock(\CarbonRack\Services\RegionService::class);
             $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, null, null, $region);
 
             $request = makeRequest('PUT', '/users/me/profile', [
@@ -244,20 +244,20 @@ class UserControllerTest extends TestCase
 
     public function testSelectAvatarInvalidReturns400(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
         $pdo = $this->createMock(\PDO::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1]);
         $avatar->method('isAvatarAvailable')->willReturn(false);
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
-        $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, $this->createMock(\CarbonTrack\Services\ErrorLogService::class), null, $region);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
+        $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, $this->createMock(\CarbonRack\Services\ErrorLogService::class), null, $region);
 
         $request = makeRequest('PUT', '/users/me/avatar', ['avatar_id' => 999]);
         $response = new \Slim\Psr7\Response();
@@ -267,10 +267,10 @@ class UserControllerTest extends TestCase
 
     public function testGetPointsHistoryReturnsPaged(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1]);
@@ -293,10 +293,10 @@ class UserControllerTest extends TestCase
         $pdo = $this->createMock(\PDO::class);
         $pdo->method('prepare')->willReturnOnConsecutiveCalls($stmtList, $stmtCount);
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
-        $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, $this->createMock(\CarbonTrack\Services\ErrorLogService::class), null, $region);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
+        $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, $this->createMock(\CarbonRack\Services\ErrorLogService::class), null, $region);
 
         $request = makeRequest('GET', '/users/me/points-history');
         $response = new \Slim\Psr7\Response();
@@ -311,7 +311,7 @@ class UserControllerTest extends TestCase
 
     public function testGetPointsHistoryUsesCanonicalPointsTransactionSchema(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 2]);
 
         $pdo = new \PDO('sqlite::memory:');
@@ -340,17 +340,17 @@ class UserControllerTest extends TestCase
 
         $controller = new UserController(
             $auth,
-            $this->createMock(\CarbonTrack\Services\AuditLogService::class),
-            $this->createMock(\CarbonTrack\Services\MessageService::class),
-            $this->createMock(\CarbonTrack\Models\Avatar::class),
-            $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class),
+            $this->createMock(\CarbonRack\Services\AuditLogService::class),
+            $this->createMock(\CarbonRack\Services\MessageService::class),
+            $this->createMock(\CarbonRack\Models\Avatar::class),
+            $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class),
             $this->mockTurnstile(),
             null,
             $this->createMock(\Monolog\Logger::class),
             $pdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             null,
-            $this->createMock(\CarbonTrack\Services\RegionService::class)
+            $this->createMock(\CarbonRack\Services\RegionService::class)
         );
 
         $request = makeRequest('GET', '/users/me/points-history');
@@ -369,10 +369,10 @@ class UserControllerTest extends TestCase
 
     public function testGetUserStatsReturnsAggregates(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1]);
@@ -458,9 +458,9 @@ class UserControllerTest extends TestCase
             return false;
         });
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
         $region->method('getRegionContext')->willReturnCallback(static function (?string $value): ?array {
             if ($value !== 'US-UM-81') {
                 return null;
@@ -475,7 +475,7 @@ class UserControllerTest extends TestCase
                 'state_name' => null,
             ];
         });
-        $leaderboardService = $this->createMock(\CarbonTrack\Services\LeaderboardService::class);
+        $leaderboardService = $this->createMock(\CarbonRack\Services\LeaderboardService::class);
         $leaderboardService->method('getSnapshot')->willReturn([
             'generated_at' => '2025-01-01 00:00:00',
             'expires_at' => '2025-01-01 01:00:00',
@@ -493,7 +493,7 @@ class UserControllerTest extends TestCase
                 ],
             ],
         ]);
-        $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, $this->createMock(\CarbonTrack\Services\ErrorLogService::class), null, $region, $leaderboardService, null, null, new \CarbonTrack\Services\UserProfileViewService($region));
+        $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, $this->createMock(\CarbonRack\Services\ErrorLogService::class), null, $region, $leaderboardService, null, null, new \CarbonRack\Services\UserProfileViewService($region));
         $request = makeRequest('GET', '/users/me/stats');
         $response = new \Slim\Psr7\Response();
         $resp = $controller->getUserStats($request, $response);
@@ -517,13 +517,13 @@ class UserControllerTest extends TestCase
 
     public function testGetRecentActivitiesReturnsPresignedImages(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 7]);
 
@@ -561,9 +561,9 @@ class UserControllerTest extends TestCase
         $r2->method('generatePresignedUrl')->willReturn('https://cdn.example.com/proofs/a.jpg?token=abc');
         $r2->method('getPublicUrl')->willReturn('https://cdn.example.com/proofs/a.jpg');
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
         $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, $errorLog, $r2, $region);
 
         $request = makeRequest('GET', '/users/me/activities');
@@ -585,10 +585,10 @@ class UserControllerTest extends TestCase
 
     public function testGetCurrentUserSuccess(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1]);
@@ -613,9 +613,9 @@ class UserControllerTest extends TestCase
         $pdo = $this->createMock(\PDO::class);
         $pdo->method('prepare')->willReturn($stmt);
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
         $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, null, null, $region);
         $request = makeRequest('GET', '/users/me');
         $response = new \Slim\Psr7\Response();
@@ -628,10 +628,10 @@ class UserControllerTest extends TestCase
 
     public function testGetCurrentUserUsesCanonicalSchoolAndRegionFields(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 3]);
@@ -657,9 +657,9 @@ class UserControllerTest extends TestCase
         $pdo = $this->createMock(\PDO::class);
         $pdo->method('prepare')->willReturn($stmt);
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
         $region->method('getRegionContext')->willReturnCallback(static function (?string $value): ?array {
             if ($value !== 'US-UM-81') {
                 return null;
@@ -691,10 +691,10 @@ class UserControllerTest extends TestCase
 
     public function testUpdateProfilePersistsCanonicalSchoolAndRegionFields(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1]);
@@ -765,9 +765,9 @@ class UserControllerTest extends TestCase
             $stmtJoined
         );
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
         $region->method('normalizeCountryCode')->willReturn('US');
         $region->method('normalizeStateCode')->willReturn('UM-81');
         $region->method('isValidRegion')->with('US', 'UM-81')->willReturn(true);
@@ -795,7 +795,7 @@ class UserControllerTest extends TestCase
             return $map[$value] ?? null;
         });
 
-        $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, $this->createMock(\CarbonTrack\Services\ErrorLogService::class), null, $region);
+        $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, $this->createMock(\CarbonRack\Services\ErrorLogService::class), null, $region);
         $request = makeRequest('PUT', '/users/me/profile', [
             'school_id' => 9,
             'country_code' => 'US',
@@ -815,10 +815,10 @@ class UserControllerTest extends TestCase
 
     public function testUpdateCurrentUserDelegatesToUpdateProfile(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1]);
@@ -868,9 +868,9 @@ class UserControllerTest extends TestCase
             $stmtJoined
         );
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
         $controller = new UserController($auth, $audit, $msg, $avatar, $prefs, $turnstile, null, $logger, $pdo, null, null, $region);
     $request = makeRequest('PUT', '/users/me', ['avatar_id' => 10]);
         $response = new \Slim\Psr7\Response();
@@ -883,14 +883,14 @@ class UserControllerTest extends TestCase
 
     public function testSendNotificationTestEmailActivityUsesLatestRecord(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn([
             'id' => 5,
             'email' => 'user@example.com',
             'username' => 'EcoHero',
         ]);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->once())
             ->method('logAuthOperation')
             ->with(
@@ -907,11 +907,11 @@ class UserControllerTest extends TestCase
                 })
             );
 
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
-        $emailService = $this->createMock(\CarbonTrack\Services\EmailService::class);
+        $emailService = $this->createMock(\CarbonRack\Services\EmailService::class);
         $emailService->expects($this->once())
             ->method('sendActivityApprovedNotification')
             ->with(
@@ -939,7 +939,7 @@ class UserControllerTest extends TestCase
                 return (bool) $callback(false);
             });
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $prefs->method('allCategories')->willReturn([
             'activity' => ['label' => 'Activity reviews', 'locked' => false],
         ]);
@@ -957,9 +957,9 @@ class UserControllerTest extends TestCase
         $pdo = $this->createMock(\PDO::class);
         $pdo->method('prepare')->willReturn($stmt);
 
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
 
         $controller = new UserController(
             $auth,
@@ -992,14 +992,14 @@ class UserControllerTest extends TestCase
 
     public function testSendNotificationTestEmailUsesCanonicalPointExchangeUserId(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn([
             'id' => 11,
             'email' => 'redeemer@example.com',
             'username' => 'Redeemer',
         ]);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->once())
             ->method('logAuthOperation')
             ->with(
@@ -1015,11 +1015,11 @@ class UserControllerTest extends TestCase
                 })
             );
 
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
-        $emailService = $this->createMock(\CarbonTrack\Services\EmailService::class);
+        $emailService = $this->createMock(\CarbonRack\Services\EmailService::class);
         $emailService->expects($this->once())
             ->method('sendExchangeConfirmation')
             ->with('redeemer@example.com', 'Redeemer', 'Eco Bottle', 2, 180.0)
@@ -1040,7 +1040,7 @@ class UserControllerTest extends TestCase
                 return (bool) $callback(false);
             });
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $prefs->method('allCategories')->willReturn([
             'transaction' => ['label' => 'Reward exchanges', 'locked' => false],
         ]);
@@ -1065,9 +1065,9 @@ class UserControllerTest extends TestCase
         $pdo->exec("INSERT INTO point_exchanges (id, user_id, product_id, quantity, points_used, product_name, deleted_at, created_at)
             VALUES ('ex-1', 11, 8, 2, 180, 'Eco Bottle', NULL, '2026-04-02 09:00:00')");
 
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
 
         $controller = new UserController(
             $auth,
@@ -1098,14 +1098,14 @@ class UserControllerTest extends TestCase
 
     public function testSendNotificationTestEmailMarksGeneratedSampleWhenMissingData(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn([
             'id' => 8,
             'email' => 'preview@example.com',
             'username' => 'PreviewUser',
         ]);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->once())
             ->method('logAuthOperation')
             ->with(
@@ -1120,11 +1120,11 @@ class UserControllerTest extends TestCase
                 })
             );
 
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
-        $emailService = $this->createMock(\CarbonTrack\Services\EmailService::class);
+        $emailService = $this->createMock(\CarbonRack\Services\EmailService::class);
         $emailService->expects($this->once())
             ->method('sendActivityApprovedNotification')
             ->with(
@@ -1147,7 +1147,7 @@ class UserControllerTest extends TestCase
                 return (bool) $callback(false);
             });
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $prefs->method('allCategories')->willReturn([
             'activity' => ['label' => 'Activity reviews', 'locked' => false],
         ]);
@@ -1159,9 +1159,9 @@ class UserControllerTest extends TestCase
         $pdo = $this->createMock(\PDO::class);
         $pdo->method('prepare')->willReturn($stmt);
 
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
 
         $controller = new UserController(
             $auth,
@@ -1194,31 +1194,31 @@ class UserControllerTest extends TestCase
 
     public function testSendNotificationTestEmailRejectsInvalidCategory(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn([
             'id' => 3,
             'email' => 'user@example.com',
         ]);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->never())->method('logAuthOperation');
 
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
-        $emailService = $this->createMock(\CarbonTrack\Services\EmailService::class);
+        $emailService = $this->createMock(\CarbonRack\Services\EmailService::class);
         $emailService->expects($this->never())->method('dispatchAsyncEmail');
 
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $prefs->method('allCategories')->willReturn([
             'system' => ['label' => 'System updates', 'locked' => false],
         ]);
 
         $pdo = $this->createMock(\PDO::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
         $turnstile = $this->mockTurnstile();
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
 
         $controller = new UserController(
             $auth,
@@ -1247,22 +1247,22 @@ class UserControllerTest extends TestCase
 
     public function testResolveAvatarPrefersPublicUrl(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
         $logger = $this->createMock(\Monolog\Logger::class);
         $pdo = $this->createMock(\PDO::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
 
         $r2->expects($this->once())
             ->method('getPublicUrl')
             ->with('avatars/default/avatar_01.png')
-            ->willReturn('https://r2-dev.carbontrackapp.com/avatars/default/avatar_01.png');
+            ->willReturn('https://r2-dev.carbonrackapp.com/avatars/default/avatar_01.png');
         $r2->expects($this->never())->method('generatePresignedUrl');
 
         $controller = new UserController(
@@ -1285,23 +1285,23 @@ class UserControllerTest extends TestCase
         $result = $method->invoke($controller, '/avatars/default/avatar_01.png');
 
         $this->assertSame('/avatars/default/avatar_01.png', $result['avatar_path']);
-        $this->assertSame('https://r2-dev.carbontrackapp.com/avatars/default/avatar_01.png', $result['avatar_url']);
+        $this->assertSame('https://r2-dev.carbonrackapp.com/avatars/default/avatar_01.png', $result['avatar_url']);
     }
 
     public function testGetSecurityActivityRequiresAuthentication(): void
     {
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(null);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
         $logger = $this->createMock(\Monolog\Logger::class);
         $pdo = $this->createMock(\PDO::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
 
         $controller = new UserController(
             $auth,
@@ -1345,10 +1345,10 @@ class UserControllerTest extends TestCase
         $insert->execute([1, null, 'user', 'passkey_list_viewed', 'success', json_encode(['count' => 2]), gmdate('Y-m-d H:i:s', strtotime('-20 minutes'))]);
         $insert->execute([2, null, 'user', 'logout', 'success', json_encode([]), gmdate('Y-m-d H:i:s', strtotime('-10 minutes'))]);
 
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'uuid' => '550e8400-e29b-41d4-a716-4466554400aa']);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->once())
             ->method('log')
             ->with($this->callback(function (array $payload): bool {
@@ -1358,13 +1358,13 @@ class UserControllerTest extends TestCase
             }))
             ->willReturn(true);
 
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
 
         $controller = new UserController(
             $auth,
@@ -1414,10 +1414,10 @@ class UserControllerTest extends TestCase
         $insert->execute([null, '550e8400-e29b-41d4-a716-4466554400aa', 'user', 'passkey_login', 'success', json_encode(['label' => 'Phone']), gmdate('Y-m-d H:i:s', strtotime('-3 days'))]);
         $insert->execute([1, null, 'user', 'password_change', 'success', json_encode([]), gmdate('Y-m-d H:i:s', strtotime('-2 days'))]);
 
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'uuid' => '550e8400-e29b-41d4-a716-4466554400aa']);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->once())
             ->method('log')
             ->with($this->callback(function (array $payload): bool {
@@ -1428,13 +1428,13 @@ class UserControllerTest extends TestCase
             }))
             ->willReturn(true);
 
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
 
         $controller = new UserController(
             $auth,
@@ -1473,15 +1473,15 @@ class UserControllerTest extends TestCase
         $pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
         TestSchemaBuilder::init($pdo);
 
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $avatar = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $prefs = $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $avatar = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $prefs = $this->createMock(\CarbonRack\Services\NotificationPreferenceService::class);
         $turnstile = $this->mockTurnstile();
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-        $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+        $region = $this->createMock(\CarbonRack\Services\RegionService::class);
 
         $controller = new UserController(
             $auth,
@@ -1509,7 +1509,7 @@ class UserControllerTest extends TestCase
 
     private function mockTurnstile(bool $configured = false)
     {
-        $mock = $this->createMock(\CarbonTrack\Services\TurnstileService::class);
+        $mock = $this->createMock(\CarbonRack\Services\TurnstileService::class);
         $mock->method('isConfigured')->willReturn($configured);
         $mock->method('verify')->willReturn(['success' => true]);
         return $mock;

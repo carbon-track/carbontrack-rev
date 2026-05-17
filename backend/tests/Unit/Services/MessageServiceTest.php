@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Models\User;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Models\Message;
-use CarbonTrack\Services\NotificationPreferenceService;
+use CarbonRack\Models\User;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Models\Message;
+use CarbonRack\Services\NotificationPreferenceService;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
 
-class MessageServiceEmailStub extends \CarbonTrack\Services\EmailService
+class MessageServiceEmailStub extends \CarbonRack\Services\EmailService
 {
     /** @var array<int,array<string,mixed>> */
     public array $messageNotifications = [];
@@ -32,7 +32,7 @@ class MessageServiceEmailStub extends \CarbonTrack\Services\EmailService
             'host' => 'smtp.test',
             'port' => 25,
             'from_address' => 'noreply@test',
-            'from_name' => 'CarbonTrack',
+            'from_name' => 'CarbonRack',
             'force_simulation' => true,
         ], $logger, null);
     }
@@ -117,7 +117,7 @@ class MessageServiceTest extends TestCase
     public function testSendSystemMessageBuildsModel(): void
     {
         $logger = $this->createMock(\Monolog\Logger::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
 
         // Mock Message::createSystemMessage static call via a stub class
         $service = new MessageService($logger, $audit);
@@ -130,7 +130,7 @@ class MessageServiceTest extends TestCase
     public function testSendBulkMessageDispatches(): void
     {
         $logger = $this->createMock(\Monolog\Logger::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $service = new MessageService($logger, $audit);
 
         $this->assertTrue(method_exists($service, 'sendBulkMessage'));
@@ -141,7 +141,7 @@ class MessageServiceTest extends TestCase
     public function testMaybeSendLinkedEmailSendsNotificationWhenUserResolved(): void
     {
         $logger = $this->createMock(Logger::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $emailStub = new MessageServiceEmailStub();
         $service = new MessageService($logger, $audit, $emailStub);
 
@@ -165,7 +165,7 @@ class MessageServiceTest extends TestCase
     public function testNotificationMessagesUseSystemEmailPreferenceCategory(): void
     {
         $logger = $this->createMock(Logger::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $emailStub = new MessageServiceEmailStub();
         $service = new MessageService($logger, $audit, $emailStub);
 
@@ -189,7 +189,7 @@ class MessageServiceTest extends TestCase
     public function testMaybeSendLinkedEmailSkipsWhenResolverReturnsNull(): void
     {
         $logger = $this->createMock(Logger::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $emailStub = new MessageServiceEmailStub();
         $service = new MessageService($logger, $audit, $emailStub);
 
@@ -209,7 +209,7 @@ class MessageServiceTest extends TestCase
     public function testSendAdminNotificationBatchAggregatesEmails(): void
     {
         $logger = $this->createMock(Logger::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $emailStub = new MessageServiceEmailStub();
 
         $service = new class($logger, $audit, $emailStub) extends MessageService {
@@ -265,7 +265,7 @@ class MessageServiceTest extends TestCase
     public function testSendExchangeConfirmationEmailToUserUsesEmailService(): void
     {
         $logger = $this->createMock(Logger::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $emailStub = new MessageServiceEmailStub();
         $service = new MessageService($logger, $audit, $emailStub);
 
@@ -290,7 +290,7 @@ class MessageServiceTest extends TestCase
     public function testSendExchangeStatusUpdateEmailToUserUsesEmailService(): void
     {
         $logger = $this->createMock(Logger::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $emailStub = new MessageServiceEmailStub();
         $service = new MessageService($logger, $audit, $emailStub);
 

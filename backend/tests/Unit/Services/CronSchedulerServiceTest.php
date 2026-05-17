@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Models\CronRun;
-use CarbonTrack\Models\CronTask;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\BadgeService;
-use CarbonTrack\Services\CronSchedulerService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\LeaderboardService;
-use CarbonTrack\Services\ProofOfWorkService;
-use CarbonTrack\Services\StreakLeaderboardService;
-use CarbonTrack\Services\SupportRoutingEngineService;
+use CarbonRack\Models\CronRun;
+use CarbonRack\Models\CronTask;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\BadgeService;
+use CarbonRack\Services\CronSchedulerService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\LeaderboardService;
+use CarbonRack\Services\ProofOfWorkService;
+use CarbonRack\Services\StreakLeaderboardService;
+use CarbonRack\Services\SupportRoutingEngineService;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Schema\Blueprint;
 use PHPUnit\Framework\TestCase;

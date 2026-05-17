@@ -1,12 +1,12 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "CarbonTrack API",
+    "title": "CarbonRack API",
     "version": "1.0.0",
-    "description": "CarbonTrack碳足迹追踪应用的完整API文档。包含用户认证、碳活动计算、积分系统、消息管理等核心功能。所有API都支持幂等性、审计日志和安全验证。",
+    "description": "CarbonRack碳足迹追踪应用的完整API文档。包含用户认证、碳活动计算、积分系统、消息管理等核心功能。所有API都支持幂等性、审计日志和安全验证。",
     "contact": {
-      "name": "CarbonTrack Development Team",
-      "email": "dev@carbontrack.com"
+      "name": "CarbonRack Development Team",
+      "email": "dev@carbonrack.com"
     },
     "license": {
       "name": "MIT",
@@ -1466,7 +1466,7 @@
             }
           }
         },
-        "operationId": "adminCarbonTrackGetPendingRecords"
+        "operationId": "adminCarbonRackGetPendingRecords"
       }
     },
     "/api/v1/admin/activities/{id}/review": {
@@ -1545,7 +1545,7 @@
             "description": "记录不存在"
           }
         },
-        "operationId": "adminCarbonTrackReviewRecord",
+        "operationId": "adminCarbonRackReviewRecord",
         "description": "审核碳记录 (别名)详细信息。"
       }
     },
@@ -1622,7 +1622,7 @@
             }
           }
         },
-        "operationId": "adminCarbonTrackReviewRecordsBulk",
+        "operationId": "adminCarbonRackReviewRecordsBulk",
         "description": "批量审核碳减排记录详细信息。"
       }
     },
@@ -4255,7 +4255,7 @@
             }
           }
         },
-        "operationId": "adminCarbonTrackGetPendingRecordsAlias",
+        "operationId": "adminCarbonRackGetPendingRecordsAlias",
         "deprecated": true,
         "parameters": [
           {
@@ -4554,7 +4554,7 @@
             }
           }
         },
-        "operationId": "adminCarbonTrackGetPendingRecordsAliasAdminCarbonRecords",
+        "operationId": "adminCarbonRackGetPendingRecordsAliasAdminCarbonRecords",
         "deprecated": true,
         "parameters": [
           {
@@ -26667,7 +26667,7 @@
           },
           "message": {
             "type": "string",
-            "example": "CarbonTrack API is running"
+            "example": "CarbonRack API is running"
           },
           "version": {
             "type": "string",
@@ -26694,7 +26694,7 @@
           },
           "message": {
             "type": "string",
-            "example": "CarbonTrack API v1"
+            "example": "CarbonRack API v1"
           },
           "version": {
             "type": "string",

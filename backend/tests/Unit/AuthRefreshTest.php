@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use CarbonTrack\Controllers\AuthController;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\CloudflareR2Service;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\TurnstileService;
+use CarbonRack\Controllers\AuthController;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\CloudflareR2Service;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\TurnstileService;
 use Firebase\JWT\JWT;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
@@ -136,8 +136,8 @@ final class AuthRefreshTest extends TestCase
         $user = $this->seedUser();
         $now = time();
         $token = JWT::encode([
-            'iss' => 'carbontrack',
-            'aud' => 'carbontrack-users',
+            'iss' => 'carbonrack',
+            'aud' => 'carbonrack-users',
             'iat' => $now,
             'exp' => $now + 60,
             'sub' => (string) $user['id'],

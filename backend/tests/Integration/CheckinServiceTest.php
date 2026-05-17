@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Integration;
+namespace CarbonRack\Tests\Integration;
 
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\CheckinService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\CheckinService;
 use DateTimeImmutable;
 use DateTimeZone;
 use PDO;

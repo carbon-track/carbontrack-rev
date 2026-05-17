@@ -5,7 +5,7 @@ import { ArrowRight, AtSign, Building2, MapPin, Phone } from 'lucide-react';
 
 import { useTranslation } from '../hooks/useTranslation';
 
-const supportEmail = import.meta.env?.VITE_SUPPORT_EMAIL || 'support@carbontrack.org';
+const supportEmail = import.meta.env?.VITE_SUPPORT_EMAIL || 'support@carbonrack.org';
 const supportPhone = '+1 475-280-7571';
 
 export default function ContactPage() {

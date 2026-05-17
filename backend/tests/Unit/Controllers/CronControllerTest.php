@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Controllers\CronController;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\CronSchedulerService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Controllers\CronController;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\CronSchedulerService;
+use CarbonRack\Services\ErrorLogService;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 

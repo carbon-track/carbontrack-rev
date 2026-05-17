@@ -2,7 +2,7 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import useAuthStore from '../store/authStore';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dev-api.carbontrackapp.com/api/v1';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dev-api.carbonrackapp.com/api/v1';
 const REFRESH_THRESHOLD_SECONDS = 10 * 60;
 export const API_REQUEST_TIMEOUT_MS = 15000;
 export const NETWORK_TIMEOUT_CODE = 'NETWORK_TIMEOUT';

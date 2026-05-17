@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\CarbonTrackController;
-use CarbonTrack\Models\User;
-use CarbonTrack\Models\UserGroup;
-use CarbonTrack\Services\CarbonCalculatorService;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\QuotaService;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\UserProfileViewService;
-use CarbonTrack\Tests\Integration\TestSchemaBuilder;
+use CarbonRack\Controllers\CarbonRackController;
+use CarbonRack\Models\User;
+use CarbonRack\Models\UserGroup;
+use CarbonRack\Services\CarbonCalculatorService;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\QuotaService;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\UserProfileViewService;
+use CarbonRack\Tests\Integration\TestSchemaBuilder;
 use Illuminate\Database\Capsule\Manager as Capsule;
 
-class CarbonTrackControllerTest extends TestCase
+class CarbonRackControllerTest extends TestCase
 {
     private array $tempDbPaths = [];
 
@@ -50,8 +50,8 @@ class CarbonTrackControllerTest extends TestCase
         $badgeService = null,
         $turnstileService = null,
         $proofOfWorkService = null
-    ): CarbonTrackController {
-        return new CarbonTrackController(
+    ): CarbonRackController {
+        return new CarbonRackController(
             $pdo,
             $calc,
             $msg,
@@ -70,16 +70,16 @@ class CarbonTrackControllerTest extends TestCase
 
     public function testControllerClassExists(): void
     {
-        $this->assertTrue(class_exists(CarbonTrackController::class));
+        $this->assertTrue(class_exists(CarbonRackController::class));
     }
 
     public function testCalculateReturnsNumbers(): void
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->getMockBuilder(CarbonCalculatorService::class)->disableOriginalConstructor()->onlyMethods(['calculateCarbonSavings'])->getMock();
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
 
         // mock auth current user
         $auth->method('getCurrentUser')->willReturn(['id' => 1]);
@@ -113,9 +113,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 1]);
 
         $controller = $this->makeController($pdo, $calc, $msg, $audit, $auth);
@@ -129,9 +129,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
 
         $controller = $this->makeController($pdo, $calc, $msg, $audit, $auth);
         $request = makeRequest('GET', '/carbon-track/factors');
@@ -146,9 +146,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>1]);
 
         $summaryStmt = $this->createMock(\PDOStatement::class);
@@ -186,11 +186,11 @@ class CarbonTrackControllerTest extends TestCase
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
         $calc->method('calculateCarbonSavings')->willReturn(['carbon_savings'=>12.3]);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
         $msg->expects($this->once())->method('sendMessage');
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->once())->method('log');
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>1,'username'=>'user']);
 
         // find activity
@@ -229,14 +229,14 @@ class CarbonTrackControllerTest extends TestCase
         try {
             $pdo = $this->createMock(\PDO::class);
             $calc = $this->createMock(CarbonCalculatorService::class);
-            $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-            $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-            $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+            $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+            $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+            $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
             $auth->method('getCurrentUser')->willReturn(['id' => 1, 'username' => 'user']);
 
             $logger = new \Monolog\Logger('test');
             $logger->pushHandler(new \Monolog\Handler\NullHandler());
-            $turnstile = new \CarbonTrack\Services\TurnstileService('test-secret', $logger);
+            $turnstile = new \CarbonRack\Services\TurnstileService('test-secret', $logger);
 
             $controller = $this->makeController($pdo, $calc, $msg, $audit, $auth, null, null, null, null, null, $turnstile);
             $request = makeRequest('POST', '/api/v1/carbon-track/record', [
@@ -264,14 +264,14 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $checkin = $this->createMock(\CarbonTrack\Services\CheckinService::class);
-        $quota = $this->createMock(\CarbonTrack\Services\QuotaService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $checkin = $this->createMock(\CarbonRack\Services\CheckinService::class);
+        $quota = $this->createMock(\CarbonRack\Services\QuotaService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'username' => 'user']);
-        $auth->method('getCurrentUserModel')->willReturn(new \CarbonTrack\Models\User(['id' => 1]));
+        $auth->method('getCurrentUserModel')->willReturn(new \CarbonRack\Models\User(['id' => 1]));
         $checkin->method('hasCheckin')->willReturn(true);
 
         $controller = $this->makeController($pdo, $calc, $msg, $audit, $auth, null, null, $checkin, $quota);
@@ -292,11 +292,11 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $checkin = $this->createMock(\CarbonTrack\Services\CheckinService::class);
-        $quota = $this->createMock(\CarbonTrack\Services\QuotaService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $checkin = $this->createMock(\CarbonRack\Services\CheckinService::class);
+        $quota = $this->createMock(\CarbonRack\Services\QuotaService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'username' => 'user']);
         $checkin->expects($this->never())->method('hasCheckin');
@@ -329,9 +329,9 @@ class CarbonTrackControllerTest extends TestCase
             'carbon_savings' => 1.5,
             'points_earned' => 15,
         ]);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => $user->id, 'username' => $user->username]);
         $auth->method('getCurrentUserModel')->willReturn($user);
 
@@ -387,9 +387,9 @@ class CarbonTrackControllerTest extends TestCase
             'carbon_savings' => 1.5,
             'points_earned' => 15,
         ]);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => $user->id, 'username' => $user->username]);
         $auth->method('getCurrentUserModel')->willReturn($user);
 
@@ -437,11 +437,11 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $checkin = $this->createMock(\CarbonTrack\Services\CheckinService::class);
-        $quota = $this->createMock(\CarbonTrack\Services\QuotaService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $checkin = $this->createMock(\CarbonRack\Services\CheckinService::class);
+        $quota = $this->createMock(\CarbonRack\Services\QuotaService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'username' => 'user']);
         $checkin->expects($this->never())->method('hasCheckin');
@@ -476,9 +476,9 @@ class CarbonTrackControllerTest extends TestCase
             'carbon_savings' => 1.5,
             'points_earned' => 15,
         ]);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => $user->id, 'username' => $user->username]);
         $auth->method('getCurrentUserModel')->willReturn($user);
 
@@ -532,13 +532,13 @@ class CarbonTrackControllerTest extends TestCase
 
         $calc = $this->getMockBuilder(CarbonCalculatorService::class)->disableOriginalConstructor()->getMock();
         $calc->method('calculateCarbonSavings')->willReturn(['carbon_savings' => 1.0]);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => (int) $user->id, 'username' => $user->username]);
         $auth->method('getCurrentUserModel')->willReturn($user);
 
-        $r2 = $this->getMockBuilder(\CarbonTrack\Services\CloudflareR2Service::class)
+        $r2 = $this->getMockBuilder(\CarbonRack\Services\CloudflareR2Service::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['uploadMultipleFiles', 'deleteFile'])
             ->getMock();
@@ -627,7 +627,7 @@ class CarbonTrackControllerTest extends TestCase
         $pdo->exec("INSERT INTO carbon_records (id, user_id, activity_id, status, points_earned, carbon_saved, amount) VALUES ('r2', 1, 'a1', 'pending', 20, 5, 10)");
 
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
         $msg->expects($this->once())
             ->method('sendCarbonRecordReviewSummary')
             ->with(
@@ -646,10 +646,10 @@ class CarbonTrackControllerTest extends TestCase
                 })
             );
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->once())->method('logAdminOperation');
 
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 9, 'username' => 'admin', 'is_admin' => true]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -698,7 +698,7 @@ class CarbonTrackControllerTest extends TestCase
         $pdo->exec("INSERT INTO carbon_records (id, user_id, activity_id, status, points_earned, carbon_saved, amount) VALUES ('r11', 3, 'a3', 'pending', 25, 3.5, 7)");
 
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
         $msg->expects($this->once())
             ->method('sendCarbonRecordReviewSummary')
             ->with(
@@ -721,10 +721,10 @@ class CarbonTrackControllerTest extends TestCase
                 })
             );
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->exactly(2))->method('logAdminOperation');
 
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 9, 'username' => 'admin', 'is_admin' => true]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -752,9 +752,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 9, 'is_admin' => true]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -800,9 +800,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>9]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -823,9 +823,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>1]);
 
         $countStmt = $this->createMock(\PDOStatement::class);
@@ -855,9 +855,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>1]);
 
         $controller = $this->makeController($pdo, $calc, $msg, $audit, $auth);
@@ -871,9 +871,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>2]);
         $auth->method('isAdminUser')->willReturn(false);
 
@@ -894,9 +894,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>9]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -927,9 +927,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>9]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -962,9 +962,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>3]);
         $auth->method('isAdminUser')->willReturn(false);
 
@@ -983,9 +983,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>1]);
         $auth->method('isAdmin')->willReturn(false);
 
@@ -1000,9 +1000,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>9]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -1033,9 +1033,9 @@ class CarbonTrackControllerTest extends TestCase
     {
         $pdo = $this->createMock(\PDO::class);
         $calc = $this->createMock(CarbonCalculatorService::class);
-        $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $msg = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 9, 'is_admin' => true]);
         $auth->method('isAdminUser')->willReturn(true);
         $countBound = [];
@@ -1092,7 +1092,7 @@ class CarbonTrackControllerTest extends TestCase
      */
     private function makeRealCheckinDatabase(int $monthlyLimit): array
     {
-        $dbPath = tempnam(sys_get_temp_dir(), 'carbontrack_record_makeup_');
+        $dbPath = tempnam(sys_get_temp_dir(), 'carbonrack_record_makeup_');
         $this->tempDbPaths[] = $dbPath;
         $pdo = new \PDO('sqlite:' . $dbPath);
         $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Services\Ai\LlmClientInterface;
-use CarbonTrack\Services\Ai\StreamCapableLlmClientInterface;
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Services\Ai\LlmClientInterface;
+use CarbonRack\Services\Ai\StreamCapableLlmClientInterface;
+use CarbonRack\Support\SyntheticRequestFactory;
 use PDO;
 use Psr\Log\LoggerInterface;
 
@@ -467,7 +467,7 @@ class AdminAiAgentService
     private function buildSystemPrompt(): string
     {
         $lines = [
-            'You are the CarbonTrack admin AI assistant.',
+            'You are the CarbonRack admin AI assistant.',
             'Operate as a multi-turn administrative agent.',
             'Use tools whenever navigation, data lookup, or execution is required.',
             'Never claim a write action has executed before explicit confirmation.',

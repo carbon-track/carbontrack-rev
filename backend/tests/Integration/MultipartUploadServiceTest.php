@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Integration;
+namespace CarbonRack\Tests\Integration;
 
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\MultipartUploadService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\MultipartUploadService;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;

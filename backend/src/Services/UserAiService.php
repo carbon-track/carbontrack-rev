@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Support\SyntheticRequestFactory;
-use CarbonTrack\Services\Ai\LlmClientInterface;
+use CarbonRack\Support\SyntheticRequestFactory;
+use CarbonRack\Services\Ai\LlmClientInterface;
 use Psr\Log\LoggerInterface;
 
 class UserAiService
@@ -189,7 +189,7 @@ class UserAiService
         }
 
         $systemPrompt = <<<EOT
-You are a CarbonTrack assistant. help extract carbon footprint activity data from user input.
+You are a CarbonRack assistant. help extract carbon footprint activity data from user input.
 You must return a valid JSON object. Match to the provided activities by UUID.
 Today is {$today} ({$weekday}).
 {$clientTimeLine}

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Models;
+namespace CarbonRack\Models;
 
 use Illuminate\Database\Eloquent\Model;
 

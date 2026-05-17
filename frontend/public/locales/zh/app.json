@@ -1,9 +1,9 @@
 {
   "app": {
-    "name": "CarbonTrack",
+    "name": "CarbonRack",
     "tagline": "碳减排追踪平台",
     "description": "记录您的环保行动，获得积分奖励",
-    "welcome": "欢迎使用CarbonTrack",
+    "welcome": "欢迎使用CarbonRack",
     "getStarted": "立即开始",
     "learnMore": "了解更多",
     "features": {

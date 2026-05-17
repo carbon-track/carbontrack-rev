@@ -1,7 +1,7 @@
 {
   "support": {
     "hero": {
-      "eyebrow": "联系 CarbonTrack",
+      "eyebrow": "联系 CarbonRack",
       "title": "按事情类型，选择最合适的联系路径。",
       "subtitle": "合作沟通和一般联系可以直接走公开渠道。登录后，同一页面会额外开放带附件、验证和跟进记录的工单入口。",
       "primaryAction": "发送支持邮件",
@@ -23,7 +23,7 @@
       "phoneTitle": "电话",
       "phoneDescription": "适合需要尽快跟进的紧急情况。",
       "addressTitle": "地址",
-      "addressDescription": "CarbonTrack 核心团队的协作与运营所在地。"
+      "addressDescription": "CarbonRack 核心团队的协作与运营所在地。"
     },
     "scenarios": {
       "eyebrow": "常见场景",

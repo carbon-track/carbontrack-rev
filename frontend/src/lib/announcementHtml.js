@@ -47,7 +47,7 @@ export const ANNOUNCEMENT_SANITIZE_OPTIONS = {
   ALLOW_DATA_ATTR: false,
 };
 
-const ANNOUNCEMENT_SANITIZE_HOOK_SENTINEL = '__carbontrack_announcement_sanitize_hook_registered__';
+const ANNOUNCEMENT_SANITIZE_HOOK_SENTINEL = '__carbonrack_announcement_sanitize_hook_registered__';
 
 function escapeHtml(value) {
   return String(value ?? '')

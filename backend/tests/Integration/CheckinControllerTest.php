@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Integration;
+namespace CarbonRack\Tests\Integration;
 
-use CarbonTrack\Controllers\CheckinController;
-use CarbonTrack\Models\User;
-use CarbonTrack\Models\UserGroup;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\QuotaService;
+use CarbonRack\Controllers\CheckinController;
+use CarbonRack\Models\User;
+use CarbonRack\Models\UserGroup;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\QuotaService;
 use DateTimeImmutable;
 use DateTimeZone;
 use Illuminate\Database\Capsule\Manager as Capsule;
@@ -33,7 +33,7 @@ class CheckinControllerTest extends TestCase
     {
         parent::setUp();
 
-        $this->dbPath = tempnam(sys_get_temp_dir(), 'carbontrack_checkins_');
+        $this->dbPath = tempnam(sys_get_temp_dir(), 'carbonrack_checkins_');
         $this->pdo = new PDO('sqlite:' . $this->dbPath);
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         TestSchemaBuilder::init($this->pdo);

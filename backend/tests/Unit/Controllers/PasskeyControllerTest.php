@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Controllers\PasskeyController;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\PasskeyService;
+use CarbonRack\Controllers\PasskeyController;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\PasskeyService;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Response;

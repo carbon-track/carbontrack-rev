@@ -1,25 +1,25 @@
 <?php
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use CarbonTrack\Services\CarbonCalculatorService;
-use CarbonTrack\Services\CloudflareR2Service;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\QuotaService;
-use CarbonTrack\Services\BadgeService;
-use CarbonTrack\Services\UserProfileViewService;
-use CarbonTrack\Services\TurnstileService;
-use CarbonTrack\Services\ProofOfWorkService;
-use CarbonTrack\Models\CarbonActivity;
+use CarbonRack\Services\CarbonCalculatorService;
+use CarbonRack\Services\CloudflareR2Service;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\QuotaService;
+use CarbonRack\Services\BadgeService;
+use CarbonRack\Services\UserProfileViewService;
+use CarbonRack\Services\TurnstileService;
+use CarbonRack\Services\ProofOfWorkService;
+use CarbonRack\Models\CarbonActivity;
 use PDO;
 
-class CarbonTrackController
+class CarbonRackController
 {
     private PDO $db;
     private CarbonCalculatorService $carbonCalculator;
@@ -291,7 +291,7 @@ class CarbonTrackController
                         }
                     }
                 } catch (\Throwable $e) {
-                    $this->logControllerException($e, $request, 'CarbonTrackController::submitRecord image upload error: ' . $e->getMessage());
+                    $this->logControllerException($e, $request, 'CarbonRackController::submitRecord image upload error: ' . $e->getMessage());
                     // 如果无 R2 服务或上传失败，继续流程但不附带上传图片
                     $images = [];
                 }
@@ -419,7 +419,7 @@ class CarbonTrackController
                         if ($isMakeup) {
                             throw $e;
                         }
-                        $this->logControllerException($e, $request, 'CarbonTrackController::submitRecord checkin error: ' . $e->getMessage());
+                        $this->logControllerException($e, $request, 'CarbonRackController::submitRecord checkin error: ' . $e->getMessage());
                     }
                 }
 
@@ -626,7 +626,7 @@ class CarbonTrackController
                 ]
             ]);
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'CarbonTrackController::calculate error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'CarbonRackController::calculate error: ' . $e->getMessage());
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -726,7 +726,7 @@ class CarbonTrackController
             ]);
 
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'CarbonTrackController::getUserRecords error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'CarbonRackController::getUserRecords error: ' . $e->getMessage());
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -787,7 +787,7 @@ class CarbonTrackController
             ]);
 
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'CarbonTrackController::getRecordDetail error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'CarbonRackController::getRecordDetail error: ' . $e->getMessage());
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -837,7 +837,7 @@ class CarbonTrackController
                 'skipped' => $result['skipped'],
             ]);
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'CarbonTrackController::reviewRecord error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'CarbonRackController::reviewRecord error: ' . $e->getMessage());
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -896,7 +896,7 @@ class CarbonTrackController
                 'missing_ids' => $missingIds,
             ]);
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'CarbonTrackController::reviewRecordsBulk error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'CarbonRackController::reviewRecordsBulk error: ' . $e->getMessage());
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -1065,7 +1065,7 @@ class CarbonTrackController
             ]);
 
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'CarbonTrackController::getPendingRecords error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'CarbonRackController::getPendingRecords error: ' . $e->getMessage());
             return $this->json($response, ['error' => 'Internal server error'], 500);
         }
     }
@@ -1166,7 +1166,7 @@ class CarbonTrackController
             ]);
 
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'CarbonTrackController::getUserStats error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'CarbonRackController::getUserStats error: ' . $e->getMessage());
             return $this->json($response, ['error' => 'Internal server error'], 500);
         }
     }
@@ -1224,7 +1224,7 @@ class CarbonTrackController
 
             return $this->json($response, ['success' => true]);
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'CarbonTrackController::getCarbonFactors error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'CarbonRackController::getCarbonFactors error: ' . $e->getMessage());
             return $this->json($response, ['error' => 'Internal server error'], 500);
         }
     }
@@ -1300,7 +1300,7 @@ class CarbonTrackController
                 $this->logControllerException(
                     $cleanupError,
                     $request,
-                    'CarbonTrackController::submitRecord uploaded image cleanup error: ' . $cleanupError->getMessage()
+                    'CarbonRackController::submitRecord uploaded image cleanup error: ' . $cleanupError->getMessage()
                 );
             }
         }
@@ -1797,7 +1797,7 @@ class CarbonTrackController
                     return ['success' => true];
                 }
             } catch (\Throwable $e) {
-                $this->logControllerException($e, $request, 'CarbonTrackController::submitRecord Turnstile error');
+                $this->logControllerException($e, $request, 'CarbonRackController::submitRecord Turnstile error');
             }
         }
 
@@ -1835,7 +1835,7 @@ class CarbonTrackController
                 ],
             ]);
         } catch (\Throwable $auditError) {
-            $this->logControllerException($auditError, $request, 'CarbonTrackController::logChallengeFailure audit log error');
+            $this->logControllerException($auditError, $request, 'CarbonRackController::logChallengeFailure audit log error');
         }
     }
 

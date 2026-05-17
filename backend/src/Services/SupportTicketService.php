@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\SupportTicket;
-use CarbonTrack\Models\SupportTicketAttachment;
-use CarbonTrack\Models\SupportTicketFeedback;
-use CarbonTrack\Models\SupportTicketMessage;
+use CarbonRack\Models\SupportTicket;
+use CarbonRack\Models\SupportTicketAttachment;
+use CarbonRack\Models\SupportTicketFeedback;
+use CarbonRack\Models\SupportTicketMessage;
 use PDO;
 use Psr\Log\LoggerInterface;
 
@@ -558,7 +558,7 @@ class SupportTicketService
                     ],
                     'button_label' => 'Open support ticket',
                     'button_path' => $this->ticketEmailPath($ticketId, true),
-                    'closing' => 'Open the support queue in CarbonTrack to review the full thread and next steps.',
+                    'closing' => 'Open the support queue in CarbonRack to review the full thread and next steps.',
                 ]
             );
         }
@@ -674,7 +674,7 @@ class SupportTicketService
                     ],
                     'button_label' => 'Review transfer',
                     'button_path' => $this->ticketEmailPath($ticketId, true),
-                    'closing' => 'Review the request in CarbonTrack to accept, reject, or follow up with the current owner.',
+                    'closing' => 'Review the request in CarbonRack to accept, reject, or follow up with the current owner.',
                 ]
             );
         }
@@ -1606,8 +1606,8 @@ class SupportTicketService
     private function supportReplyClosing(string $status): string
     {
         return match ($status) {
-            self::STATUS_RESOLVED, self::STATUS_CLOSED => 'If anything is still unclear, open CarbonTrack to review the thread and follow up.',
-            default => 'Reply in CarbonTrack whenever you are ready so we can keep the thread moving.',
+            self::STATUS_RESOLVED, self::STATUS_CLOSED => 'If anything is still unclear, open CarbonRack to review the thread and follow up.',
+            default => 'Reply in CarbonRack whenever you are ready so we can keep the thread moving.',
         };
     }
 
@@ -1659,7 +1659,7 @@ class SupportTicketService
                         'changes' => $changeItems,
                         'button_label' => 'Review ticket',
                         'button_path' => $this->ticketEmailPath($ticketId, false),
-                        'closing' => 'You can revisit the ticket thread in CarbonTrack whenever you need the full context.',
+                        'closing' => 'You can revisit the ticket thread in CarbonRack whenever you need the full context.',
                     ],
                     NotificationPreferenceService::CATEGORY_SUPPORT,
                     'normal'
@@ -1793,7 +1793,7 @@ class SupportTicketService
             ],
             'button_label' => 'Open support ticket',
             'button_path' => $this->ticketEmailPath($ticketId, true),
-            'closing' => 'Open CarbonTrack to review the full conversation, attachments, and workflow state.',
+            'closing' => 'Open CarbonRack to review the full conversation, attachments, and workflow state.',
         ];
     }
 
@@ -2223,7 +2223,7 @@ class SupportTicketService
         ]);
 
         try {
-            $request = \CarbonTrack\Support\SyntheticRequestFactory::fromContext(
+            $request = \CarbonRack\Support\SyntheticRequestFactory::fromContext(
                 '/support/notifications',
                 'SYSTEM',
                 null,

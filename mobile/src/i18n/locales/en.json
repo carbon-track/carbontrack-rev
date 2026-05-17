@@ -1,11 +1,11 @@
 {
   "app": {
-    "name": "CarbonTrack",
-    "fallbackUser": "CarbonTracker",
+    "name": "CarbonRack",
+    "fallbackUser": "CarbonRacker",
     "emptyValue": "None"
   },
   "auth": {
-    "loginTitle": "Sign in to CarbonTrack",
+    "loginTitle": "Sign in to CarbonRack",
     "loginSubtitle": "Continue tracking low-carbon actions with your email or username.",
     "identifier": "Username or email",
     "identifierPlaceholder": "Enter username or email",
@@ -23,7 +23,7 @@
     "turnstileRequired": "Complete the human check first.",
     "retryLater": "Please try again later.",
     "registerTitle": "Create account",
-    "registerSubtitle": "Join CarbonTrack and start recording low-carbon actions.",
+    "registerSubtitle": "Join CarbonRack and start recording low-carbon actions.",
     "username": "Username",
     "usernamePlaceholder": "3-50 letters, numbers, or underscores",
     "email": "Email",
@@ -150,7 +150,7 @@
       "descriptionLabel": "Notes / review memo",
       "descriptionFallback": "No extra note.",
       "footerLineOne": "This receipt is queued for manual review. Keep your proof ready.",
-      "footerLineTwo": "CarbonTrack · thermal log snapshot",
+      "footerLineTwo": "CarbonRack · thermal log snapshot",
       "recordAnother": "Record another",
       "goHome": "Go home"
     },

@@ -25,7 +25,7 @@ JOIN (
     FROM (
         SELECT
             `id`,
-            MD5(CONCAT('carbontrack-user-', `id`)) AS `uuid_hash`
+            MD5(CONCAT('carbonrack-user-', `id`)) AS `uuid_hash`
         FROM `users`
     ) AS `hashed_users`
 ) AS `generated_users`

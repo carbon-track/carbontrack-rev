@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Support\RequestIdNormalizer;
+use CarbonRack\Support\RequestIdNormalizer;
 use PDO;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Log\LoggerInterface;

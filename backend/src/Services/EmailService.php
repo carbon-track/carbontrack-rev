@@ -1,9 +1,9 @@
 <?php
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\Message;
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Models\Message;
+use CarbonRack\Support\SyntheticRequestFactory;
 use Monolog\Logger;
 use PHPMailer\PHPMailer\PHPMailer;
 
@@ -77,7 +77,7 @@ HTML;
         $this->fromAddress = (string) ($_ENV['MAIL_FROM_ADDRESS']
             ?? ($this->config['from_address'] ?? $this->config['from_email'] ?? 'noreply@example.com'));
         $this->fromName = (string) ($_ENV['MAIL_FROM_NAME']
-            ?? ($this->config['from_name'] ?? 'CarbonTrack'));
+            ?? ($this->config['from_name'] ?? 'CarbonRack'));
 
         if (!$this->forceSimulation && class_exists(PHPMailer::class)) {
             $this->mailer = new PHPMailer(true);
@@ -92,14 +92,14 @@ HTML;
             }
         }
 
-        // APP_NAME (or fallback to MAIL_FROM_NAME, then config, then 'CarbonTrack')
+        // APP_NAME (or fallback to MAIL_FROM_NAME, then config, then 'CarbonRack')
         $appNameEnv = $_ENV['APP_NAME'] ?? ($_ENV['MAIL_FROM_NAME'] ?? null);
         if (is_string($appNameEnv) && trim($appNameEnv) !== '') {
             $this->appName = $appNameEnv;
         } elseif (is_string($this->config['app_name'] ?? null) && trim((string) $this->config['app_name']) !== '') {
             $this->appName = (string) $this->config['app_name'];
         } else {
-            $this->appName = $this->fromName ?: 'CarbonTrack';
+            $this->appName = $this->fromName ?: 'CarbonRack';
         }
 
         // SUPPORT_EMAIL (or fallback to reply_to, then MAIL_FROM_ADDRESS, then default)
@@ -172,9 +172,9 @@ HTML;
             $fromAddress = $_ENV['MAIL_FROM_ADDRESS']
                 ?? ($this->config['from_address'] ?? ($this->config['from_email'] ?? 'noreply@example.com'));
             $fromName = $_ENV['MAIL_FROM_NAME']
-                ?? ($this->config['from_name'] ?? 'CarbonTrack');
+                ?? ($this->config['from_name'] ?? 'CarbonRack');
             $this->fromAddress = $fromAddress ?: 'noreply@example.com';
-            $this->fromName = $fromName ?: 'CarbonTrack';
+            $this->fromName = $fromName ?: 'CarbonRack';
 
             $this->mailer->setFrom($this->fromAddress, $this->fromName);
             $this->mailer->isHTML(true);
@@ -365,7 +365,7 @@ HTML;
         $messagesUrl = $this->buildFrontendUrl('messages');
         if ($messagesUrl) {
             $buttons[] = [
-                'text' => 'View in CarbonTrack',
+                'text' => 'View in CarbonRack',
                 'url' => $messagesUrl,
                 'color' => self::DEFAULT_BUTTON_COLOR,
             ];
@@ -530,7 +530,7 @@ HTML;
         $messagesUrl = $this->buildFrontendUrl('messages');
         if ($messagesUrl) {
             $buttons[] = [
-                'text' => 'Open CarbonTrack',
+                'text' => 'Open CarbonRack',
                 'url' => $messagesUrl,
                 'color' => self::DEFAULT_BUTTON_COLOR,
             ];
@@ -1421,7 +1421,7 @@ HTML;
             return false;
         }
 
-        $subject = $this->config['subjects']['welcome'] ?? 'Welcome to CarbonTrack';
+        $subject = $this->config['subjects']['welcome'] ?? 'Welcome to CarbonRack';
         $contentHtml = sprintf(
             '<p>Hello %s,</p>'
             . '<p>Welcome to %s! Your account is ready to go.</p>'

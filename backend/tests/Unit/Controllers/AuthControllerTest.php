@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Controllers\AuthController;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\TurnstileService;
-use CarbonTrack\Services\ProofOfWorkService;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\CloudflareR2Service;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\UserProfileViewService;
+use CarbonRack\Controllers\AuthController;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\TurnstileService;
+use CarbonRack\Services\ProofOfWorkService;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\CloudflareR2Service;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\UserProfileViewService;
 use PHPUnit\Framework\TestCase;
 
 class AuthControllerTest extends TestCase
@@ -41,7 +41,7 @@ class AuthControllerTest extends TestCase
             $mockR2Service,
             $mockLogger,
             $mockPdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             $mockRegion
         );
 
@@ -139,7 +139,7 @@ class AuthControllerTest extends TestCase
             null,
             $mockLogger,
             $mockPdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             $mockRegion,
             null,
             new UserProfileViewService($mockRegion)
@@ -166,19 +166,19 @@ class AuthControllerTest extends TestCase
         $this->assertCount(13, $parameters);
 
         $expectedTypes = [
-            'CarbonTrack\Services\AuthService',
-            'CarbonTrack\Services\EmailService',
-            'CarbonTrack\Services\TurnstileService',
-            'CarbonTrack\Services\AuditLogService',
-            'CarbonTrack\Services\MessageService',
-            'CarbonTrack\Services\CloudflareR2Service',
+            'CarbonRack\Services\AuthService',
+            'CarbonRack\Services\EmailService',
+            'CarbonRack\Services\TurnstileService',
+            'CarbonRack\Services\AuditLogService',
+            'CarbonRack\Services\MessageService',
+            'CarbonRack\Services\CloudflareR2Service',
             'Monolog\Logger',
             'PDO',
-            'CarbonTrack\Services\ErrorLogService',
-            'CarbonTrack\Services\RegionService',
-            'CarbonTrack\Services\CheckinService',
-            'CarbonTrack\Services\UserProfileViewService',
-            'CarbonTrack\Services\ProofOfWorkService'
+            'CarbonRack\Services\ErrorLogService',
+            'CarbonRack\Services\RegionService',
+            'CarbonRack\Services\CheckinService',
+            'CarbonRack\Services\UserProfileViewService',
+            'CarbonRack\Services\ProofOfWorkService'
         ];
         $nullableIndexes = [5, 8, 10, 11, 12];
 
@@ -250,7 +250,7 @@ class AuthControllerTest extends TestCase
             $mockR2Service,
             $mockLogger,
             $mockPdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             $mockRegion
         );
 
@@ -328,7 +328,7 @@ class AuthControllerTest extends TestCase
             $mockR2Service,
             $mockLogger,
             $mockPdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             $mockRegion
         );
 
@@ -366,7 +366,7 @@ class AuthControllerTest extends TestCase
         $mockR2Service->expects($this->once())
             ->method('getPublicUrl')
             ->with('avatars/default/avatar_01.png')
-            ->willReturn('https://r2-dev.carbontrackapp.com/avatars/default/avatar_01.png');
+            ->willReturn('https://r2-dev.carbonrackapp.com/avatars/default/avatar_01.png');
         $mockR2Service->expects($this->never())->method('generatePresignedUrl');
 
         $controller = new AuthController(
@@ -378,7 +378,7 @@ class AuthControllerTest extends TestCase
             $mockR2Service,
             $mockLogger,
             $mockPdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             $mockRegion
         );
 
@@ -387,7 +387,7 @@ class AuthControllerTest extends TestCase
         $result = $method->invoke($controller, '/avatars/default/avatar_01.png');
 
         $this->assertSame('/avatars/default/avatar_01.png', $result['avatar_path']);
-        $this->assertSame('https://r2-dev.carbontrackapp.com/avatars/default/avatar_01.png', $result['avatar_url']);
+        $this->assertSame('https://r2-dev.carbonrackapp.com/avatars/default/avatar_01.png', $result['avatar_url']);
     }
 
     public function testForgotPasswordRequiresTurnstile(): void
@@ -413,7 +413,7 @@ class AuthControllerTest extends TestCase
             $mockR2Service,
             $mockLogger,
             $mockPdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             $mockRegion
         );
 
@@ -450,7 +450,7 @@ class AuthControllerTest extends TestCase
             $mockR2Service,
             $mockLogger,
             $mockPdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             $mockRegion
         );
 
@@ -490,7 +490,7 @@ class AuthControllerTest extends TestCase
             $mockR2Service,
             $mockLogger,
             $mockPdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             $mockRegion
         );
 
@@ -536,7 +536,7 @@ class AuthControllerTest extends TestCase
             $mockR2Service,
             $mockLogger,
             $mockPdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             $mockRegion
         );
 
@@ -577,14 +577,14 @@ class AuthControllerTest extends TestCase
             $mockR2Service,
             $mockLogger,
             $mockPdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             $mockRegion
         );
 
         $request = makeRequest('POST', '/auth/login', [
             'identifier' => 'john@example.com',
             'password' => 'secret123',
-        ], null, ['Origin' => ['https://dev.carbontrackapp.com']]);
+        ], null, ['Origin' => ['https://dev.carbonrackapp.com']]);
         $response = new \Slim\Psr7\Response();
 
         $resp = $controller->login($request, $response);
@@ -622,7 +622,7 @@ class AuthControllerTest extends TestCase
             $mockR2Service,
             $mockLogger,
             $mockPdo,
-            $this->createMock(\CarbonTrack\Services\ErrorLogService::class),
+            $this->createMock(\CarbonRack\Services\ErrorLogService::class),
             $mockRegion,
             null,
             null,

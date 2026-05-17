@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\UserAiService;
-use CarbonTrack\Services\CarbonCalculatorService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\QuotaService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\UserAiService;
+use CarbonRack\Services\CarbonCalculatorService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\QuotaService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Log\LoggerInterface;
@@ -20,7 +20,7 @@ class UserAiController
         private CarbonCalculatorService $calculatorService,
         private QuotaService $quotaService,
         private LoggerInterface $logger,
-        private \CarbonTrack\Services\AuthService $authService,
+        private \CarbonRack\Services\AuthService $authService,
         private AuditLogService $auditLogService,
         private ErrorLogService $errorLogService
     ) {}

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\PasskeyConfig;
+use CarbonRack\Services\PasskeyConfig;
 use PHPUnit\Framework\TestCase;
 
 class PasskeyConfigTest extends TestCase
@@ -12,57 +12,57 @@ class PasskeyConfigTest extends TestCase
     public function testGetRpIdKeepsConfiguredSuffixWhenCompatibleWithFrontendHost(): void
     {
         $config = new PasskeyConfig([
-            'PASSKEYS_RP_ID' => 'carbontrackapp.com',
-            'FRONTEND_URL' => 'https://dev.carbontrackapp.com',
+            'PASSKEYS_RP_ID' => 'carbonrackapp.com',
+            'FRONTEND_URL' => 'https://dev.carbonrackapp.com',
         ]);
 
-        $this->assertSame('carbontrackapp.com', $config->getRpId());
+        $this->assertSame('carbonrackapp.com', $config->getRpId());
     }
 
     public function testGetRpIdFallsBackToFrontendHostWhenConfiguredRpIdMismatchesFrontendHost(): void
     {
         $config = new PasskeyConfig([
-            'PASSKEYS_RP_ID' => 'carbontrack.com',
-            'PASSKEYS_ORIGINS' => 'https://dev.carbontrack.com',
-            'FRONTEND_URL' => 'https://dev.carbontrackapp.com',
+            'PASSKEYS_RP_ID' => 'carbonrack.com',
+            'PASSKEYS_ORIGINS' => 'https://dev.carbonrack.com',
+            'FRONTEND_URL' => 'https://dev.carbonrackapp.com',
         ]);
 
-        $this->assertSame('dev.carbontrackapp.com', $config->getRpId());
+        $this->assertSame('dev.carbonrackapp.com', $config->getRpId());
     }
 
     public function testGetAllowedOriginsIncludesFrontendOriginWhenExplicitOriginsMissIt(): void
     {
         $config = new PasskeyConfig([
-            'PASSKEYS_ORIGINS' => 'https://dev.carbontrack.com/',
-            'FRONTEND_URL' => 'https://dev.carbontrackapp.com/',
+            'PASSKEYS_ORIGINS' => 'https://dev.carbonrack.com/',
+            'FRONTEND_URL' => 'https://dev.carbonrackapp.com/',
         ]);
 
         $this->assertSame([
-            'https://dev.carbontrack.com',
-            'https://dev.carbontrackapp.com',
+            'https://dev.carbonrack.com',
+            'https://dev.carbonrackapp.com',
         ], $config->getAllowedOrigins());
     }
 
     public function testGetAllowedOriginsFallsBackToFrontendOriginBeforeAppUrl(): void
     {
         $config = new PasskeyConfig([
-            'FRONTEND_URL' => 'https://dev.carbontrackapp.com/path',
-            'APP_URL' => 'https://dev-api.carbontrackapp.com',
+            'FRONTEND_URL' => 'https://dev.carbonrackapp.com/path',
+            'APP_URL' => 'https://dev-api.carbonrackapp.com',
         ]);
 
         $this->assertSame([
-            'https://dev.carbontrackapp.com',
+            'https://dev.carbonrackapp.com',
         ], $config->getAllowedOrigins());
     }
 
     public function testGetAllowedOriginsFallsBackToAppUrlWhenFrontendUrlMissing(): void
     {
         $config = new PasskeyConfig([
-            'APP_URL' => 'https://dev-api.carbontrackapp.com/api',
+            'APP_URL' => 'https://dev-api.carbonrackapp.com/api',
         ]);
 
         $this->assertSame([
-            'https://dev-api.carbontrackapp.com',
+            'https://dev-api.carbonrackapp.com',
         ], $config->getAllowedOrigins());
     }
 }

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\ErrorLogService;
 use Firebase\JWT\JWT;
 use PHPUnit\Framework\TestCase;
 use PDO;
@@ -150,8 +150,8 @@ class AuthServiceTest extends TestCase
         $service->setDatabase($pdo);
 
         $token = JWT::encode([
-            'iss' => 'carbontrack',
-            'aud' => 'carbontrack-users',
+            'iss' => 'carbonrack',
+            'aud' => 'carbonrack-users',
             'iat' => time(),
             'exp' => time() + 3600,
             'sub' => '550e8400-e29b-41d4-a716-4466554400aa',
@@ -177,8 +177,8 @@ class AuthServiceTest extends TestCase
         $service->setDatabase($pdo);
 
         $token = JWT::encode([
-            'iss' => 'carbontrack',
-            'aud' => 'carbontrack-users',
+            'iss' => 'carbonrack',
+            'aud' => 'carbonrack-users',
             'iat' => time(),
             'exp' => time() + 3600,
             'sub' => '550e8400-e29b-41d4-a716-4466554400ab',
@@ -206,8 +206,8 @@ class AuthServiceTest extends TestCase
         $service->setDatabase($pdo);
 
         $token = JWT::encode([
-            'iss' => 'carbontrack',
-            'aud' => 'carbontrack-users',
+            'iss' => 'carbonrack',
+            'aud' => 'carbonrack-users',
             'iat' => time(),
             'exp' => time() + 3600,
             'sub' => '550e8400-e29b-41d4-a716-4466554400ac',

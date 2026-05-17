@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use CarbonTrack\Models\CarbonActivity;
-use CarbonTrack\Services\CarbonCalculatorService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Models\CarbonActivity;
+use CarbonRack\Services\CarbonCalculatorService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
 use Slim\Psr7\Response;
 use Illuminate\Support\Str;
 

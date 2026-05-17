@@ -2,7 +2,7 @@
 
 ## 本地开发连接远程 API 的 CORS 配置
 
-为了方便本地前端（如 `http://localhost:5173`）调试已部署的远程后端 API（如 `https://dev-api.carbontrackapp.com`），后端 CORS 中间件已做特殊处理：
+为了方便本地前端（如 `http://localhost:5173`）调试已部署的远程后端 API（如 `https://dev-api.carbonrackapp.com`），后端 CORS 中间件已做特殊处理：
 
 - **非生产环境 (`APP_ENV != 'production'`)**：
   - 会自动将常见的本地开发源（`http://localhost:5173`, `http://localhost:3000`, `http://127.0.0.1:5173`, `http://127.0.0.1:3000`）加入到 `CORS_ALLOWED_ORIGINS` 允许列表中。

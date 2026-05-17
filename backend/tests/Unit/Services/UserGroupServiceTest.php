@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Models\UserGroup;
-use CarbonTrack\Services\QuotaConfigService;
-use CarbonTrack\Services\UserGroupService;
+use CarbonRack\Models\UserGroup;
+use CarbonRack\Services\QuotaConfigService;
+use CarbonRack\Services\UserGroupService;
 use PHPUnit\Framework\TestCase;
 
 class UserGroupServiceTest extends TestCase

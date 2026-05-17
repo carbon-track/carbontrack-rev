@@ -1,11 +1,11 @@
 {
   "app": {
-    "name": "CarbonTrack",
-    "fallbackUser": "CarbonTracker",
+    "name": "CarbonRack",
+    "fallbackUser": "CarbonRacker",
     "emptyValue": "无"
   },
   "auth": {
-    "loginTitle": "CarbonTrack 登录",
+    "loginTitle": "CarbonRack 登录",
     "loginSubtitle": "使用邮箱或用户名继续低碳行动记录。",
     "identifier": "用户名或邮箱",
     "identifierPlaceholder": "请输入用户名或邮箱",
@@ -23,7 +23,7 @@
     "turnstileRequired": "请先完成人机验证。",
     "retryLater": "请稍后重试。",
     "registerTitle": "创建账号",
-    "registerSubtitle": "加入 CarbonTrack，开始记录低碳行动。",
+    "registerSubtitle": "加入 CarbonRack，开始记录低碳行动。",
     "username": "用户名",
     "usernamePlaceholder": "3-50 位字母、数字或下划线",
     "email": "邮箱",
@@ -150,7 +150,7 @@
       "descriptionLabel": "备注 / 审核提示",
       "descriptionFallback": "无附加备注。",
       "footerLineOne": "此回执已进入人工审核队列，请保留凭证。",
-      "footerLineTwo": "CarbonTrack · 热敏记录快照",
+      "footerLineTwo": "CarbonRack · 热敏记录快照",
       "recordAnother": "继续记录下一条",
       "goHome": "返回首页"
     },

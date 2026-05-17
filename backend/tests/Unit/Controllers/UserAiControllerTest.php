@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Controllers\UserAiController;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\UserAiService;
-use CarbonTrack\Services\CarbonCalculatorService;
-use CarbonTrack\Services\QuotaService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Controllers\UserAiController;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\UserAiService;
+use CarbonRack\Services\CarbonCalculatorService;
+use CarbonRack\Services\QuotaService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\ErrorLogService;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Slim\Psr7\Response;
@@ -43,7 +43,7 @@ class UserAiControllerTest extends TestCase
         
         // Mock getUserIdFromRequest
         $this->authService->method('getUserIdFromRequest')->willReturn(1);
-        $this->authService->method('getCurrentUserModel')->willReturn($this->createMock(\CarbonTrack\Models\User::class));
+        $this->authService->method('getCurrentUserModel')->willReturn($this->createMock(\CarbonRack\Models\User::class));
     }
 
     private function createController(): UserAiController
@@ -135,7 +135,7 @@ class UserAiControllerTest extends TestCase
         $this->auditLogService->expects($this->once())->method('logUserAction')->willReturn(true);
         
         $this->authService = $this->createMock(AuthService::class);
-        $this->authService->method('getCurrentUserModel')->willReturn($this->createMock(\CarbonTrack\Models\User::class));
+        $this->authService->method('getCurrentUserModel')->willReturn($this->createMock(\CarbonRack\Models\User::class));
 
         $controller = $this->createController();
 

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Integration;
+namespace CarbonRack\Tests\Integration;
 
-use CarbonTrack\Controllers\AdminController;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\BadgeService;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\StatisticsService;
-use CarbonTrack\Services\QuotaConfigService;
-use CarbonTrack\Services\UserProfileViewService;
+use CarbonRack\Controllers\AdminController;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\BadgeService;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\StatisticsService;
+use CarbonRack\Services\QuotaConfigService;
+use CarbonRack\Services\UserProfileViewService;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Response;
 
@@ -78,7 +78,7 @@ class AdminStatsIntegrationTest extends TestCase
 
         $auditLog = $this->createMock(AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
-        $statsCacheDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'carbontrack_stats_cache_' . uniqid();
+        $statsCacheDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'carbonrack_stats_cache_' . uniqid();
         $statsService = new StatisticsService($pdo, $statsCacheDir, 0, 0);
 
         $checkinService = new CheckinService($pdo, null, 'UTC');

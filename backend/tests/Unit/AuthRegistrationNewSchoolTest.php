@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\AuthController;
-use CarbonTrack\Services\{AuthService, EmailService, TurnstileService, AuditLogService, ErrorLogService, MessageService, CloudflareR2Service, RegionService};
+use CarbonRack\Controllers\AuthController;
+use CarbonRack\Services\{AuthService, EmailService, TurnstileService, AuditLogService, ErrorLogService, MessageService, CloudflareR2Service, RegionService};
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Slim\Psr7\Response;

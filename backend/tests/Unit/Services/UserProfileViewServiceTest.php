@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\UserProfileViewService;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\UserProfileViewService;
 use PHPUnit\Framework\TestCase;
 
 class UserProfileViewServiceTest extends TestCase

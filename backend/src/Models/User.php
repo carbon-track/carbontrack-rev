@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Models;
+namespace CarbonRack\Models;
 
 use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use CarbonTrack\Models\UserGroup;
+use CarbonRack\Models\UserGroup;
 
 class User extends Model
 {

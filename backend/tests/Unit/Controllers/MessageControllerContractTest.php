@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\MessageController;
+use CarbonRack\Controllers\MessageController;
 
 class MessageControllerContractTest extends TestCase
 {

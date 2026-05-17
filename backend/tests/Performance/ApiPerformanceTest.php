@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Performance;
+namespace CarbonRack\Tests\Performance;
 
 use PHPUnit\Framework\TestCase;
 

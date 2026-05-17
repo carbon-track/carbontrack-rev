@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\SystemLogService;
+use CarbonRack\Services\SystemLogService;
 use Monolog\Logger;
 use PDO;
 use PHPUnit\Framework\TestCase;

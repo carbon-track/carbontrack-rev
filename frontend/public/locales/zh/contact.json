@@ -1,7 +1,7 @@
 {
   "contact": {
     "hero": {
-      "eyebrow": "联系 CarbonTrack",
+      "eyebrow": "联系 CarbonRack",
       "title": "公开联系渠道",
       "subtitle": "合作、媒体、一般咨询请直接通过这里联系。",
       "primaryAction": "发送邮件",
@@ -17,7 +17,7 @@
       "phoneTitle": "电话",
       "phoneDescription": "适合需要即时沟通的情况。",
       "addressTitle": "地址",
-      "addressDescription": "CarbonTrack 团队的协作与运营地址。"
+      "addressDescription": "CarbonRack 团队的协作与运营地址。"
     },
     "linksTitle": "更多入口",
     "links": [
@@ -29,7 +29,7 @@
       {
         "type": "instagram",
         "label": "关注 Instagram",
-        "href": "https://www.instagram.com/carbontrackorg/",
+        "href": "https://www.instagram.com/carbonrackorg/",
         "external": true
       },
       {
@@ -41,7 +41,7 @@
       {
         "type": "partnership",
         "label": "合作洽谈",
-        "href": "https://carbontrack.org/partners",
+        "href": "https://carbonrack.org/partners",
         "external": true
       }
     ]

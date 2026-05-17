@@ -1,9 +1,9 @@
 {
   "app": {
-    "name": "CarbonTrack",
+    "name": "CarbonRack",
     "tagline": "Carbon Reduction Tracking Platform",
     "description": "Record your environmental actions and earn reward points",
-    "welcome": "Welcome to CarbonTrack",
+    "welcome": "Welcome to CarbonRack",
     "getStarted": "Get Started",
     "learnMore": "Learn More",
     "features": {

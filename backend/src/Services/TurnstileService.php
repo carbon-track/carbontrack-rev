@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Support\SyntheticRequestFactory;
 use Monolog\Logger;
 
 class TurnstileService
@@ -76,7 +76,7 @@ class TurnstileService
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT => 10,
                 CURLOPT_CONNECTTIMEOUT => 5,
-                CURLOPT_USERAGENT => 'CarbonTrack/1.0',
+                CURLOPT_USERAGENT => 'CarbonRack/1.0',
                 CURLOPT_HTTPHEADER => [
                     'Content-Type: application/x-www-form-urlencoded'
                 ],

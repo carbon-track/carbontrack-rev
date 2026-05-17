@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\CronRun;
-use CarbonTrack\Models\CronTask;
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Models\CronRun;
+use CarbonRack\Models\CronTask;
+use CarbonRack\Support\SyntheticRequestFactory;
 use DateTimeImmutable;
 use DateTimeZone;
 use PDO;

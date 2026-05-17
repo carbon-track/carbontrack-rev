@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Middleware;
+namespace CarbonRack\Middleware;
 
-use CarbonTrack\Support\CorsHeaderBuilder;
+use CarbonRack\Support\CorsHeaderBuilder;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;

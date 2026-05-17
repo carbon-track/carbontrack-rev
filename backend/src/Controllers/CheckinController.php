@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
-use CarbonTrack\Models\UserUsageStats;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\QuotaService;
+use CarbonRack\Models\UserUsageStats;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\QuotaService;
 use DateTimeImmutable;
 use DateTimeZone;
 use Monolog\Logger;

@@ -2,9 +2,9 @@
 trigger: always_on
 ---
 
-# CarbonTrack AI Agent Instructions
+# CarbonRack AI Agent Instructions
 
-This document provides essential guidance for AI agents working on the CarbonTrack codebase.
+This document provides essential guidance for AI agents working on the CarbonRack codebase.
 
 ## Architecture Overview
 

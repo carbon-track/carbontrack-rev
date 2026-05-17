@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\AvatarController;
+use CarbonRack\Controllers\AvatarController;
 
 class AvatarControllerTest extends TestCase
 {
@@ -16,10 +16,10 @@ class AvatarControllerTest extends TestCase
 
     public function testGetAvatarsHidesInactiveForNonAdmin(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
         $auth->method('getCurrentUser')->willReturn(['id'=>1,'is_admin'=>0]);
@@ -27,13 +27,13 @@ class AvatarControllerTest extends TestCase
             ['id'=>1,'name'=>'A','is_active'=>1]
         ]);
 
-    $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-    /** @var \CarbonTrack\Models\Avatar $avatarModel */
-    /** @var \CarbonTrack\Services\AuthService $auth */
-    /** @var \CarbonTrack\Services\AuditLogService $audit */
-    /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+    $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+    /** @var \CarbonRack\Models\Avatar $avatarModel */
+    /** @var \CarbonRack\Services\AuthService $auth */
+    /** @var \CarbonRack\Services\AuditLogService $audit */
+    /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
     /** @var \Monolog\Logger $logger */
-    /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+    /** @var \CarbonRack\Services\ErrorLogService $errorLog */
     $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
         $request = makeRequest('GET', '/avatars');
         $response = new \Slim\Psr7\Response();
@@ -47,12 +47,12 @@ class AvatarControllerTest extends TestCase
 
     public function testGetAvatarsAllowsAdminToIncludeInactiveAndReturnsActivationState(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 9, 'is_admin' => 1]);
         $avatarModel->expects($this->once())
@@ -63,12 +63,12 @@ class AvatarControllerTest extends TestCase
                 ['id' => 2, 'name' => 'Fox', 'category' => 'animals', 'is_active' => '0', 'is_default' => '1'],
             ]);
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
-        /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
         $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
 
         $response = $controller->getAvatars(
@@ -87,12 +87,12 @@ class AvatarControllerTest extends TestCase
 
     public function testGetAvatarsIncludesIconUrls(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
 
         $auth->method('getCurrentUser')->willReturn(null);
         $avatarModel->method('getAvailableAvatars')->willReturn([
@@ -121,12 +121,12 @@ class AvatarControllerTest extends TestCase
             ->with('avatars/default/avatar.png', 600)
             ->willReturn('https://signed.example/avatar.png');
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
-        /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
         $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
 
         $response = $controller->getAvatars(makeRequest('GET', '/avatars'), new \Slim\Psr7\Response());
@@ -145,20 +145,20 @@ class AvatarControllerTest extends TestCase
 
     public function testGetAvatarRequiresAdmin(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
 
         $auth->method('getCurrentUser')->willReturn(['id'=>1,'is_admin'=>0]);
-    $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-    /** @var \CarbonTrack\Models\Avatar $avatarModel */
-    /** @var \CarbonTrack\Services\AuthService $auth */
-    /** @var \CarbonTrack\Services\AuditLogService $audit */
-    /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+    $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+    /** @var \CarbonRack\Models\Avatar $avatarModel */
+    /** @var \CarbonRack\Services\AuthService $auth */
+    /** @var \CarbonRack\Services\AuditLogService $audit */
+    /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
     /** @var \Monolog\Logger $logger */
-    /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+    /** @var \CarbonRack\Services\ErrorLogService $errorLog */
     $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
         $request = makeRequest('GET', '/avatars/1');
         $response = new \Slim\Psr7\Response();
@@ -168,12 +168,12 @@ class AvatarControllerTest extends TestCase
 
     public function testUpdateAvatarNormalizesEmptyStringDefaultFlag(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $audit->method('log')->willReturn(true);
@@ -205,12 +205,12 @@ class AvatarControllerTest extends TestCase
             }))
             ->willReturn(true);
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
-        /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
         $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
 
         $request = makeRequest('PUT', '/admin/avatars/5', [
@@ -226,22 +226,22 @@ class AvatarControllerTest extends TestCase
 
     public function testUpdateAvatarRejectsInvalidSortOrderString(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $avatarModel->expects($this->never())->method('updateAvatar');
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
-        /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
         $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
 
         $response = $controller->updateAvatar(
@@ -258,11 +258,11 @@ class AvatarControllerTest extends TestCase
 
     public function testUpdateAvatarReturnsStorageUnavailableWhenR2PathCannotBeVerified(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $avatarModel->expects($this->once())
@@ -280,11 +280,11 @@ class AvatarControllerTest extends TestCase
             ->method('error')
             ->with('Avatar storage service is unavailable');
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
         $controller = new AvatarController($avatarModel, $auth, $audit, null, $logger, $errorLog);
 
         $response = $controller->updateAvatar(
@@ -301,22 +301,22 @@ class AvatarControllerTest extends TestCase
 
     public function testCreateAvatarRejectsNonObjectRequestBody(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $avatarModel->expects($this->never())->method('createAvatar');
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
-        /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
         $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
 
         $response = $controller->createAvatar(
@@ -332,11 +332,11 @@ class AvatarControllerTest extends TestCase
 
     public function testCreateAvatarReturnsStorageUnavailableWhenR2PathCannotBeVerified(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $avatarModel->expects($this->never())->method('createAvatar');
@@ -344,11 +344,11 @@ class AvatarControllerTest extends TestCase
             ->method('error')
             ->with('Avatar storage service is unavailable');
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
         $controller = new AvatarController($avatarModel, $auth, $audit, null, $logger, $errorLog);
 
         $response = $controller->createAvatar(
@@ -367,22 +367,22 @@ class AvatarControllerTest extends TestCase
 
     public function testCreateAvatarRejectsInactiveDefaultAvatar(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $avatarModel->expects($this->never())->method('createAvatar');
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
-        /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
         $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
 
         $response = $controller->createAvatar(
@@ -404,12 +404,12 @@ class AvatarControllerTest extends TestCase
 
     public function testUpdateAvatarRejectsDisablingDefaultAvatar(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $avatarModel->expects($this->once())
@@ -424,12 +424,12 @@ class AvatarControllerTest extends TestCase
             ]);
         $avatarModel->expects($this->never())->method('updateAvatar');
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
-        /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
         $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
 
         $response = $controller->updateAvatar(
@@ -447,12 +447,12 @@ class AvatarControllerTest extends TestCase
 
     public function testUpdateAvatarRejectsDisablingCurrentDefaultEvenWhenPayloadClearsDefault(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $avatarModel->expects($this->once())
@@ -469,12 +469,12 @@ class AvatarControllerTest extends TestCase
         $avatarModel->expects($this->never())->method('updateAvatarAndReassignUsers');
         $avatarModel->expects($this->never())->method('updateAvatar');
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
-        /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
         $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
 
         $response = $controller->updateAvatar(
@@ -492,8 +492,8 @@ class AvatarControllerTest extends TestCase
 
     public function testUpdateAvatarSucceedsWhenOptionalAuditAndLoggerAreMissing(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $avatarModel->expects($this->exactly(2))
@@ -520,8 +520,8 @@ class AvatarControllerTest extends TestCase
             ->with(5, ['name' => 'Leaf Prime'])
             ->willReturn(true);
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
         $controller = new AvatarController($avatarModel, $auth);
 
         $response = $controller->updateAvatar(
@@ -538,13 +538,13 @@ class AvatarControllerTest extends TestCase
 
     public function testUpdateAvatarDisablesAvatarReassignsUsersAndSendsNotifications(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 7, 'is_admin' => 1]);
         $audit->method('log')->willReturn(true);
@@ -591,21 +591,21 @@ class AvatarControllerTest extends TestCase
                 [101, 202],
                 $this->stringContains('Selected avatar unavailable'),
                 $this->stringContains('Default Seedling'),
-                \CarbonTrack\Models\Message::TYPE_NOTIFICATION,
-                \CarbonTrack\Models\Message::PRIORITY_NORMAL,
+                \CarbonRack\Models\Message::TYPE_NOTIFICATION,
+                \CarbonRack\Models\Message::PRIORITY_NORMAL,
                 'avatar',
                 5,
                 true
             )
             ->willReturn(['sent_count' => 2, 'failed_user_ids' => []]);
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
-        /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
-        /** @var \CarbonTrack\Services\MessageService $messageService */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\MessageService $messageService */
         $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog, $messageService);
 
         $response = $controller->updateAvatar(
@@ -622,12 +622,12 @@ class AvatarControllerTest extends TestCase
 
     public function testUpdateAvatarRejectsDisablingAvatarWhenNoDefaultFallbackExists(): void
     {
-        $avatarModel = $this->createMock(\CarbonTrack\Models\Avatar::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $avatarModel = $this->createMock(\CarbonRack\Models\Avatar::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         $logger = $this->createMock(\Monolog\Logger::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
 
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $avatarModel->expects($this->once())
@@ -643,15 +643,15 @@ class AvatarControllerTest extends TestCase
         $avatarModel->expects($this->once())
             ->method('updateAvatarAndReassignUsers')
             ->with(5, ['is_active' => false], null)
-            ->willThrowException(new \CarbonTrack\Models\AvatarFallbackUnavailableException());
+            ->willThrowException(new \CarbonRack\Models\AvatarFallbackUnavailableException());
         $avatarModel->expects($this->never())->method('updateAvatar');
 
-        /** @var \CarbonTrack\Models\Avatar $avatarModel */
-        /** @var \CarbonTrack\Services\AuthService $auth */
-        /** @var \CarbonTrack\Services\AuditLogService $audit */
-        /** @var \CarbonTrack\Services\CloudflareR2Service $r2 */
+        /** @var \CarbonRack\Models\Avatar $avatarModel */
+        /** @var \CarbonRack\Services\AuthService $auth */
+        /** @var \CarbonRack\Services\AuditLogService $audit */
+        /** @var \CarbonRack\Services\CloudflareR2Service $r2 */
         /** @var \Monolog\Logger $logger */
-        /** @var \CarbonTrack\Services\ErrorLogService $errorLog */
+        /** @var \CarbonRack\Services\ErrorLogService $errorLog */
         $controller = new AvatarController($avatarModel, $auth, $audit, $r2, $logger, $errorLog);
 
         $response = $controller->updateAvatar(

@@ -10,7 +10,7 @@ rules:
       - pattern: |
           $GROUP->get('/activities/categories', ...);
       - pattern-not: |
-          $GROUP->get('/activities/categories', ...)->add(\CarbonTrack\Middleware\AuthMiddleware::class);
+          $GROUP->get('/activities/categories', ...)->add(\CarbonRack\Middleware\AuthMiddleware::class);
       - pattern-not: |
           $GROUP->get('/activities/categories', ...)->add(AuthMiddleware::class);
     paths:
@@ -41,7 +41,7 @@ rules:
       - pattern-not-inside: |
           class $CLASS {
             ...
-            public function __construct(..., \CarbonTrack\Services\AuditLogService $X, ...) { ... }
+            public function __construct(..., \CarbonRack\Services\AuditLogService $X, ...) { ... }
             ...
           }
     paths:

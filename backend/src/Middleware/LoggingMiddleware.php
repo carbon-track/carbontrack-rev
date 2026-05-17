@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Middleware;
+namespace CarbonRack\Middleware;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
 use Psr\Log\LoggerInterface;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Services\ErrorLogService;
 
 class LoggingMiddleware implements MiddlewareInterface
 {

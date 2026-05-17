@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Services\DatabaseService;
+use CarbonRack\Services\DatabaseService;
 use Illuminate\Database\Capsule\Manager as Capsule;
 
 class DatabaseServiceTest extends TestCase

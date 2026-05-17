@@ -42,7 +42,7 @@
       "loadError": "We couldn't load the latest community statistics. Please try again."
     },
     "features": {
-      "title": "Why Choose CarbonTrack?",
+      "title": "Why Choose CarbonRack?",
       "subtitle": "We provide a complete carbon footprint tracking solution, making environmental actions simple and fun.",
       "calculate": {
         "title": "Precise Calculation",
@@ -91,13 +91,13 @@
       "communityDescription": "Active community, grow together"
     },
     "announcements": {
-      "title": "What's New at CarbonTrack",
+      "title": "What's New at CarbonRack",
       "subtitle": "Stay updated with the latest announcements from our sustainability community.",
       "items": [
         {
           "id": "feedback",
           "title": "We love hearing from you",
-          "description": "Share suggestions at carbontrack666@gmail.com so we can keep improving your experience."
+          "description": "Share suggestions at carbonrack666@gmail.com so we can keep improving your experience."
         },
         {
           "id": "rewards",
@@ -124,7 +124,7 @@
           "id": "footprint",
           "title": "Understand your footprint",
           "subtitle": "Everyday actions, measurable outcomes",
-          "description": "CarbonTrack translates daily activities into accurate CO₂ reductions so you can see where you create the biggest impact.",
+          "description": "CarbonRack translates daily activities into accurate CO₂ reductions so you can see where you create the biggest impact.",
           "highlights": [
             "Science-based factors tailored for campus life",
             "Instant feedback every time you submit a record",

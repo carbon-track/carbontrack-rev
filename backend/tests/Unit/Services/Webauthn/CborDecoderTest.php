@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services\Webauthn;
+namespace CarbonRack\Tests\Unit\Services\Webauthn;
 
-use CarbonTrack\Services\Webauthn\CborDecoder;
+use CarbonRack\Services\Webauthn\CborDecoder;
 use PHPUnit\Framework\TestCase;
 
 final class CborDecoderTest extends TestCase

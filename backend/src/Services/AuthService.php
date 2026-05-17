@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Support\Uuid;
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Support\Uuid;
+use CarbonRack\Support\SyntheticRequestFactory;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -56,8 +56,8 @@ class AuthService
 
         $now = time();
         $payload = [
-            'iss' => 'carbontrack',
-            'aud' => 'carbontrack-users',
+            'iss' => 'carbonrack',
+            'aud' => 'carbonrack-users',
             'iat' => $now,
             'exp' => $now + $this->jwtExpiration,
             'sub' => $subject,
@@ -185,7 +185,7 @@ class AuthService
     /**
      * Get current user model
      */
-    public function getCurrentUserModel(Request $request): ?\CarbonTrack\Models\User
+    public function getCurrentUserModel(Request $request): ?\CarbonRack\Models\User
     {
         $userData = $this->getCurrentUser($request);
         if (!$userData) {
@@ -194,12 +194,12 @@ class AuthService
 
         $userId = $this->normalizeUserId($userData['id'] ?? null);
         if ($userId !== null) {
-            return \CarbonTrack\Models\User::find($userId);
+            return \CarbonRack\Models\User::find($userId);
         }
 
         $userUuid = $this->normalizeUuidValue($userData['uuid'] ?? null);
         if ($userUuid !== null) {
-            return \CarbonTrack\Models\User::query()->where('uuid', $userUuid)->first();
+            return \CarbonRack\Models\User::query()->where('uuid', $userUuid)->first();
         }
 
         return null;

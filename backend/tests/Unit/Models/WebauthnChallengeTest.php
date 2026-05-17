@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Models;
+namespace CarbonRack\Tests\Unit\Models;
 
-use CarbonTrack\Models\WebauthnChallenge;
-use CarbonTrack\Tests\Integration\TestSchemaBuilder;
+use CarbonRack\Models\WebauthnChallenge;
+use CarbonRack\Tests\Integration\TestSchemaBuilder;
 use PDO;
 use PHPUnit\Framework\TestCase;
 

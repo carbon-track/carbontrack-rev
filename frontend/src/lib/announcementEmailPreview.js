@@ -28,7 +28,7 @@ export function renderAnnouncementEmailPreviewHtml({
   content,
   contentFormat = ANNOUNCEMENT_CONTENT_FORMAT_TEXT,
   priority = 'normal',
-  appName = 'CarbonTrack',
+  appName = 'CarbonRack',
   supportEmail = 'support@example.com',
 }) {
   const safeTitle = escapeHtml(title || 'Announcement preview');

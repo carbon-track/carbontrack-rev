@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useColorScheme } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-const THEME_KEY = 'carbontrack.appearance.theme';
+const THEME_KEY = 'carbonrack.appearance.theme';
 const DEFAULT_THEME_MODE = 'system';
 
 export const themeOptions = [

@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 
-const TOKEN_KEY = 'carbontrack.auth.token';
-const USER_KEY = 'carbontrack.auth.user';
-const EMAIL_VERIFICATION_REQUIRED_KEY = 'carbontrack.auth.emailVerificationRequired';
-const VERIFICATION_EMAIL_KEY = 'carbontrack.auth.verificationEmail';
+const TOKEN_KEY = 'carbonrack.auth.token';
+const USER_KEY = 'carbonrack.auth.user';
+const EMAIL_VERIFICATION_REQUIRED_KEY = 'carbonrack.auth.emailVerificationRequired';
+const VERIFICATION_EMAIL_KEY = 'carbonrack.auth.verificationEmail';
 const SESSION_KEYS = [
   TOKEN_KEY,
   USER_KEY,

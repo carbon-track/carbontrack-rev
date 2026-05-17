@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Services\CloudflareR2Service;
+use CarbonRack\Services\CloudflareR2Service;
 
 class CloudflareR2ServiceTest extends TestCase
 {

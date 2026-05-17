@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
 use Illuminate\Database\Capsule\Manager as Capsule;
 use PDO;

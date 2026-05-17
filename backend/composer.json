@@ -1,6 +1,6 @@
 {
-    "name": "carbontrack/backend",
-    "description": "CarbonTrack Backend API using Slim Framework",
+    "name": "carbonrack/backend",
+    "description": "CarbonRack Backend API using Slim Framework",
     "type": "project",
     "require": {
         "php": ">=8.2",
@@ -32,12 +32,12 @@
     },
     "autoload": {
         "psr-4": {
-            "CarbonTrack\\": "src/"
+            "CarbonRack\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "CarbonTrack\\Tests\\": "tests/"
+            "CarbonRack\\Tests\\": "tests/"
         }
     },
     "scripts": {

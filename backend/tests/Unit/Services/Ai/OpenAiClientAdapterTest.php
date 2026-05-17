@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services\Ai;
+namespace CarbonRack\Tests\Unit\Services\Ai;
 
-use CarbonTrack\Services\Ai\OpenAiClientAdapter;
+use CarbonRack\Services\Ai\OpenAiClientAdapter;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;

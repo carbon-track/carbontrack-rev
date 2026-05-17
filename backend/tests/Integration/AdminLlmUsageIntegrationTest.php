@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Integration;
+namespace CarbonRack\Tests\Integration;
 
-use CarbonTrack\Controllers\AdminLlmUsageController;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\AuthService;
+use CarbonRack\Controllers\AdminLlmUsageController;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\AuthService;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use Slim\Psr7\Response;

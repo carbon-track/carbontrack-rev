@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Models;
+namespace CarbonRack\Models;
 
 class AvatarFallbackUnavailableException extends \RuntimeException
 {

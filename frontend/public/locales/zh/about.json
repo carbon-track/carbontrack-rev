@@ -1,19 +1,19 @@
 {
   "about": {
     "hero": {
-      "title": "关于 CarbonTrack",
+      "title": "关于 CarbonRack",
       "subtitle": "我们是一群热爱环保与科技的年轻人，希望携手构建一个可持续的低碳未来。"
     },
     "contactLinks": [
       {
         "type": "email",
         "label": "联系我们",
-        "href": "mailto:carbontrack666@gmail.com"
+        "href": "mailto:carbonrack666@gmail.com"
       },
       {
         "type": "instagram",
         "label": "关注我们（Instagram）",
-        "href": "https://www.instagram.com/carbontrackorg/",
+        "href": "https://www.instagram.com/carbonrackorg/",
         "external": true
       },
       {
@@ -25,13 +25,13 @@
       {
         "type": "partnership",
         "label": "合作洽谈",
-        "href": "https://carbontrack.org/partners",
+        "href": "https://carbonrack.org/partners",
         "external": true
       }
     ],
     "team": {
       "title": "核心团队",
-      "intro": "认识 CarbonTrack 背后的伙伴们，他们把创意、技术与热情倾注到每一次低碳行动之中。",
+      "intro": "认识 CarbonRack 背后的伙伴们，他们把创意、技术与热情倾注到每一次低碳行动之中。",
       "learnMore": "了解更多",
       "members": [
         {
@@ -44,7 +44,7 @@
         {
           "name": "Zining (Jeffery) Lyu",
           "role": "联合创始人 & 全栈工程师",
-          "bio": "Jeffery 是核心技术负责人，负责 CarbonTrack 网站的架构、开发与维护。",
+          "bio": "Jeffery 是核心技术负责人，负责 CarbonRack 网站的架构、开发与维护。",
           "link": "https://github.com/Jeffery2008",
           "linkLabel": "GitHub"
         },
@@ -58,7 +58,7 @@
         {
           "name": "Smiley Ni",
           "role": "创意负责人",
-          "bio": "Smiley 主导品牌视觉与内容创作，热爱舞蹈与艺术，希望让 CarbonTrack 在传播环保理念的同时带来快乐。",
+          "bio": "Smiley 主导品牌视觉与内容创作，热爱舞蹈与艺术，希望让 CarbonRack 在传播环保理念的同时带来快乐。",
           "link": "https://smileyn327.com/",
           "linkLabel": "个人主页"
         },
@@ -75,7 +75,7 @@
         {
           "name": "Tony Li",
           "role": "全栈工程师",
-          "bio": "Tony 负责新功能开发、性能优化与交互体验迭代，让 CarbonTrack 更高效、更易用。"
+          "bio": "Tony 负责新功能开发、性能优化与交互体验迭代，让 CarbonRack 更高效、更易用。"
         },
         {
           "name": "Eddie Peng",
@@ -95,7 +95,7 @@
         {
           "name": "Kiana Jin",
           "role": "市场负责人",
-          "bio": "Kiana 统筹活动、社交媒体与外部合作，把多元声音带入 CarbonTrack 社群。"
+          "bio": "Kiana 统筹活动、社交媒体与外部合作，把多元声音带入 CarbonRack 社群。"
         },
         {
           "name": "Kelly Du",
@@ -117,7 +117,7 @@
         {
           "name": "Arya Chen",
           "role": "界面设计师",
-          "bio": "Arya 擅长 Adobe Ps/Au 等设计工具，期待持续为 CarbonTrack 打造创意与易用兼顾的体验。"
+          "bio": "Arya 擅长 Adobe Ps/Au 等设计工具，期待持续为 CarbonRack 打造创意与易用兼顾的体验。"
         },
         {
           "name": "Amily Gao",
@@ -132,7 +132,7 @@
         {
           "name": "Yangyang Zhou",
           "role": "联合创始人",
-          "bio": "杨扬热爱经济学、数学与篮球，为 CarbonTrack 的启动与战略方向提供支持。"
+          "bio": "杨扬热爱经济学、数学与篮球，为 CarbonRack 的启动与战略方向提供支持。"
         },
         {
           "name": "Dora Xu",
@@ -158,7 +158,7 @@
     },
     "mission": {
       "title": "我们的使命",
-      "description": "CarbonTrack 通过数字化碳账户，让气候行动变得可记录、可奖励，也更贴近每个人的日常生活。",
+      "description": "CarbonRack 通过数字化碳账户，让气候行动变得可记录、可奖励，也更贴近每个人的日常生活。",
       "items": [
         "让更多学生与青年关注气候变化与碳排放议题。",
         "提供简单易用的工具，记录每日碳足迹并奖励低碳习惯。",
@@ -168,7 +168,7 @@
     },
     "achievements": {
       "title": "我们的成果",
-      "description": "在 CarbonTrack 社群的共同努力下，我们把碳账户变成一段积极、有趣且可衡量的旅程。",
+      "description": "在 CarbonRack 社群的共同努力下，我们把碳账户变成一段积极、有趣且可衡量的旅程。",
       "stats": [
         {
           "label": "碳减排成效",

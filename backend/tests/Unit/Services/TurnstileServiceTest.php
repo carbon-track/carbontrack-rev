@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Services\TurnstileService;
+use CarbonRack\Services\TurnstileService;
 
 class TurnstileServiceTest extends TestCase
 {

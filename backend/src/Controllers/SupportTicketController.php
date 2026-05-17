@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\CronSchedulerService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\SupportRoutingEngineService;
-use CarbonTrack\Services\SupportTicketService;
-use CarbonTrack\Services\TurnstileService;
-use CarbonTrack\Services\ProofOfWorkService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\CronSchedulerService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\SupportRoutingEngineService;
+use CarbonRack\Services\SupportTicketService;
+use CarbonRack\Services\TurnstileService;
+use CarbonRack\Services\ProofOfWorkService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Log\LoggerInterface;

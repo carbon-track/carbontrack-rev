@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\SupportTicketRoutingRun;
-use CarbonTrack\Models\SupportTicketTagAssignment;
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Models\SupportTicketRoutingRun;
+use CarbonRack\Models\SupportTicketTagAssignment;
+use CarbonRack\Support\SyntheticRequestFactory;
 use DateTimeImmutable;
 use DateTimeZone;
 use PDO;

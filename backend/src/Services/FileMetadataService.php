@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\File;
+use CarbonRack\Models\File;
 use Illuminate\Database\Capsule\Manager as DB;
 class FileMetadataService
 {

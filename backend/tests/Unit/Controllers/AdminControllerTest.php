@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Tests\Integration\TestSchemaBuilder;
+use CarbonRack\Tests\Integration\TestSchemaBuilder;
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\AdminController;
-use CarbonTrack\Services\BadgeService;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\StatisticsService;
-use CarbonTrack\Services\QuotaConfigService;
-use CarbonTrack\Services\UserProfileViewService;
+use CarbonRack\Controllers\AdminController;
+use CarbonRack\Services\BadgeService;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\StatisticsService;
+use CarbonRack\Services\QuotaConfigService;
+use CarbonRack\Services\UserProfileViewService;
 
 class AdminControllerTest extends TestCase
 {
@@ -23,8 +23,8 @@ class AdminControllerTest extends TestCase
 
     private function makeController(
         \PDO $pdo,
-        \CarbonTrack\Services\AuthService $auth,
-        \CarbonTrack\Services\AuditLogService $audit,
+        \CarbonRack\Services\AuthService $auth,
+        \CarbonRack\Services\AuditLogService $audit,
         BadgeService $badgeService,
         StatisticsService $statsService,
         CheckinService $checkinService,
@@ -52,8 +52,8 @@ class AdminControllerTest extends TestCase
     public function testGetUsersRequiresAdmin(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
         $statsService = $this->createMock(StatisticsService::class);
         $checkinService = $this->createMock(CheckinService::class);
@@ -75,8 +75,8 @@ class AdminControllerTest extends TestCase
     public function testGetUsersSuccessWithFilters(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
         $statsService = $this->createMock(StatisticsService::class);
         $checkinService = $this->createMock(CheckinService::class);
@@ -154,8 +154,8 @@ class AdminControllerTest extends TestCase
     public function testLoadUserRowUsesCanonicalSchoolName(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
         $statsService = $this->createMock(StatisticsService::class);
         $checkinService = $this->createMock(CheckinService::class);
@@ -194,8 +194,8 @@ class AdminControllerTest extends TestCase
     public function testSanitizeSupportRoutingOverrideRejectsFractionalIntegerFields(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
         $statsService = $this->createMock(StatisticsService::class);
         $checkinService = $this->createMock(CheckinService::class);
@@ -243,11 +243,11 @@ class AdminControllerTest extends TestCase
         $stmt->execute([1, null, 'user', 'login', 'success', json_encode(['ip_address' => '2.2.2.2']), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-3 hours'))]);
         $stmt->execute([null, '550e8400-e29b-41d4-a716-4466554400aa', 'user', 'passkey_registered', 'success', json_encode(['passkey_id' => 1, 'label' => 'Admin Laptop']), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-2 hours'))]);
 
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $auth->method('isAdminUser')->willReturn(true);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
         $badgeService->method('compileUserMetrics')->willReturn([
             'total_points_earned' => 10,
@@ -293,11 +293,11 @@ class AdminControllerTest extends TestCase
         $pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
         TestSchemaBuilder::init($pdo);
 
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
         $auth->method('isAdminUser')->willReturn(true);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
         $badgeService->method('compileUserMetrics')->willReturn([]);
         $badgeService->method('getUserBadges')->willReturn([]);
@@ -337,11 +337,11 @@ class AdminControllerTest extends TestCase
         $insert->execute([1, null, 'user', 'login', 'success', json_encode(['ip_address' => '1.1.1.1']), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-1 days'))]);
         $insert->execute([1, null, 'user', 'logout', 'success', json_encode([]), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-120 days'))]);
 
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 9, 'is_admin' => 1]);
         $auth->method('isAdminUser')->willReturn(true);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->once())
             ->method('logDataChange')
             ->with(
@@ -398,11 +398,11 @@ class AdminControllerTest extends TestCase
             (23, '33333333-3333-4333-8333-333333333333', 'adminish', 'admin@example.com', 'active', 1, 'admin', '2026-01-01 00:00:00', '2026-01-01 00:00:00')
         ");
 
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1, 'role' => 'admin']);
         $auth->method('isAdminUser')->willReturn(true);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
         $statsService = $this->createMock(StatisticsService::class);
         $checkinService = $this->createMock(CheckinService::class);
@@ -436,11 +436,11 @@ class AdminControllerTest extends TestCase
             (31, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'target-user', 'target@example.com', 'active', 0, 'user', '2026-01-01 00:00:00', '2026-01-01 00:00:00')
         ");
 
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1, 'role' => 'admin']);
         $auth->method('isAdminUser')->willReturn(true);
 
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->once())
             ->method('logDataChange')
             ->with(

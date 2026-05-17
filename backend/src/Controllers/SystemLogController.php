@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\ErrorLogService;
 use PDO;
 
 /**

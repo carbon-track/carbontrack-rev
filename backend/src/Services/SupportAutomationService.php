@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\SupportAssigneeProfile;
-use CarbonTrack\Models\SupportRoutingSetting;
-use CarbonTrack\Models\SupportTicketAutomationRule;
-use CarbonTrack\Models\SupportTicketTag;
-use CarbonTrack\Models\SupportTicketTagAssignment;
+use CarbonRack\Models\SupportAssigneeProfile;
+use CarbonRack\Models\SupportRoutingSetting;
+use CarbonRack\Models\SupportTicketAutomationRule;
+use CarbonRack\Models\SupportTicketTag;
+use CarbonRack\Models\SupportTicketTagAssignment;
 use DateTimeImmutable;
 use DateTimeZone;
 use PDO;

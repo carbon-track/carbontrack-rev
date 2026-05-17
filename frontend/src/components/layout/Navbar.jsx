@@ -618,8 +618,8 @@ export function Navbar() {
           <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 text-xl font-bold text-green-600 dark:text-emerald-400">
-            <img src="/favicon.ico" alt="CarbonTrack logo" className="h-12 w-12 shrink-0 object-contain" />
-            <span>CarbonTrack</span>
+            <img src="/favicon.ico" alt="CarbonRack logo" className="h-12 w-12 shrink-0 object-contain" />
+            <span>CarbonRack</span>
           </Link>
 
           {/* Desktop Navigation */}

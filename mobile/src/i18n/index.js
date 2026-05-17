@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import en from './locales/en.json';
 import zh from './locales/zh.json';
 
-const LANGUAGE_KEY = 'carbontrack.appearance.language';
+const LANGUAGE_KEY = 'carbonrack.appearance.language';
 const DEFAULT_LANGUAGE_MODE = 'system';
 const DEFAULT_LANGUAGE = 'en';
 

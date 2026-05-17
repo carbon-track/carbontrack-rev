@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\CarbonActivityController;
-use CarbonTrack\Services\CarbonCalculatorService;
-use CarbonTrack\Services\AuditLogService;
+use CarbonRack\Controllers\CarbonActivityController;
+use CarbonRack\Services\CarbonCalculatorService;
+use CarbonRack\Services\AuditLogService;
 
 class CarbonActivityControllerTest extends TestCase
 {
@@ -28,7 +28,7 @@ class CarbonActivityControllerTest extends TestCase
             ]
         ]);
         $calc->method('getCategories')->willReturn(['daily']);
-    $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+    $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
     $controller = new CarbonActivityController($calc, $audit, $errorLog);
 
         $request = makeRequest('GET', '/carbon-activities', null, ['grouped' => 'true']);
@@ -70,7 +70,7 @@ class CarbonActivityControllerTest extends TestCase
             }))
             ->willReturn(true);
 
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
         $controller = new CarbonActivityController($calc, $audit, $errorLog);
 
         $request = makeRequest('GET', '/api/v1/activities/categories')
@@ -102,7 +102,7 @@ class CarbonActivityControllerTest extends TestCase
             }))
             ->willReturn(true);
 
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
         $errorLog->expects($this->once())
             ->method('logException');
 
@@ -128,8 +128,8 @@ class CarbonActivityControllerTest extends TestCase
         $audit = $this->createMock(AuditLogService::class);
         $calc->method('validateActivityData')->willReturn(false);
 
-    $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-    $controller = new \CarbonTrack\Controllers\CarbonActivityController($calc, $audit, $errorLog);
+    $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+    $controller = new \CarbonRack\Controllers\CarbonActivityController($calc, $audit, $errorLog);
         $request = makeRequest('POST', '/admin/carbon-activities', []);
         $response = new \Slim\Psr7\Response();
         $resp = $controller->createActivity($request, $response);
@@ -143,8 +143,8 @@ class CarbonActivityControllerTest extends TestCase
 
         // CarbonActivity::find will be called; we simulate via partial mocking using anonymous class
         // Here we just ensure controller returns success structure without real DB.
-    $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-    $controller = new \CarbonTrack\Controllers\CarbonActivityController($calc, $audit, $errorLog);
+    $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+    $controller = new \CarbonRack\Controllers\CarbonActivityController($calc, $audit, $errorLog);
         $request = makeRequest('PUT', '/admin/carbon-activities/sort-orders', ['activities' => [
                 ['id' => 'a1', 'sort_order' => 1],
                 ['id' => 'a2', 'sort_order' => 2]
@@ -160,12 +160,12 @@ class CarbonActivityControllerTest extends TestCase
         // Without mocking Eloquent static, we just call and expect 500 would not be acceptable. Instead, we rely on behavior check through minimal stub.
         $calc = $this->createMock(CarbonCalculatorService::class);
         $audit = $this->createMock(AuditLogService::class);
-    $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-    $controller = new \CarbonTrack\Controllers\CarbonActivityController($calc, $audit, $errorLog);
+    $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+    $controller = new \CarbonRack\Controllers\CarbonActivityController($calc, $audit, $errorLog);
         $request = makeRequest('GET', '/carbon-activities/not-exist');
         $response = new \Slim\Psr7\Response();
         // 仅验证方法存在（不运行 Eloquent 静态查询）
-        $this->assertTrue(method_exists(\CarbonTrack\Controllers\CarbonActivityController::class, 'getActivity'));
+        $this->assertTrue(method_exists(\CarbonRack\Controllers\CarbonActivityController::class, 'getActivity'));
     }
 
     public function testGetActivityStatistics(): void
@@ -173,8 +173,8 @@ class CarbonActivityControllerTest extends TestCase
         $calc = $this->createMock(CarbonCalculatorService::class);
         $audit = $this->createMock(AuditLogService::class);
         $calc->method('getActivityStatistics')->willReturn(['total_records' => 5]);
-    $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
-    $controller = new \CarbonTrack\Controllers\CarbonActivityController($calc, $audit, $errorLog);
+    $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
+    $controller = new \CarbonRack\Controllers\CarbonActivityController($calc, $audit, $errorLog);
         $request = makeRequest('GET', '/admin/carbon-activities/statistics');
         $response = new \Slim\Psr7\Response();
         $resp = $controller->getActivityStatistics($request, $response, []);

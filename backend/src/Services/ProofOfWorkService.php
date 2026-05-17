@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Support\SyntheticRequestFactory;
 use Monolog\Logger;
 use PDO;
 
@@ -46,7 +46,7 @@ class ProofOfWorkService
             if ($environment === 'production') {
                 throw new \RuntimeException('POW_SECRET or JWT_SECRET must be configured in production.');
             }
-            $secret = 'carbontrack-pow-development-secret';
+            $secret = 'carbonrack-pow-development-secret';
         }
 
         $this->secret = $secret;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Support\InputValueNormalizer;
+use CarbonRack\Support\InputValueNormalizer;
 use PDO;
 
 class AdminAiWriteActionService

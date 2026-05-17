@@ -1,7 +1,7 @@
 {
   "contact": {
     "hero": {
-      "eyebrow": "Contact CarbonTrack",
+      "eyebrow": "Contact CarbonRack",
       "title": "Public contact channels",
       "subtitle": "Use these routes for partnerships, media, and general questions.",
       "primaryAction": "Send email",
@@ -17,7 +17,7 @@
       "phoneTitle": "Phone",
       "phoneDescription": "Best when you need a direct conversation.",
       "addressTitle": "Address",
-      "addressDescription": "CarbonTrack team operations and collaboration base."
+      "addressDescription": "CarbonRack team operations and collaboration base."
     },
     "linksTitle": "More links",
     "links": [
@@ -29,7 +29,7 @@
       {
         "type": "instagram",
         "label": "Follow on Instagram",
-        "href": "https://www.instagram.com/carbontrackorg/",
+        "href": "https://www.instagram.com/carbonrackorg/",
         "external": true
       },
       {
@@ -41,7 +41,7 @@
       {
         "type": "partnership",
         "label": "Partnerships",
-        "href": "https://carbontrack.org/partners",
+        "href": "https://carbonrack.org/partners",
         "external": true
       }
     ]

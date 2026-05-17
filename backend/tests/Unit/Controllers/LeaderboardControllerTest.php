@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Controllers\LeaderboardController;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\CronSchedulerService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\LeaderboardService;
+use CarbonRack\Controllers\LeaderboardController;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\CronSchedulerService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\LeaderboardService;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;

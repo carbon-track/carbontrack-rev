@@ -1,4 +1,4 @@
-# CarbonTrack 项目全栈开发环境配置指南
+# CarbonRack 项目全栈开发环境配置指南
 
 本指南为新成员提供完整的全栈（前端 React + 后端 PHP）开发环境配置说明。
 
@@ -38,7 +38,7 @@
 ```bash
 # 克隆仓库
 git clone <repository-url>
-cd carbontrack_rev
+cd carbonrack_rev
 ```
 
 ---
@@ -62,7 +62,7 @@ APP_DEBUG=true
 DB_DRIVER=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=carbontrack
+DB_DATABASE=carbonrack
 DB_USERNAME=root
 DB_PASSWORD=your_password
 DB_CHARSET=utf8mb4
@@ -79,14 +79,14 @@ OPENAI_API_KEY=your_openai_api_key
 DEBUG_TOKEN=your_debug_token
 
 # 邮件与应用标识
-APP_NAME="CarbonTrack"
-MAIL_FROM_ADDRESS=noreply@carbontrack.com
-MAIL_FROM_NAME="CarbonTrack Support"
+APP_NAME="CarbonRack"
+MAIL_FROM_ADDRESS=noreply@carbonrack.com
+MAIL_FROM_NAME="CarbonRack Support"
 FRONTEND_URL=http://localhost:5173
 ```
 
 ### 3. 数据库初始化
-1. **创建数据库**：在 MySQL 中创建名为 `carbontrack` 的数据库。
+1. **创建数据库**：在 MySQL 中创建名为 `carbonrack` 的数据库。
 2. **导入基础结构**：执行 `database/localhost.sql` 以建立初始表结构和基础数据。
 
 ### 4. 运行后端预览

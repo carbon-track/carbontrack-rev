@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\ProofOfWorkService;
+use CarbonRack\Services\ProofOfWorkService;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
 use PDO;

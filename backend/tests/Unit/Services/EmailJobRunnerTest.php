@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Jobs\EmailJobRunner;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Jobs\EmailJobRunner;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\ErrorLogService;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;

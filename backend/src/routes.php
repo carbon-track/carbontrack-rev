@@ -4,36 +4,36 @@ declare(strict_types=1);
 
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
-use CarbonTrack\Controllers\AuthController;
-use CarbonTrack\Controllers\UserController;
-use CarbonTrack\Controllers\CarbonTrackController;
-use CarbonTrack\Controllers\CarbonActivityController;
-use CarbonTrack\Controllers\ProductController;
-use CarbonTrack\Controllers\MessageController;
-use CarbonTrack\Controllers\SchoolController;
-use CarbonTrack\Controllers\AdminController;
-use CarbonTrack\Controllers\LeaderboardController;
-use CarbonTrack\Controllers\FileUploadController;
-use CarbonTrack\Controllers\AvatarController;
-use CarbonTrack\Controllers\BadgeController;
-use CarbonTrack\Controllers\AdminBadgeController;
-use CarbonTrack\Controllers\SystemLogController;
-use CarbonTrack\Controllers\AdminAiController;
-use CarbonTrack\Controllers\UserAiController;
-use CarbonTrack\Controllers\AdminUserGroupController;
-use CarbonTrack\Controllers\LogSearchController;
-use CarbonTrack\Controllers\AdminLlmUsageController;
-use CarbonTrack\Controllers\StatsController;
-use CarbonTrack\Controllers\CheckinController;
-use CarbonTrack\Controllers\PasskeyController;
-use CarbonTrack\Controllers\AdminSupportController;
-use CarbonTrack\Controllers\AdminCronController;
-use CarbonTrack\Controllers\CronController;
-use CarbonTrack\Controllers\SupportTicketController;
-use CarbonTrack\Middleware\AuthMiddleware;
-use CarbonTrack\Middleware\AdminMiddleware;
-use CarbonTrack\Middleware\SupportMiddleware;
-use CarbonTrack\Middleware\RequestLoggingMiddleware;
+use CarbonRack\Controllers\AuthController;
+use CarbonRack\Controllers\UserController;
+use CarbonRack\Controllers\CarbonRackController;
+use CarbonRack\Controllers\CarbonActivityController;
+use CarbonRack\Controllers\ProductController;
+use CarbonRack\Controllers\MessageController;
+use CarbonRack\Controllers\SchoolController;
+use CarbonRack\Controllers\AdminController;
+use CarbonRack\Controllers\LeaderboardController;
+use CarbonRack\Controllers\FileUploadController;
+use CarbonRack\Controllers\AvatarController;
+use CarbonRack\Controllers\BadgeController;
+use CarbonRack\Controllers\AdminBadgeController;
+use CarbonRack\Controllers\SystemLogController;
+use CarbonRack\Controllers\AdminAiController;
+use CarbonRack\Controllers\UserAiController;
+use CarbonRack\Controllers\AdminUserGroupController;
+use CarbonRack\Controllers\LogSearchController;
+use CarbonRack\Controllers\AdminLlmUsageController;
+use CarbonRack\Controllers\StatsController;
+use CarbonRack\Controllers\CheckinController;
+use CarbonRack\Controllers\PasskeyController;
+use CarbonRack\Controllers\AdminSupportController;
+use CarbonRack\Controllers\AdminCronController;
+use CarbonRack\Controllers\CronController;
+use CarbonRack\Controllers\SupportTicketController;
+use CarbonRack\Middleware\AuthMiddleware;
+use CarbonRack\Middleware\AdminMiddleware;
+use CarbonRack\Middleware\SupportMiddleware;
+use CarbonRack\Middleware\RequestLoggingMiddleware;
 
 // Constants to avoid duplicated literals
 defined('CONTENT_TYPE_JSON') || define('CONTENT_TYPE_JSON', 'application/json');
@@ -61,7 +61,7 @@ return function (App $app) {
             $request->getMethod();
             $response->getBody()->write(json_encode([
                 'success' => true,
-                'message' => 'CarbonTrack API is running',
+                'message' => 'CarbonRack API is running',
                 'version' => '1.0.0',
                 'timestamp' => date('Y-m-d H:i:s')
             ]));
@@ -74,7 +74,7 @@ return function (App $app) {
             $request->getMethod();
             $response->getBody()->write(json_encode([
                 'success' => true,
-                'message' => 'CarbonTrack API v1',
+                'message' => 'CarbonRack API v1',
                 'version' => '1.0.0',
                 'timestamp' => date('Y-m-d H:i:s'),
                 'endpoints' => [
@@ -162,23 +162,23 @@ return function (App $app) {
         $group->get(PATH_CARBON_ACTIVITY_ID, [CarbonActivityController::class, 'getActivity']);
     };
 
-    $registerCarbonTrackRoutes = function (RouteCollectorProxy $group) {
+    $registerCarbonRackRoutes = function (RouteCollectorProxy $group) {
         $group->group('/carbon-track', function (RouteCollectorProxy $carbon) {
-            $carbon->post('/calculate', [CarbonTrackController::class, 'calculate']);
-            $carbon->post('/record', [CarbonTrackController::class, 'submitRecord']);
-            $carbon->get('/transactions', [CarbonTrackController::class, 'getUserRecords']);
-            $carbon->get(PATH_TRANSACTIONS_ID_UUID, [CarbonTrackController::class, 'getRecordDetail']);
-            $carbon->put(PATH_TRANSACTIONS_ID_UUID, [CarbonTrackController::class, 'reviewRecord']);
-            $carbon->put('/transactions/{id:[0-9a-fA-F\-]+}/approve', [CarbonTrackController::class, 'reviewRecord']);
-            $carbon->put('/transactions/{id:[0-9a-fA-F\-]+}/reject', [CarbonTrackController::class, 'reviewRecord']);
-            $carbon->delete(PATH_TRANSACTIONS_ID_UUID, [CarbonTrackController::class, 'deleteTransaction']);
-            $carbon->get('/factors', [CarbonTrackController::class, 'getCarbonFactors']);
-            $carbon->get(PATH_STATS, [CarbonTrackController::class, 'getUserStats']);
+            $carbon->post('/calculate', [CarbonRackController::class, 'calculate']);
+            $carbon->post('/record', [CarbonRackController::class, 'submitRecord']);
+            $carbon->get('/transactions', [CarbonRackController::class, 'getUserRecords']);
+            $carbon->get(PATH_TRANSACTIONS_ID_UUID, [CarbonRackController::class, 'getRecordDetail']);
+            $carbon->put(PATH_TRANSACTIONS_ID_UUID, [CarbonRackController::class, 'reviewRecord']);
+            $carbon->put('/transactions/{id:[0-9a-fA-F\-]+}/approve', [CarbonRackController::class, 'reviewRecord']);
+            $carbon->put('/transactions/{id:[0-9a-fA-F\-]+}/reject', [CarbonRackController::class, 'reviewRecord']);
+            $carbon->delete(PATH_TRANSACTIONS_ID_UUID, [CarbonRackController::class, 'deleteTransaction']);
+            $carbon->get('/factors', [CarbonRackController::class, 'getCarbonFactors']);
+            $carbon->get(PATH_STATS, [CarbonRackController::class, 'getUserStats']);
         })->add(AuthMiddleware::class);
 
     // New standardized endpoint documented in OpenAPI replacing legacy /carbon-track/record
     // Enforces image requirement in controller based on path containing '/api/v1/carbon-records'
-    $group->post('/carbon-records', [CarbonTrackController::class, 'submitRecord'])->add(AuthMiddleware::class);
+    $group->post('/carbon-records', [CarbonRackController::class, 'submitRecord'])->add(AuthMiddleware::class);
     };
 
     $registerProductRoutes = function (RouteCollectorProxy $group) {
@@ -295,10 +295,10 @@ return function (App $app) {
             $admin->delete(PATH_CARBON_ACTIVITY_ID, [CarbonActivityController::class, 'deleteActivity']);
             $admin->post(PATH_CARBON_ACTIVITY_ID . '/restore', [CarbonActivityController::class, 'restoreActivity']);
             $admin->get(PATH_CARBON_ACTIVITY_ID . '/statistics', [CarbonActivityController::class, 'getActivityStatistics']);
-            $admin->get('/activities', [CarbonTrackController::class, 'getPendingRecords']);
+            $admin->get('/activities', [CarbonRackController::class, 'getPendingRecords']);
             // 兼容别名：/admin/carbon-activities/pending 与 /admin/carbon-records
-            $admin->get('/carbon-activities/pending', [CarbonTrackController::class, 'getPendingRecords']);
-            $admin->get('/carbon-records', [CarbonTrackController::class, 'getPendingRecords']);
+            $admin->get('/carbon-activities/pending', [CarbonRackController::class, 'getPendingRecords']);
+            $admin->get('/carbon-records', [CarbonRackController::class, 'getPendingRecords']);
             // 系统请求日志
             $admin->get('/system-logs', [SystemLogController::class, 'list']);
             $admin->get('/system-logs/{id:[0-9]+}', [SystemLogController::class, 'detail']);
@@ -309,8 +309,8 @@ return function (App $app) {
             // Unified logs export & related (previously missing, causing 404 in frontend)
             $admin->get('/logs/export', [LogSearchController::class, 'export']);
             $admin->get('/logs/related', [LogSearchController::class, 'related']);
-            $admin->put('/activities/review', [CarbonTrackController::class, 'reviewRecordsBulk']);
-            $admin->put('/activities/{id:[0-9a-fA-F\-]+}/review', [CarbonTrackController::class, 'reviewRecord']);
+            $admin->put('/activities/review', [CarbonRackController::class, 'reviewRecordsBulk']);
+            $admin->put('/activities/{id:[0-9a-fA-F\-]+}/review', [CarbonRackController::class, 'reviewRecord']);
             $admin->get('/exchanges', [ProductController::class, 'getExchangeRecords']);
             $admin->get('/exchanges/{id:[0-9a-fA-F\-]+}', [ProductController::class, 'getExchangeRecordDetail']);
             $admin->put('/exchanges/{id:[0-9a-fA-F\-]+}/status', [ProductController::class, 'updateExchangeStatus']);
@@ -395,7 +395,7 @@ return function (App $app) {
         $registerAvatarRoutes,
         $registerBadgeRoutes,
         $registerCarbonActivitiesRoutes,
-        $registerCarbonTrackRoutes,
+        $registerCarbonRackRoutes,
         $registerProductRoutes,
         $registerExchangeRoutes,
         $registerMessageRoutes,
@@ -413,7 +413,7 @@ return function (App $app) {
         $registerAvatarRoutes($group);
         $registerBadgeRoutes($group);
         $registerCarbonActivitiesRoutes($group);
-        $registerCarbonTrackRoutes($group);
+        $registerCarbonRackRoutes($group);
         $registerProductRoutes($group);
         $registerExchangeRoutes($group);
         $registerMessageRoutes($group);
@@ -434,7 +434,7 @@ return function (App $app) {
         $group->get('/stats/summary', [StatsController::class, 'getPublicSummary']);
 
         // Backward-compatible aliases for activities listing and categories
-        $group->get('/activities', [CarbonTrackController::class, 'getUserRecords'])->add(AuthMiddleware::class);
+        $group->get('/activities', [CarbonRackController::class, 'getUserRecords'])->add(AuthMiddleware::class);
         $group->get('/activities/categories', [CarbonActivityController::class, 'getCategories'])->add(AuthMiddleware::class);
 
         // AI Assistant

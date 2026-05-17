@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Middleware;
+namespace CarbonRack\Tests\Unit\Middleware;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Middleware\AuthMiddleware;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\AuditLogService;
+use CarbonRack\Middleware\AuthMiddleware;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\AuditLogService;
 
 class AuthMiddlewareTest extends TestCase
 {

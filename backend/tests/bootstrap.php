@@ -35,10 +35,10 @@ $mailDefaults = [
     'MAIL_USERNAME' => 'test',
     'MAIL_PASSWORD' => 'test',
     'MAIL_ENCRYPTION' => 'tls',
-    'MAIL_FROM_ADDRESS' => 'noreply@carbontrack.test',
-    'MAIL_FROM_NAME' => 'CarbonTrack Test',
+    'MAIL_FROM_ADDRESS' => 'noreply@carbonrack.test',
+    'MAIL_FROM_NAME' => 'CarbonRack Test',
     'MAIL_SMTP_DEBUG' => '0',
-    'SUPPORT_EMAIL' => 'support@carbontrack.test',
+    'SUPPORT_EMAIL' => 'support@carbonrack.test',
     'FRONTEND_URL' => 'http://localhost:5173',
 ];
 
@@ -53,7 +53,7 @@ foreach ($mailDefaults as $key => $value) {
 
 // Set test environment variables if not already set
 $_ENV['APP_ENV'] = $_ENV['APP_ENV'] ?? 'testing';
-$_ENV['DB_DATABASE'] = $_ENV['DB_DATABASE'] ?? 'carbontrack_test';
+$_ENV['DB_DATABASE'] = $_ENV['DB_DATABASE'] ?? 'carbonrack_test';
 $_ENV['JWT_SECRET'] = $_ENV['JWT_SECRET'] ?? '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 $_ENV['JWT_EXPIRES_IN'] = $_ENV['JWT_EXPIRES_IN'] ?? '3600';
 

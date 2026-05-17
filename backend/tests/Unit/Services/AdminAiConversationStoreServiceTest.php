@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\AdminAiConversationStoreService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Tests\Integration\TestSchemaBuilder;
+use CarbonRack\Services\AdminAiConversationStoreService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Tests\Integration\TestSchemaBuilder;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
 use PDO;

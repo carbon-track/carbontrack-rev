@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Integration;
+namespace CarbonRack\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Slim\App;
 use Slim\Psr7\Factory\ServerRequestFactory;
 use Slim\Psr7\Factory\ResponseFactory;
 use DI\Container;
-use CarbonTrack\Services\DatabaseService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Tests\Integration\TestSchemaBuilder;
+use CarbonRack\Services\DatabaseService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Tests\Integration\TestSchemaBuilder;
 
 /**
  * Comprehensive business data tests that simulate real-world usage patterns
@@ -430,7 +430,7 @@ class ComprehensiveBusinessDataTest extends TestCase
         $this->assertEquals(150, $data['data']['points']);
     }
 
-    public function testCarbonTrackingWorkflow(): void
+    public function testCarbonRackingWorkflow(): void
     {
         $token = $this->getAuthToken('zhang.wei@testdomain.com');
         $activity = $this->testCarbonActivities[0];

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Models;
+namespace CarbonRack\Tests\Unit\Models;
 
-use CarbonTrack\Models\Message;
+use CarbonRack\Models\Message;
 use PHPUnit\Framework\TestCase;
 
 class MessageTest extends TestCase

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\AdminAnnouncementAiException;
-use CarbonTrack\Services\AdminAnnouncementAiService;
-use CarbonTrack\Services\AdminAnnouncementAiUnavailableException;
-use CarbonTrack\Services\Ai\LlmClientInterface;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Services\AdminAnnouncementAiException;
+use CarbonRack\Services\AdminAnnouncementAiService;
+use CarbonRack\Services\AdminAnnouncementAiUnavailableException;
+use CarbonRack\Services\Ai\LlmClientInterface;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 

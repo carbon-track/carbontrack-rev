@@ -1,7 +1,7 @@
 {
   "support": {
     "hero": {
-      "eyebrow": "Contact CarbonTrack",
+      "eyebrow": "Contact CarbonRack",
       "title": "Choose the route that matches the job.",
       "subtitle": "Use public channels for partnerships and general contact. Once signed in, the same page reveals a ticket lane with attachments, verification, and follow-up history.",
       "primaryAction": "Email support",
@@ -23,7 +23,7 @@
       "phoneTitle": "Phone",
       "phoneDescription": "Best for urgent follow-up during active support hours.",
       "addressTitle": "Address",
-      "addressDescription": "CarbonTrack core team operations and collaboration base."
+      "addressDescription": "CarbonRack core team operations and collaboration base."
     },
     "scenarios": {
       "eyebrow": "Typical scenarios",

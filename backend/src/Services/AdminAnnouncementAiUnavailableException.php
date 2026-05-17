@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
 class AdminAnnouncementAiUnavailableException extends AdminAnnouncementAiException
 {

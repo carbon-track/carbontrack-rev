@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Integration;
+namespace CarbonRack\Tests\Integration;
 
-use CarbonTrack\Controllers\ProductController;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\MessageService;
+use CarbonRack\Controllers\ProductController;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\MessageService;
 use PDO;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;

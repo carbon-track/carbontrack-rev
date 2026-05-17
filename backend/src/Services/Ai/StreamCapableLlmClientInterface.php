@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services\Ai;
+namespace CarbonRack\Services\Ai;
 
 interface StreamCapableLlmClientInterface extends LlmClientInterface
 {

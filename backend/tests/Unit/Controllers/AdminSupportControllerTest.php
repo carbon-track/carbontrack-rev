@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Controllers\AdminSupportController;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\SupportRoutingEngineService;
-use CarbonTrack\Services\SupportAutomationService;
-use CarbonTrack\Services\SupportTicketService;
+use CarbonRack\Controllers\AdminSupportController;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\SupportRoutingEngineService;
+use CarbonRack\Services\SupportAutomationService;
+use CarbonRack\Services\SupportTicketService;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 

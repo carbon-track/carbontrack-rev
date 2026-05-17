@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Controllers\SystemLogController;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\AuthService;
+use CarbonRack\Controllers\SystemLogController;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\AuthService;
 use PHPUnit\Framework\TestCase;
 
 class SystemLogControllerTest extends TestCase

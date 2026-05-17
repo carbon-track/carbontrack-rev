@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Support;
+namespace CarbonRack\Tests\Unit\Support;
 
-use CarbonTrack\Support\ErrorResponseBuilder;
+use CarbonRack\Support\ErrorResponseBuilder;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Headers;
 use Slim\Psr7\Request;

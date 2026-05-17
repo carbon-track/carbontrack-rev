@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Middleware;
+namespace CarbonRack\Tests\Unit\Middleware;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Middleware\TurnstileMiddleware;
-use CarbonTrack\Services\TurnstileService;
-use CarbonTrack\Services\AuditLogService;
+use CarbonRack\Middleware\TurnstileMiddleware;
+use CarbonRack\Services\TurnstileService;
+use CarbonRack\Services\AuditLogService;
 
 class TurnstileMiddlewareTest extends TestCase
 {

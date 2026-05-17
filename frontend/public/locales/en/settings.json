@@ -2,7 +2,7 @@
   "settings": {
     "notifications": {
       "title": "Email notification preferences",
-      "subtitle": "Choose which emails CarbonTrack should send you. Updates take effect immediately.",
+      "subtitle": "Choose which emails CarbonRack should send you. Updates take effect immediately.",
       "emailHeading": "Email alerts",
       "emailDescription": "Toggle the email notifications you would like to receive. Direct messages and security alerts are always delivered.",
       "locked": "This notification is required and cannot be disabled.",

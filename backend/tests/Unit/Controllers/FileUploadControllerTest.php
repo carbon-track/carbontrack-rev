@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\FileUploadController;
-use CarbonTrack\Services\FileMetadataService;
-use CarbonTrack\Services\FileOwnershipConflictException;
-use CarbonTrack\Services\MultipartUploadService;
-use CarbonTrack\Models\File;
-use CarbonTrack\Models\MultipartUpload;
+use CarbonRack\Controllers\FileUploadController;
+use CarbonRack\Services\FileMetadataService;
+use CarbonRack\Services\FileOwnershipConflictException;
+use CarbonRack\Services\MultipartUploadService;
+use CarbonRack\Models\File;
+use CarbonRack\Models\MultipartUpload;
 
 class FileUploadControllerTest extends TestCase
 {
@@ -32,14 +32,14 @@ class FileUploadControllerTest extends TestCase
 
     private function controller(?array $user, ?callable $cfg = null, ?FileMetadataService $fileMeta = null, ?MultipartUploadService $multipart = null): FileUploadController
     {
-        $r2 = $this->createMock(\CarbonTrack\Services\CloudflareR2Service::class);
+        $r2 = $this->createMock(\CarbonRack\Services\CloudflareR2Service::class);
         if ($cfg) { $cfg($r2); }
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn($user);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $logger = new \Monolog\Logger('test');
         $logger->pushHandler(new \Monolog\Handler\NullHandler());
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
         $fileMeta ??= $this->createMock(FileMetadataService::class);
         $multipart ??= $this->createMock(MultipartUploadService::class);
         return new FileUploadController($r2, $auth, $audit, $logger, $errorLog, $fileMeta, $multipart);

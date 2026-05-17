@@ -14,8 +14,8 @@ const testflightGuide = readFileSync(testflightPath, 'utf8');
 const bundleIdentifier = appConfig?.expo?.ios?.bundleIdentifier;
 const associatedDomains = appConfig?.expo?.ios?.associatedDomains || [];
 const webcredentialApps = association?.webcredentials?.apps || [];
-const expectedDomain = 'webcredentials:carbontrackapp.com';
-const expectedBundleIdentifier = 'CarbonTrackOrg.CarbonTrackApp';
+const expectedDomain = 'webcredentials:carbonrackapp.com';
+const expectedBundleIdentifier = 'CarbonRackOrg.CarbonRackApp';
 const expectedTeamId = 'YT85VSXYAF';
 const expectedAppleAppId = `${expectedTeamId}.${expectedBundleIdentifier}`;
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\ProductController;
+use CarbonRack\Controllers\ProductController;
 
 class ProductControllerTest extends TestCase
 {
@@ -18,9 +18,9 @@ class ProductControllerTest extends TestCase
     {
         // Mocks
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
 
         // count statement
         $countStmt = $this->createMock(\PDOStatement::class);
@@ -72,9 +72,9 @@ class ProductControllerTest extends TestCase
     public function testGetProductsUsesDistinctSearchBindings(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $listBound = [];
         $prepareCalls = 0;
 
@@ -126,9 +126,9 @@ class ProductControllerTest extends TestCase
     public function testGetProductDetail(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
 
         $stmt = $this->createMock(\PDOStatement::class);
         $stmt->method('execute')->willReturn(true);
@@ -157,9 +157,9 @@ class ProductControllerTest extends TestCase
     public function testSearchProductTags(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
 
         $stmt = $this->createMock(\PDOStatement::class);
         $stmt->method('bindValue')->willReturn(true);
@@ -185,9 +185,9 @@ class ProductControllerTest extends TestCase
     public function testSearchProductTagsUsesDistinctSearchBindings(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $bound = [];
 
         $stmt = $this->createMock(\PDOStatement::class);
@@ -224,9 +224,9 @@ class ProductControllerTest extends TestCase
     public function testExchangeProductInsufficientStock(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>1,'username'=>'u','points'=>1000]);
 
         // product select FOR UPDATE
@@ -249,9 +249,9 @@ class ProductControllerTest extends TestCase
     public function testExchangeProductInsufficientPoints(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>1,'username'=>'u','points'=>10]);
 
         $select = $this->createMock(\PDOStatement::class);
@@ -273,7 +273,7 @@ class ProductControllerTest extends TestCase
     public function testExchangeProductSuccessFlow(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
         $messageService->expects($this->once())->method('sendMessage');
         $messageService->expects($this->once())
             ->method('sendExchangeConfirmationEmailToUser')
@@ -285,8 +285,8 @@ class ProductControllerTest extends TestCase
                 $this->equalTo(null),
                 $this->equalTo('u')
             );
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>1,'username'=>'u','points'=>1000]);
 
         // product select
@@ -336,9 +336,9 @@ class ProductControllerTest extends TestCase
     public function testGetCategories(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
 
         $categoryStmt = $this->createMock(\PDOStatement::class);
         $categoryStmt->method('execute')->willReturn(true);
@@ -374,9 +374,9 @@ class ProductControllerTest extends TestCase
     public function testGetExchangeRecordsRequiresAdmin(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>1]);
         $auth->method('isAdminUser')->willReturn(false);
 
@@ -390,9 +390,9 @@ class ProductControllerTest extends TestCase
     public function testGetExchangeRecordsSuccess(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>9]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -422,9 +422,9 @@ class ProductControllerTest extends TestCase
     public function testGetExchangeRecordsSearchUsesDistinctBindings(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 9]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -460,9 +460,9 @@ class ProductControllerTest extends TestCase
     public function testUpdateExchangeStatusInvalid(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>9]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -476,7 +476,7 @@ class ProductControllerTest extends TestCase
     public function testUpdateExchangeStatusSuccess(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
         $messageService->expects($this->once())->method('sendMessage');
         $messageService->expects($this->once())
             ->method('sendExchangeStatusUpdateEmailToUser')
@@ -489,8 +489,8 @@ class ProductControllerTest extends TestCase
                 $this->equalTo(null),
                 $this->equalTo(null)
             );
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>9]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -514,9 +514,9 @@ class ProductControllerTest extends TestCase
     public function testGetUserExchangesSuccess(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>5]);
 
         $countStmt = $this->createMock(\PDOStatement::class);
@@ -545,9 +545,9 @@ class ProductControllerTest extends TestCase
     public function testGetExchangeRecordDetailSuccess(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>9]);
         $auth->method('isAdminUser')->willReturn(true);
 
@@ -569,9 +569,9 @@ class ProductControllerTest extends TestCase
     public function testGetExchangeTransactionsAliasSuccess(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>5]);
 
         $countStmt = $this->createMock(\PDOStatement::class);
@@ -600,9 +600,9 @@ class ProductControllerTest extends TestCase
     public function testGetExchangeTransactionDetailSuccess(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>5]);
 
         $stmt = $this->createMock(\PDOStatement::class);
@@ -650,13 +650,13 @@ class ProductControllerTest extends TestCase
             deleted_at TEXT
         )');
 
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
         $audit->expects($this->once())->method('log');
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 99]);
         $auth->method('isAdminUser')->willReturn(true);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
         $capturedException = null;
         $errorLog->expects($this->any())
             ->method('logException')
@@ -728,10 +728,10 @@ class ProductControllerTest extends TestCase
         $pdo->exec("INSERT INTO products (name, category, category_slug, points_required, description, image_path, images, stock, status, sort_order, created_at) VALUES ('Bottle', 'Eco Living', 'eco-living', 100, '', '', '[]', 10, 'active', 0, NOW())");
         $pdo->exec("INSERT INTO products (name, category, category_slug, points_required, description, image_path, images, stock, status, sort_order, created_at) VALUES ('DIY Kit', '手工材料', '', 200, '', '', '[]', 5, 'active', 0, NOW())");
 
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
         $errorLog->expects($this->any())->method('logException');
 
         $controller = new ProductController($pdo, $messageService, $audit, $auth, $errorLog);
@@ -756,10 +756,10 @@ class ProductControllerTest extends TestCase
     public function testGetCategoriesUsesDistinctSearchBindings(): void
     {
         $pdo = $this->createMock(\PDO::class);
-        $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
-        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
-        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $messageService = $this->createMock(\CarbonRack\Services\MessageService::class);
+        $audit = $this->createMock(\CarbonRack\Services\AuditLogService::class);
+        $auth = $this->createMock(\CarbonRack\Services\AuthService::class);
+        $errorLog = $this->createMock(\CarbonRack\Services\ErrorLogService::class);
         $errorLog->expects($this->never())->method('logException');
         $categoryBound = [];
         $prepareCalls = 0;

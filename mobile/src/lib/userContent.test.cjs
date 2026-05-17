@@ -14,7 +14,7 @@ const {
   validateTicketDraft,
 } = require('./userContent');
 
-test('normalizeMessagesPayload accepts CarbonTrack paginated message responses', () => {
+test('normalizeMessagesPayload accepts CarbonRack paginated message responses', () => {
   const payload = normalizeMessagesPayload({
     data: [
       { id: 1, title: 'Welcome', is_read: false, created_at: '2026-05-03 08:00:00' },

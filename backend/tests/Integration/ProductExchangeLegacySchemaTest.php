@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Integration;
+namespace CarbonRack\Tests\Integration;
 
-use CarbonTrack\Controllers\ProductController;
-use CarbonTrack\Models\Message;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\MessageService;
+use CarbonRack\Controllers\ProductController;
+use CarbonRack\Models\Message;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\MessageService;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
 use PDO;
@@ -22,12 +22,12 @@ class ProductExchangeLegacySchemaTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $tmp = tempnam(sys_get_temp_dir(), 'carbontrack_legacy_');
+        $tmp = tempnam(sys_get_temp_dir(), 'carbonrack_legacy_');
         if ($tmp !== false) {
             @unlink($tmp);
             $path = $tmp . '.sqlite';
         } else {
-            $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('carbontrack_legacy_', true) . '.sqlite';
+            $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('carbonrack_legacy_', true) . '.sqlite';
         }
         $this->dbPath = $path;
     }

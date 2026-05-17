@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\CronSchedulerService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\LeaderboardService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\CronSchedulerService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\LeaderboardService;
 use Monolog\Logger;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;

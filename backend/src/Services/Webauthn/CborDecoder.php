@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services\Webauthn;
+namespace CarbonRack\Services\Webauthn;
 
 final class CborDecoder
 {

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Models\File;
-use CarbonTrack\Models\User;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\CloudflareR2Service;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\FileMetadataService;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\NotificationPreferenceService;
-use CarbonTrack\Services\SupportAutomationService;
-use CarbonTrack\Services\SupportTicketService;
+use CarbonRack\Models\File;
+use CarbonRack\Models\User;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\CloudflareR2Service;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\FileMetadataService;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\NotificationPreferenceService;
+use CarbonRack\Services\SupportAutomationService;
+use CarbonRack\Services\SupportTicketService;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Schema\Blueprint;
 use PHPUnit\Framework\TestCase;
@@ -598,7 +598,7 @@ class SupportTicketServiceTest extends TestCase
                 'Support replied to ticket #54',
                 $this->callback(function (array $payload): bool {
                     return ($payload['summary'] ?? null) === 'We posted a new reply and closed the ticket.'
-                        && ($payload['closing'] ?? null) === 'If anything is still unclear, open CarbonTrack to review the thread and follow up.'
+                        && ($payload['closing'] ?? null) === 'If anything is still unclear, open CarbonRack to review the thread and follow up.'
                         && in_array(['label' => 'Status', 'value' => 'Closed'], $payload['details'] ?? [], true)
                         && ($payload['message']['body'] ?? null) === 'Closing this out';
                 }),

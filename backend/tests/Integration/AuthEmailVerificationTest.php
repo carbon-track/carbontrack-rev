@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use CarbonTrack\Controllers\AuthController;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\CloudflareR2Service;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\TurnstileService;
-use CarbonTrack\Services\RegionService;
+use CarbonRack\Controllers\AuthController;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\CloudflareR2Service;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\TurnstileService;
+use CarbonRack\Services\RegionService;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use PHPUnit\Framework\MockObject\MockObject;

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Models;
+namespace CarbonRack\Models;
 
 use PDO;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Support\InputValueNormalizer;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Support\InputValueNormalizer;
 use Psr\Log\LoggerInterface;
 use Slim\Psr7\Factory\ServerRequestFactory;
 

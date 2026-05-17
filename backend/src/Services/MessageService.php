@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Jobs\EmailJobRunner;
-use CarbonTrack\Models\Message;
-use CarbonTrack\Models\User;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\NotificationPreferenceService;
+use CarbonRack\Jobs\EmailJobRunner;
+use CarbonRack\Models\Message;
+use CarbonRack\Models\User;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\NotificationPreferenceService;
 use Monolog\Logger;
 
 class MessageService
@@ -260,7 +260,7 @@ class MessageService
     /**
      * @param mixed $transaction Backward-compatible transaction object/array
      */
-    public function sendCarbonTrackingSubmissionNotification($transaction): Message
+    public function sendCarbonRackingSubmissionNotification($transaction): Message
     {
         $user = is_array($transaction) ? ($transaction['user'] ?? null) : ($transaction->user ?? null);
         $activity = is_array($transaction) ? ($transaction['activity'] ?? null) : ($transaction->activity ?? null);
@@ -296,7 +296,7 @@ class MessageService
     /**
      * @param mixed $transaction Backward-compatible transaction object/array
      */
-    public function sendCarbonTrackingApprovalNotification($transaction, User $approver): Message
+    public function sendCarbonRackingApprovalNotification($transaction, User $approver): Message
     {
         $user = is_array($transaction) ? ($transaction['user'] ?? null) : ($transaction->user ?? null);
         $activity = is_array($transaction) ? ($transaction['activity'] ?? null) : ($transaction->activity ?? null);
@@ -341,7 +341,7 @@ class MessageService
     /**
      * @param mixed $transaction Backward-compatible transaction object/array
      */
-    public function sendCarbonTrackingRejectionNotification($transaction, User $approver, ?string $reason = null): Message
+    public function sendCarbonRackingRejectionNotification($transaction, User $approver, ?string $reason = null): Message
     {
         $user = is_array($transaction) ? ($transaction['user'] ?? null) : ($transaction->user ?? null);
         $activity = is_array($transaction) ? ($transaction['activity'] ?? null) : ($transaction->activity ?? null);
@@ -476,13 +476,13 @@ class MessageService
                   "建议您：\n" .
                   "• 记录更多的碳减排活动\n" .
                   "• 参与平台的环保挑战\n" .
-                  "• 邀请朋友加入CarbonTrack\n\n" .
+                  "• 邀请朋友加入CarbonRack\n\n" .
                   "让我们一起为地球环保贡献更多力量！\n\n" .
                   "Your points balance is low (current: {$user->points}), you may not be able to exchange for desired products.\n\n" .
                   "We suggest you:\n" .
                   "• Record more carbon reduction activities\n" .
                   "• Participate in platform environmental challenges\n" .
-                  "• Invite friends to join CarbonTrack\n\n" .
+                  "• Invite friends to join CarbonRack\n\n" .
                   "Let's contribute more to environmental protection together!";
 
         return $this->sendSystemMessage(

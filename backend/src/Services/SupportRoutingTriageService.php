@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Services\Ai\LlmClientInterface;
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Services\Ai\LlmClientInterface;
+use CarbonRack\Support\SyntheticRequestFactory;
 use Psr\Log\LoggerInterface;
 
 class SupportRoutingTriageService

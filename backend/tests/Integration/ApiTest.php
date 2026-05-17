@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Integration;
+namespace CarbonRack\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Slim\App;
@@ -27,7 +27,7 @@ class ApiTest extends TestCase
         $this->app->get('/', function ($request, $response) {
             $response->getBody()->write(json_encode([
                 'success' => true,
-                'message' => 'CarbonTrack API is running',
+                'message' => 'CarbonRack API is running',
                 'version' => '1.0.0',
                 'timestamp' => date('Y-m-d H:i:s')
             ]));
@@ -63,7 +63,7 @@ class ApiTest extends TestCase
         $data = json_decode($body, true);
 
         $this->assertTrue($data['success']);
-        $this->assertEquals('CarbonTrack API is running', $data['message']);
+        $this->assertEquals('CarbonRack API is running', $data['message']);
         $this->assertEquals('1.0.0', $data['version']);
         $this->assertArrayHasKey('timestamp', $data);
     }

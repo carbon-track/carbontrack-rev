@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\TurnstileService;
-use CarbonTrack\Services\ProofOfWorkService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\CloudflareR2Service;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\UserProfileViewService;
-use CarbonTrack\Support\Uuid;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\TurnstileService;
+use CarbonRack\Services\ProofOfWorkService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\CloudflareR2Service;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\UserProfileViewService;
+use CarbonRack\Support\Uuid;
 use Monolog\Logger;
 use PDO;
 

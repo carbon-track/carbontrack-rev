@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Middleware;
+namespace CarbonRack\Middleware;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use CarbonTrack\Services\SystemLogService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Support\Uuid;
+use CarbonRack\Services\SystemLogService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Support\Uuid;
 use Monolog\Logger;
 
 class RequestLoggingMiddleware implements MiddlewareInterface

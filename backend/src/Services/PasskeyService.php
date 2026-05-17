@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\UserPasskey;
-use CarbonTrack\Models\WebauthnChallenge;
-use CarbonTrack\Services\Webauthn\Base64Url;
-use CarbonTrack\Support\Uuid;
+use CarbonRack\Models\UserPasskey;
+use CarbonRack\Models\WebauthnChallenge;
+use CarbonRack\Services\Webauthn\Base64Url;
+use CarbonRack\Support\Uuid;
 use Monolog\Logger;
 use PDO;
 

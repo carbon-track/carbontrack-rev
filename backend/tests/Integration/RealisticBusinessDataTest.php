@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Integration;
+namespace CarbonRack\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Services\DatabaseService;
+use CarbonRack\Services\DatabaseService;
 use Slim\App;
 use Slim\Psr7\Factory\ServerRequestFactory;
 use DI\Container;
@@ -122,7 +122,7 @@ class RealisticBusinessDataTest extends TestCase
         $data = json_decode($body, true);
         
         $this->assertTrue($data['success']);
-        $this->assertEquals('CarbonTrack API is running', $data['message']);
+        $this->assertEquals('CarbonRack API is running', $data['message']);
         $this->assertEquals('1.0.0', $data['version']);
     }
 
@@ -137,7 +137,7 @@ class RealisticBusinessDataTest extends TestCase
         $data = json_decode($body, true);
         
         $this->assertTrue($data['success']);
-        $this->assertEquals('CarbonTrack API v1', $data['message']);
+        $this->assertEquals('CarbonRack API v1', $data['message']);
         $this->assertArrayHasKey('endpoints', $data);
         
         // Verify all major endpoints are listed

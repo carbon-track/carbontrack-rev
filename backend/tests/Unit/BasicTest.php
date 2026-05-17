@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit;
+namespace CarbonRack\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 
@@ -63,11 +63,11 @@ class BasicTest extends TestCase
 
     public function testStringOperations(): void
     {
-        $str = 'CarbonTrack API';
+        $str = 'CarbonRack API';
         
         $this->assertStringContainsString('Carbon', $str);
         $this->assertEquals(15, strlen($str));
-        $this->assertEquals('carbontrack api', strtolower($str));
+        $this->assertEquals('carbonrack api', strtolower($str));
     }
 
     public function testDateOperations(): void

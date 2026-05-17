@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
-export const DEFAULT_API_BASE_URL = 'https://dev-api.carbontrackapp.com/api/v1';
+export const DEFAULT_API_BASE_URL = 'https://dev-api.carbonrackapp.com/api/v1';
 
 function resolveApiBaseUrl() {
   const configuredBaseUrl = import.meta.env?.VITE_API_URL;

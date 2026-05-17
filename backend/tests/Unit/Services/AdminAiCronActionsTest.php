@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\AdminAiReadModelService;
-use CarbonTrack\Services\AdminAiWriteActionService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\BadgeService;
-use CarbonTrack\Services\CronSchedulerService;
-use CarbonTrack\Services\MessageService;
+use CarbonRack\Services\AdminAiReadModelService;
+use CarbonRack\Services\AdminAiWriteActionService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\BadgeService;
+use CarbonRack\Services\CronSchedulerService;
+use CarbonRack\Services\MessageService;
 use PHPUnit\Framework\TestCase;
 
 class AdminAiCronActionsTest extends TestCase

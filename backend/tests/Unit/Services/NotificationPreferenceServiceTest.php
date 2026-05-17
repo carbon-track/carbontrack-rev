@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Models\User;
-use CarbonTrack\Services\NotificationPreferenceService;
+use CarbonRack\Models\User;
+use CarbonRack\Services\NotificationPreferenceService;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Schema\Blueprint;
 use Monolog\Handler\NullHandler;

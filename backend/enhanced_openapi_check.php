@@ -146,7 +146,7 @@ final class EnhancedOpenApiChecker
 
     private function resolveSourceFile(string $class): ?string
     {
-        $prefix = 'CarbonTrack\\';
+        $prefix = 'CarbonRack\\';
         if (!str_starts_with($class, $prefix)) {
             return null;
         }

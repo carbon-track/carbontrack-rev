@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\CarbonActivity;
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Models\CarbonActivity;
+use CarbonRack\Support\SyntheticRequestFactory;
 use Monolog\Logger;
 
 class CarbonCalculatorService

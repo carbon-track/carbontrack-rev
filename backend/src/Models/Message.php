@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Models;
+namespace CarbonRack\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -329,15 +329,15 @@ class Message extends Model
      */
     public static function createWelcomeMessage(int $receiverId): self
     {
-        $title = '欢迎加入CarbonTrack! / Welcome to CarbonTrack!';
-        $content = "亲爱的用户，欢迎加入CarbonTrack碳减排追踪平台！\n\n" .
+        $title = '欢迎加入CarbonRack! / Welcome to CarbonRack!';
+        $content = "亲爱的用户，欢迎加入CarbonRack碳减排追踪平台！\n\n" .
                   "在这里，您可以：\n" .
                   "• 记录您的碳减排活动\n" .
                   "• 获得碳减排积分\n" .
                   "• 兑换环保商品\n" .
                   "• 查看您的环保贡献\n\n" .
                   "让我们一起为地球环保贡献力量！\n\n" .
-                  "Dear user, welcome to CarbonTrack!\n\n" .
+                  "Dear user, welcome to CarbonRack!\n\n" .
                   "Here you can:\n" .
                   "• Record your carbon reduction activities\n" .
                   "• Earn carbon reduction points\n" .

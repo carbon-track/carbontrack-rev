@@ -1,7 +1,7 @@
 {
   "admin": {
     "title": "Admin Panel",
-    "subtitle": "Run every corner of CarbonTrack from one place",
+    "subtitle": "Run every corner of CarbonRack from one place",
     "transactions": "Transaction Management",
     "messages": "Message Management",
     "logs": "Log Management",

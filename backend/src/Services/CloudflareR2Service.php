@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
 use Aws\S3\S3Client;
 use Aws\Exception\AwsException;
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Support\SyntheticRequestFactory;
 use Monolog\Logger;
 use Psr\Http\Message\UploadedFileInterface;
 

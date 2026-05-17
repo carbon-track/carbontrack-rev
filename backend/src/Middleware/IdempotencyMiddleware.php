@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Middleware;
+namespace CarbonRack\Middleware;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use CarbonTrack\Services\DatabaseService;
-use CarbonTrack\Models\IdempotencyRecord;
+use CarbonRack\Services\DatabaseService;
+use CarbonRack\Models\IdempotencyRecord;
 use Slim\Psr7\Response;
 use Monolog\Logger;
 

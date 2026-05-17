@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
 class PasskeyConfig
 {
@@ -64,7 +64,7 @@ class PasskeyConfig
         }
 
         $appName = trim((string) ($this->env['APP_NAME'] ?? ''));
-        return $appName !== '' ? $appName : 'CarbonTrack';
+        return $appName !== '' ? $appName : 'CarbonRack';
     }
 
     /**

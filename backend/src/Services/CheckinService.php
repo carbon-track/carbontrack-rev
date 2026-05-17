@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Support\SyntheticRequestFactory;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;

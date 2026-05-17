@@ -1,16 +1,16 @@
 <?php
 
-namespace CarbonTrack\Controllers;
+namespace CarbonRack\Controllers;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\AuthService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\EmailService;
-use CarbonTrack\Services\UserProfileViewService;
-use CarbonTrack\Models\Message;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\AuthService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\EmailService;
+use CarbonRack\Services\UserProfileViewService;
+use CarbonRack\Models\Message;
 use PDO;
 
 class MessageController

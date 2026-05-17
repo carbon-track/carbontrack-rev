@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\AchievementBadge;
-use CarbonTrack\Models\UserBadge;
-use CarbonTrack\Models\User;
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Models\AchievementBadge;
+use CarbonRack\Models\UserBadge;
+use CarbonRack\Models\User;
+use CarbonRack\Support\SyntheticRequestFactory;
 use Illuminate\Database\ConnectionInterface;
 use PDO;
 use DateTimeImmutable;
 use DateTimeZone;
-use CarbonTrack\Services\CheckinService;
-use CarbonTrack\Services\MessageService;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Models\Message;
+use CarbonRack\Services\CheckinService;
+use CarbonRack\Services\MessageService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Models\Message;
 use Monolog\Logger;
 
 /**

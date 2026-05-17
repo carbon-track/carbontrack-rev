@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Support;
+namespace CarbonRack\Tests\Unit\Support;
 
-use CarbonTrack\Support\InputValueNormalizer;
+use CarbonRack\Support\InputValueNormalizer;
 use PHPUnit\Framework\TestCase;
 
 class InputValueNormalizerTest extends TestCase

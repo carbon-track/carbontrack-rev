@@ -1,4 +1,4 @@
-# CarbonTrack API .htaccess Configuration
+# CarbonRack API .htaccess Configuration
 # This file provides URL rewriting and security headers for the API
 
 # Enable URL rewriting

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "CarbonTrack Mobile",
+    "name": "CarbonRack Mobile",
     "slug": "mobile",
     "version": "3.0.0",
     "orientation": "portrait",
@@ -14,16 +14,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "CarbonTrackOrg.CarbonTrackApp",
+      "bundleIdentifier": "CarbonRackOrg.CarbonRackApp",
       "associatedDomains": [
-        "webcredentials:carbontrackapp.com"
+        "webcredentials:carbonrackapp.com"
       ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.carbontrack.mobile",
+      "package": "com.carbonrack.mobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -38,7 +38,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow CarbonTrack to select activity proof images.",
+          "photosPermission": "Allow CarbonRack to select activity proof images.",
           "cameraPermission": false,
           "microphonePermission": false
         }
@@ -46,8 +46,8 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow CarbonTrack to show saved images.",
-          "savePhotosPermission": "Allow CarbonTrack to save activity and reward images to your photo library."
+          "photosPermission": "Allow CarbonRack to show saved images.",
+          "savePhotosPermission": "Allow CarbonRack to save activity and reward images to your photo library."
         }
       ],
       [

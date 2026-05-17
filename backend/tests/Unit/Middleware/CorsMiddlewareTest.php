@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Middleware;
+namespace CarbonRack\Tests\Unit\Middleware;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Middleware\CorsMiddleware;
+use CarbonRack\Middleware\CorsMiddleware;
 
 class CorsMiddlewareTest extends TestCase
 {

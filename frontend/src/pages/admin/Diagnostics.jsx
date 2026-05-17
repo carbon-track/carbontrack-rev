@@ -46,7 +46,7 @@ import { API_BASE_URL } from '../../lib/api';
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head'];
 const UNTAGGED_TOKEN = '__untagged__';
 const REMOTE_SPEC_FALLBACK =
-  'https://raw.githubusercontent.com/carbon-track/carbontrack-rev/refs/heads/main/backend/openapi.json';
+  'https://raw.githubusercontent.com/carbon-track/carbonrack-rev/refs/heads/main/backend/openapi.json';
 const API_TEST_BASE_URL = API_BASE_URL;
 const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 

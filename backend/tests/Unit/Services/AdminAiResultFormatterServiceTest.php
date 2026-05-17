@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\AdminAiResultFormatterService;
+use CarbonRack\Services\AdminAiResultFormatterService;
 use PHPUnit\Framework\TestCase;
 
 class AdminAiResultFormatterServiceTest extends TestCase

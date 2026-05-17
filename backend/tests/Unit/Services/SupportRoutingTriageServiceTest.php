@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Services\Ai\LlmClientInterface;
-use CarbonTrack\Services\SupportRoutingTriageService;
+use CarbonRack\Services\Ai\LlmClientInterface;
+use CarbonRack\Services\SupportRoutingTriageService;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 

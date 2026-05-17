@@ -17,7 +17,7 @@ const localFileForSave = async (uri) => {
   if (String(uri).startsWith('file://')) {
     return uri;
   }
-  const target = `${FileSystem.cacheDirectory}carbontrack-image-${Date.now()}${extensionFromUri(uri)}`;
+  const target = `${FileSystem.cacheDirectory}carbonrack-image-${Date.now()}${extensionFromUri(uri)}`;
   const result = await FileSystem.downloadAsync(uri, target);
   return result.uri;
 };

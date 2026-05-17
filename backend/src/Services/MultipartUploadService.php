@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Services;
+namespace CarbonRack\Services;
 
-use CarbonTrack\Models\MultipartUpload;
-use CarbonTrack\Support\SyntheticRequestFactory;
+use CarbonRack\Models\MultipartUpload;
+use CarbonRack\Support\SyntheticRequestFactory;
 use Monolog\Logger;
 
 class MultipartUploadService

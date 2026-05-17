@@ -1,7 +1,7 @@
 {
   "admin": {
     "title": "管理后台",
-    "subtitle": "集中管理 CarbonTrack 平台的一切",
+    "subtitle": "集中管理 CarbonRack 平台的一切",
     "transactions": "交易管理",
     "messages": "消息管理",
     "logs": "日志管理",

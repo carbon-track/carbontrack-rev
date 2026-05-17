@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Controllers;
+namespace CarbonRack\Tests\Unit\Controllers;
 
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
 use Illuminate\Database\QueryException;
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Controllers\SchoolController;
+use CarbonRack\Controllers\SchoolController;
 
 class SchoolControllerTest extends TestCase
 {

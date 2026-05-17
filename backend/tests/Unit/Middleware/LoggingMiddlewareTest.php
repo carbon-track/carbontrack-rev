@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Middleware;
+namespace CarbonRack\Tests\Unit\Middleware;
 
 use PHPUnit\Framework\TestCase;
-use CarbonTrack\Middleware\LoggingMiddleware;
+use CarbonRack\Middleware\LoggingMiddleware;
 
 class LoggingMiddlewareTest extends TestCase
 {

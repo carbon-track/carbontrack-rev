@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace CarbonTrack\Tests\Unit\Services;
+namespace CarbonRack\Tests\Unit\Services;
 
-use CarbonTrack\Models\UserPasskey;
-use CarbonTrack\Models\WebauthnChallenge;
-use CarbonTrack\Services\AuditLogService;
-use CarbonTrack\Services\ErrorLogService;
-use CarbonTrack\Services\NativeWebauthnProvider;
-use CarbonTrack\Services\PasskeyConfig;
-use CarbonTrack\Services\PasskeyOperationException;
-use CarbonTrack\Services\PasskeyService;
-use CarbonTrack\Services\RegionService;
-use CarbonTrack\Services\Webauthn\Base64Url;
-use CarbonTrack\Services\WebauthnProviderInterface;
-use CarbonTrack\Tests\Integration\TestSchemaBuilder;
+use CarbonRack\Models\UserPasskey;
+use CarbonRack\Models\WebauthnChallenge;
+use CarbonRack\Services\AuditLogService;
+use CarbonRack\Services\ErrorLogService;
+use CarbonRack\Services\NativeWebauthnProvider;
+use CarbonRack\Services\PasskeyConfig;
+use CarbonRack\Services\PasskeyOperationException;
+use CarbonRack\Services\PasskeyService;
+use CarbonRack\Services\RegionService;
+use CarbonRack\Services\Webauthn\Base64Url;
+use CarbonRack\Services\WebauthnProviderInterface;
+use CarbonRack\Tests\Integration\TestSchemaBuilder;
 use Monolog\Logger;
 use PDO;
 use PHPUnit\Framework\TestCase;
@@ -40,7 +40,7 @@ class PasskeyServiceTest extends TestCase
         $this->config = new PasskeyConfig([
             'PASSKEYS_ENABLED' => 'true',
             'PASSKEYS_RP_ID' => 'app.example.test',
-            'PASSKEYS_RP_NAME' => 'CarbonTrack Test',
+            'PASSKEYS_RP_NAME' => 'CarbonRack Test',
             'PASSKEYS_ORIGINS' => 'https://app.example.test',
             'PASSKEYS_CHALLENGE_TTL_SECONDS' => '300',
             'PASSKEYS_REGISTRATION_TIMEOUT_MS' => '180000',
@@ -71,7 +71,7 @@ class PasskeyServiceTest extends TestCase
 
         $this->assertNotEmpty($result['challenge_id']);
         $this->assertSame('app.example.test', $result['public_key']['rp']['id']);
-        $this->assertSame('CarbonTrack Test', $result['public_key']['rp']['name']);
+        $this->assertSame('CarbonRack Test', $result['public_key']['rp']['name']);
         $this->assertCount(1, $result['public_key']['excludeCredentials']);
         $this->assertSame('existing-credential', $result['public_key']['excludeCredentials'][0]['id']);
         $this->assertTrue($result['integration']['available']);

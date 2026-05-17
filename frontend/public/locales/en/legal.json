@@ -3,12 +3,12 @@
     "lastUpdated": "Last Updated: {{date}}",
     "privacy": {
       "title": "Privacy Policy",
-      "intro": "CarbonTrack is committed to protecting your privacy. This policy outlines how we collect, use, and safeguard your data in accordance with the <strong>Personal Data (Privacy) Ordinance (Cap. 486) of Hong Kong (\"PDPO\")</strong> and the <strong>EU General Data Protection Regulation (\"GDPR\")</strong>.",
+      "intro": "CarbonRack is committed to protecting your privacy. This policy outlines how we collect, use, and safeguard your data in accordance with the <strong>Personal Data (Privacy) Ordinance (Cap. 486) of Hong Kong (\"PDPO\")</strong> and the <strong>EU General Data Protection Regulation (\"GDPR\")</strong>.",
       "sections": {
         "identity": {
           "title": "1. Identity and Scope",
-          "content1": "This Privacy Policy applies to the CarbonTrack platform (\"Service\"), operated by CarbonTrack from <strong>Hong Kong SAR</strong>. We provide our services to users globally.",
-          "content2": "For the purposes of the GDPR, CarbonTrack is the <strong>Data Controller</strong> of your personal information."
+          "content1": "This Privacy Policy applies to the CarbonRack platform (\"Service\"), operated by CarbonRack from <strong>Hong Kong SAR</strong>. We provide our services to users globally.",
+          "content2": "For the purposes of the GDPR, CarbonRack is the <strong>Data Controller</strong> of your personal information."
         },
         "collection": {
           "title": "2. Information We Collect",
@@ -31,7 +31,7 @@
         },
         "storage": {
           "title": "4. Data Storage and International Transfers",
-          "content1": "CarbonTrack is based in Hong Kong. Your data is primarily processed and stored on secure servers located in <strong>Hong Kong</strong> and via global cloud service providers (e.g., Cloudflare).",
+          "content1": "CarbonRack is based in Hong Kong. Your data is primarily processed and stored on secure servers located in <strong>Hong Kong</strong> and via global cloud service providers (e.g., Cloudflare).",
           "content2": "For international data transfers (including those from the EU/EEA), we implement appropriate protective measures to ensure your data security in compliance with applicable laws.",
           "items": []
         },
@@ -55,18 +55,18 @@
         "contact": {
           "title": "7. Contact Us",
           "intro": "If you have any questions about this Privacy Policy or our data practices, please contact us at:",
-          "details": "<strong>CarbonTrack Privacy Team</strong><br/>Email: <a href=\"mailto:{{email}}\" class=\"text-blue-600 hover:underline\">{{email}}</a>"
+          "details": "<strong>CarbonRack Privacy Team</strong><br/>Email: <a href=\"mailto:{{email}}\" class=\"text-blue-600 hover:underline\">{{email}}</a>"
         }
       }
     },
     "terms": {
       "title": "Terms of Service",
-      "intro": "Please read these terms carefully before using the CarbonTrack platform. By accessing or using our service, you agree to be bound by these terms.",
+      "intro": "Please read these terms carefully before using the CarbonRack platform. By accessing or using our service, you agree to be bound by these terms.",
       "sections": {
         "agreement": {
           "title": "1. Agreement to Terms",
-          "content1": "These Terms of Service (\"Terms\") constitute a legally binding agreement made between you, whether personally or on behalf of an entity (\"you\") and <strong>CarbonTrack</strong> (\"we,\" \"us,\" or \"our\"), regarding your access to and use of our website and services.",
-          "content2": "CarbonTrack is operated from <strong>Hong Kong SAR</strong>."
+          "content1": "These Terms of Service (\"Terms\") constitute a legally binding agreement made between you, whether personally or on behalf of an entity (\"you\") and <strong>CarbonRack</strong> (\"we,\" \"us,\" or \"our\"), regarding your access to and use of our website and services.",
+          "content2": "CarbonRack is operated from <strong>Hong Kong SAR</strong>."
         },
         "responsibility": {
           "title": "2. User Responsibilities & Conduct",
@@ -80,11 +80,11 @@
         },
         "ip": {
           "title": "3. Intellectual Property",
-          "content": "The Service and its original content (excluding content provided by users), features, and functionality are and will remain the exclusive property of CarbonTrack and its licensors. The Service is protected by copyright, trademark, and other laws of both Hong Kong and foreign countries."
+          "content": "The Service and its original content (excluding content provided by users), features, and functionality are and will remain the exclusive property of CarbonRack and its licensors. The Service is protected by copyright, trademark, and other laws of both Hong Kong and foreign countries."
         },
         "liability": {
           "title": "4. Limitation of Liability",
-          "content": "To the maximum extent permitted by applicable law, CarbonTrack shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from (i) your access to or use of or inability to access or use the Service; (ii) any conduct or content of any third party on the Service."
+          "content": "To the maximum extent permitted by applicable law, CarbonRack shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from (i) your access to or use of or inability to access or use the Service; (ii) any conduct or content of any third party on the Service."
         },
         "law": {
           "title": "5. Governing Law and Dispute Resolution",
@@ -103,7 +103,7 @@
     },
     "cookies": {
       "title": "Cookie Policy",
-      "intro": "This Cookie Policy explains how CarbonTrack uses cookies and similar technologies to recognize you when you visit our website.",
+      "intro": "This Cookie Policy explains how CarbonRack uses cookies and similar technologies to recognize you when you visit our website.",
       "sections": {
         "what": {
           "title": "1. What are Cookies?",
@@ -152,7 +152,7 @@
       "sections": {
         "commitment": {
           "title": "1. Our Commitment",
-          "content": "CarbonTrack is committed to protecting your data. We employ industry-standard technical and organizational measures to safeguard your information against unauthorized access, disclosure, alteration, and destruction."
+          "content": "CarbonRack is committed to protecting your data. We employ industry-standard technical and organizational measures to safeguard your information against unauthorized access, disclosure, alteration, and destruction."
         },
         "infrastructure": {
           "title": "2. Infrastructure Security",
@@ -173,7 +173,7 @@
         },
         "vuln": {
           "title": "4. Vulnerability Reporting",
-          "intro": "If you believe you have found a security vulnerability in CarbonTrack, please let us know immediately. We appreciate your assistance in making our platform safer.",
+          "intro": "If you believe you have found a security vulnerability in CarbonRack, please let us know immediately. We appreciate your assistance in making our platform safer.",
           "policyTitle": "Responsible Disclosure Policy",
           "contact": "Please submit your report to <a href=\"mailto:{{email}}\" class=\"underline font-semibold\">{{email}}</a>.",
           "items": [
