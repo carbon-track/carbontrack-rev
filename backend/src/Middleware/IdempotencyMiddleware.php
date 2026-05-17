@@ -12,6 +12,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 use CarbonTrack\Services\DatabaseService;
 use CarbonTrack\Services\AuthService;
 use CarbonTrack\Models\IdempotencyRecord;
+use CarbonTrack\Support\SensitiveDataRedactor;
 use Slim\Psr7\Response;
 use Monolog\Logger;
 
@@ -140,6 +141,7 @@ class IdempotencyMiddleware implements MiddlewareInterface
                         ->withAttribute('user_email', $payload['email'] ?? null)
                         ->withAttribute('user_role', $payload['role'] ?? 'user')
                         ->withAttribute('authenticated_user', $payload['user'] ?? null)
+                        ->withAttribute('user', $payload['user'] ?? null)
                         ->withAttribute('token_payload', $payload)
                         ->withAttribute('idempotency_validated_token', true);
                     return [$tokenUserId, $request];
@@ -202,7 +204,11 @@ class IdempotencyMiddleware implements MiddlewareInterface
         }
 
         if (is_string($value)) {
-            hash_update($context, 'string:' . strlen($value) . ':' . hash('sha256', $value) . ';');
+            $length = strlen($value);
+            $fingerprintValue = $length > self::FINGERPRINT_MAX_STRING_BYTES
+                ? substr($value, 0, self::FINGERPRINT_MAX_STRING_BYTES)
+                : $value;
+            hash_update($context, 'string:' . $length . ':' . hash('sha256', $fingerprintValue) . ';');
             return;
         }
 
@@ -427,7 +433,9 @@ class IdempotencyMiddleware implements MiddlewareInterface
                 'user_id' => $userId,
                 'request_method' => $request->getMethod(),
                 'request_uri' => $request->getUri()->getPath(),
-                'request_body' => $this->encodeForFingerprint($this->normalizeForFingerprint($request->getParsedBody())),
+                'request_body' => $this->encodeForFingerprint($this->normalizeForFingerprint(
+                    SensitiveDataRedactor::redact($request->getParsedBody())
+                )),
                 'response_status' => $statusCode,
                 'response_body' => $responseBody,
                 'ip_address' => $this->getClientIp($request),

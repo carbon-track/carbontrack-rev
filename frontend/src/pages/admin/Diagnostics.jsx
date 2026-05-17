@@ -938,7 +938,7 @@ function RequestTester({ operation }) {
       let stripped = false;
       if (!targetIsTrusted) {
         Object.keys(headers).forEach((key) => {
-          if (/^(proxy-)?authorization$/i.test(key)) {
+          if (/^(proxy-)?authorization$|^cookie$|^x-mobile-client-token$/i.test(key)) {
             delete headers[key];
             stripped = true;
           }
