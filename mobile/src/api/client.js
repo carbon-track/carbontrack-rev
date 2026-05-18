@@ -4,7 +4,15 @@ import { jwtDecode } from 'jwt-decode';
 import useAuthStore from '../store/authStore';
 import { mobileClientHeaders } from './mobileClientConfig';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dev-api.carbontrackapp.com/api/v1';
+const resolveApiUrl = () => {
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (typeof configuredUrl === 'string' && configuredUrl.trim()) {
+    return configuredUrl.trim();
+  }
+  throw new Error('EXPO_PUBLIC_API_URL must be configured with the backend API base URL');
+};
+
+const API_URL = resolveApiUrl();
 const REFRESH_THRESHOLD_SECONDS = 10 * 60;
 const IDEMPOTENT_METHODS = new Set(['post', 'put', 'patch']);
 export const API_REQUEST_TIMEOUT_MS = 15000;

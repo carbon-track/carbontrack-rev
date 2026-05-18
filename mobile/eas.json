@@ -15,6 +15,9 @@
     "production": {
       "autoIncrement": true,
       "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.carbontrackapp.com/api/v1"
+      },
       "ios": {
         "image": "latest"
       }

@@ -1,17 +1,15 @@
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
-export const DEFAULT_API_BASE_URL = '/api/v1';
-
 function resolveApiBaseUrl() {
   const configuredBaseUrl = import.meta.env?.VITE_API_URL;
   if (typeof configuredBaseUrl === 'string' && configuredBaseUrl.trim()) {
     return configuredBaseUrl.trim();
   }
-  return DEFAULT_API_BASE_URL;
+  throw new Error('VITE_API_URL must be configured with the backend API base URL');
 }
 
-// API base URL - 优先环境变量，未配置时使用同源 API
+// API base URL - 必须由环境变量显式配置，避免误连开发环境或同源静态站点。
 export const API_BASE_URL = resolveApiBaseUrl();
 const IDEMPOTENT_METHODS = new Set(['post', 'put', 'patch']);
 
