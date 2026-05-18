@@ -1102,7 +1102,7 @@ class FileUploadController
         }
 
         if ($fileRecord) {
-            return $this->isOwnedFileRecord($fileRecord, $userId);
+            return false;
         }
 
         return $this->objectMetadataBelongsToUser($fileInfo, $userId);

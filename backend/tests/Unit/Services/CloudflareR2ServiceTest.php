@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace CarbonTrack\Tests\Unit\Services;
 
 use Aws\MockHandler;
+use Aws\Command;
+use Aws\Exception\AwsException;
 use Aws\Result;
 use Aws\S3\S3Client;
 use CarbonTrack\Services\CloudflareR2Service;
@@ -45,7 +47,36 @@ class CloudflareR2ServiceTest extends TestCase
         ]);
     }
 
+    public function testValidateDirectUploadObjectReadFailureUsesGenericExceptionMessage(): void
+    {
+        $service = $this->makeServiceWithGetObjectFailure('ListObjects failed for https://accountid1234567890.r2.cloudflarestorage.com/private-bucket');
+
+        try {
+            $service->validateDirectUploadObject('uploads/bad.png', 'bad.png', [
+                'size' => 34,
+                'mime_type' => 'image/png',
+            ]);
+        } catch (\RuntimeException $e) {
+            $this->assertSame('Failed to verify uploaded file content', $e->getMessage());
+            $this->assertStringNotContainsString('accountid1234567890', $e->getMessage());
+            $this->assertStringNotContainsString('private-bucket', $e->getMessage());
+            return;
+        }
+
+        $this->fail('Expected RuntimeException was not thrown');
+    }
+
     private function makeServiceWithGetObjectBody(string $body): CloudflareR2Service
+    {
+        return $this->makeServiceWithMockHandler(new Result(['Body' => $body]));
+    }
+
+    private function makeServiceWithGetObjectFailure(string $message): CloudflareR2Service
+    {
+        return $this->makeServiceWithMockHandler(new AwsException($message, new Command('GetObject')));
+    }
+
+    private function makeServiceWithMockHandler(Result|AwsException $result): CloudflareR2Service
     {
         $logger = new Logger('test');
         $logger->pushHandler(new NullHandler());
@@ -61,7 +92,7 @@ class CloudflareR2ServiceTest extends TestCase
         );
 
         $mock = new MockHandler();
-        $mock->append(new Result(['Body' => $body]));
+        $mock->append($result);
         $s3Client = new S3Client([
             'version' => 'latest',
             'region' => 'auto',

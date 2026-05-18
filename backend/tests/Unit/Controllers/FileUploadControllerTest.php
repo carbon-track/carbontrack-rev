@@ -634,6 +634,40 @@ class FileUploadControllerTest extends TestCase
         $this->assertSame('INVALID_FILE_CONTENT', $payload['code']);
     }
 
+    public function testConfirmDoesNotDeleteAlreadyPersistedOwnedObjectWhenContentValidationFails(): void
+    {
+        $owned = new File();
+        $owned->user_id = 33;
+        $fileMeta = $this->createMock(FileMetadataService::class);
+        $fileMeta->expects($this->once())
+            ->method('findByFilePath')
+            ->with(self::EXISTING_OK_PATH)
+            ->willReturn($owned);
+        $fileMeta->expects($this->never())->method('createRecord');
+
+        $c = $this->controller(['id'=>33], function($r2){
+            $r2->method('getFileInfo')->willReturn([
+                'file_path'=>self::EXISTING_OK_PATH,
+                'size'=>256,
+                'mime_type'=>self::MIME_PNG,
+                'metadata'=>['uploaded_by'=>'33'],
+            ]);
+            $r2->expects($this->once())
+                ->method('validateDirectUploadObject')
+                ->with(self::EXISTING_OK_PATH, 'bad-name.txt', $this->isType('array'))
+                ->willThrowException(new \InvalidArgumentException('File extension not allowed. Allowed extensions: jpg, jpeg, png, gif, webp'));
+            $r2->expects($this->never())->method('deleteFile');
+        }, $fileMeta);
+
+        $resp = $c->confirmDirectUpload(makeRequest('POST', self::ROUTE_CONFIRM,[
+            'file_path'=>self::EXISTING_OK_PATH,'original_name'=>'bad-name.txt'
+        ]), new \Slim\Psr7\Response());
+
+        $this->assertSame(400, $resp->getStatusCode());
+        $payload = json_decode((string)$resp->getBody(), true);
+        $this->assertSame('INVALID_FILE_CONTENT', $payload['code']);
+    }
+
     public function testR2DiagnosticsResponseRedactsStorageIdentifiers(): void
     {
         $c = $this->controller(['id'=>1, 'is_admin'=>1], function($r2){

@@ -522,7 +522,7 @@ class CloudflareR2Service
             $this->logFailure('r2_direct_upload_content_read_failed', $e, [
                 'file_path' => $filePath,
             ], '/internal/r2/direct-upload-content');
-            throw new \RuntimeException('Failed to verify uploaded file content: ' . $e->getMessage(), 0, $e);
+            throw new \RuntimeException('Failed to verify uploaded file content', 0, $e);
         }
 
         if (!$this->isValidImageContent($content, $mimeType)) {
