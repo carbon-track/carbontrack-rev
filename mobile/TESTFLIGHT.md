@@ -39,7 +39,7 @@
 
 ## 发布前配置
 
-移动端运行时配置统一走环境变量。`eas.json` 只选择 build profile 和 EAS environment，不再内联 API 域名或原生功能开关。
+移动端运行时配置统一走环境变量。`eas.json` 选择 build profile 和 EAS environment；production profile 仅内联正式 API 基地址，原生功能开关仍从 EAS Environment Variables 或本地 `.env` 读取。
 
 本地开发前，确认 `mobile/.env` 包含：
 

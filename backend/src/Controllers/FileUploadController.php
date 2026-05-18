@@ -210,6 +210,7 @@ class FileUploadController
                     // 改用实际信息，但返回时仍提示
                     $info = $altInfo;
                     $storagePath = $altPath;
+                    $info['file_path'] = $storagePath;
                 }
             }
             if (!$info) {
@@ -278,7 +279,7 @@ class FileUploadController
 
             // 持久化元数据（如果 sha256 提供，则去重引用计数）
             ['file' => $fileRecord, 'duplicate' => $duplicated] = $this->persistDirectUploadOwnership(
-                $filePath,
+                $storagePath,
                 (int) $user['id'],
                 $originalName,
                 $info,

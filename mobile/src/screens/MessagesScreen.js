@@ -653,7 +653,6 @@ function TicketDetailModal({ ticketId, onClose }) {
                         key={value}
                         contentStyle={styles.starButtonContent}
                         onPress={() => updateFeedbackDraft(feedbackCandidate, { rating: value })}
-                        onPressIn={() => updateFeedbackDraft(feedbackCandidate, { rating: value })}
                         style={styles.starButton}
                       >
                         <Ionicons

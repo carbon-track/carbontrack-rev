@@ -523,6 +523,58 @@ class FileUploadControllerTest extends TestCase
         $this->assertSame(1, $payload['data']['reference_count']);
     }
 
+    public function testConfirmPersistsResolvedBucketPrefixedStoragePath(): void
+    {
+        $requestedPath = 'uploads/prefix-fallback.jpg';
+        $actualPath = 'carbontrack-bucket/' . $requestedPath;
+
+        $created = new File();
+        $created->reference_count = 1;
+        $created->sha256 = str_repeat('a', 64);
+
+        $fileMeta = $this->createMock(FileMetadataService::class);
+        $fileMeta->expects($this->once())
+            ->method('findByFilePath')
+            ->with($actualPath)
+            ->willReturn(null);
+        $fileMeta->expects($this->once())
+            ->method('createRecord')
+            ->with($this->callback(function(array $data) use ($actualPath): bool {
+                return ($data['file_path'] ?? null) === $actualPath
+                    && ($data['user_id'] ?? null) === 41
+                    && is_string($data['sha256'] ?? null);
+            }))
+            ->willReturn($created);
+
+        $c = $this->controller(['id'=>41], function($r2) use ($requestedPath, $actualPath) {
+            $r2->method('getBucketName')->willReturn('carbontrack-bucket');
+            $r2->method('getFileInfo')->willReturnCallback(function($path) use ($actualPath) {
+                if ($path !== $actualPath) {
+                    return null;
+                }
+
+                return [
+                    'file_path' => $actualPath,
+                    'size' => 10,
+                    'mime_type' => self::MIME_JPEG,
+                    'metadata' => ['uploaded_by' => '41'],
+                ];
+            });
+            $r2->expects($this->once())
+                ->method('validateDirectUploadObject')
+                ->with($actualPath, 'prefix-fallback.jpg', $this->isType('array'));
+        }, $fileMeta);
+
+        $resp = $c->confirmDirectUpload(makeRequest('POST', self::ROUTE_CONFIRM, [
+            'file_path' => $requestedPath,
+            'original_name' => 'prefix-fallback.jpg',
+        ]), new \Slim\Psr7\Response());
+
+        $this->assertSame(200, $resp->getStatusCode());
+        $payload = json_decode((string) $resp->getBody(), true);
+        $this->assertSame($actualPath, $payload['data']['file_path']);
+    }
+
     public function testConfirmNotFound(): void
     {
         $c = $this->controller(['id'=>12], function($r2){
