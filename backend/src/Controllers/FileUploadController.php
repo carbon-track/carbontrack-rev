@@ -1434,7 +1434,7 @@ class FileUploadController
             }
 
             $values[] = $raw;
-            $parts = @parse_url($raw);
+            $parts = parse_url($raw);
             if (!is_array($parts)) {
                 continue;
             }
