@@ -1461,11 +1461,21 @@ class FileUploadController
 
         $values = array_values(array_unique(array_filter(
             $values,
-            fn ($value) => is_string($value) && strlen($value) >= 3
+            fn ($value) => is_string($value) && $this->shouldRedactDiagnosticIdentifier($value)
         )));
         usort($values, fn ($a, $b) => strlen($b) <=> strlen($a));
 
         return $values;
+    }
+
+    private function shouldRedactDiagnosticIdentifier(string $value): bool
+    {
+        $value = trim($value);
+        if (strlen($value) >= 12) {
+            return true;
+        }
+
+        return strlen($value) >= 6 && preg_match('/[.\-\d]/', $value) === 1;
     }
 
     private function redactDiagnosticValue($value, array $redactionValues)

@@ -767,6 +767,28 @@ class FileUploadControllerTest extends TestCase
         $this->assertStringContainsString('[redacted-id]', $error);
     }
 
+    public function testR2DiagnosticsRedactionDoesNotMaskCommonLowEntropyTerms(): void
+    {
+        $c = $this->controller(['id'=>1, 'is_admin'=>1], function($r2){
+            $r2->method('diagnostics')->willReturn([
+                'bucket' => 'dev',
+                'endpoint' => 'https://api.r2.dev/dev',
+                'public_base' => 'https://api.r2.dev/dev',
+                'endpoint_has_bucket_path' => false,
+                'tls_verify' => true,
+                'checks' => [],
+                'errors' => ['dev api prod labels should remain readable'],
+                'timestamp' => '2026-05-18T00:00:00+00:00',
+            ]);
+        });
+
+        $resp = $c->r2Diagnostics(makeRequest('GET', '/files/r2/diagnostics'), new \Slim\Psr7\Response());
+
+        $this->assertSame(200, $resp->getStatusCode());
+        $payload = json_decode((string)$resp->getBody(), true);
+        $this->assertSame('dev api prod labels should remain readable', $payload['data']['errors'][0]);
+    }
+
     public function testR2DiagnosticsFailureDoesNotExposeExceptionDetails(): void
     {
         $c = $this->controller(['id'=>1, 'is_admin'=>1], function($r2){
