@@ -1135,7 +1135,7 @@ class CloudflareR2Service
             'tls_verify' => empty($_ENV['R2_DISABLE_TLS_VERIFY']),
             'checks' => $checks,
             'errors' => $errors,
-            'timestamp' => date('c')
+            'timestamp' => gmdate('c')
         ];
     }
 

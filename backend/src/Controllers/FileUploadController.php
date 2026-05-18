@@ -1394,13 +1394,15 @@ class FileUploadController
 
     private function redactR2Diagnostics(array $diagnostics): array
     {
+        $redactionValues = $this->diagnosticRedactionValues($diagnostics);
         $checks = $diagnostics['checks'] ?? [];
         if (isset($checks['presign_sample']) && is_array($checks['presign_sample'])) {
             unset($checks['presign_sample']['file_path']);
         }
+        $checks = $this->redactDiagnosticValue($checks, $redactionValues);
 
         $errors = array_map(
-            fn ($error) => $this->redactDiagnosticText((string) $error),
+            fn ($error) => $this->redactDiagnosticText((string) $error, $redactionValues),
             array_values($diagnostics['errors'] ?? [])
         );
 
@@ -1414,14 +1416,83 @@ class FileUploadController
             'tls_verify' => (bool) ($diagnostics['tls_verify'] ?? true),
             'checks' => $checks,
             'errors' => $errors,
-            'timestamp' => $diagnostics['timestamp'] ?? date('c'),
+            'timestamp' => $diagnostics['timestamp'] ?? gmdate('c'),
         ];
     }
 
-    private function redactDiagnosticText(string $value): string
+    private function diagnosticRedactionValues(array $diagnostics): array
+    {
+        $values = [];
+        foreach (['bucket', 'endpoint', 'public_base', 'recommended_endpoint'] as $field) {
+            if (!isset($diagnostics[$field]) || !is_string($diagnostics[$field])) {
+                continue;
+            }
+
+            $raw = trim($diagnostics[$field]);
+            if ($raw === '') {
+                continue;
+            }
+
+            $values[] = $raw;
+            $parts = @parse_url($raw);
+            if (!is_array($parts)) {
+                continue;
+            }
+
+            $host = trim((string) ($parts['host'] ?? ''));
+            if ($host !== '') {
+                $values[] = $host;
+                if (preg_match('/^pub-([a-z0-9-]+)\.r2\.dev$/i', $host, $matches)) {
+                    $values[] = $matches[1];
+                } elseif (preg_match('/^([a-z0-9-]+)\.r2\.cloudflarestorage\.com$/i', $host, $matches)) {
+                    $values[] = $matches[1];
+                }
+            }
+
+            $path = trim((string) ($parts['path'] ?? ''), '/');
+            if ($path !== '') {
+                foreach (explode('/', $path) as $segment) {
+                    if ($segment !== '') {
+                        $values[] = $segment;
+                    }
+                }
+            }
+        }
+
+        $values = array_values(array_unique(array_filter(
+            $values,
+            fn ($value) => is_string($value) && strlen($value) >= 3
+        )));
+        usort($values, fn ($a, $b) => strlen($b) <=> strlen($a));
+
+        return $values;
+    }
+
+    private function redactDiagnosticValue($value, array $redactionValues)
+    {
+        if (is_array($value)) {
+            return array_map(
+                fn ($item) => $this->redactDiagnosticValue($item, $redactionValues),
+                $value
+            );
+        }
+
+        if (is_string($value)) {
+            return $this->redactDiagnosticText($value, $redactionValues);
+        }
+
+        return $value;
+    }
+
+    private function redactDiagnosticText(string $value, array $redactionValues = []): string
     {
         $value = preg_replace('#https?://[^\s,)\]]+#i', '[redacted-url]', $value) ?? $value;
-        return preg_replace('/\b[a-f0-9]{16,}\b/i', '[redacted-id]', $value) ?? $value;
+        $value = preg_replace('/\b[a-f0-9]{16,}\b/i', '[redacted-id]', $value) ?? $value;
+        foreach ($redactionValues as $identifier) {
+            $value = str_ireplace($identifier, '[redacted-storage]', $value);
+        }
+
+        return $value;
     }
 }
 

@@ -717,7 +717,10 @@ class FileUploadControllerTest extends TestCase
                         'url_length' => 512,
                     ],
                 ],
-                'errors' => ['ListObjects failed for https://accountid1234567890.r2.cloudflarestorage.com/private-bucket'],
+                'errors' => [
+                    'ListObjects failed for https://accountid1234567890.r2.cloudflarestorage.com/private-bucket',
+                    'Plain host accountid1234567890.r2.cloudflarestorage.com and bucket private-bucket leaked by SDK',
+                ],
                 'timestamp' => '2026-05-18T00:00:00+00:00',
             ]);
         });
@@ -735,6 +738,8 @@ class FileUploadControllerTest extends TestCase
         $this->assertArrayNotHasKey('file_path', $data['checks']['presign_sample']);
         $this->assertStringNotContainsString('accountid1234567890', $data['errors'][0]);
         $this->assertStringNotContainsString('private-bucket', $data['errors'][0]);
+        $this->assertStringNotContainsString('accountid1234567890', $data['errors'][1]);
+        $this->assertStringNotContainsString('private-bucket', $data['errors'][1]);
     }
 
     public function testR2DiagnosticsRedactionKeepsLongNonHexWordsReadable(): void

@@ -10,7 +10,8 @@ const MAX_DYNAMIC_SOLVE_ATTEMPTS = 12000000;
 const MAX_DYNAMIC_SOLVE_MS = 90000;
 const EXPECTED_ATTEMPT_MULTIPLIER = 3;
 const POW_UI_WATCHDOG_MS = MAX_DYNAMIC_SOLVE_MS + 10000;
-const activeScopes = new Set();
+const scopeQueues = new Map();
+let cachedTextEncoder = null;
 // PoW needs hundreds of thousands of hashes; keep hashing inside JS instead of
 // crossing the Expo native module boundary once per nonce.
 const SHA256_INITIAL_STATE = [
@@ -49,6 +50,13 @@ const blockLengthForMessage = (messageLength) => (
 );
 
 const utf8Bytes = (message) => {
+  if (typeof globalThis.TextEncoder === 'function') {
+    if (!cachedTextEncoder) {
+      cachedTextEncoder = new globalThis.TextEncoder();
+    }
+    return cachedTextEncoder.encode(message);
+  }
+
   const bytes = [];
 
   for (let i = 0; i < message.length; i += 1) {
@@ -266,15 +274,9 @@ export const getProofOfWorkChallenge = async (scope) => {
   return response.data?.data || {};
 };
 
-export const withMobileProofOfWork = async (scope, payload) => {
-  if (activeScopes.has(scope)) {
-    throw new Error('Proof-of-work calculation already in progress');
-  }
-
-  activeScopes.add(scope);
+const buildProofOfWorkPayload = async (scope, payload) => {
   const operationId = useProofOfWorkStore.getState().begin(scope);
   const watchdog = setTimeout(() => {
-    activeScopes.delete(scope);
     useProofOfWorkStore.getState().end(operationId);
   }, POW_UI_WATCHDOG_MS);
 
@@ -297,7 +299,21 @@ export const withMobileProofOfWork = async (scope, payload) => {
     };
   } finally {
     clearTimeout(watchdog);
-    activeScopes.delete(scope);
     useProofOfWorkStore.getState().end(operationId);
   }
+};
+
+export const withMobileProofOfWork = async (scope, payload) => {
+  const previous = scopeQueues.get(scope) || Promise.resolve();
+  const queued = previous
+    .catch(() => {})
+    .then(() => buildProofOfWorkPayload(scope, payload));
+  const tracked = queued.finally(() => {
+    if (scopeQueues.get(scope) === tracked) {
+      scopeQueues.delete(scope);
+    }
+  });
+
+  scopeQueues.set(scope, tracked);
+  return tracked;
 };
