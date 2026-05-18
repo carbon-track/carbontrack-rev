@@ -230,7 +230,25 @@ class FileUploadController
                     $info
                 );
                 if ($canDeleteFailedObject) {
-                    $this->r2Service->deleteFile($storagePath, (int) $user['id']);
+                    try {
+                        $this->r2Service->deleteFile($storagePath, (int) $user['id']);
+                    } catch (\Throwable $cleanupError) {
+                        $this->logger->error('Failed to delete invalid direct upload object during cleanup', [
+                            'file_path' => $filePath,
+                            'storage_path' => $storagePath,
+                            'user_id' => $user['id'],
+                            'error' => $cleanupError->getMessage(),
+                        ]);
+                        try {
+                            $this->errorLogService->logException($cleanupError, $request, [
+                                'context' => 'direct_upload_invalid_object_cleanup_failed',
+                                'file_path' => $filePath,
+                                'storage_path' => $storagePath,
+                            ]);
+                        } catch (\Throwable $ignore) {
+                            $this->logger->error('ErrorLogService failed: ' . $ignore->getMessage());
+                        }
+                    }
                 } else {
                     $this->logger->warning('Skipped failed direct upload cleanup for unverified object ownership', [
                         'file_path' => $filePath,

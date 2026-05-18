@@ -31,7 +31,9 @@ class PasskeyConfig
         if ($value !== '') {
             $rpId = strtolower($value);
 
-            if ($frontendHost !== null) {
+            if (!$this->isValidRpIdHostname($rpId)) {
+                $rpId = '';
+            } elseif ($frontendHost !== null) {
                 if ($this->isRpIdCompatibleWithHost($rpId, $frontendHost)) {
                     return $rpId;
                 }
@@ -252,6 +254,32 @@ class PasskeyConfig
         return $host === $rpId || str_ends_with($host, '.' . $rpId);
     }
 
+    private function isValidRpIdHostname(string $rpId): bool
+    {
+        $rpId = strtolower(trim($rpId));
+        if ($rpId === '' || str_contains($rpId, '://') || str_contains($rpId, '/') || str_contains($rpId, ':')) {
+            return false;
+        }
+
+        if (preg_match('/\s/', $rpId) === 1 || str_starts_with($rpId, '.') || str_ends_with($rpId, '.')) {
+            return false;
+        }
+
+        foreach (explode('.', $rpId) as $label) {
+            if (
+                $label === ''
+                || strlen($label) > 63
+                || str_starts_with($label, '-')
+                || str_ends_with($label, '-')
+                || preg_match('/^[a-z0-9-]+$/', $label) !== 1
+            ) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private function resolveOriginFromUrl(string $url): ?string
     {
         $url = trim($url);
@@ -305,7 +333,7 @@ class PasskeyConfig
         }
 
         $rpId = strtolower($rpId);
-        if ($rpId === 'localhost' || str_contains($rpId, '://') || str_contains($rpId, '/')) {
+        if ($rpId === 'localhost' || !$this->isValidRpIdHostname($rpId)) {
             return null;
         }
 

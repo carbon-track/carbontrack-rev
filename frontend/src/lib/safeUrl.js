@@ -1,4 +1,4 @@
-export const SAFE_HTML_URI_PATTERN = /^(?:(?:https?|mailto|tel):|#|\/(?!\/))/i;
+export const SAFE_HTML_URI_PATTERN = /^(?:(?:https?|mailto|tel):|#|\/(?![/\\]))/i;
 
 const STORAGE_HOST_SUFFIXES = ['.r2.dev', '.r2.cloudflarestorage.com'];
 const ATTACHMENT_ORIGIN_ENV_KEYS = [
@@ -8,7 +8,12 @@ const ATTACHMENT_ORIGIN_ENV_KEYS = [
 ];
 
 export function isSafeHtmlUri(value) {
-  return typeof value === 'string' && SAFE_HTML_URI_PATTERN.test(value.trim());
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  const trimmed = value.trim();
+  return trimmed !== '' && !trimmed.includes('\\') && SAFE_HTML_URI_PATTERN.test(trimmed);
 }
 
 function envValue(key) {
@@ -63,7 +68,7 @@ export function safeAttachmentHref(value) {
   }
 
   const trimmed = value.trim();
-  if (!trimmed || trimmed.startsWith('//')) {
+  if (!trimmed || trimmed.startsWith('//') || trimmed.includes('\\')) {
     return '';
   }
 

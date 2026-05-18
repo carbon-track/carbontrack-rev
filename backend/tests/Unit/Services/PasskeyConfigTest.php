@@ -30,6 +30,16 @@ class PasskeyConfigTest extends TestCase
         $this->assertSame('dev.carbontrackapp.com', $config->getRpId());
     }
 
+    public function testGetRpIdFallsBackWhenConfiguredRpIdContainsPort(): void
+    {
+        $config = new PasskeyConfig([
+            'PASSKEYS_RP_ID' => 'carbontrackapp.com:8443',
+            'FRONTEND_URL' => 'https://dev.carbontrackapp.com',
+        ]);
+
+        $this->assertSame('dev.carbontrackapp.com', $config->getRpId());
+    }
+
     public function testGetAllowedOriginsIncludesFrontendOriginWhenExplicitOriginsMissIt(): void
     {
         $config = new PasskeyConfig([
@@ -66,6 +76,19 @@ class PasskeyConfigTest extends TestCase
 
         $this->assertSame([
             'https://dev.carbontrack.com',
+        ], $config->getAllowedOrigins());
+    }
+
+    public function testGetAllowedOriginsDoesNotBuildOriginFromRpIdWithPort(): void
+    {
+        $config = new PasskeyConfig([
+            'PASSKEYS_RP_ID' => 'carbontrackapp.com:8443',
+            'PASSKEYS_ORIGINS' => 'https://dev.carbontrackapp.com',
+            'FRONTEND_URL' => 'https://dev.carbontrackapp.com',
+        ]);
+
+        $this->assertSame([
+            'https://dev.carbontrackapp.com',
         ], $config->getAllowedOrigins());
     }
 
