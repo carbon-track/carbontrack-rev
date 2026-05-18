@@ -1421,7 +1421,7 @@ class FileUploadController
     private function redactDiagnosticText(string $value): string
     {
         $value = preg_replace('#https?://[^\s,)\]]+#i', '[redacted-url]', $value) ?? $value;
-        return preg_replace('/\b[a-z0-9]{16,}\b/i', '[redacted-id]', $value) ?? $value;
+        return preg_replace('/\b[a-f0-9]{16,}\b/i', '[redacted-id]', $value) ?? $value;
     }
 }
 

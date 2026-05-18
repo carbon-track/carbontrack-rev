@@ -3,7 +3,7 @@ import { mobileClientType, requireMobileClientToken } from './mobileClientConfig
 import useProofOfWorkStore from '../store/proofOfWorkStore';
 
 const HASH_BATCH_SIZE = 512;
-const YIELD_INTERVAL = 4096;
+const YIELD_INTERVAL = HASH_BATCH_SIZE * 2;
 const MAX_SOLVE_ATTEMPTS = 2000000;
 const MAX_SOLVE_MS = 30000;
 const MAX_DYNAMIC_SOLVE_ATTEMPTS = 12000000;

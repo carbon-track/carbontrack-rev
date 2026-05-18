@@ -746,7 +746,7 @@ class CloudflareR2Service
             return str_starts_with($content, 'GIF87a') || str_starts_with($content, 'GIF89a');
         }
         if ($mimeType === 'image/webp') {
-            return str_starts_with($content, 'RIFF') && substr($content, 8, 4) === 'WEBP';
+            return strlen($content) >= 12 && str_starts_with($content, 'RIFF') && substr($content, 8, 4) === 'WEBP';
         }
 
         return false;

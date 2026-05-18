@@ -47,6 +47,19 @@ class CloudflareR2ServiceTest extends TestCase
         ]);
     }
 
+    public function testValidateDirectUploadObjectRejectsShortWebpHeader(): void
+    {
+        $service = $this->makeServiceWithGetObjectBody('RIFF');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('File content does not match the declared MIME type');
+
+        $service->validateDirectUploadObject('uploads/bad.webp', 'bad.webp', [
+            'size' => 4,
+            'mime_type' => 'image/webp',
+        ]);
+    }
+
     public function testValidateDirectUploadObjectReadFailureUsesGenericExceptionMessage(): void
     {
         $service = $this->makeServiceWithGetObjectFailure('ListObjects failed for https://accountid1234567890.r2.cloudflarestorage.com/private-bucket');
