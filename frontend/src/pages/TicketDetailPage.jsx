@@ -51,6 +51,7 @@ function AttachmentList({ attachments }) {
                     filePath={!href && filePath ? filePath : undefined}
                     alt={attachment.original_name}
                     className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+                    loading="lazy"
                   />
                 </div>
                 <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">

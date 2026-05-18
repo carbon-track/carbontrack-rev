@@ -44,6 +44,10 @@ const rotateRight = (value, bits) => (
   (value >>> bits) | (value << (32 - bits))
 );
 
+const blockLengthForMessage = (messageLength) => (
+  Math.ceil((messageLength + 1 + 8) / 64) * 64
+);
+
 const utf8Bytes = (message) => {
   const bytes = [];
 
@@ -84,17 +88,29 @@ const utf8Bytes = (message) => {
   return bytes;
 };
 
-const sha256Bytes = (message) => {
-  const messageBytes = utf8Bytes(message);
-  const bitLength = messageBytes.length * 8;
-  const paddedLength = messageBytes.length + 1 + 8;
-  const totalLength = Math.ceil(paddedLength / 64) * 64;
-  const buffer = new Uint8Array(totalLength);
-  const words = new Uint32Array(64);
-  const state = SHA256_INITIAL_STATE.slice();
+const writeDecimalBytes = (value, buffer, offset) => {
+  const text = String(value);
+  for (let i = 0; i < text.length; i += 1) {
+    buffer[offset + i] = text.charCodeAt(i);
+  }
+  return offset + text.length;
+};
 
-  buffer.set(messageBytes);
-  buffer[messageBytes.length] = 0x80;
+const createSha256Workspace = (maxMessageLength) => ({
+  buffer: new Uint8Array(blockLengthForMessage(maxMessageLength)),
+  words: new Uint32Array(64),
+  state: new Uint32Array(8),
+  digest: new Uint8Array(32),
+});
+
+const sha256WorkspaceDigest = (workspace, messageLength) => {
+  const { buffer, words, state, digest } = workspace;
+  const bitLength = messageLength * 8;
+  const totalLength = blockLengthForMessage(messageLength);
+
+  buffer.fill(0, messageLength, totalLength);
+  buffer[messageLength] = 0x80;
+  state.set(SHA256_INITIAL_STATE);
 
   const highBits = Math.floor(bitLength / 0x100000000);
   const lowBits = bitLength >>> 0;
@@ -154,7 +170,6 @@ const sha256Bytes = (message) => {
     state[7] = (state[7] + h) >>> 0;
   }
 
-  const digest = new Uint8Array(32);
   for (let i = 0; i < state.length; i += 1) {
     digest[i * 4] = (state[i] >>> 24) & 0xff;
     digest[i * 4 + 1] = (state[i] >>> 16) & 0xff;
@@ -163,6 +178,18 @@ const sha256Bytes = (message) => {
   }
 
   return digest;
+};
+
+const createProofOfWorkHasher = (challenge, maxAttempts) => {
+  const prefixBytes = utf8Bytes(`${challenge}:`);
+  const maxNonceDigits = Math.max(1, String(Math.max(0, maxAttempts - 1)).length);
+  const workspace = createSha256Workspace(prefixBytes.length + maxNonceDigits);
+
+  return (nonce) => {
+    workspace.buffer.set(prefixBytes, 0);
+    const messageLength = writeDecimalBytes(nonce, workspace.buffer, prefixBytes.length);
+    return sha256WorkspaceDigest(workspace, messageLength);
+  };
 };
 
 const hasLeadingZeroBits = (bytes, difficulty) => {
@@ -202,6 +229,7 @@ export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
       normalizedDifficulty >= 22 ? MAX_DYNAMIC_SOLVE_MS : MAX_SOLVE_MS,
     );
   const startedAt = Date.now();
+  const hashNonce = createProofOfWorkHasher(challenge, maxAttempts);
   let nonce = 0;
   let checked = 0;
   while (checked < maxAttempts) {
@@ -214,7 +242,7 @@ export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
 
     const batchEnd = Math.min(nonce + HASH_BATCH_SIZE, maxAttempts);
     for (; nonce < batchEnd; nonce += 1) {
-      if (hasLeadingZeroBits(sha256Bytes(`${challenge}:${nonce}`), normalizedDifficulty)) {
+      if (hasLeadingZeroBits(hashNonce(nonce), normalizedDifficulty)) {
         return String(nonce);
       }
     }
