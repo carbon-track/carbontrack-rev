@@ -223,7 +223,21 @@ class FileUploadController
             try {
                 $this->r2Service->validateDirectUploadObject($storagePath, $originalName, $info);
             } catch (\InvalidArgumentException $e) {
-                $this->r2Service->deleteFile($storagePath, (int) $user['id']);
+                $canDeleteFailedObject = $this->canDeleteFailedDirectUploadObject(
+                    $filePath,
+                    $storagePath,
+                    (int) $user['id'],
+                    $info
+                );
+                if ($canDeleteFailedObject) {
+                    $this->r2Service->deleteFile($storagePath, (int) $user['id']);
+                } else {
+                    $this->logger->warning('Skipped failed direct upload cleanup for unverified object ownership', [
+                        'file_path' => $filePath,
+                        'storage_path' => $storagePath,
+                        'user_id' => $user['id'],
+                    ]);
+                }
                 $this->auditLogService->log([
                     'user_id' => (int) $user['id'],
                     'action' => 'direct_upload_confirmed',
@@ -1074,6 +1088,35 @@ class FileUploadController
         $existingOwnerId = (int) ($fileRecord->user_id ?? 0);
 
         return $userId > 0 && $existingOwnerId > 0 && $existingOwnerId === $userId;
+    }
+
+    private function canDeleteFailedDirectUploadObject(string $filePath, string $storagePath, int $userId, array $fileInfo): bool
+    {
+        if ($userId <= 0) {
+            return false;
+        }
+
+        $fileRecord = $this->fileMetadataService->findByFilePath($filePath);
+        if (!$fileRecord && $storagePath !== $filePath) {
+            $fileRecord = $this->fileMetadataService->findByFilePath($storagePath);
+        }
+
+        if ($fileRecord) {
+            return $this->isOwnedFileRecord($fileRecord, $userId);
+        }
+
+        return $this->objectMetadataBelongsToUser($fileInfo, $userId);
+    }
+
+    private function objectMetadataBelongsToUser(array $fileInfo, int $userId): bool
+    {
+        $metadata = $fileInfo['metadata'] ?? [];
+        if (!is_array($metadata)) {
+            return false;
+        }
+
+        $uploadedBy = $metadata['uploaded_by'] ?? null;
+        return $uploadedBy !== null && trim((string) $uploadedBy) === (string) $userId;
     }
 
     private function persistDirectUploadOwnership(string $filePath, int $userId, string $originalName, array $fileInfo, ?string $sha256 = null): array

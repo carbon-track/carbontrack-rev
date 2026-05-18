@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 let nextOperationId = 1;
 
-const useProofOfWorkStore = create((set, get) => ({
+const useProofOfWorkStore = create((set) => ({
   activeCount: 0,
   operations: {},
 
