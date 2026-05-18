@@ -43,6 +43,32 @@ class PasskeyConfigTest extends TestCase
         ], $config->getAllowedOrigins());
     }
 
+    public function testGetAllowedOriginsIncludesConfiguredRpIdOriginForAssociatedDomainPasskeys(): void
+    {
+        $config = new PasskeyConfig([
+            'PASSKEYS_RP_ID' => 'carbontrackapp.com',
+            'PASSKEYS_ORIGINS' => 'https://dev.carbontrackapp.com',
+            'FRONTEND_URL' => 'https://dev.carbontrackapp.com',
+        ]);
+
+        $this->assertSame([
+            'https://dev.carbontrackapp.com',
+            'https://carbontrackapp.com',
+        ], $config->getAllowedOrigins());
+    }
+
+    public function testGetAllowedOriginsDoesNotTrustIncompatibleConfiguredRpIdOrigin(): void
+    {
+        $config = new PasskeyConfig([
+            'PASSKEYS_RP_ID' => 'carbontrackapp.com',
+            'PASSKEYS_ORIGINS' => 'https://dev.carbontrack.com',
+        ]);
+
+        $this->assertSame([
+            'https://dev.carbontrack.com',
+        ], $config->getAllowedOrigins());
+    }
+
     public function testGetAllowedOriginsFallsBackToFrontendOriginBeforeAppUrl(): void
     {
         $config = new PasskeyConfig([

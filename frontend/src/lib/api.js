@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
-export const DEFAULT_API_BASE_URL = 'https://dev-api.carbontrackapp.com/api/v1';
+export const DEFAULT_API_BASE_URL = '/api/v1';
 
 function resolveApiBaseUrl() {
   const configuredBaseUrl = import.meta.env?.VITE_API_URL;
@@ -11,7 +11,7 @@ function resolveApiBaseUrl() {
   return DEFAULT_API_BASE_URL;
 }
 
-// API base URL - 优先环境变量，未配置时回退到开发 API
+// API base URL - 优先环境变量，未配置时使用同源 API
 export const API_BASE_URL = resolveApiBaseUrl();
 const IDEMPOTENT_METHODS = new Set(['post', 'put', 'patch']);
 

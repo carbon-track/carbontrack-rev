@@ -170,7 +170,7 @@ export default function RecordScreen({ navigation, route }) {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.82,
     });
     if (!result.canceled && result.assets?.[0]) {

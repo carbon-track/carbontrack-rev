@@ -176,6 +176,7 @@ class FileUploadController
             }
             $body = $request->getParsedBody() ?: [];
             $filePath = trim($body['file_path'] ?? '');
+            $storagePath = $filePath;
             $originalName = trim($body['original_name'] ?? '');
             $entityType = $body['entity_type'] ?? null;
             $entityId = isset($body['entity_id']) ? (int)$body['entity_id'] : null;
@@ -208,6 +209,7 @@ class FileUploadController
                     ]);
                     // 改用实际信息，但返回时仍提示
                     $info = $altInfo;
+                    $storagePath = $altPath;
                 }
             }
             if (!$info) {
@@ -216,6 +218,30 @@ class FileUploadController
                     'user_id' => $user['id']
                 ]);
                 return $this->jsonResponse($response, ['success' => false, 'message' => 'File not found in storage'], 404);
+            }
+
+            try {
+                $this->r2Service->validateDirectUploadObject($storagePath, $originalName, $info);
+            } catch (\InvalidArgumentException $e) {
+                $this->r2Service->deleteFile($storagePath, (int) $user['id']);
+                $this->auditLogService->log([
+                    'user_id' => (int) $user['id'],
+                    'action' => 'direct_upload_confirmed',
+                    'operation_category' => 'file_management',
+                    'affected_table' => 'files',
+                    'status' => 'failed',
+                    'data' => [
+                        'file_path' => $filePath,
+                        'storage_path' => $storagePath,
+                        'error' => $e->getMessage(),
+                        'error_code' => 'INVALID_FILE_CONTENT',
+                    ],
+                ]);
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'code' => 'INVALID_FILE_CONTENT'
+                ], 400);
             }
 
             // 持久化元数据（如果 sha256 提供，则去重引用计数）
@@ -1296,11 +1322,45 @@ class FileUploadController
             if (!$user) {
                 return $this->jsonResponse($response, ['success' => false, 'message' => 'Unauthorized'], 401);
             }
-            $data = $this->r2Service->diagnostics();
+            $data = $this->redactR2Diagnostics($this->r2Service->diagnostics());
             return $this->jsonResponse($response, ['success' => true, 'data' => $data]);
         } catch (\Throwable $e) {
-            return $this->jsonResponse($response, ['success' => false, 'message' => 'Diagnostics failed: ' . $e->getMessage()], 500);
+            try { $this->errorLogService->logException($e, $request); } catch (\Throwable $ignore) { $this->logger->error('ErrorLogService failed: ' . $ignore->getMessage()); }
+            $this->logger->error('R2 diagnostics failed', ['error' => $e->getMessage()]);
+            return $this->jsonResponse($response, ['success' => false, 'message' => 'Diagnostics failed'], 500);
         }
+    }
+
+    private function redactR2Diagnostics(array $diagnostics): array
+    {
+        $checks = $diagnostics['checks'] ?? [];
+        if (isset($checks['presign_sample']) && is_array($checks['presign_sample'])) {
+            unset($checks['presign_sample']['file_path']);
+        }
+
+        $errors = array_map(
+            fn ($error) => $this->redactDiagnosticText((string) $error),
+            array_values($diagnostics['errors'] ?? [])
+        );
+
+        return [
+            'storage_configured' => [
+                'bucket' => !empty($diagnostics['bucket']),
+                'endpoint' => !empty($diagnostics['endpoint']),
+                'public_base' => !empty($diagnostics['public_base']),
+            ],
+            'endpoint_has_bucket_path' => (bool) ($diagnostics['endpoint_has_bucket_path'] ?? false),
+            'tls_verify' => (bool) ($diagnostics['tls_verify'] ?? true),
+            'checks' => $checks,
+            'errors' => $errors,
+            'timestamp' => $diagnostics['timestamp'] ?? date('c'),
+        ];
+    }
+
+    private function redactDiagnosticText(string $value): string
+    {
+        $value = preg_replace('#https?://[^\s,)\]]+#i', '[redacted-url]', $value) ?? $value;
+        return preg_replace('/\b[a-z0-9]{16,}\b/i', '[redacted-id]', $value) ?? $value;
     }
 }
 

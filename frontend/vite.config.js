@@ -55,7 +55,7 @@ function resolveApiBaseUrl(env) {
     return configuredApiUrl
   }
 
-
+  return '/api/v1'
 }
 
 // https://vite.dev/config/

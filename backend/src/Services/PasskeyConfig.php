@@ -79,6 +79,11 @@ class PasskeyConfig
             $origins[] = $frontendOrigin;
         }
 
+        $rpIdOrigin = $this->resolveOriginFromRpId($origins);
+        if ($rpIdOrigin !== null) {
+            $origins[] = $rpIdOrigin;
+        }
+
         $origins = array_values(array_unique($origins));
         if ($origins !== []) {
             return $origins;
@@ -287,5 +292,51 @@ class PasskeyConfig
         }
 
         return strtolower($host);
+    }
+
+    /**
+     * @param string[] $candidateOrigins
+     */
+    private function resolveOriginFromRpId(array $candidateOrigins): ?string
+    {
+        $rpId = trim((string) ($this->env['PASSKEYS_RP_ID'] ?? ''));
+        if ($rpId === '') {
+            return null;
+        }
+
+        $rpId = strtolower($rpId);
+        if ($rpId === 'localhost' || str_contains($rpId, '://') || str_contains($rpId, '/')) {
+            return null;
+        }
+
+        $frontendHost = $this->resolveHostFromUrl((string) ($this->env['FRONTEND_URL'] ?? ''));
+        if ($frontendHost !== null && !$this->isRpIdCompatibleWithHost($rpId, $frontendHost)) {
+            return null;
+        }
+
+        if ($frontendHost === null && !$this->isRpIdCompatibleWithCandidateOrigins($rpId, $candidateOrigins)) {
+            return null;
+        }
+
+        return 'https://' . $rpId;
+    }
+
+    /**
+     * @param string[] $candidateOrigins
+     */
+    private function isRpIdCompatibleWithCandidateOrigins(string $rpId, array $candidateOrigins): bool
+    {
+        if ($candidateOrigins === []) {
+            return true;
+        }
+
+        foreach ($candidateOrigins as $origin) {
+            $host = $this->resolveHostFromUrl($origin);
+            if ($host !== null && $this->isRpIdCompatibleWithHost($rpId, $host)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

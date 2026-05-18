@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,7 +26,6 @@ import {
   SegmentedControl,
 } from '../components/Glass';
 import ImageLightbox from '../components/ImageLightbox';
-import TurnstileWidget from '../components/Turnstile';
 import { filesApi } from '../api/files';
 import { messageApi } from '../api/messages';
 import { ticketApi } from '../api/tickets';
@@ -39,9 +38,33 @@ const ticketStatuses = ['all', 'open', 'in_progress', 'waiting_user', 'resolved'
 const ticketCategories = ['website_bug', 'business_issue', 'feature_request', 'account', 'other'];
 const ticketPriorities = ['low', 'normal', 'high', 'urgent'];
 const PAGE_SIZE = 20;
+const FEEDBACK_RATING_VALUES = [1, 2, 3, 4, 5];
 
 const displayDateTime = (value) => String(value || '').replace('T', ' ').slice(0, 16) || '--';
 const messageTone = (message) => (message.isRead ? 'read' : 'unread');
+const feedbackCandidateKey = (candidate) => String(candidate?.id ?? '');
+const feedbackRatedUserId = (entry = {}) => Number(
+  entry.rated_user_id
+    ?? entry.ratedUserId
+    ?? entry.rated_user?.id
+    ?? entry.ratedUser?.id
+    ?? 0
+);
+
+const buildFeedbackDrafts = (ticket, candidates) => {
+  const drafts = {};
+  const feedbackEntries = Array.isArray(ticket?.feedback) ? ticket.feedback : [];
+  candidates.forEach((candidate) => {
+    const candidateId = Number(candidate?.id ?? 0);
+    const existing = feedbackEntries.find((entry) => feedbackRatedUserId(entry) === candidateId);
+    drafts[feedbackCandidateKey(candidate)] = {
+      comment: existing?.comment ?? '',
+      existing: Boolean(existing),
+      rating: Number(existing?.rating ?? 0),
+    };
+  });
+  return drafts;
+};
 
 function EmptyState({ icon, text }) {
   const { colors } = useTheme();
@@ -233,8 +256,6 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
   const [errors, setErrors] = useState({});
   const [priority, setPriority] = useState('normal');
   const [subject, setSubject] = useState('');
-  const [turnstileToken, setTurnstileToken] = useState('');
-  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
   const reset = () => {
     setCategory('website_bug');
@@ -242,8 +263,6 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
     setErrors({});
     setPriority('normal');
     setSubject('');
-    setTurnstileToken('');
-    setTurnstileResetKey((value) => value + 1);
   };
 
   const submit = () => {
@@ -257,7 +276,6 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
       content: content.trim(),
       priority,
       subject: subject.trim(),
-      ...(turnstileToken ? { cf_turnstile_response: turnstileToken } : {}),
     }, reset);
   };
 
@@ -306,12 +324,6 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
               <FilterPills active={category} onChange={setCategory} options={ticketCategories} prefix="support.categories" />
               <Text style={[styles.formLabel, { color: colors.text }]}>{t('support.priority')}</Text>
               <FilterPills active={priority} onChange={setPriority} options={ticketPriorities} prefix="support.priorities" />
-              <TurnstileWidget
-                resetKey={turnstileResetKey}
-                onError={() => setTurnstileToken('')}
-                onExpire={() => setTurnstileToken('')}
-                onVerify={setTurnstileToken}
-              />
               <PrimaryButton loading={loading} onPress={submit} title={t('support.submitTicket')} />
             </ScrollView>
           </View>
@@ -383,19 +395,15 @@ function TicketDetailModal({ ticketId, onClose }) {
   const queryClient = useQueryClient();
   const [attachment, setAttachment] = useState(null);
   const [reply, setReply] = useState('');
-  const [turnstileToken, setTurnstileToken] = useState('');
-  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
+  const dirtyFeedbackDraftIdsRef = useRef(new Set());
+  const [feedbackDrafts, setFeedbackDrafts] = useState({});
   const [selectedFeedbackUserId, setSelectedFeedbackUserId] = useState(null);
 
   useEffect(() => {
     setAttachment(null);
     setReply('');
-    setTurnstileToken('');
-    setTurnstileResetKey((value) => value + 1);
-    setRating(0);
-    setComment('');
+    dirtyFeedbackDraftIdsRef.current.clear();
+    setFeedbackDrafts({});
     setSelectedFeedbackUserId(null);
   }, [ticketId]);
 
@@ -405,7 +413,7 @@ function TicketDetailModal({ ticketId, onClose }) {
     queryKey: ['mobile-ticket-detail', ticketId],
   });
   const ticket = ticketQuery.data;
-  const feedbackCandidates = ticket?.feedbackCandidates || [];
+  const feedbackCandidates = useMemo(() => ticket?.feedbackCandidates || [], [ticket]);
 
   useEffect(() => {
     if (!feedbackCandidates.length) {
@@ -418,6 +426,19 @@ function TicketDetailModal({ ticketId, onClose }) {
         : feedbackCandidates[0].id
     ));
   }, [feedbackCandidates]);
+
+  useEffect(() => {
+    const nextDrafts = buildFeedbackDrafts(ticket, feedbackCandidates);
+    setFeedbackDrafts((current) => {
+      const mergedDrafts = { ...nextDrafts };
+      Object.entries(current).forEach(([candidateId, draft]) => {
+        if (dirtyFeedbackDraftIdsRef.current.has(candidateId) && nextDrafts[candidateId]) {
+          mergedDrafts[candidateId] = draft;
+        }
+      });
+      return mergedDrafts;
+    });
+  }, [ticket, feedbackCandidates]);
 
   const replyMutation = useMutation({
     mutationFn: async () => {
@@ -433,25 +454,36 @@ function TicketDetailModal({ ticketId, onClose }) {
       return ticketApi.reply(ticketId, {
         attachments,
         content: reply.trim(),
-        ...(turnstileToken ? { cf_turnstile_response: turnstileToken } : {}),
       });
     },
     onError: (error) => Alert.alert(t('support.replyFailed'), apiError(error, t('support.replyFailed'))),
     onSuccess: () => {
       setAttachment(null);
       setReply('');
-      setTurnstileToken('');
-      setTurnstileResetKey((value) => value + 1);
       queryClient.invalidateQueries({ queryKey: ['mobile-ticket-detail', ticketId] });
       queryClient.invalidateQueries({ queryKey: ['mobile-tickets'] });
     },
   });
 
   const feedbackMutation = useMutation({
-    mutationFn: ({ ratedUserId }) => ticketApi.submitFeedback(ticketId, { rated_user_id: ratedUserId, rating, comment }),
+    mutationFn: ({ comment, ratedUserId, rating }) => ticketApi.submitFeedback(ticketId, {
+      comment,
+      rated_user_id: ratedUserId,
+      rating,
+    }),
     onError: (error) => Alert.alert(t('support.feedbackFailed'), apiError(error, t('support.feedbackFailed'))),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      dirtyFeedbackDraftIdsRef.current.delete(String(variables.ratedUserId));
+      setFeedbackDrafts((current) => ({
+        ...current,
+        [variables.ratedUserId]: {
+          comment: variables.comment,
+          existing: true,
+          rating: variables.rating,
+        },
+      }));
       queryClient.invalidateQueries({ queryKey: ['mobile-ticket-detail', ticketId] });
+      queryClient.invalidateQueries({ queryKey: ['mobile-tickets'] });
     },
   });
 
@@ -463,7 +495,7 @@ function TicketDetailModal({ ticketId, onClose }) {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: false,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.82,
     });
     if (!result.canceled && result.assets?.[0]) {
@@ -481,7 +513,36 @@ function TicketDetailModal({ ticketId, onClose }) {
 
   const canFeedback = ['resolved', 'closed'].includes(ticket?.status);
   const feedbackCandidate = feedbackCandidates.find((candidate) => candidate.id === selectedFeedbackUserId) || feedbackCandidates[0];
+  const feedbackCandidateDraft = feedbackDrafts[feedbackCandidateKey(feedbackCandidate)] || { comment: '', existing: false, rating: 0 };
   const threadMessages = ticket?.messages || [];
+  const updateFeedbackDraft = (candidate, patch) => {
+    const candidateId = feedbackCandidateKey(candidate);
+    if (!candidateId) {
+      return;
+    }
+    dirtyFeedbackDraftIdsRef.current.add(candidateId);
+    setFeedbackDrafts((current) => ({
+      ...current,
+      [candidateId]: {
+        comment: current[candidateId]?.comment ?? '',
+        existing: current[candidateId]?.existing ?? false,
+        rating: current[candidateId]?.rating ?? 0,
+        ...patch,
+      },
+    }));
+  };
+  const submitFeedback = (candidate) => {
+    const candidateId = feedbackCandidateKey(candidate);
+    const draft = feedbackDrafts[candidateId] || { comment: '', rating: 0 };
+    if (!candidateId || !draft.rating) {
+      return;
+    }
+    feedbackMutation.mutate({
+      comment: draft.comment,
+      ratedUserId: candidate.id,
+      rating: draft.rating,
+    });
+  };
 
   return (
     <Modal animationType="fade" onRequestClose={onClose} transparent visible={Boolean(ticketId)}>
@@ -556,12 +617,6 @@ function TicketDetailModal({ ticketId, onClose }) {
                   <Field label={t('support.content')} multiline onChangeText={setReply} style={styles.replyTextArea} textAlignVertical="top" value={reply} />
                   {attachment ? <AttachmentPreview image={attachment} onRemove={() => setAttachment(null)} /> : null}
                   <SecondaryButton icon="image-outline" onPress={pickAttachment} title={t('support.addImage')} />
-                  <TurnstileWidget
-                    resetKey={turnstileResetKey}
-                    onError={() => setTurnstileToken('')}
-                    onExpire={() => setTurnstileToken('')}
-                    onVerify={setTurnstileToken}
-                  />
                   <PrimaryButton loading={replyMutation.isPending} onPress={submitReply} title={t('support.submitReply')} />
                 </GlassSurface>
               ) : null}
@@ -593,24 +648,35 @@ function TicketDetailModal({ ticketId, onClose }) {
                     </View>
                   ) : null}
                   <View style={styles.stars}>
-                    {[1, 2, 3, 4, 5].map((value) => (
+                    {FEEDBACK_RATING_VALUES.map((value) => (
                       <GlassButtonSurface
                         key={value}
                         contentStyle={styles.starButtonContent}
-                        onPress={() => setRating(value)}
-                        onPressIn={() => setRating(value)}
+                        onPress={() => updateFeedbackDraft(feedbackCandidate, { rating: value })}
+                        onPressIn={() => updateFeedbackDraft(feedbackCandidate, { rating: value })}
                         style={styles.starButton}
                       >
-                        <Ionicons color={value <= rating ? colors.warning : colors.textMuted} name={value <= rating ? 'star' : 'star-outline'} size={24} />
+                        <Ionicons
+                          color={value <= feedbackCandidateDraft.rating ? colors.warning : colors.textMuted}
+                          name={value <= feedbackCandidateDraft.rating ? 'star' : 'star-outline'}
+                          size={24}
+                        />
                       </GlassButtonSurface>
                     ))}
                   </View>
-                  <Field label={t('support.feedbackComment')} onChangeText={setComment} value={comment} />
+                  <Field
+                    label={t('support.feedbackComment')}
+                    onChangeText={(value) => updateFeedbackDraft(feedbackCandidate, { comment: value })}
+                    value={feedbackCandidateDraft.comment}
+                  />
+                  <Text style={[styles.rowMeta, { color: colors.textMuted }]}>
+                    {t(feedbackCandidateDraft.existing ? 'support.feedbackUpdateHint' : 'support.feedbackCreateHint')}
+                  </Text>
                   <PrimaryButton
-                    disabled={!rating}
+                    disabled={!feedbackCandidateDraft.rating}
                     loading={feedbackMutation.isPending}
-                    onPress={() => feedbackMutation.mutate({ ratedUserId: feedbackCandidate.id })}
-                    title={t('support.submitFeedback')}
+                    onPress={() => submitFeedback(feedbackCandidate)}
+                    title={t(feedbackCandidateDraft.existing ? 'support.updateFeedback' : 'support.submitFeedback')}
                   />
                 </GlassSurface>
               ) : null}

@@ -630,13 +630,30 @@ class SupportAutomationServiceTest extends TestCase
     {
         $audit = $this->createMock(AuditLogService::class);
         $audit->method('log')->willReturn(true);
+        $profileViewService = $this->makeUserProfileViewService();
 
         return new SupportAutomationService(
             self::$capsule->getConnection()->getPdo(),
             $this->createMock(LoggerInterface::class),
             $audit,
             $this->createMock(ErrorLogService::class),
-            new UserProfileViewService(new RegionService())
+            $profileViewService
         );
+    }
+
+    private function makeUserProfileViewService(): UserProfileViewService
+    {
+        $previousRegionDataPath = $_ENV['REGION_DATA_PATH'] ?? null;
+        unset($_ENV['REGION_DATA_PATH']);
+
+        try {
+            return new UserProfileViewService(new RegionService(realpath(__DIR__ . '/../../../storage/data/states.json') ?: null));
+        } finally {
+            if ($previousRegionDataPath !== null) {
+                $_ENV['REGION_DATA_PATH'] = $previousRegionDataPath;
+            } else {
+                unset($_ENV['REGION_DATA_PATH']);
+            }
+        }
     }
 }

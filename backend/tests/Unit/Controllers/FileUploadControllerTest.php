@@ -569,6 +569,99 @@ class FileUploadControllerTest extends TestCase
         $this->assertSame(200,$resp->getStatusCode());
     }
 
+    public function testConfirmDeletesObjectAndRejectsWhenContentValidationFails(): void
+    {
+        $fileMeta = $this->createMock(FileMetadataService::class);
+        $fileMeta->expects($this->never())->method('createRecord');
+
+        $c = $this->controller(['id'=>33], function($r2){
+            $r2->method('getFileInfo')->willReturn([
+                'file_path'=>self::EXISTING_OK_PATH,
+                'size'=>256,
+                'mime_type'=>self::MIME_PNG,
+            ]);
+            $r2->expects($this->once())
+                ->method('validateDirectUploadObject')
+                ->with(self::EXISTING_OK_PATH, 'ok.png', $this->isType('array'))
+                ->willThrowException(new \InvalidArgumentException('File content does not match the declared MIME type'));
+            $r2->expects($this->once())
+                ->method('deleteFile')
+                ->with(self::EXISTING_OK_PATH, 33)
+                ->willReturn(true);
+        }, $fileMeta);
+
+        $resp = $c->confirmDirectUpload(makeRequest('POST', self::ROUTE_CONFIRM,[
+            'file_path'=>self::EXISTING_OK_PATH,'original_name'=>'ok.png'
+        ]), new \Slim\Psr7\Response());
+
+        $this->assertSame(400, $resp->getStatusCode());
+        $payload = json_decode((string)$resp->getBody(), true);
+        $this->assertSame('INVALID_FILE_CONTENT', $payload['code']);
+    }
+
+    public function testR2DiagnosticsResponseRedactsStorageIdentifiers(): void
+    {
+        $c = $this->controller(['id'=>1, 'is_admin'=>1], function($r2){
+            $r2->method('diagnostics')->willReturn([
+                'bucket' => 'private-bucket',
+                'endpoint' => 'https://accountid1234567890.r2.cloudflarestorage.com/private-bucket',
+                'public_base' => 'https://pub-accountid1234567890.r2.dev/private-bucket',
+                'endpoint_has_bucket_path' => true,
+                'recommended_endpoint' => 'https://accountid1234567890.r2.cloudflarestorage.com',
+                'tls_verify' => true,
+                'checks' => [
+                    'list_objects' => true,
+                    'presign_put' => true,
+                    'presign_sample' => [
+                        'file_path' => 'diagnostics/_probe_secret.txt',
+                        'url_length' => 512,
+                    ],
+                ],
+                'errors' => ['ListObjects failed for https://accountid1234567890.r2.cloudflarestorage.com/private-bucket'],
+                'timestamp' => '2026-05-18T00:00:00+00:00',
+            ]);
+        });
+
+        $resp = $c->r2Diagnostics(makeRequest('GET', '/files/r2/diagnostics'), new \Slim\Psr7\Response());
+
+        $this->assertSame(200, $resp->getStatusCode());
+        $payload = json_decode((string)$resp->getBody(), true);
+        $data = $payload['data'];
+        $this->assertArrayNotHasKey('bucket', $data);
+        $this->assertArrayNotHasKey('endpoint', $data);
+        $this->assertArrayNotHasKey('public_base', $data);
+        $this->assertArrayNotHasKey('recommended_endpoint', $data);
+        $this->assertSame(['bucket' => true, 'endpoint' => true, 'public_base' => true], $data['storage_configured']);
+        $this->assertArrayNotHasKey('file_path', $data['checks']['presign_sample']);
+        $this->assertStringNotContainsString('accountid1234567890', $data['errors'][0]);
+        $this->assertStringNotContainsString('private-bucket', $data['errors'][0]);
+    }
+
+    public function testR2DiagnosticsFailureDoesNotExposeExceptionDetails(): void
+    {
+        $c = $this->controller(['id'=>1, 'is_admin'=>1], function($r2){
+            $r2->method('diagnostics')->willThrowException(new \RuntimeException('private-bucket accountid1234567890'));
+        });
+
+        $resp = $c->r2Diagnostics(makeRequest('GET', '/files/r2/diagnostics'), new \Slim\Psr7\Response());
+
+        $this->assertSame(500, $resp->getStatusCode());
+        $payload = json_decode((string)$resp->getBody(), true);
+        $this->assertSame('Diagnostics failed', $payload['message']);
+        $this->assertStringNotContainsString('private-bucket', (string)$resp->getBody());
+        $this->assertStringNotContainsString('accountid1234567890', (string)$resp->getBody());
+    }
+
+    public function testR2DiagnosticsRouteRequiresAdminMiddleware(): void
+    {
+        $routes = file_get_contents(__DIR__ . '/../../../src/routes.php');
+
+        $this->assertMatchesRegularExpression(
+            "#/r2/diagnostics'.*FileUploadController::class, 'r2Diagnostics'.*->add\\(AdminMiddleware::class\\)#s",
+            $routes
+        );
+    }
+
     public function testConfirmWithoutSha256BackfillsExistingOwnerlessRecord(): void
     {
         $existing = $this->getMockBuilder(File::class)
