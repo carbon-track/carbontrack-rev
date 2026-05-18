@@ -1147,7 +1147,6 @@ class FileUploadController
 
         $duplicated = false;
         $persistedSha256 = $sha256;
-        $digestClearedForConflict = false;
         if ($sha256) {
             $existing = $this->fileMetadataService->findBySha256($sha256);
             if ($existing && $existing->file_path === $filePath && $this->isOwnedFileRecord($existing, $userId)) {
@@ -1158,8 +1157,7 @@ class FileUploadController
             }
 
             if ($existing) {
-                $persistedSha256 = null;
-                $digestClearedForConflict = true;
+                $persistedSha256 = $this->resolveConflictSafeFileRecordSha256($filePath, $fileInfo, $originalName);
             }
         }
 
@@ -1169,8 +1167,7 @@ class FileUploadController
                 $userId,
                 $originalName,
                 $fileInfo,
-                $persistedSha256,
-                !$digestClearedForConflict
+                $persistedSha256
             )
         );
 
@@ -1236,11 +1233,10 @@ class FileUploadController
         }
 
         $persistedSha256 = $sha256;
-        $digestClearedForConflict = false;
         $existing = $this->fileMetadataService->findBySha256($sha256);
         if ($existing) {
-            $persistedSha256 = null;
-            $digestClearedForConflict = true;
+            $originalName = (string) ($fileInfo['metadata']['original_name'] ?? basename($filePath));
+            $persistedSha256 = $this->resolveConflictSafeFileRecordSha256($filePath, $fileInfo ?? [], $originalName);
         }
 
         $this->fileMetadataService->createRecord(
@@ -1248,8 +1244,7 @@ class FileUploadController
                 $filePath,
                 $userId,
                 $fileInfo,
-                $persistedSha256,
-                !$digestClearedForConflict
+                $persistedSha256
             )
         );
 
@@ -1301,6 +1296,11 @@ class FileUploadController
         ];
 
         return $recordData;
+    }
+
+    private function resolveConflictSafeFileRecordSha256(string $filePath, array $fileInfo, string $originalName): string
+    {
+        return $this->resolveFileRecordSha256(null, $filePath, $fileInfo, $originalName, false);
     }
 
     private function resolveFileRecordSha256(
