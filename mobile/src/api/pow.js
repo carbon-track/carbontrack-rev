@@ -276,15 +276,29 @@ export const getProofOfWorkChallenge = async (scope, options = {}) => {
   return response.data?.data || {};
 };
 
-const buildProofOfWorkPayload = async (scope, payload) => {
+const cancellationError = () => new Error('Proof-of-work calculation cancelled');
+
+const buildProofOfWorkPayload = async (scope, payload, queue) => {
+  if (queue?.cancelled) {
+    throw cancellationError();
+  }
+
   const abortController = typeof AbortController === 'function' ? new AbortController() : null;
-  const operationId = useProofOfWorkStore.getState().begin(scope, () => abortController?.abort());
+  const operationId = useProofOfWorkStore.getState().begin(scope, () => {
+    if (queue) {
+      queue.cancelled = true;
+    }
+    abortController?.abort();
+  });
   const watchdog = setTimeout(() => {
     useProofOfWorkStore.getState().end(operationId);
   }, POW_UI_WATCHDOG_MS);
 
   try {
     const challenge = await getProofOfWorkChallenge(scope, { signal: abortController?.signal });
+    if (queue?.cancelled) {
+      throw cancellationError();
+    }
     const nonce = await solveProofOfWork(challenge.challenge, challenge.difficulty, {
       signal: abortController?.signal,
     });
@@ -309,16 +323,30 @@ const buildProofOfWorkPayload = async (scope, payload) => {
 };
 
 export const withMobileProofOfWork = async (scope, payload) => {
-  const previous = scopeQueues.get(scope) || Promise.resolve();
+  const queue = scopeQueues.get(scope) || {
+    cancelled: false,
+    pending: 0,
+    promise: Promise.resolve(),
+  };
+  scopeQueues.set(scope, queue);
+  queue.pending += 1;
+
+  const previous = queue.promise;
   const queued = previous
     .catch(() => {})
-    .then(() => buildProofOfWorkPayload(scope, payload));
+    .then(() => {
+      if (queue.cancelled) {
+        throw cancellationError();
+      }
+      return buildProofOfWorkPayload(scope, payload, queue);
+    });
   const tracked = queued.finally(() => {
-    if (scopeQueues.get(scope) === tracked) {
+    queue.pending = Math.max(0, queue.pending - 1);
+    if (queue.pending === 0 && scopeQueues.get(scope) === queue) {
       scopeQueues.delete(scope);
     }
   });
 
-  scopeQueues.set(scope, tracked);
+  queue.promise = tracked;
   return tracked;
 };

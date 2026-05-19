@@ -73,6 +73,49 @@ const loadSolveProofOfWork = ({ includeTextEncoder }) => {
   return context.module.exports.solveProofOfWork;
 };
 
+const loadProofOfWorkModule = ({ apiClient, storeState }) => {
+  const sourcePath = path.join(__dirname, 'pow.js');
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  const start = source.indexOf('const HASH_BATCH_SIZE');
+  assert.notEqual(start, -1);
+
+  const moduleSource = source
+    .slice(start)
+    .replace(/export const /g, 'const ');
+  const context = {
+    AbortController,
+    Array,
+    Date,
+    Error,
+    Math,
+    Number,
+    Promise,
+    RegExp,
+    String,
+    TextEncoder,
+    Uint8Array,
+    Uint32Array,
+    apiClient,
+    clearTimeout,
+    mobileClientType: 'mobile',
+    module: { exports: {} },
+    requireMobileClientToken: () => {},
+    setTimeout,
+    useProofOfWorkStore: {
+      getState: () => storeState,
+    },
+  };
+  context.globalThis = context;
+
+  vm.runInNewContext(
+    `${moduleSource}\nmodule.exports = { solveProofOfWork, withMobileProofOfWork };`,
+    context,
+    { filename: 'pow-module-under-test.js' },
+  );
+
+  return context.module.exports;
+};
+
 test('solveProofOfWork matches Node crypto for ASCII challenges', async () => {
   const solveProofOfWork = loadSolveProofOfWork({ includeTextEncoder: true });
   const challenge = 'carbontrack-pow-test';
@@ -108,4 +151,48 @@ test('solveProofOfWork stops when cancelled before solving', async () => {
     }),
     /cancelled/,
   );
+});
+
+test('withMobileProofOfWork does not start queued work after cancellation', async () => {
+  let activeCancel = null;
+  const storeState = {
+    begin: (scope, cancel) => {
+      activeCancel = cancel;
+      return `${scope}-operation`;
+    },
+    end: () => {},
+  };
+  let challengeRequests = 0;
+  const apiClient = {
+    post: (url, payload, options = {}) => {
+      challengeRequests += 1;
+      return new Promise((resolve, reject) => {
+        options.signal?.addEventListener('abort', () => {
+          reject(new Error('aborted'));
+        });
+        setTimeout(() => {
+          resolve({
+            data: {
+              data: {
+                challenge: `queued-${challengeRequests}`,
+                difficulty: 8,
+              },
+            },
+          });
+        }, 20);
+      });
+    },
+  };
+  const { withMobileProofOfWork } = loadProofOfWorkModule({ apiClient, storeState });
+
+  const first = withMobileProofOfWork('login', { first: true });
+  const second = withMobileProofOfWork('login', { second: true });
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+  activeCancel();
+
+  await assert.rejects(first, /aborted|cancelled/);
+  await assert.rejects(second, /cancelled/);
+  assert.equal(challengeRequests, 1);
 });
