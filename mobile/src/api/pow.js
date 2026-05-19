@@ -291,6 +291,10 @@ const buildProofOfWorkPayload = async (scope, payload, queue) => {
     abortController?.abort();
   });
   const watchdog = setTimeout(() => {
+    if (queue) {
+      queue.cancelled = true;
+    }
+    abortController?.abort();
     useProofOfWorkStore.getState().end(operationId);
   }, POW_UI_WATCHDOG_MS);
 
