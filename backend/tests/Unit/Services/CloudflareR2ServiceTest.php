@@ -79,6 +79,25 @@ class CloudflareR2ServiceTest extends TestCase
         $this->fail('Expected RuntimeException was not thrown');
     }
 
+    public function testUploadPresignSignsRequiredOwnershipMetadataHeaders(): void
+    {
+        $service = $this->makeServiceWithMockHandler(new Result([]));
+
+        $presign = $service->generateUploadPresignedUrl('uploads/direct/owned.jpg', 'image/jpeg', 600, [
+            'uploaded_by' => '42',
+            'entity_type' => 'activity',
+        ]);
+
+        $this->assertSame('42', $presign['headers']['x-amz-meta-uploaded_by'] ?? null);
+        $this->assertSame('activity', $presign['headers']['x-amz-meta-entity_type'] ?? null);
+
+        parse_str((string) parse_url($presign['url'], PHP_URL_QUERY), $query);
+        $signedHeaders = rawurldecode((string) ($query['X-Amz-SignedHeaders'] ?? ''));
+
+        $this->assertStringContainsString('x-amz-meta-uploaded_by', $signedHeaders);
+        $this->assertStringContainsString('x-amz-meta-entity_type', $signedHeaders);
+    }
+
     private function makeServiceWithGetObjectBody(string $body): CloudflareR2Service
     {
         return $this->makeServiceWithMockHandler(new Result(['Body' => $body]));
