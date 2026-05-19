@@ -6,7 +6,8 @@
   },
   "securityCheck": {
     "title": "行政审查中",
-    "subtitle": "正在完成提交前安全校验"
+    "subtitle": "正在完成提交前安全校验",
+    "cancel": "取消"
   },
   "auth": {
     "loginTitle": "CarbonTrack 登录",

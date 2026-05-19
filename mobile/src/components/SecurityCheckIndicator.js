@@ -1,5 +1,5 @@
 import React from 'react';
-import { Animated, Modal, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassSurface } from './Glass';
 import { useI18n } from '../i18n';
@@ -63,9 +63,10 @@ export default function SecurityCheckIndicator() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const visible = useProofOfWorkStore((state) => state.activeCount > 0);
+  const cancelAll = useProofOfWorkStore((state) => state.cancelAll);
 
   return (
-    <Modal animationType="fade" onRequestClose={() => {}} transparent visible={visible}>
+    <Modal animationType="fade" onRequestClose={cancelAll} transparent visible={visible}>
       <View style={[styles.backdrop, { backgroundColor: colors.dark ? 'rgba(0, 0, 0, 0.46)' : 'rgba(16, 35, 26, 0.22)' }]}>
         <GlassSurface
           contentStyle={styles.cardContent}
@@ -82,6 +83,16 @@ export default function SecurityCheckIndicator() {
               <ThinkingDots />
             </View>
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t('securityCheck.subtitle')}</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={cancelAll}
+              style={({ pressed }) => [
+                styles.cancelButton,
+                { borderColor: colors.borderStrong, opacity: pressed ? 0.72 : 1 },
+              ]}
+            >
+              <Text style={[styles.cancelText, { color: colors.primary }]}>{t('securityCheck.cancel')}</Text>
+            </Pressable>
           </View>
         </GlassSurface>
       </View>
@@ -111,6 +122,17 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     height: 6,
     width: 6,
+  },
+  cancelButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  cancelText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
   dots: {
     alignItems: 'center',

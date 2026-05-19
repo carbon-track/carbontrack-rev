@@ -264,25 +264,30 @@ export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
   throw new Error('Proof-of-work attempt limit exceeded');
 };
 
-export const getProofOfWorkChallenge = async (scope) => {
+export const getProofOfWorkChallenge = async (scope, options = {}) => {
   requireMobileClientToken();
 
   const response = await apiClient.post('/security/pow/challenge', {
     scope,
     client_type: mobileClientType,
+  }, {
+    signal: options.signal,
   });
   return response.data?.data || {};
 };
 
 const buildProofOfWorkPayload = async (scope, payload) => {
-  const operationId = useProofOfWorkStore.getState().begin(scope);
+  const abortController = typeof AbortController === 'function' ? new AbortController() : null;
+  const operationId = useProofOfWorkStore.getState().begin(scope, () => abortController?.abort());
   const watchdog = setTimeout(() => {
     useProofOfWorkStore.getState().end(operationId);
   }, POW_UI_WATCHDOG_MS);
 
   try {
-    const challenge = await getProofOfWorkChallenge(scope);
-    const nonce = await solveProofOfWork(challenge.challenge, challenge.difficulty);
+    const challenge = await getProofOfWorkChallenge(scope, { signal: abortController?.signal });
+    const nonce = await solveProofOfWork(challenge.challenge, challenge.difficulty, {
+      signal: abortController?.signal,
+    });
 
     if (payload && typeof payload.append === 'function') {
       payload.append('client_type', mobileClientType);

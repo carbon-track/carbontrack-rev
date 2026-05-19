@@ -6,7 +6,8 @@
   },
   "securityCheck": {
     "title": "Administrative review",
-    "subtitle": "Completing the pre-submit security check"
+    "subtitle": "Completing the pre-submit security check",
+    "cancel": "Cancel"
   },
   "auth": {
     "loginTitle": "Sign in to CarbonTrack",
