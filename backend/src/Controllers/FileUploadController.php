@@ -1472,6 +1472,10 @@ class FileUploadController
     private function shouldRedactDiagnosticIdentifier(string $value): bool
     {
         $value = trim($value);
+        if (preg_match('/^[A-Z][A-Za-z0-9_]*(?:Exception|Error)$/', $value) === 1) {
+            return false;
+        }
+
         if (strlen($value) >= 12) {
             return true;
         }

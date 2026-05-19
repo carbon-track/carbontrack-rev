@@ -647,7 +647,7 @@ class SupportAutomationServiceTest extends TestCase
         unset($_ENV['REGION_DATA_PATH']);
 
         try {
-            $datasetPath = realpath(dirname(__DIR__, 3) . '/storage/data/states.json') ?: null;
+            $datasetPath = realpath(__DIR__ . '/../../../storage/data/states.json') ?: null;
             return new UserProfileViewService(new RegionService($datasetPath));
         } finally {
             if ($previousRegionDataPath !== null) {

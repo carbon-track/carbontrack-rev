@@ -819,6 +819,30 @@ class FileUploadControllerTest extends TestCase
         $this->assertStringContainsString('[redacted-id]', $error);
     }
 
+    public function testR2DiagnosticsRedactionKeepsExceptionClassNamesReadable(): void
+    {
+        $c = $this->controller(['id'=>1, 'is_admin'=>1], function($r2){
+            $r2->method('diagnostics')->willReturn([
+                'bucket' => 'private-bucket',
+                'endpoint' => 'https://accountid1234567890.r2.cloudflarestorage.com/ResourceNotFoundException',
+                'public_base' => 'https://pub-accountid1234567890.r2.dev/private-bucket',
+                'endpoint_has_bucket_path' => false,
+                'tls_verify' => true,
+                'checks' => [],
+                'errors' => ['ResourceNotFoundException while reading private-bucket'],
+                'timestamp' => '2026-05-18T00:00:00+00:00',
+            ]);
+        });
+
+        $resp = $c->r2Diagnostics(makeRequest('GET', '/files/r2/diagnostics'), new \Slim\Psr7\Response());
+
+        $this->assertSame(200, $resp->getStatusCode());
+        $payload = json_decode((string)$resp->getBody(), true);
+        $error = $payload['data']['errors'][0];
+        $this->assertStringContainsString('ResourceNotFoundException', $error);
+        $this->assertStringNotContainsString('private-bucket', $error);
+    }
+
     public function testR2DiagnosticsRedactionDoesNotMaskCommonLowEntropyTerms(): void
     {
         $c = $this->controller(['id'=>1, 'is_admin'=>1], function($r2){
