@@ -426,6 +426,7 @@ function AdminAiMarkdown({ content, className }) {
           blockquote: ({ children }) => (
             <blockquote className="my-3 border-l-2 border-current/30 pl-3 italic opacity-90">{children}</blockquote>
           ),
+          img: () => null,
           a: ({ href, children }) => {
             if (href === '' || (href && !isSafeMarkdownHref(href))) {
               return <span>{children}</span>;
@@ -2342,6 +2343,9 @@ export default function AdminAiWorkspacePage() {
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [workspaceSection, setWorkspaceSection] = useState('actions');
   const [streamState, setStreamState] = useState(createEmptyStreamState);
+  const [isDocumentVisible, setIsDocumentVisible] = useState(
+    () => typeof document === 'undefined' || document.visibilityState === 'visible'
+  );
   const [autonomyMode, setAutonomyMode] = useState('read_only_auto');
 
   const aiContext = useMemo(() => ({
@@ -2432,13 +2436,26 @@ export default function AdminAiWorkspacePage() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const updateVisibility = () => {
+      setIsDocumentVisible(document.visibilityState === 'visible');
+    };
+
+    updateVisibility();
+    document.addEventListener('visibilitychange', updateVisibility);
+    return () => document.removeEventListener('visibilitychange', updateVisibility);
+  }, []);
+
   const hasLocalStreamItems = Boolean(streamState.optimisticMessage)
     || (Array.isArray(streamState.items) && streamState.items.length > 0);
   const shouldPollCurrentConversation = Boolean(selectedConversationId)
     && !isCreatingConversation
     && !hasLocalStreamItems
-    && typeof document !== 'undefined'
-    && document.visibilityState === 'visible';
+    && isDocumentVisible;
 
   const conversationDetailQuery = useQuery(
     ['adminAiConversation', selectedConversationId],
