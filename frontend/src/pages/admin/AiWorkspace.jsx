@@ -427,15 +427,17 @@ function AdminAiMarkdown({ content, className }) {
             <blockquote className="my-3 border-l-2 border-current/30 pl-3 italic opacity-90">{children}</blockquote>
           ),
           a: ({ href, children }) => {
-            if (!isSafeMarkdownHref(href)) {
+            if (href && !isSafeMarkdownHref(href)) {
               return <span>{children}</span>;
             }
+
+            const opensNewWindow = href && !href.startsWith('#');
 
             return (
               <a
                 href={href}
-                target={href?.startsWith('#') ? undefined : '_blank'}
-                rel={href?.startsWith('#') ? undefined : 'noopener noreferrer'}
+                target={opensNewWindow ? '_blank' : undefined}
+                rel={opensNewWindow ? 'noreferrer noopener' : undefined}
                 className="font-medium underline decoration-current/40 underline-offset-4 hover:decoration-current"
               >
                 {children}
