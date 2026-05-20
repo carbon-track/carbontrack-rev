@@ -30,6 +30,7 @@ import { adminAPI, streamApiRequest } from '../../lib/api';
 import { userManager } from '../../lib/auth';
 import { useTranslation } from '../../hooks/useTranslation';
 import { cn } from '../../lib/utils';
+import { isSafeHtmlUri } from '../../lib/safeUrl';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/badge';
 import { Textarea } from '../../components/ui/textarea';
@@ -384,12 +385,22 @@ function isSafeMarkdownHref(href) {
   }
 
   const trimmed = href.trim();
-  if (trimmed === '') {
+  if (trimmed === '' || trimmed.startsWith('//') || trimmed.includes('\\')) {
     return false;
   }
 
-  return /^(https?:|mailto:|tel:|#|\/(?!\/)|\.{1,2}\/|[A-Za-z0-9_./?=&%+-]+$)/i.test(trimmed)
-    && !/^\s*(?:javascript|data|vbscript):/i.test(trimmed);
+  for (let index = 0; index < trimmed.length; index += 1) {
+    const code = trimmed.charCodeAt(index);
+    if (code <= 31 || code === 127) {
+      return false;
+    }
+  }
+
+  if (/^\.{1,2}\//.test(trimmed)) {
+    return true;
+  }
+
+  return isSafeHtmlUri(trimmed);
 }
 
 function AdminAiMarkdown({ content, className }) {
@@ -424,7 +435,7 @@ function AdminAiMarkdown({ content, className }) {
               <a
                 href={href}
                 target={href?.startsWith('#') ? undefined : '_blank'}
-                rel={href?.startsWith('#') ? undefined : 'noreferrer'}
+                rel={href?.startsWith('#') ? undefined : 'noopener noreferrer'}
                 className="font-medium underline decoration-current/40 underline-offset-4 hover:decoration-current"
               >
                 {children}
@@ -2543,11 +2554,9 @@ export default function AdminAiWorkspacePage() {
         invalidateWorkspace();
       },
       onError: (error) => {
+        setStreamState(createEmptyStreamState());
         invalidateWorkspace();
         queryClient.invalidateQueries(['adminAiConversation']);
-        if (normalizedSelectedConversationId) {
-          queryClient.invalidateQueries(['adminAiConversation', normalizedSelectedConversationId]);
-        }
         if (error?.code === 'AI_STREAM_DISCONNECTED') {
           toast.error(isZh ? 'AI 连接中断，正在恢复会话记录。' : 'AI stream disconnected. Restoring the session timeline.');
           return;
@@ -2620,11 +2629,9 @@ export default function AdminAiWorkspacePage() {
         setStreamState(createEmptyStreamState());
       },
       onError: (error) => {
+        setStreamState(createEmptyStreamState());
         invalidateWorkspace();
         queryClient.invalidateQueries(['adminAiConversation']);
-        if (normalizedSelectedConversationId) {
-          queryClient.invalidateQueries(['adminAiConversation', normalizedSelectedConversationId]);
-        }
         if (error?.code === 'AI_PROVIDER_TIMEOUT' || error?.response?.data?.code === 'AI_PROVIDER_TIMEOUT') {
           toast.error(isZh ? '模型处理超时，可能请求过复杂，请拆分任务或稍后重试。' : 'The model timed out. Try splitting the task or retry later.');
           return;
