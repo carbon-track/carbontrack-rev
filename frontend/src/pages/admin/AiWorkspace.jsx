@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Activity,
   ArrowUpRight,
@@ -37,6 +39,13 @@ import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 const COMMAND_MIN_LENGTH = 2;
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
+
+function createEmptyStreamState() {
+  return {
+    optimisticMessage: null,
+    items: [],
+  };
+}
 
 async function streamAdminAiChat(payload, onEvent) {
   const response = await streamApiRequest('/admin/ai/chat/stream', {
@@ -369,6 +378,87 @@ function translateI18nMessage(t, messageI18n, fallback) {
   });
 }
 
+function isSafeMarkdownHref(href) {
+  if (typeof href !== 'string') {
+    return false;
+  }
+
+  const trimmed = href.trim();
+  if (trimmed === '') {
+    return false;
+  }
+
+  return /^(https?:|mailto:|tel:|#|\/(?!\/)|\.{1,2}\/|[A-Za-z0-9_./?=&%+-]+$)/i.test(trimmed)
+    && !/^\s*(?:javascript|data|vbscript):/i.test(trimmed);
+}
+
+function AdminAiMarkdown({ content, className }) {
+  const text = typeof content === 'string' ? content : String(content ?? '');
+  if (text.trim() === '') {
+    return null;
+  }
+
+  return (
+    <div className={cn('min-w-0 max-w-none break-words text-sm leading-7', className)}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        skipHtml
+        components={{
+          h1: ({ children }) => <h1 className="mb-3 mt-0 text-xl font-semibold leading-8">{children}</h1>,
+          h2: ({ children }) => <h2 className="mb-2 mt-4 text-lg font-semibold leading-7">{children}</h2>,
+          h3: ({ children }) => <h3 className="mb-2 mt-3 text-base font-semibold leading-7">{children}</h3>,
+          p: ({ children }) => <p className="my-0 leading-7">{children}</p>,
+          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+          ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>,
+          ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>,
+          li: ({ children }) => <li className="pl-1 leading-7">{children}</li>,
+          blockquote: ({ children }) => (
+            <blockquote className="my-3 border-l-2 border-current/30 pl-3 italic opacity-90">{children}</blockquote>
+          ),
+          a: ({ href, children }) => {
+            if (!isSafeMarkdownHref(href)) {
+              return <span>{children}</span>;
+            }
+
+            return (
+              <a
+                href={href}
+                target={href?.startsWith('#') ? undefined : '_blank'}
+                rel={href?.startsWith('#') ? undefined : 'noreferrer'}
+                className="font-medium underline decoration-current/40 underline-offset-4 hover:decoration-current"
+              >
+                {children}
+              </a>
+            );
+          },
+          code: ({ inline, children }) => (
+            inline ? (
+              <code className="rounded-md border border-current/10 bg-current/10 px-1.5 py-0.5 font-mono text-[0.9em]">
+                {children}
+              </code>
+            ) : (
+              <code className="block overflow-x-auto whitespace-pre rounded-[16px] border border-white/10 bg-[#050816] px-3 py-3 font-mono text-[12px] leading-5 text-slate-200">
+                {children}
+              </code>
+            )
+          ),
+          pre: ({ children }) => <pre className="my-3 overflow-x-auto">{children}</pre>,
+          table: ({ children }) => (
+            <div className="my-3 overflow-x-auto rounded-[16px] border border-current/10">
+              <table className="min-w-full text-left text-xs">{children}</table>
+            </div>
+          ),
+          th: ({ children }) => <th className="border-b border-current/10 bg-current/5 px-3 py-2 font-semibold">{children}</th>,
+          td: ({ children }) => <td className="border-b border-current/10 px-3 py-2 align-top">{children}</td>,
+          hr: () => <hr className="my-4 border-current/10" />,
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 function buildFallbackConversation(conversation, conversationId, previousConversation, userMessage, assistantMessage, assistantMessageI18n = null) {
   if (hasRenderableMessages(conversation)) {
     return conversation;
@@ -582,6 +672,168 @@ function buildConversationTimeline(conversation) {
     }
     return 0;
   });
+}
+
+function createOptimisticUserMessage(content, conversationId) {
+  return {
+    id: `local-user-${conversationId || 'new'}-${Date.now()}`,
+    kind: 'message',
+    role: 'user',
+    content,
+    created_at: new Date().toISOString(),
+    meta: { data: { source: 'client_stream_optimistic' } },
+  };
+}
+
+function getStreamToolKey(event, data, items = []) {
+  const runId = data?.run_id || 'run';
+  if (data?.step_id) {
+    return `tool:${runId}:${data.step_id}`;
+  }
+
+  if (data?.proposal?.proposal_id) {
+    const proposalId = data.proposal.proposal_id;
+    const matched = items.find((item) => item?.kind === 'stream_tool' && item?.data?.proposal?.proposal_id === proposalId);
+    if (matched?.toolKey) {
+      return matched.toolKey;
+    }
+  }
+
+  if (data?.tool_name) {
+    const matched = [...items].reverse().find(
+      (item) => item?.kind === 'stream_tool'
+        && item?.data?.run_id === data.run_id
+        && item?.data?.tool_name === data.tool_name
+        && ['running', 'waiting_input', 'waiting_approval'].includes(item?.data?.status)
+    );
+    if (matched?.toolKey) {
+      return matched.toolKey;
+    }
+
+    return `tool:${runId}:${data.tool_name}:${data?.sequence || items.length}`;
+  }
+
+  return null;
+}
+
+function getStreamToolStatus(event, data, previousStatus) {
+  if (event === 'tool.started') return 'running';
+  if (event === 'tool.error') return 'error';
+  if (event === 'missing.input') return 'waiting_input';
+  if (event === 'approval.required') return 'waiting_approval';
+  return data?.status || previousStatus || 'success';
+}
+
+function mergeStreamToolData(previousData, event, data) {
+  return {
+    ...(previousData || {}),
+    ...(data || {}),
+    status: getStreamToolStatus(event, data, previousData?.status),
+    arguments: data?.arguments ?? previousData?.arguments,
+    result: data?.result ?? previousData?.result,
+    proposal: data?.proposal ?? previousData?.proposal,
+    suggestion: data?.suggestion ?? previousData?.suggestion,
+    missing: data?.missing ?? previousData?.missing,
+    error: data?.error ?? previousData?.error,
+    last_event: event,
+  };
+}
+
+function reduceStreamState(state, event, data) {
+  const currentState = state || createEmptyStreamState();
+  const items = Array.isArray(currentState.items) ? currentState.items : [];
+
+  if (event === 'run.started') {
+    return {
+      ...currentState,
+      items: [{
+        kind: 'stream_status',
+        event,
+        data: { ...(data || {}), status: 'running' },
+        id: `${data?.run_id || 'run'}-${data?.sequence || 1}`,
+      }],
+    };
+  }
+
+  if (event === 'run.finished') {
+    return {
+      ...currentState,
+      items: items.map((item) => (
+        item.kind === 'stream_status' && item.data?.run_id === data?.run_id
+          ? { ...item, event, data: { ...item.data, ...(data || {}), status: 'finished' } }
+          : item
+      )),
+    };
+  }
+
+  if (event === 'assistant.delta' || event === 'assistant.message') {
+    const runId = data?.run_id || 'run';
+    const index = items.findIndex((item) => item.kind === 'assistant_stream' && item.data?.run_id === runId);
+    const content = event === 'assistant.delta'
+      ? `${index >= 0 ? items[index].data?.content || '' : ''}${data?.content || ''}`
+      : (data?.content || (index >= 0 ? items[index].data?.content : '') || '');
+    const nextItem = {
+      kind: 'assistant_stream',
+      event,
+      data: {
+        ...(index >= 0 ? items[index].data : {}),
+        ...(data || {}),
+        content,
+        streaming: event === 'assistant.delta',
+      },
+      id: `assistant-${runId}`,
+    };
+
+    if (index >= 0) {
+      return {
+        ...currentState,
+        items: items.map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
+      };
+    }
+
+    return {
+      ...currentState,
+      items: [...items, nextItem],
+    };
+  }
+
+  if (event?.startsWith('tool.') || event === 'missing.input' || event === 'approval.required') {
+    const toolKey = getStreamToolKey(event, data, items);
+    if (toolKey) {
+      const index = items.findIndex((item) => item.kind === 'stream_tool' && item.toolKey === toolKey);
+      const nextItem = {
+        kind: 'stream_tool',
+        event,
+        data: mergeStreamToolData(index >= 0 ? items[index].data : null, event, data),
+        id: toolKey,
+        toolKey,
+      };
+      if (index >= 0) {
+        return {
+          ...currentState,
+          items: items.map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
+        };
+      }
+
+      return {
+        ...currentState,
+        items: [...items, nextItem],
+      };
+    }
+  }
+
+  return {
+    ...currentState,
+    items: [
+      ...items,
+      {
+        kind: 'stream_event',
+        event,
+        data,
+        id: `${event}-${data?.run_id || 'run'}-${data?.step_id || data?.sequence || items.length}`,
+      },
+    ],
+  };
 }
 
 function formatAbsoluteTime(value, locale = 'zh-CN') {
@@ -1158,6 +1410,7 @@ function WorkspaceSectionButton({ active, icon, label, count, onClick }) {
 function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
   const event = item?.event;
   const data = item?.data || {};
+  const isToolItem = item?.kind === 'stream_tool' || event?.startsWith('tool.');
   const hasToolInput = data.arguments != null && data.arguments !== '';
   const hasToolResult = data.result != null && data.result !== '';
 
@@ -1173,7 +1426,7 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
     );
   }
 
-  if (event === 'assistant.delta' || event === 'assistant.message') {
+  if (item?.kind === 'assistant_stream' || event === 'assistant.delta' || event === 'assistant.message') {
     const content = event === 'assistant.message'
       ? translateI18nMessage(
           t,
@@ -1187,23 +1440,26 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
         <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-          <Bot className="h-3.5 w-3.5" />
-          {event === 'assistant.delta'
+          {data.streaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
+          {data.streaming
             ? (isZh ? '正在生成回复' : 'Streaming response')
             : (isZh ? 'AI 回复' : 'Assistant message')}
         </div>
-        <div className="whitespace-pre-wrap">{content}</div>
+        <AdminAiMarkdown content={content} />
       </div>
     );
   }
 
-  if (event?.startsWith('tool.')) {
-    const status = event === 'tool.started' ? 'running' : event === 'tool.error' ? 'error' : data.status || 'success';
+  if (isToolItem) {
+    const status = data.status || (event === 'tool.started' ? 'running' : event === 'tool.error' ? 'error' : 'success');
     const tone = status === 'error'
       ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100'
       : status === 'running'
         ? 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100'
+        : status === 'waiting_approval' || status === 'waiting_input'
+          ? 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100'
         : 'border-slate-200 bg-slate-50 text-slate-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-100';
+    const missing = Array.isArray(data.missing) ? data.missing : [];
 
     return (
       <div className={cn('rounded-2xl border px-4 py-3 text-sm', tone)}>
@@ -1216,13 +1472,24 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         </div>
         {data.error ? <div className="mt-2 text-xs opacity-80">{data.error}</div> : null}
         {data.proposal?.summary ? <div className="mt-2 text-xs opacity-80">{data.proposal.summary}</div> : null}
+        {data.message ? <div className="mt-2 text-xs opacity-80">{data.message}</div> : null}
         {data.step_id ? <div className="mt-2 font-mono text-[11px] opacity-60">{data.step_id}</div> : null}
+        {missing.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {missing.map((field, index) => (
+              <Badge key={`${field?.field || field || 'field'}-${index}`} variant="outline" className="border-current/20 text-current">
+                {field?.field || field}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
         {hasToolInput || hasToolResult ? (
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <ResultSnapshot title={isZh ? '工具输入' : 'Tool input'} value={data.arguments} isZh={isZh} />
             <ResultSnapshot title={isZh ? '工具结果' : 'Tool result'} value={data.result} isZh={isZh} />
           </div>
         ) : null}
+        {data.proposal ? <ResultSnapshot title={isZh ? '确认提案' : 'Approval proposal'} value={data.proposal} isZh={isZh} /> : null}
       </div>
     );
   }
@@ -1935,7 +2202,11 @@ function MessageBubble({
             ? 'rounded-tr-lg border-slate-200 bg-white text-slate-900 dark:border-white/12 dark:bg-white/[0.08] dark:text-white'
             : 'rounded-tl-lg border-emerald-200 bg-emerald-50/85 text-slate-800 dark:border-emerald-400/14 dark:bg-emerald-400/[0.08] dark:text-slate-100'
         )}>
-          {messageContent || (isZh ? 'AI 未返回文本。' : 'No assistant text returned.')}
+          {messageContent ? (
+            isUser
+              ? <div className="whitespace-pre-wrap">{messageContent}</div>
+              : <AdminAiMarkdown content={messageContent} />
+          ) : (isZh ? 'AI 未返回文本。' : 'No assistant text returned.')}
         </div>
 
         {!isUser && (actionName || result || missing.length > 0) ? (
@@ -2054,7 +2325,7 @@ export default function AdminAiWorkspacePage() {
   const [conversationFilter, setConversationFilter] = useState('all');
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [workspaceSection, setWorkspaceSection] = useState('actions');
-  const [streamEvents, setStreamEvents] = useState([]);
+  const [streamState, setStreamState] = useState(createEmptyStreamState);
   const [autonomyMode, setAutonomyMode] = useState('read_only_auto');
 
   const aiContext = useMemo(() => ({
@@ -2145,6 +2416,14 @@ export default function AdminAiWorkspacePage() {
     }
   }, [searchParams]);
 
+  const hasLocalStreamItems = Boolean(streamState.optimisticMessage)
+    || (Array.isArray(streamState.items) && streamState.items.length > 0);
+  const shouldPollCurrentConversation = Boolean(selectedConversationId)
+    && !isCreatingConversation
+    && !hasLocalStreamItems
+    && typeof document !== 'undefined'
+    && document.visibilityState === 'visible';
+
   const conversationDetailQuery = useQuery(
     ['adminAiConversation', selectedConversationId],
     async () => {
@@ -2153,6 +2432,9 @@ export default function AdminAiWorkspacePage() {
     },
     {
       enabled: Boolean(selectedConversationId),
+      keepPreviousData: true,
+      refetchOnWindowFocus: true,
+      refetchInterval: shouldPollCurrentConversation ? 8000 : false,
     }
   );
 
@@ -2191,42 +2473,15 @@ export default function AdminAiWorkspacePage() {
     && activeConversationId !== normalizedSelectedConversationId;
 
   const handleStreamEvent = useCallback(({ event, data }) => {
-    setStreamEvents((items) => {
-      if (event === 'run.started') {
-        return [{ event, data, id: `${data?.run_id || 'run'}-${data?.sequence || 1}` }];
-      }
-
-      if (event === 'assistant.delta') {
-        const last = items[items.length - 1];
-        if (last?.event === 'assistant.delta') {
-          return [
-            ...items.slice(0, -1),
-            {
-              ...last,
-              data: {
-                ...last.data,
-                content: `${last.data?.content || ''}${data?.content || ''}`,
-                sequence: data?.sequence || last.data?.sequence,
-              },
-            },
-          ];
-        }
-      }
-
-      return [
-        ...items,
-        {
-          event,
-          data,
-          id: `${event}-${data?.run_id || 'run'}-${data?.step_id || data?.sequence || items.length}`,
-        },
-      ];
-    });
+    if (event === 'run.started' && data?.conversation_id) {
+      setSelectedConversationId(String(data.conversation_id));
+      setIsCreatingConversation(false);
+    }
+    setStreamState((state) => reduceStreamState(state, event, data));
   }, []);
 
   const sendMutation = useMutation(
     async ({ message, conversationId }) => {
-      setStreamEvents([]);
       try {
         const payload = await streamAdminAiChat({
           conversation_id: conversationId || undefined,
@@ -2259,6 +2514,13 @@ export default function AdminAiWorkspacePage() {
       }
     },
     {
+      onMutate: (variables) => {
+        setStreamState({
+          optimisticMessage: createOptimisticUserMessage(variables.message, variables.conversationId),
+          items: [],
+        });
+        setDraft('');
+      },
       onSuccess: (response, variables) => {
         const payload = response.data || {};
         const nextConversation = buildFallbackConversation(
@@ -2277,12 +2539,12 @@ export default function AdminAiWorkspacePage() {
         }
 
         setIsCreatingConversation(false);
-        setDraft('');
-        setStreamEvents([]);
+        setStreamState(createEmptyStreamState());
         invalidateWorkspace();
       },
       onError: (error) => {
         invalidateWorkspace();
+        queryClient.invalidateQueries(['adminAiConversation']);
         if (normalizedSelectedConversationId) {
           queryClient.invalidateQueries(['adminAiConversation', normalizedSelectedConversationId]);
         }
@@ -2301,7 +2563,7 @@ export default function AdminAiWorkspacePage() {
 
   const decisionMutation = useMutation(
     async ({ proposalId, outcome, conversationId, rollback }) => {
-      setStreamEvents([]);
+      setStreamState(createEmptyStreamState());
       const decisionPayload = {
         proposal_id: proposalId,
         outcome,
@@ -2330,7 +2592,7 @@ export default function AdminAiWorkspacePage() {
           throw error;
         }
 
-        setStreamEvents([]);
+        setStreamState(createEmptyStreamState());
         return adminAPI.chatWithAdminAi(requestPayload);
       }
     },
@@ -2355,10 +2617,11 @@ export default function AdminAiWorkspacePage() {
         }
 
         invalidateWorkspace();
-        setStreamEvents([]);
+        setStreamState(createEmptyStreamState());
       },
       onError: (error) => {
         invalidateWorkspace();
+        queryClient.invalidateQueries(['adminAiConversation']);
         if (normalizedSelectedConversationId) {
           queryClient.invalidateQueries(['adminAiConversation', normalizedSelectedConversationId]);
         }
@@ -2396,7 +2659,7 @@ export default function AdminAiWorkspacePage() {
   const lastActivityLabel = formatAbsoluteTime(currentSummary.last_activity_at, locale);
   const canSend = draft.trim().length >= COMMAND_MIN_LENGTH && !sendMutation.isLoading && assistant.chat_enabled !== false;
   const canCreateConversation = !sendMutation.isLoading && !decisionMutation.isLoading;
-  const disableProposalActions = decisionMutation.isLoading || hasStaleConversationDetail;
+  const disableProposalActions = sendMutation.isLoading || decisionMutation.isLoading || hasStaleConversationDetail;
   const autonomyOptions = useMemo(() => ([
     {
       id: 'read_only_auto',
@@ -2528,6 +2791,7 @@ export default function AdminAiWorkspacePage() {
   const handleSelectConversation = useCallback((conversationId) => {
     setIsCreatingConversation(false);
     setSelectedConversationId(conversationId);
+    setStreamState(createEmptyStreamState());
   }, []);
 
   const handleUsePrompt = useCallback((prompt) => {
@@ -2538,6 +2802,7 @@ export default function AdminAiWorkspacePage() {
   const handleStartConversation = useCallback(() => {
     setIsCreatingConversation(true);
     setSelectedConversationId(null);
+    setStreamState(createEmptyStreamState());
     queryClient.removeQueries(['adminAiConversation']);
     requestAnimationFrame(() => composerRef.current?.focus());
   }, [queryClient]);
@@ -2815,7 +3080,7 @@ export default function AdminAiWorkspacePage() {
                       <div className="flex h-full items-center justify-center">
                         <Loader2 className="h-5 w-5 animate-spin text-slate-400 dark:text-slate-500" />
                       </div>
-                    ) : conversationTimeline.length === 0 && streamEvents.length === 0 ? (
+                    ) : conversationTimeline.length === 0 && !streamState.optimisticMessage && streamState.items.length === 0 ? (
                       <EmptyConversationState
                         isZh={isZh}
                         starterPrompts={starterPrompts}
@@ -2877,7 +3142,28 @@ export default function AdminAiWorkspacePage() {
                                 />
                               )
                             ))}
-                            {streamEvents.map((item) => (
+                            {streamState.optimisticMessage ? (
+                              <MessageBubble
+                                key={streamState.optimisticMessage.id}
+                                message={streamState.optimisticMessage}
+                                locale={locale}
+                                isZh={isZh}
+                                t={t}
+                                disabled={disableProposalActions}
+                                onNavigateSuggestion={handleNavigateSuggestion}
+                                onConfirmProposal={(proposalId) => normalizedSelectedConversationId && decisionMutation.mutate({
+                                  proposalId,
+                                  outcome: 'confirm',
+                                  conversationId: normalizedSelectedConversationId,
+                                })}
+                                onRejectProposal={(proposalId) => normalizedSelectedConversationId && decisionMutation.mutate({
+                                  proposalId,
+                                  outcome: 'reject',
+                                  conversationId: normalizedSelectedConversationId,
+                                })}
+                              />
+                            ) : null}
+                            {streamState.items.map((item) => (
                               <AgentStreamEventCard
                                 key={item.id}
                                 item={item}
