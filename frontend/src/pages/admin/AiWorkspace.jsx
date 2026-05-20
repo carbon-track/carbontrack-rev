@@ -418,7 +418,7 @@ function AdminAiMarkdown({ content, className }) {
           h1: ({ children }) => <h1 className="mb-3 mt-0 text-xl font-semibold leading-8">{children}</h1>,
           h2: ({ children }) => <h2 className="mb-2 mt-4 text-lg font-semibold leading-7">{children}</h2>,
           h3: ({ children }) => <h3 className="mb-2 mt-3 text-base font-semibold leading-7">{children}</h3>,
-          p: ({ children }) => <p className="my-0 leading-7">{children}</p>,
+          p: ({ children }) => <p className="mb-4 leading-7 last:mb-0">{children}</p>,
           strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
           ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>,
           ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>,
@@ -444,17 +444,20 @@ function AdminAiMarkdown({ content, className }) {
               </a>
             );
           },
-          code: ({ inline, children }) => (
-            inline ? (
-              <code className="rounded-md border border-current/10 bg-current/10 px-1.5 py-0.5 font-mono text-[0.9em]">
-                {children}
-              </code>
-            ) : (
+          code: ({ className, children }) => {
+            const rawCode = String(children ?? '');
+            const isBlock = /language-/.test(className || '') || rawCode.includes('\n');
+
+            return isBlock ? (
               <code className="block overflow-x-auto whitespace-pre rounded-[16px] border border-white/10 bg-[#050816] px-3 py-3 font-mono text-[12px] leading-5 text-slate-200">
                 {children}
               </code>
-            )
-          ),
+            ) : (
+              <code className="rounded-md border border-current/10 bg-current/10 px-1.5 py-0.5 font-mono text-[0.9em]">
+                {children}
+              </code>
+            );
+          },
           pre: ({ children }) => <pre className="my-3 overflow-x-auto">{children}</pre>,
           table: ({ children }) => (
             <div className="my-3 overflow-x-auto rounded-[16px] border border-current/10">
