@@ -427,7 +427,7 @@ function AdminAiMarkdown({ content, className }) {
             <blockquote className="my-3 border-l-2 border-current/30 pl-3 italic opacity-90">{children}</blockquote>
           ),
           a: ({ href, children }) => {
-            if (href && !isSafeMarkdownHref(href)) {
+            if (href === '' || (href && !isSafeMarkdownHref(href))) {
               return <span>{children}</span>;
             }
 
