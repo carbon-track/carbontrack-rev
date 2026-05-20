@@ -51,11 +51,7 @@ function normalizeApiBaseUrl(value) {
 
 function resolveApiBaseUrl(env) {
   const configuredApiUrl = normalizeApiBaseUrl(env.VITE_API_URL)
-  if (configuredApiUrl) {
-    return configuredApiUrl
-  }
-
-
+  return configuredApiUrl
 }
 
 // https://vite.dev/config/

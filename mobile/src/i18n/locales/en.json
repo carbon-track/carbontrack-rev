@@ -4,6 +4,11 @@
     "fallbackUser": "CarbonTracker",
     "emptyValue": "None"
   },
+  "securityCheck": {
+    "title": "Administrative review",
+    "subtitle": "Completing the pre-submit security check",
+    "cancel": "Cancel"
+  },
   "auth": {
     "loginTitle": "Sign in to CarbonTrack",
     "loginSubtitle": "Continue tracking low-carbon actions with your email or username.",
@@ -20,7 +25,6 @@
     "hasAccount": "Already have an account? Sign in",
     "loginFailed": "Sign-in failed",
     "loginMissingFields": "Enter account and password.",
-    "turnstileRequired": "Complete the human check first.",
     "retryLater": "Please try again later.",
     "registerTitle": "Create account",
     "registerSubtitle": "Join CarbonTrack and start recording low-carbon actions.",
@@ -54,10 +58,8 @@
     "sentTitle": "Sent",
     "sentMessage": "The verification code was sent to your email.",
     "sendEmailRequired": "Enter email.",
-    "sendEmailTurnstileRequired": "Enter email and complete the human check.",
     "verifyFailed": "Verification failed",
-    "verifyMissing": "Enter email and verification code.",
-    "verifyTurnstileMissing": "Enter email, verification code, and complete the human check."
+    "verifyMissing": "Enter email and verification code."
   },
   "region": {
     "country": "Country or region",
@@ -66,9 +68,6 @@
     "statePlaceholder": "Select state or province",
     "stateMissing": "No region data",
     "countryFirst": "Select country or region first"
-  },
-  "turnstile": {
-    "missingConfig": "Turnstile site key or base URL is not configured."
   },
   "tabs": {
     "home": "Home",
@@ -503,9 +502,10 @@
     "feedbackResponder": "Responder",
     "feedbackComment": "Feedback note",
     "submitFeedback": "Submit feedback",
+    "updateFeedback": "Update feedback",
+    "feedbackCreateHint": "You can edit your own feedback after submitting.",
+    "feedbackUpdateHint": "Your previous feedback is loaded. Submitting again will update it.",
     "feedbackFailed": "Feedback failed",
-    "turnstileRequiredTitle": "Verification required",
-    "turnstileRequired": "Complete the human check first.",
     "previous": "Previous",
     "next": "Next",
     "pageStatus": "Page {{page}} / {{pages}}",

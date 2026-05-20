@@ -186,6 +186,10 @@ jobs:
         working-directory: mobile
         run: pnpm exec expo config --type public
 
+      - name: Run mobile unit tests
+        working-directory: mobile
+        run: pnpm test
+
   mobile-cd-readiness:
     name: monorepo / mobile-cd-readiness
     runs-on: ubuntu-latest

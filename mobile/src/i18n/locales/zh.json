@@ -4,6 +4,11 @@
     "fallbackUser": "CarbonTracker",
     "emptyValue": "无"
   },
+  "securityCheck": {
+    "title": "行政审查中",
+    "subtitle": "正在完成提交前安全校验",
+    "cancel": "取消"
+  },
   "auth": {
     "loginTitle": "CarbonTrack 登录",
     "loginSubtitle": "使用邮箱或用户名继续低碳行动记录。",
@@ -20,7 +25,6 @@
     "hasAccount": "已有账号？登录",
     "loginFailed": "登录失败",
     "loginMissingFields": "请输入账号和密码。",
-    "turnstileRequired": "请先完成人机验证。",
     "retryLater": "请稍后重试。",
     "registerTitle": "创建账号",
     "registerSubtitle": "加入 CarbonTrack，开始记录低碳行动。",
@@ -54,10 +58,8 @@
     "sentTitle": "已发送",
     "sentMessage": "验证码已发送至邮箱。",
     "sendEmailRequired": "请输入邮箱。",
-    "sendEmailTurnstileRequired": "请输入邮箱并完成人机验证。",
     "verifyFailed": "验证失败",
-    "verifyMissing": "请输入邮箱和验证码。",
-    "verifyTurnstileMissing": "请输入邮箱、验证码并完成人机验证。"
+    "verifyMissing": "请输入邮箱和验证码。"
   },
   "region": {
     "country": "国家 / 地区",
@@ -66,9 +68,6 @@
     "statePlaceholder": "请选择省 / 州",
     "stateMissing": "暂无地区数据",
     "countryFirst": "请先选择国家 / 地区"
-  },
-  "turnstile": {
-    "missingConfig": "未配置 Turnstile site key 或 base URL。"
   },
   "tabs": {
     "home": "首页",
@@ -503,9 +502,10 @@
     "feedbackResponder": "评价对象",
     "feedbackComment": "评价备注",
     "submitFeedback": "提交评价",
+    "updateFeedback": "更新评价",
+    "feedbackCreateHint": "提交后可再次修改自己的评价。",
+    "feedbackUpdateHint": "已加载你之前的评价，再次提交将覆盖原评价。",
     "feedbackFailed": "评价提交失败",
-    "turnstileRequiredTitle": "需要验证",
-    "turnstileRequired": "请先完成人机验证。",
     "previous": "上一页",
     "next": "下一页",
     "pageStatus": "第 {{page}} / {{pages}} 页",

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "test": "node --test src/lib/userContent.test.cjs src/lib/thermalReceipt.test.cjs src/api/pow.test.cjs",
     "start": "expo start",
     "start:dev-client": "expo start --dev-client",
     "android": "expo run:android",

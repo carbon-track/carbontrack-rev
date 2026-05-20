@@ -13,8 +13,9 @@ import { resolveR2ImageSource } from '../../lib/r2Image';
  *  expiresIn?: number (秒)
  *  fallback?: ReactNode
  *  onError?: (err)=>void
+ *  loading?: 'lazy' | 'eager'
  */
-export function R2Image({ filePath, src, alt='', className='', expiresIn=600, fallback=null, onError }) {
+export function R2Image({ filePath, src, alt='', className='', expiresIn=600, fallback=null, onError, loading='lazy' }) {
   const normalizedInput = resolveR2ImageSource({
     urlCandidates: [src],
     pathCandidates: [filePath],
@@ -97,7 +98,7 @@ export function R2Image({ filePath, src, alt='', className='', expiresIn=600, fa
   if (!resolved) {
     return <div className={loadingClassName} />;
   }
-  return <img src={resolved} alt={alt} className={className} onError={handleImageError} />;
+  return <img src={resolved} alt={alt} className={className} loading={loading} decoding="async" onError={handleImageError} />;
 }
 
 export default R2Image;

@@ -9,7 +9,6 @@
 - Android package: `com.carbontrack.mobile`
 - Associated Domain: `webcredentials:carbontrackapp.com`
 - 默认 API: `https://api.carbontrackapp.com/api/v1`
-- Turnstile base URL: `https://carbontrackapp.com`
 
 ## macOS / Xcode 要求
 
@@ -40,20 +39,27 @@
 
 ## 发布前配置
 
-TestFlight 构建前，确认 `mobile/.env` 或构建环境包含：
+移动端运行时配置统一走环境变量。`eas.json` 选择 build profile 和 EAS environment；production profile 仅内联正式 API 基地址，原生功能开关仍从 EAS Environment Variables 或本地 `.env` 读取。
+
+本地开发前，确认 `mobile/.env` 包含：
 
 ```env
 EXPO_PUBLIC_API_URL=https://api.carbontrackapp.com/api/v1
 EXPO_PUBLIC_MOBILE_CLIENT_TOKEN=<same value as backend MOBILE_CLIENT_TOKEN>
-EXPO_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAAA0wcgSIUML5Ocs3
-EXPO_PUBLIC_TURNSTILE_BASE_URL=https://carbontrackapp.com
 EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS=true
 EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS=true
 ```
 
-`EXPO_PUBLIC_MOBILE_CLIENT_TOKEN` 必须与后端 `MOBILE_CLIENT_TOKEN` 保持一致；匿名移动端注册、登录、邮箱验证码等接口会以 `X-Mobile-Client-Token` 请求头配合 PoW 校验。该值会进入移动端 bundle，只用于分流和降低误用，不能视作强客户端证明；生产安全仍依赖一次性 PoW、Turnstile、限流和日志脱敏。生产环境应通过 EAS/CI 环境变量注入并按版本轮换。
+EAS 云构建前，把同名变量配置到 EAS Environment Variables 中，并按 profile 选择：
 
-默认仓库配置把两个 native 开关设为 `false`，是为了让 Expo Go 和未重建的旧 dev client 不因为缺少 `NativeLiquidGlassModule` 或 native tabs 新签名而崩溃。只有 TestFlight 或重新构建后的自定义 dev client 才应设为 `true`。
+```bash
+npx eas-cli env:pull --environment development .env
+npx eas-cli env:pull --environment production .env
+```
+
+`EXPO_PUBLIC_MOBILE_CLIENT_TOKEN` 必须与后端 `MOBILE_CLIENT_TOKEN` 保持一致；匿名移动端注册、登录、邮箱验证码等接口会以 `X-Mobile-Client-Token` 请求头配合 PoW 校验。该值会进入移动端 bundle，只用于分流和降低误用，不能视作强客户端证明；生产安全仍依赖一次性 PoW、限流和日志脱敏。生产环境应通过 EAS Environment Variables / CI 注入并按版本轮换。
+
+默认 `.env.example` 面向可重新构建的 development client / TestFlight，把两个 native 开关设为 `true`。Expo Go 或旧 binary 加载失败时仍会回退到 JS tabs / 普通半透明视图；需要临时回退时，在本机 `.env` 中改为 `false`。
 
 开发模式不再强制回退 JS tabs。使用 EAS development build 且两个 native 开关为 `true` 时，开发包也会尝试加载原生 tabs 与 Liquid Glass；Expo Go 或旧 binary 加载失败时仍会回退到 JS tabs / 普通半透明视图。
 
@@ -89,9 +95,10 @@ npx eas-cli build --platform ios --profile development
 
 - `developmentClient: true`
 - `distribution: internal`
+- `environment: development`
 - `ios.image: latest`
-- `EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS=true`
-- `EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS=true`
+
+具体 `EXPO_PUBLIC_*` 值从 EAS `development` environment 或本地 `mobile/.env` 读取。
 
 5. iPhone 安装 EAS 生成的 development build 后，在 Windows 上启动 Metro：
 

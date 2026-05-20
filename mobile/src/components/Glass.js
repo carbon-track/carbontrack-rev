@@ -6,7 +6,18 @@ import { makeShadow, useTheme } from '../theme';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 
+const fallbackLiquidGlass = {
+  Container: View,
+  Surface: View,
+  isSupported: false,
+};
+const liquidGlassEnabled = process.env.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS === 'true';
+
 const loadLiquidGlass = () => {
+  if (!liquidGlassEnabled) {
+    return fallbackLiquidGlass;
+  }
+
   try {
     const module = require('@callstack/liquid-glass');
     return {
@@ -18,11 +29,7 @@ const loadLiquidGlass = () => {
     if (__DEV__) {
       console.warn('Liquid Glass native module unavailable; using fallback surfaces.', error);
     }
-    return {
-      Container: View,
-      Surface: View,
-      isSupported: false,
-    };
+    return fallbackLiquidGlass;
   }
 };
 

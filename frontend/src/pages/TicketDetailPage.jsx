@@ -10,6 +10,7 @@ import { ArrowLeft, Headset, ImageIcon, Paperclip, Send, Shield, Star, UserRound
 import { useTranslation } from '../hooks/useTranslation';
 import { ticketAPI } from '../lib/api';
 import { buildAvatarDisplayProps } from '../lib/avatarUtils';
+import { attachmentDisplayHref, normalizeSafeAttachmentFilePath } from '../lib/safeUrl';
 import { formatSupportDate, getPriorityVariant, getSlaMeta, getSlaMilestoneMeta, getSlaTone, getStatusTone, isImageAttachment, mergeUploadedFiles } from '../lib/supportTickets';
 import Turnstile from '../components/common/Turnstile';
 import FileUpload from '../components/FileUpload';
@@ -37,18 +38,17 @@ function AttachmentList({ attachments }) {
       {imageAttachments.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {imageAttachments.map((attachment) => {
-            const href = attachment.download_url || attachment.public_url || attachment.file_path;
-            return (
-              <a
-                key={attachment.id ?? attachment.file_path}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group overflow-hidden rounded-2xl border border-border bg-background transition hover:border-emerald-300 hover:shadow-sm"
-              >
+            const href = attachmentDisplayHref(attachment);
+            const filePath = normalizeSafeAttachmentFilePath(attachment.file_path);
+            if (!href && !filePath) {
+              return null;
+            }
+            const content = (
+              <>
                 <div className="aspect-square bg-muted/30">
-                  <img
-                    src={href}
+                  <R2Image
+                    src={href || undefined}
+                    filePath={!href && filePath ? filePath : undefined}
                     alt={attachment.original_name}
                     className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
                     loading="lazy"
@@ -58,6 +58,27 @@ function AttachmentList({ attachments }) {
                   <ImageIcon className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{attachment.original_name}</span>
                 </div>
+              </>
+            );
+            if (!href) {
+              return (
+                <div
+                  key={attachment.id ?? attachment.file_path}
+                  className="group overflow-hidden rounded-2xl border border-border bg-background"
+                >
+                  {content}
+                </div>
+              );
+            }
+            return (
+              <a
+                key={attachment.id ?? attachment.file_path}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group overflow-hidden rounded-2xl border border-border bg-background transition hover:border-emerald-300 hover:shadow-sm"
+              >
+                {content}
               </a>
             );
           })}
@@ -66,18 +87,24 @@ function AttachmentList({ attachments }) {
 
       {fileAttachments.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {fileAttachments.map((attachment) => (
-            <a
-              key={attachment.id ?? attachment.file_path}
-              href={attachment.download_url || attachment.public_url || attachment.file_path}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
-            >
-              <Paperclip className="h-3.5 w-3.5" />
-              {attachment.original_name}
-            </a>
-          ))}
+          {fileAttachments.map((attachment) => {
+            const href = attachmentDisplayHref(attachment);
+            if (!href) {
+              return null;
+            }
+            return (
+              <a
+                key={attachment.id ?? attachment.file_path}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
+              >
+                <Paperclip className="h-3.5 w-3.5" />
+                {attachment.original_name}
+              </a>
+            );
+          })}
         </div>
       ) : null}
     </div>

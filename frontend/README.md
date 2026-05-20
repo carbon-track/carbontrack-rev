@@ -5,7 +5,7 @@
 前端直接读取 `VITE_API_URL` 作为后端 API 地址；Cloudflare Pages 也应在各环境里显式配置这个变量。
 
 说明：
-- 本地开发若未设置 `VITE_API_URL`，默认回退到 `https://dev-api.carbontrackapp.com/api/v1`。
+- 本地开发、CI、Cloudflare Pages 均必须显式设置 `VITE_API_URL`；未设置时应用会启动失败，避免误连开发 API 或静态站同源路径。
 - Cloudflare Pages 不再按分支名推算 API 地址，需在对应环境中直接设置 `VITE_API_URL`。
 
 - 后端主要在版本化前缀下提供接口，即 `/api/v1/...`。
