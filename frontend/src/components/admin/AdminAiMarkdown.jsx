@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 
 import { isSafeHtmlUri } from '../../lib/safeUrl';
@@ -39,6 +40,7 @@ export default function AdminAiMarkdown({ content, className }) {
     <div className={cn('min-w-0 max-w-none break-words text-sm leading-7', className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeSanitize]}
         skipHtml
         components={{
           h1: ({ children }) => <h1 className="mb-3 mt-0 text-xl font-semibold leading-8">{children}</h1>,
