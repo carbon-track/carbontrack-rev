@@ -140,7 +140,10 @@
         "noAssistantText": "AI 未返回文本。",
         "status": {
           "streaming": "正在生成回复",
-          "assistantMessage": "AI 回复"
+          "assistantMessage": "AI 回复",
+          "runStarted": "Agent 已开始处理",
+          "runFinished": "Agent 已完成处理",
+          "runFailed": "Agent 处理失败"
         }
       },
       "messages": {

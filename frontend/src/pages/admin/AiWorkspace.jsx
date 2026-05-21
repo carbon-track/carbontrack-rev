@@ -38,6 +38,11 @@ import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 const COMMAND_MIN_LENGTH = 2;
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
+const MAX_STREAM_ITEMS = 120;
+
+function trimStreamItems(items) {
+  return items.length > MAX_STREAM_ITEMS ? items.slice(-MAX_STREAM_ITEMS) : items;
+}
 
 function createEmptyStreamState() {
   return {
@@ -642,6 +647,26 @@ function getStreamToolStatus(event, data, previousStatus) {
   return data?.status || previousStatus || 'success';
 }
 
+function formatMissingFieldLabel(field, isZh) {
+  if (field == null || field === '') {
+    return isZh ? '未知字段' : 'Unknown field';
+  }
+  if (typeof field !== 'object') {
+    return String(field);
+  }
+
+  const label = field.field ?? field.label ?? field.name ?? field.key ?? field.path;
+  if (label != null && label !== '') {
+    return String(label);
+  }
+
+  try {
+    return JSON.stringify(field);
+  } catch {
+    return summarizeObject(field, isZh);
+  }
+}
+
 function mergeStreamToolData(previousData, event, data) {
   return {
     ...(previousData || {}),
@@ -675,7 +700,7 @@ function reduceStreamState(state, event, data) {
       ...currentState,
       items: existingIndex >= 0
         ? items.map((item, index) => (index === existingIndex ? statusItem : item))
-        : [...items, statusItem],
+        : trimStreamItems([...items, statusItem]),
     };
   }
 
@@ -746,14 +771,14 @@ function reduceStreamState(state, event, data) {
 
       return {
         ...currentState,
-        items: [...items, nextItem],
+        items: trimStreamItems([...items, nextItem]),
       };
     }
   }
 
   return {
     ...currentState,
-    items: [
+    items: trimStreamItems([
       ...items,
       {
         kind: 'stream_event',
@@ -761,7 +786,7 @@ function reduceStreamState(state, event, data) {
         data,
         id: `${event}-${data?.run_id || 'run'}-${data?.step_id ?? data?.sequence ?? items.length}`,
       },
-    ],
+    ]),
   };
 }
 
@@ -1343,12 +1368,19 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
   const hasToolInput = data.arguments != null && data.arguments !== '';
   const hasToolResult = data.result != null && data.result !== '';
 
-  if (event === 'run.started') {
+  if (item?.kind === 'stream_status') {
+    const status = data.status || (event === 'run.finished' ? 'finished' : 'running');
+    const label = status === 'finished'
+      ? t('aiWorkspace.stream.status.runFinished', { defaultValue: isZh ? 'Agent 已完成处理' : 'Agent run finished' })
+      : status === 'error'
+        ? t('aiWorkspace.stream.status.runFailed', { defaultValue: isZh ? 'Agent 处理失败' : 'Agent run failed' })
+        : t('aiWorkspace.stream.status.runStarted', { defaultValue: isZh ? 'Agent 已开始处理' : 'Agent run started' });
+
     return (
       <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100">
         <div className="flex items-center gap-2 font-medium">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {isZh ? 'Agent 已开始处理' : 'Agent run started'}
+          {status === 'running' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+          {label}
         </div>
         {data.run_id ? <div className="mt-1 font-mono text-[11px] opacity-70">{data.run_id}</div> : null}
       </div>
@@ -1405,11 +1437,14 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         {data.step_id ? <div className="mt-2 font-mono text-[11px] opacity-60">{data.step_id}</div> : null}
         {missing.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-2">
-            {missing.map((field, index) => (
-              <Badge key={`${field?.field || field || 'field'}-${index}`} variant="outline" className="border-current/20 text-current">
-                {field?.field || field}
-              </Badge>
-            ))}
+            {missing.map((field, index) => {
+              const label = formatMissingFieldLabel(field, isZh);
+              return (
+                <Badge key={`${label}-${index}`} variant="outline" className="border-current/20 text-current">
+                  {label}
+                </Badge>
+              );
+            })}
           </div>
         ) : null}
         {hasToolInput || hasToolResult ? (
@@ -2394,6 +2429,22 @@ export default function AdminAiWorkspacePage() {
     () => conversationTimeline.filter((item) => item?.kind === 'message'),
     [conversationTimeline]
   );
+  const shouldRenderOptimisticMessage = useMemo(() => {
+    const optimisticMessage = streamState.optimisticMessage;
+    if (!optimisticMessage) {
+      return false;
+    }
+
+    const optimisticContent = String(optimisticMessage.content || optimisticMessage.message || '').trim();
+    if (!optimisticContent) {
+      return true;
+    }
+
+    return !visibleMessages.some((message) => (
+      message?.role === 'user'
+      && String(message.content || message.message || '').trim() === optimisticContent
+    ));
+  }, [streamState.optimisticMessage, visibleMessages]);
   const pendingActions = useMemo(
     () => (Array.isArray(activeConversation?.pending_actions) ? activeConversation.pending_actions : []),
     [activeConversation]
@@ -3092,7 +3143,7 @@ export default function AdminAiWorkspacePage() {
                                 />
                               )
                             ))}
-                            {streamState.optimisticMessage ? (
+                            {shouldRenderOptimisticMessage ? (
                               <MessageBubble
                                 key={streamState.optimisticMessage.id}
                                 message={streamState.optimisticMessage}

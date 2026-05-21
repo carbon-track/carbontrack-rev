@@ -140,7 +140,10 @@
         "noAssistantText": "No assistant text returned.",
         "status": {
           "streaming": "Streaming response",
-          "assistantMessage": "Assistant message"
+          "assistantMessage": "Assistant message",
+          "runStarted": "Agent run started",
+          "runFinished": "Agent run finished",
+          "runFailed": "Agent run failed"
         }
       },
       "messages": {
