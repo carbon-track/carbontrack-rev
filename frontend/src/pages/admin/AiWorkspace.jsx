@@ -662,14 +662,20 @@ function reduceStreamState(state, event, data) {
   const items = Array.isArray(currentState.items) ? currentState.items : [];
 
   if (event === 'run.started') {
+    const runId = data?.run_id || 'run';
+    const statusItem = {
+      kind: 'stream_status',
+      event,
+      data: { ...(data || {}), status: 'running' },
+      id: `${runId}-${data?.sequence || 1}`,
+    };
+    const existingIndex = items.findIndex((item) => item.kind === 'stream_status' && item.data?.run_id === runId);
+
     return {
       ...currentState,
-      items: [{
-        kind: 'stream_status',
-        event,
-        data: { ...(data || {}), status: 'running' },
-        id: `${data?.run_id || 'run'}-${data?.sequence || 1}`,
-      }],
+      items: existingIndex >= 0
+        ? items.map((item, index) => (index === existingIndex ? statusItem : item))
+        : [...items, statusItem],
     };
   }
 
@@ -1408,11 +1414,11 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         ) : null}
         {hasToolInput || hasToolResult ? (
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
-            <ResultSnapshot title={isZh ? '工具输入' : 'Tool input'} value={data.arguments} isZh={isZh} />
-            <ResultSnapshot title={isZh ? '工具结果' : 'Tool result'} value={data.result} isZh={isZh} />
+            <ResultSnapshot title={t('aiWorkspace.stream.toolInput', { defaultValue: isZh ? '工具输入' : 'Tool input' })} value={data.arguments} isZh={isZh} />
+            <ResultSnapshot title={t('aiWorkspace.stream.toolResult', { defaultValue: isZh ? '工具结果' : 'Tool result' })} value={data.result} isZh={isZh} />
           </div>
         ) : null}
-        {data.proposal ? <ResultSnapshot title={isZh ? '确认提案' : 'Approval proposal'} value={data.proposal} isZh={isZh} /> : null}
+        {data.proposal ? <ResultSnapshot title={t('aiWorkspace.stream.approvalProposal', { defaultValue: isZh ? '确认提案' : 'Approval proposal' })} value={data.proposal} isZh={isZh} /> : null}
       </div>
     );
   }
@@ -1422,9 +1428,9 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
       <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
         <div className="flex items-center gap-2 font-semibold">
           <ShieldAlert className="h-4 w-4" />
-          {isZh ? '需要在对话中确认' : 'Approval required'}
+          {t('aiWorkspace.stream.approvalRequired', { defaultValue: isZh ? '需要在对话中确认' : 'Approval required' })}
         </div>
-        <div className="mt-2 leading-6">{data.proposal?.summary || data.proposal?.label || (isZh ? '等待管理员确认后执行。' : 'Waiting for admin approval before execution.')}</div>
+        <div className="mt-2 leading-6">{data.proposal?.summary || data.proposal?.label || t('aiWorkspace.stream.waitingApproval', { defaultValue: isZh ? '等待管理员确认后执行。' : 'Waiting for admin approval before execution.' })}</div>
       </div>
     );
   }
@@ -2129,7 +2135,7 @@ function MessageBubble({
             isUser
               ? <div className="whitespace-pre-wrap">{messageContent}</div>
               : <AdminAiMarkdown content={messageContent} />
-          ) : (isZh ? 'AI 未返回文本。' : 'No assistant text returned.')}
+          ) : t('aiWorkspace.stream.noAssistantText', { defaultValue: isZh ? 'AI 未返回文本。' : 'No assistant text returned.' })}
         </div>
 
         {!isUser && (actionName || result || missing.length > 0) ? (
@@ -2371,7 +2377,6 @@ export default function AdminAiWorkspacePage() {
     },
     {
       enabled: Boolean(selectedConversationId),
-      keepPreviousData: true,
       refetchOnWindowFocus: true,
       refetchInterval: shouldPollCurrentConversation ? 3000 : false,
     }

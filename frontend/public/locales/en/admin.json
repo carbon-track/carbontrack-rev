@@ -132,6 +132,12 @@
       "managementActionsTitle": "Management actions",
       "requiredFields": "Required: {{fields}}",
       "stream": {
+        "toolInput": "Tool input",
+        "toolResult": "Tool result",
+        "approvalProposal": "Approval proposal",
+        "approvalRequired": "Approval required",
+        "waitingApproval": "Waiting for admin approval before execution.",
+        "noAssistantText": "No assistant text returned.",
         "status": {
           "streaming": "Streaming response",
           "assistantMessage": "Assistant message"

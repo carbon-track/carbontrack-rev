@@ -132,6 +132,12 @@
       "managementActionsTitle": "管理动作",
       "requiredFields": "必填：{{fields}}",
       "stream": {
+        "toolInput": "工具输入",
+        "toolResult": "工具结果",
+        "approvalProposal": "确认提案",
+        "approvalRequired": "需要在对话中确认",
+        "waitingApproval": "等待管理员确认后执行。",
+        "noAssistantText": "AI 未返回文本。",
         "status": {
           "streaming": "正在生成回复",
           "assistantMessage": "AI 回复"
