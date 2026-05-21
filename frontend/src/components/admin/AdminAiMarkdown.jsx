@@ -16,8 +16,8 @@ function isSafeMarkdownHref(href) {
     return false;
   }
 
-  for (let index = 0; index < trimmed.length; index += 1) {
-    const code = trimmed.charCodeAt(index);
+  for (const char of trimmed) {
+    const code = char.charCodeAt(0);
     if (code <= 31 || code === 127) {
       return false;
     }
@@ -78,7 +78,7 @@ export default function AdminAiMarkdown({ content, className }) {
             const isBlock = /language-/.test(className || '') || rawCode.includes('\n');
 
             return isBlock ? (
-              <code className="block overflow-x-auto whitespace-pre rounded-[16px] border border-white/10 bg-slate-900 px-3 py-3 font-mono text-[12px] leading-5 text-slate-200">
+              <code className="block overflow-x-auto whitespace-pre rounded-2xl border border-white/10 bg-slate-900 px-3 py-3 font-mono text-[12px] leading-5 text-slate-200">
                 {children}
               </code>
             ) : (
@@ -89,7 +89,7 @@ export default function AdminAiMarkdown({ content, className }) {
           },
           pre: ({ children }) => <pre className="my-3 overflow-x-auto">{children}</pre>,
           table: ({ children }) => (
-            <div className="my-3 overflow-x-auto rounded-[16px] border border-current/10">
+            <div className="my-3 overflow-x-auto rounded-2xl border border-current/10">
               <table className="min-w-full text-left text-xs">{children}</table>
             </div>
           ),

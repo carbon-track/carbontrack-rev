@@ -131,6 +131,12 @@
       "navigationTitle": "Navigation targets",
       "managementActionsTitle": "Management actions",
       "requiredFields": "Required: {{fields}}",
+      "stream": {
+        "status": {
+          "streaming": "Streaming response",
+          "assistantMessage": "Assistant message"
+        }
+      },
       "messages": {
         "actionRejected": "The pending action was cancelled. Add more details and send a new instruction when ready.",
         "actionExecutionFailed": "The action failed while executing. Please try again later.",

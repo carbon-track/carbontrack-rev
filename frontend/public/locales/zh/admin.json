@@ -131,6 +131,12 @@
       "navigationTitle": "导航目标",
       "managementActionsTitle": "管理动作",
       "requiredFields": "必填：{{fields}}",
+      "stream": {
+        "status": {
+          "streaming": "正在生成回复",
+          "assistantMessage": "AI 回复"
+        }
+      },
       "messages": {
         "actionRejected": "已取消该待执行操作。你可以补充条件后重新下达指令。",
         "actionExecutionFailed": "执行该操作时出现错误，请稍后重试。",

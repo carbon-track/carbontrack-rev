@@ -618,14 +618,14 @@ function getStreamToolKey(event, data, items = []) {
   }
 
   if (data?.tool_name) {
-    const matched = [...items].reverse().find(
-      (item) => item?.kind === 'stream_tool'
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+      const item = items[index];
+      if (item?.kind === 'stream_tool'
         && item?.data?.run_id === data.run_id
         && item?.data?.tool_name === data.tool_name
-        && ['running', 'waiting_input', 'waiting_approval'].includes(item?.data?.status)
-    );
-    if (matched?.toolKey) {
-      return matched.toolKey;
+        && ['running', 'waiting_input', 'waiting_approval'].includes(item?.data?.status)) {
+        return item.toolKey;
+      }
     }
 
     return `tool:${runId}:${data.tool_name}:${data?.sequence || items.length}`;
@@ -674,13 +674,18 @@ function reduceStreamState(state, event, data) {
   }
 
   if (event === 'run.finished') {
+    const runId = data?.run_id;
     return {
       ...currentState,
-      items: items.map((item) => (
-        item.kind === 'stream_status' && item.data?.run_id === data?.run_id
-          ? { ...item, event, data: { ...item.data, ...(data || {}), status: 'finished' } }
-          : item
-      )),
+      items: items.map((item) => {
+        if (item.kind === 'stream_status' && item.data?.run_id === runId) {
+          return { ...item, event, data: { ...item.data, ...(data || {}), status: 'finished' } };
+        }
+        if (item.kind === 'assistant_stream' && (!runId || item.data?.run_id === runId)) {
+          return { ...item, event, data: { ...item.data, ...(data || {}), streaming: false } };
+        }
+        return item;
+      }),
     };
   }
 
@@ -1360,8 +1365,8 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
           {data.streaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
           {data.streaming
-            ? (isZh ? '正在生成回复' : 'Streaming response')
-            : (isZh ? 'AI 回复' : 'Assistant message')}
+            ? t('aiWorkspace.stream.status.streaming', { defaultValue: isZh ? '正在生成回复' : 'Streaming response' })
+            : t('aiWorkspace.stream.status.assistantMessage', { defaultValue: isZh ? 'AI 回复' : 'Assistant message' })}
         </div>
         <AdminAiMarkdown content={content} />
       </div>
@@ -1369,7 +1374,7 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
   }
 
   if (isToolItem) {
-    const status = data.status || (event === 'tool.started' ? 'running' : event === 'tool.error' ? 'error' : 'success');
+    const status = data.status || 'success';
     const tone = status === 'error'
       ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100'
       : status === 'running'
@@ -2403,6 +2408,16 @@ export default function AdminAiWorkspacePage() {
     queryClient.invalidateQueries(['adminAiConversations', currentAdminId]);
   }, [currentAdminId, queryClient]);
 
+  const invalidateConversationDetail = useCallback((conversationId) => {
+    const targetConversationId = conversationId ?? selectedConversationId;
+    if (targetConversationId != null) {
+      queryClient.invalidateQueries(['adminAiConversation', targetConversationId]);
+      return;
+    }
+
+    queryClient.invalidateQueries(['adminAiConversation']);
+  }, [queryClient, selectedConversationId]);
+
   const hasStaleConversationDetail = Boolean(normalizedSelectedConversationId)
     && activeConversationId !== normalizedSelectedConversationId;
 
@@ -2476,10 +2491,10 @@ export default function AdminAiWorkspacePage() {
         setDraft((current) => (current.trim() === variables.message ? '' : current));
         invalidateWorkspace();
       },
-      onError: (error) => {
+      onError: (error, variables) => {
         setStreamState(createEmptyStreamState());
         invalidateWorkspace();
-        queryClient.invalidateQueries(['adminAiConversation']);
+        invalidateConversationDetail(variables?.conversationId);
         if (error?.code === 'AI_STREAM_DISCONNECTED') {
           toast.error(isZh ? 'AI 连接中断，正在恢复会话记录。' : 'AI stream disconnected. Restoring the session timeline.');
           return;
@@ -2551,10 +2566,10 @@ export default function AdminAiWorkspacePage() {
         invalidateWorkspace();
         setStreamState(createEmptyStreamState());
       },
-      onError: (error) => {
+      onError: (error, variables) => {
         setStreamState(createEmptyStreamState());
         invalidateWorkspace();
-        queryClient.invalidateQueries(['adminAiConversation']);
+        invalidateConversationDetail(variables?.conversationId);
         if (error?.code === 'AI_PROVIDER_TIMEOUT' || error?.response?.data?.code === 'AI_PROVIDER_TIMEOUT') {
           toast.error(isZh ? '模型处理超时，可能请求过复杂，请拆分任务或稍后重试。' : 'The model timed out. Try splitting the task or retry later.');
           return;
