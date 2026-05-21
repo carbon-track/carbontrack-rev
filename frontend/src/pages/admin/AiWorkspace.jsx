@@ -2378,7 +2378,7 @@ export default function AdminAiWorkspacePage() {
     {
       enabled: Boolean(selectedConversationId),
       refetchOnWindowFocus: true,
-      refetchInterval: shouldPollCurrentConversation ? 3000 : false,
+      refetchInterval: shouldPollCurrentConversation ? 10000 : false,
     }
   );
 
