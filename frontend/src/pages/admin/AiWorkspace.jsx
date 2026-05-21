@@ -722,7 +722,12 @@ function reduceStreamState(state, event, data) {
 
   if (event === 'assistant.delta' || event === 'assistant.message') {
     const runId = data?.run_id || 'run';
-    const index = items.findIndex((item) => item.kind === 'assistant_stream' && item.data?.run_id === runId);
+    const assistantKey = data?.message_id || data?.response_id || data?.step_id || runId;
+    const index = items.findIndex((item) => (
+      item.kind === 'assistant_stream'
+      && item.data?.run_id === runId
+      && (item.data?.assistant_key || item.data?.message_id || item.data?.response_id || item.data?.step_id || item.data?.run_id) === assistantKey
+    ));
     const content = event === 'assistant.delta'
       ? `${index >= 0 ? items[index].data?.content || '' : ''}${data?.content || ''}`
       : (data?.content || (index >= 0 ? items[index].data?.content : '') || '');
@@ -732,10 +737,11 @@ function reduceStreamState(state, event, data) {
       data: {
         ...(index >= 0 ? items[index].data : {}),
         ...(data || {}),
+        assistant_key: assistantKey,
         content,
         streaming: event === 'assistant.delta',
       },
-      id: `assistant-${runId}`,
+      id: `assistant-${runId}-${assistantKey}`,
     };
 
     if (index >= 0) {
@@ -747,7 +753,7 @@ function reduceStreamState(state, event, data) {
 
     return {
       ...currentState,
-      items: [...items, nextItem],
+      items: trimStreamItems([...items, nextItem]),
     };
   }
 
@@ -2290,10 +2296,13 @@ export default function AdminAiWorkspacePage() {
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [workspaceSection, setWorkspaceSection] = useState('actions');
   const [streamState, setStreamState] = useState(createEmptyStreamState);
+  const [streamConversationId, setStreamConversationId] = useState(null);
   const [isDocumentVisible, setIsDocumentVisible] = useState(
     () => typeof document === 'undefined' || document.visibilityState === 'visible'
   );
   const [autonomyMode, setAutonomyMode] = useState('read_only_auto');
+  const selectedConversationIdRef = useRef(selectedConversationId);
+  const isCreatingConversationRef = useRef(isCreatingConversation);
 
   const aiContext = useMemo(() => ({
     activeRoute: '/admin/ai',
@@ -2301,6 +2310,14 @@ export default function AdminAiWorkspacePage() {
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai',
     autonomyMode,
   }), [autonomyMode, locale]);
+
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
+
+  useEffect(() => {
+    isCreatingConversationRef.current = isCreatingConversation;
+  }, [isCreatingConversation]);
 
   const workspaceQuery = useQuery(
     ['adminAiWorkspace'],
@@ -2318,8 +2335,7 @@ export default function AdminAiWorkspacePage() {
         admin_id: currentAdminId || undefined,
       });
       return response.data?.data || [];
-    },
-    { keepPreviousData: true }
+    }
   );
 
   const conversationItems = useMemo(() => {
@@ -2367,15 +2383,31 @@ export default function AdminAiWorkspacePage() {
   }, [filteredConversationItems, isCreatingConversation, selectedConversationId]);
 
   useEffect(() => {
+    if (
+      streamConversationId
+      && filteredConversationItems.some((item) => String(item.conversation_id) === String(streamConversationId))
+    ) {
+      setStreamConversationId(null);
+    }
+  }, [filteredConversationItems, streamConversationId]);
+
+  useEffect(() => {
     if (isCreatingConversation || !selectedConversationId) {
       return;
     }
 
-    const stillVisible = filteredConversationItems.some((item) => item.conversation_id === selectedConversationId);
+    const stillVisible = filteredConversationItems.some((item) => String(item.conversation_id) === String(selectedConversationId));
+    if (
+      !stillVisible
+      && streamConversationId != null
+      && String(selectedConversationId) === String(streamConversationId)
+    ) {
+      return;
+    }
     if (!stillVisible && filteredConversationItems.length > 0) {
       setSelectedConversationId(filteredConversationItems[0].conversation_id);
     }
-  }, [filteredConversationItems, isCreatingConversation, selectedConversationId]);
+  }, [filteredConversationItems, isCreatingConversation, selectedConversationId, streamConversationId]);
 
   useEffect(() => {
     if (searchParams.get('focus') === 'composer') {
@@ -2440,10 +2472,16 @@ export default function AdminAiWorkspacePage() {
       return true;
     }
 
-    return !visibleMessages.some((message) => (
-      message?.role === 'user'
-      && String(message.content || message.message || '').trim() === optimisticContent
-    ));
+    for (let index = visibleMessages.length - 1; index >= 0; index -= 1) {
+      const message = visibleMessages[index];
+      if (message?.role !== 'user') {
+        continue;
+      }
+
+      return String(message.content || message.message || '').trim() !== optimisticContent;
+    }
+
+    return true;
   }, [streamState.optimisticMessage, visibleMessages]);
   const pendingActions = useMemo(
     () => (Array.isArray(activeConversation?.pending_actions) ? activeConversation.pending_actions : []),
@@ -2479,11 +2517,36 @@ export default function AdminAiWorkspacePage() {
 
   const handleStreamEvent = useCallback(({ event, data }) => {
     if (event === 'run.started' && data?.conversation_id) {
-      setSelectedConversationId(data.conversation_id);
+      const nextConversationId = data.conversation_id;
+      setStreamConversationId(nextConversationId);
+      setSelectedConversationId((current) => {
+        const currentConversationId = current == null ? null : String(current);
+        const eventConversationId = String(nextConversationId);
+        const latestSelectedConversationId = selectedConversationIdRef.current == null
+          ? null
+          : String(selectedConversationIdRef.current);
+
+        const shouldSelectStreamConversation = (
+          isCreatingConversationRef.current
+          || currentConversationId == null
+          || currentConversationId === eventConversationId
+          || latestSelectedConversationId === eventConversationId
+        );
+
+        if (shouldSelectStreamConversation) {
+          selectedConversationIdRef.current = nextConversationId;
+          return nextConversationId;
+        }
+
+        return current;
+      });
+      isCreatingConversationRef.current = false;
       setIsCreatingConversation(false);
+      queryClient.invalidateQueries(['adminAiConversations', currentAdminId]);
+      invalidateConversationDetail(nextConversationId);
     }
     setStreamState((state) => reduceStreamState(state, event, data));
-  }, []);
+  }, [currentAdminId, invalidateConversationDetail, queryClient]);
 
   const sendMutation = useMutation(
     async ({ message, conversationId }) => {
@@ -2536,19 +2599,39 @@ export default function AdminAiWorkspacePage() {
           normalizeI18nMessagePayload(payload.message_i18n || payload.metadata?.message_i18n)
         );
         const nextConversationId = payload.conversation_id || nextConversation?.conversation_id || null;
+        const latestSelectedConversationId = selectedConversationIdRef.current == null
+          ? null
+          : String(selectedConversationIdRef.current);
+        const requestConversationId = variables?.conversationId == null
+          ? null
+          : String(variables.conversationId);
+        const normalizedNextConversationId = nextConversationId == null ? null : String(nextConversationId);
 
         if (nextConversationId) {
           queryClient.setQueryData(['adminAiConversation', nextConversationId], nextConversation);
-          setSelectedConversationId(nextConversationId);
+          const shouldSelectNextConversation = (
+            isCreatingConversationRef.current
+            || latestSelectedConversationId == null
+            || latestSelectedConversationId === normalizedNextConversationId
+            || latestSelectedConversationId === requestConversationId
+          );
+          if (shouldSelectNextConversation) {
+            selectedConversationIdRef.current = nextConversationId;
+            setSelectedConversationId(nextConversationId);
+          }
         }
 
+        isCreatingConversationRef.current = false;
         setIsCreatingConversation(false);
+        setStreamConversationId(nextConversationId || null);
         setStreamState(createEmptyStreamState());
         setDraft((current) => (current.trim() === variables.message ? '' : current));
+        invalidateConversationDetail(nextConversationId || variables?.conversationId);
         invalidateWorkspace();
       },
       onError: (error, variables) => {
         setStreamState(createEmptyStreamState());
+        setStreamConversationId(null);
         invalidateWorkspace();
         invalidateConversationDetail(variables?.conversationId);
         if (error?.code === 'AI_STREAM_DISCONNECTED') {
@@ -2620,10 +2703,13 @@ export default function AdminAiWorkspacePage() {
         }
 
         invalidateWorkspace();
+        invalidateConversationDetail(nextConversationId || variables?.conversationId);
+        setStreamConversationId(nextConversationId || variables?.conversationId || null);
         setStreamState(createEmptyStreamState());
       },
       onError: (error, variables) => {
         setStreamState(createEmptyStreamState());
+        setStreamConversationId(null);
         invalidateWorkspace();
         invalidateConversationDetail(variables?.conversationId);
         if (error?.code === 'AI_PROVIDER_TIMEOUT' || error?.response?.data?.code === 'AI_PROVIDER_TIMEOUT') {
@@ -2654,7 +2740,9 @@ export default function AdminAiWorkspacePage() {
     [workspaceData?.management_actions]
   );
 
-  const currentSummary = activeConversation?.summary || conversationItems.find((item) => item.conversation_id === selectedConversationId) || {};
+  const currentSummary = activeConversation?.summary
+    || conversationItems.find((item) => String(item.conversation_id) === String(selectedConversationId))
+    || {};
   const selectedConversationTitle = currentSummary.title || (isCreatingConversation ? (isZh ? '新会话' : 'New session') : (isZh ? '控制通道' : 'Control channel'));
   const currentConversationIdLabel = activeConversationId || normalizedSelectedConversationId || null;
   const lastActivityLabel = formatAbsoluteTime(currentSummary.last_activity_at, locale);
@@ -2790,8 +2878,11 @@ export default function AdminAiWorkspacePage() {
   const currentSection = secondarySections.find((item) => item.id === workspaceSection) || secondarySections[0];
 
   const handleSelectConversation = useCallback((conversationId) => {
+    isCreatingConversationRef.current = false;
+    selectedConversationIdRef.current = conversationId;
     setIsCreatingConversation(false);
     setSelectedConversationId(conversationId);
+    setStreamConversationId(null);
     setStreamState(createEmptyStreamState());
   }, []);
 
@@ -2801,8 +2892,11 @@ export default function AdminAiWorkspacePage() {
   }, []);
 
   const handleStartConversation = useCallback(() => {
+    isCreatingConversationRef.current = true;
+    selectedConversationIdRef.current = null;
     setIsCreatingConversation(true);
     setSelectedConversationId(null);
+    setStreamConversationId(null);
     setStreamState(createEmptyStreamState());
     queryClient.removeQueries(['adminAiConversation']);
     requestAnimationFrame(() => composerRef.current?.focus());
