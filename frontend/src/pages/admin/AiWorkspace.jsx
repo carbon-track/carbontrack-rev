@@ -2471,6 +2471,7 @@ export default function AdminAiWorkspacePage() {
     if (!optimisticContent) {
       return true;
     }
+    const optimisticTime = parseTimelineTime(optimisticMessage.created_at);
 
     for (let index = visibleMessages.length - 1; index >= 0; index -= 1) {
       const message = visibleMessages[index];
@@ -2478,7 +2479,16 @@ export default function AdminAiWorkspacePage() {
         continue;
       }
 
-      return String(message.content || message.message || '').trim() !== optimisticContent;
+      if (String(message.content || message.message || '').trim() !== optimisticContent) {
+        return true;
+      }
+
+      const messageTime = parseTimelineTime(message.created_at);
+      if (!Number.isFinite(optimisticTime) || !Number.isFinite(messageTime)) {
+        return false;
+      }
+
+      return messageTime < optimisticTime;
     }
 
     return true;
