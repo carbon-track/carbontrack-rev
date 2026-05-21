@@ -605,7 +605,7 @@ function createOptimisticUserMessage(content, conversationId) {
 
 function getStreamToolKey(event, data, items = []) {
   const runId = data?.run_id || 'run';
-  if (data?.step_id) {
+  if (data?.step_id != null) {
     return `tool:${runId}:${data.step_id}`;
   }
 
@@ -628,7 +628,7 @@ function getStreamToolKey(event, data, items = []) {
       }
     }
 
-    return `tool:${runId}:${data.tool_name}:${data?.sequence || items.length}`;
+    return `tool:${runId}:${data.tool_name}:${data?.sequence ?? items.length}`;
   }
 
   return null;
@@ -667,7 +667,7 @@ function reduceStreamState(state, event, data) {
       kind: 'stream_status',
       event,
       data: { ...(data || {}), status: 'running' },
-      id: `${runId}-${data?.sequence || 1}`,
+      id: `${runId}-${data?.sequence ?? 1}`,
     };
     const existingIndex = items.findIndex((item) => item.kind === 'stream_status' && item.data?.run_id === runId);
 
@@ -759,7 +759,7 @@ function reduceStreamState(state, event, data) {
         kind: 'stream_event',
         event,
         data,
-        id: `${event}-${data?.run_id || 'run'}-${data?.step_id || data?.sequence || items.length}`,
+        id: `${event}-${data?.run_id || 'run'}-${data?.step_id ?? data?.sequence ?? items.length}`,
       },
     ],
   };
