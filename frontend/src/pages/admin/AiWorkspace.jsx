@@ -39,16 +39,9 @@ const COMMAND_MIN_LENGTH = 2;
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
 const MAX_STREAM_ITEMS = 120;
-let optimisticMessageSequence = 0;
-let streamItemSequence = 0;
 
 function trimStreamItems(items) {
   return items.length > MAX_STREAM_ITEMS ? items.slice(-MAX_STREAM_ITEMS) : items;
-}
-
-function createStreamItemSequence() {
-  streamItemSequence += 1;
-  return streamItemSequence;
 }
 
 function createEmptyStreamState() {
@@ -651,11 +644,10 @@ function buildConversationTimeline(conversation) {
   });
 }
 
-function createOptimisticUserMessage(content, conversationId, baselineUserMessageMatches = 0) {
-  optimisticMessageSequence += 1;
+function createOptimisticUserMessage(content, conversationId, baselineUserMessageMatches = 0, fallbackSequence = 0) {
   const randomId = typeof globalThis.crypto?.randomUUID === 'function'
     ? globalThis.crypto.randomUUID()
-    : `${Date.now()}-${optimisticMessageSequence}`;
+    : `${Date.now()}-${fallbackSequence}`;
 
   return {
     id: `local-user-${conversationId || 'new'}-${randomId}`,
@@ -697,7 +689,7 @@ function getStreamToolKey(event, data, items = []) {
       }
     }
 
-    return `tool:${runId}:${data.tool_name}:${data?.sequence ?? createStreamItemSequence()}`;
+    return `tool:${runId}:${data.tool_name}:${data?.sequence ?? data?._client_sequence ?? items.length}`;
   }
 
   return null;
@@ -883,7 +875,7 @@ function reduceStreamState(state, event, data) {
         kind: 'stream_event',
         event,
         data,
-        id: `${event}-${data?.run_id || 'run'}-${data?.step_id ?? data?.sequence ?? createStreamItemSequence()}`,
+        id: `${event}-${data?.run_id || 'run'}-${data?.step_id ?? data?.sequence ?? data?._client_sequence ?? items.length}`,
       },
     ]),
   };
@@ -2371,6 +2363,8 @@ export default function AdminAiWorkspacePage() {
   const [autonomyMode, setAutonomyMode] = useState('read_only_auto');
   const selectedConversationIdRef = useRef(selectedConversationId);
   const isCreatingConversationRef = useRef(isCreatingConversation);
+  const optimisticMessageSequenceRef = useRef(0);
+  const streamItemSequenceRef = useRef(0);
 
   const aiContext = useMemo(() => ({
     activeRoute: '/admin/ai',
@@ -2593,8 +2587,13 @@ export default function AdminAiWorkspacePage() {
     && activeConversationId !== normalizedSelectedConversationId;
 
   const handleStreamEvent = useCallback(({ event, data }) => {
-    if (event === 'run.started' && data?.conversation_id) {
-      const nextConversationId = data.conversation_id;
+    streamItemSequenceRef.current += 1;
+    const eventData = data && typeof data === 'object'
+      ? { ...data, _client_sequence: streamItemSequenceRef.current }
+      : data;
+
+    if (event === 'run.started' && eventData?.conversation_id) {
+      const nextConversationId = eventData.conversation_id;
       const eventConversationId = String(nextConversationId);
       const latestSelectedConversationId = selectedConversationIdRef.current == null
         ? null
@@ -2615,7 +2614,7 @@ export default function AdminAiWorkspacePage() {
       queryClient.invalidateQueries(['adminAiConversations', currentAdminId]);
       invalidateConversationDetail(nextConversationId);
     }
-    setStreamState((state) => reduceStreamState(state, event, data));
+    setStreamState((state) => reduceStreamState(state, event, eventData));
   }, [currentAdminId, invalidateConversationDetail, queryClient]);
 
   const sendMutation = useMutation(
@@ -2668,7 +2667,8 @@ export default function AdminAiWorkspacePage() {
           optimisticMessage: createOptimisticUserMessage(
             variables.message,
             variables.conversationId,
-            baselineUserMessageMatches
+            baselineUserMessageMatches,
+            optimisticMessageSequenceRef.current += 1
           ),
           items: [],
         });
