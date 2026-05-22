@@ -598,7 +598,7 @@ function buildConversationTimeline(conversation) {
   });
 }
 
-function createOptimisticUserMessage(content, conversationId) {
+function createOptimisticUserMessage(content, conversationId, baselineUserMessageMatches = 0) {
   optimisticMessageSequence += 1;
   const randomId = typeof globalThis.crypto?.randomUUID === 'function'
     ? globalThis.crypto.randomUUID()
@@ -610,7 +610,12 @@ function createOptimisticUserMessage(content, conversationId) {
     role: 'user',
     content,
     created_at: new Date().toISOString(),
-    meta: { data: { source: 'client_stream_optimistic' } },
+    meta: {
+      data: {
+        source: 'client_stream_optimistic',
+        baseline_user_message_matches: baselineUserMessageMatches,
+      },
+    },
   };
 }
 
@@ -653,9 +658,9 @@ function getStreamToolStatus(event, data, previousStatus) {
   return data?.status || previousStatus || 'success';
 }
 
-function formatMissingFieldLabel(field, isZh) {
+function formatMissingFieldLabel(field, isZh, t) {
   if (field == null || field === '') {
-    return isZh ? '未知字段' : 'Unknown field';
+    return t('admin.aiWorkspace.stream.unknownField', { defaultValue: isZh ? '未知字段' : 'Unknown field' });
   }
   if (typeof field !== 'object') {
     return String(field);
@@ -1450,7 +1455,7 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         {missing.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-2">
             {missing.map((field, index) => {
-              const label = formatMissingFieldLabel(field, isZh);
+              const label = formatMissingFieldLabel(field, isZh, t);
               return (
                 <Badge key={`${label}-${index}`} variant="outline" className="border-current/20 text-current">
                   {label}
@@ -2480,7 +2485,10 @@ export default function AdminAiWorkspacePage() {
     if (!optimisticContent) {
       return true;
     }
-    const optimisticTime = parseTimelineTime(optimisticMessage.created_at);
+    const baselineUserMessageMatches = Number(
+      optimisticMessage.meta?.data?.baseline_user_message_matches ?? 0
+    );
+    let currentUserMessageMatches = 0;
 
     for (let index = visibleMessages.length - 1; index >= 0; index -= 1) {
       const message = visibleMessages[index];
@@ -2488,19 +2496,12 @@ export default function AdminAiWorkspacePage() {
         continue;
       }
 
-      if (String(message.content || message.message || '').trim() !== optimisticContent) {
-        return true;
+      if (String(message.content || message.message || '').trim() === optimisticContent) {
+        currentUserMessageMatches += 1;
       }
-
-      const messageTime = parseTimelineTime(message.created_at);
-      if (!Number.isFinite(optimisticTime) || !Number.isFinite(messageTime)) {
-        return false;
-      }
-
-      return messageTime < optimisticTime;
     }
 
-    return true;
+    return currentUserMessageMatches <= baselineUserMessageMatches;
   }, [streamState.optimisticMessage, visibleMessages]);
   const pendingActions = useMemo(
     () => (Array.isArray(activeConversation?.pending_actions) ? activeConversation.pending_actions : []),
@@ -2602,8 +2603,23 @@ export default function AdminAiWorkspacePage() {
     },
     {
       onMutate: (variables) => {
+        const optimisticContent = String(variables.message || '').trim();
+        const baselineUserMessageMatches = visibleMessages.reduce((count, message) => {
+          if (
+            message?.role === 'user'
+            && String(message.content || message.message || '').trim() === optimisticContent
+          ) {
+            return count + 1;
+          }
+          return count;
+        }, 0);
+
         setStreamState({
-          optimisticMessage: createOptimisticUserMessage(variables.message, variables.conversationId),
+          optimisticMessage: createOptimisticUserMessage(
+            variables.message,
+            variables.conversationId,
+            baselineUserMessageMatches
+          ),
           items: [],
         });
       },

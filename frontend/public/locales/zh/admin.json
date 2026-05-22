@@ -138,6 +138,7 @@
         "approvalRequired": "需要在对话中确认",
         "waitingApproval": "等待管理员确认后执行。",
         "noAssistantText": "AI 未返回文本。",
+        "unknownField": "未知字段",
         "status": {
           "streaming": "正在生成回复",
           "assistantMessage": "AI 回复",

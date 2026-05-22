@@ -138,6 +138,7 @@
         "approvalRequired": "Approval required",
         "waitingApproval": "Waiting for admin approval before execution.",
         "noAssistantText": "No assistant text returned.",
+        "unknownField": "Unknown field",
         "status": {
           "streaming": "Streaming response",
           "assistantMessage": "Assistant message",
