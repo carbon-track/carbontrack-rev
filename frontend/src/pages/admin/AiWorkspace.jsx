@@ -39,6 +39,7 @@ const COMMAND_MIN_LENGTH = 2;
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
 const MAX_STREAM_ITEMS = 120;
+let optimisticMessageSequence = 0;
 
 function trimStreamItems(items) {
   return items.length > MAX_STREAM_ITEMS ? items.slice(-MAX_STREAM_ITEMS) : items;
@@ -598,8 +599,13 @@ function buildConversationTimeline(conversation) {
 }
 
 function createOptimisticUserMessage(content, conversationId) {
+  optimisticMessageSequence += 1;
+  const randomId = typeof globalThis.crypto?.randomUUID === 'function'
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}-${optimisticMessageSequence}`;
+
   return {
-    id: `local-user-${conversationId || 'new'}-${Date.now()}`,
+    id: `local-user-${conversationId || 'new'}-${randomId}`,
     kind: 'message',
     role: 'user',
     content,
@@ -1377,10 +1383,10 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
   if (item?.kind === 'stream_status') {
     const status = data.status || (event === 'run.finished' ? 'finished' : 'running');
     const label = status === 'finished'
-      ? t('aiWorkspace.stream.status.runFinished', { defaultValue: isZh ? 'Agent 已完成处理' : 'Agent run finished' })
+      ? t('admin.aiWorkspace.stream.status.runFinished', { defaultValue: isZh ? 'Agent 已完成处理' : 'Agent run finished' })
       : status === 'error'
-        ? t('aiWorkspace.stream.status.runFailed', { defaultValue: isZh ? 'Agent 处理失败' : 'Agent run failed' })
-        : t('aiWorkspace.stream.status.runStarted', { defaultValue: isZh ? 'Agent 已开始处理' : 'Agent run started' });
+        ? t('admin.aiWorkspace.stream.status.runFailed', { defaultValue: isZh ? 'Agent 处理失败' : 'Agent run failed' })
+        : t('admin.aiWorkspace.stream.status.runStarted', { defaultValue: isZh ? 'Agent 已开始处理' : 'Agent run started' });
 
     return (
       <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100">
@@ -1409,8 +1415,8 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
           {data.streaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
           {data.streaming
-            ? t('aiWorkspace.stream.status.streaming', { defaultValue: isZh ? '正在生成回复' : 'Streaming response' })
-            : t('aiWorkspace.stream.status.assistantMessage', { defaultValue: isZh ? 'AI 回复' : 'Assistant message' })}
+            ? t('admin.aiWorkspace.stream.status.streaming', { defaultValue: isZh ? '正在生成回复' : 'Streaming response' })
+            : t('admin.aiWorkspace.stream.status.assistantMessage', { defaultValue: isZh ? 'AI 回复' : 'Assistant message' })}
         </div>
         <AdminAiMarkdown content={content} />
       </div>
@@ -1455,11 +1461,11 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         ) : null}
         {hasToolInput || hasToolResult ? (
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
-            <ResultSnapshot title={t('aiWorkspace.stream.toolInput', { defaultValue: isZh ? '工具输入' : 'Tool input' })} value={data.arguments} isZh={isZh} />
-            <ResultSnapshot title={t('aiWorkspace.stream.toolResult', { defaultValue: isZh ? '工具结果' : 'Tool result' })} value={data.result} isZh={isZh} />
+            <ResultSnapshot title={t('admin.aiWorkspace.stream.toolInput', { defaultValue: isZh ? '工具输入' : 'Tool input' })} value={data.arguments} isZh={isZh} />
+            <ResultSnapshot title={t('admin.aiWorkspace.stream.toolResult', { defaultValue: isZh ? '工具结果' : 'Tool result' })} value={data.result} isZh={isZh} />
           </div>
         ) : null}
-        {data.proposal ? <ResultSnapshot title={t('aiWorkspace.stream.approvalProposal', { defaultValue: isZh ? '确认提案' : 'Approval proposal' })} value={data.proposal} isZh={isZh} /> : null}
+        {data.proposal ? <ResultSnapshot title={t('admin.aiWorkspace.stream.approvalProposal', { defaultValue: isZh ? '确认提案' : 'Approval proposal' })} value={data.proposal} isZh={isZh} /> : null}
       </div>
     );
   }
@@ -1469,9 +1475,9 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
       <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
         <div className="flex items-center gap-2 font-semibold">
           <ShieldAlert className="h-4 w-4" />
-          {t('aiWorkspace.stream.approvalRequired', { defaultValue: isZh ? '需要在对话中确认' : 'Approval required' })}
+          {t('admin.aiWorkspace.stream.approvalRequired', { defaultValue: isZh ? '需要在对话中确认' : 'Approval required' })}
         </div>
-        <div className="mt-2 leading-6">{data.proposal?.summary || data.proposal?.label || t('aiWorkspace.stream.waitingApproval', { defaultValue: isZh ? '等待管理员确认后执行。' : 'Waiting for admin approval before execution.' })}</div>
+        <div className="mt-2 leading-6">{data.proposal?.summary || data.proposal?.label || t('admin.aiWorkspace.stream.waitingApproval', { defaultValue: isZh ? '等待管理员确认后执行。' : 'Waiting for admin approval before execution.' })}</div>
       </div>
     );
   }
@@ -2176,7 +2182,7 @@ function MessageBubble({
             isUser
               ? <div className="whitespace-pre-wrap">{messageContent}</div>
               : <AdminAiMarkdown content={messageContent} />
-          ) : t('aiWorkspace.stream.noAssistantText', { defaultValue: isZh ? 'AI 未返回文本。' : 'No assistant text returned.' })}
+          ) : t('admin.aiWorkspace.stream.noAssistantText', { defaultValue: isZh ? 'AI 未返回文本。' : 'No assistant text returned.' })}
         </div>
 
         {!isUser && (actionName || result || missing.length > 0) ? (
@@ -2385,11 +2391,11 @@ export default function AdminAiWorkspacePage() {
   useEffect(() => {
     if (
       streamConversationId
-      && filteredConversationItems.some((item) => String(item.conversation_id) === String(streamConversationId))
+      && conversationItems.some((item) => String(item.conversation_id) === String(streamConversationId))
     ) {
       setStreamConversationId(null);
     }
-  }, [filteredConversationItems, streamConversationId]);
+  }, [conversationItems, streamConversationId]);
 
   useEffect(() => {
     if (isCreatingConversation || !selectedConversationId) {
@@ -2397,9 +2403,12 @@ export default function AdminAiWorkspacePage() {
     }
 
     const stillVisible = filteredConversationItems.some((item) => String(item.conversation_id) === String(selectedConversationId));
+    const streamConversationPendingInList = streamConversationId != null
+      && !conversationItems.some((item) => String(item.conversation_id) === String(streamConversationId));
     if (
       !stillVisible
       && streamConversationId != null
+      && streamConversationPendingInList
       && String(selectedConversationId) === String(streamConversationId)
     ) {
       return;
@@ -2407,7 +2416,7 @@ export default function AdminAiWorkspacePage() {
     if (!stillVisible && filteredConversationItems.length > 0) {
       setSelectedConversationId(filteredConversationItems[0].conversation_id);
     }
-  }, [filteredConversationItems, isCreatingConversation, selectedConversationId, streamConversationId]);
+  }, [conversationItems, filteredConversationItems, isCreatingConversation, selectedConversationId, streamConversationId]);
 
   useEffect(() => {
     if (searchParams.get('focus') === 'composer') {
