@@ -99,6 +99,8 @@
       "readActions": "可读动作",
       "writeActions": "可写动作",
       "pendingConfirmations": "需确认",
+      "newConversationTitle": "新会话",
+      "controlChannelTitle": "控制通道",
       "unavailableTitle": "当前无法发起新对话",
       "unavailableDescription": "仍可查看会话、能力目录和快捷入口；如需恢复对话，请检查后端 LLM 配置与诊断状态。",
       "conversationsTitle": "最近会话",

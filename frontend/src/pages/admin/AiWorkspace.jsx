@@ -1442,9 +1442,14 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
       : status === 'error'
         ? t('admin.aiWorkspace.stream.status.runFailed', { defaultValue: isZh ? 'Agent 处理失败' : 'Agent run failed' })
         : t('admin.aiWorkspace.stream.status.runStarted', { defaultValue: isZh ? 'Agent 已开始处理' : 'Agent run started' });
+    const statusToneClass = status === 'error'
+      ? 'border-red-200/80 bg-red-50/80 text-red-900 dark:border-red-400/25 dark:bg-red-400/10 dark:text-red-100'
+      : status === 'finished'
+        ? 'border-emerald-200/80 bg-emerald-50/80 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100'
+        : 'border-sky-200/80 bg-sky-50/80 text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100';
 
     return (
-      <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100">
+      <div className={cn('rounded-2xl border px-4 py-3 text-sm', statusToneClass)}>
         <div className="flex items-center gap-2 font-medium">
           {status === 'running' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
           {label}
@@ -2832,7 +2837,11 @@ export default function AdminAiWorkspacePage() {
   const currentSummary = activeConversation?.summary
     || conversationItems.find((item) => String(item.conversation_id) === String(selectedConversationId))
     || {};
-  const selectedConversationTitle = currentSummary.title || (isCreatingConversation ? (isZh ? '新会话' : 'New session') : (isZh ? '控制通道' : 'Control channel'));
+  const selectedConversationTitle = currentSummary.title || (
+    isCreatingConversation
+      ? t('admin.aiWorkspace.newConversationTitle', { defaultValue: isZh ? '新会话' : 'New session' })
+      : t('admin.aiWorkspace.controlChannelTitle', { defaultValue: isZh ? '控制通道' : 'Control channel' })
+  );
   const currentConversationIdLabel = activeConversationId || normalizedSelectedConversationId || null;
   const lastActivityLabel = formatAbsoluteTime(currentSummary.last_activity_at, locale);
   const canSend = draft.trim().length >= COMMAND_MIN_LENGTH && !sendMutation.isLoading && assistant.chat_enabled !== false;
