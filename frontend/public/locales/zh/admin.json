@@ -99,6 +99,8 @@
       "readActions": "可读动作",
       "writeActions": "可写动作",
       "pendingConfirmations": "需确认",
+      "newConversationTitle": "新会话",
+      "controlChannelTitle": "控制通道",
       "unavailableTitle": "当前无法发起新对话",
       "unavailableDescription": "仍可查看会话、能力目录和快捷入口；如需恢复对话，请检查后端 LLM 配置与诊断状态。",
       "conversationsTitle": "最近会话",
@@ -131,6 +133,23 @@
       "navigationTitle": "导航目标",
       "managementActionsTitle": "管理动作",
       "requiredFields": "必填：{{fields}}",
+      "stream": {
+        "toolInput": "工具输入",
+        "toolResult": "工具结果",
+        "approvalProposal": "确认提案",
+        "approvalRequired": "需要在对话中确认",
+        "waitingApproval": "等待管理员确认后执行。",
+        "noAssistantText": "AI 未返回文本。",
+        "unknownField": "未知字段",
+        "emptyStructuredData": "没有附带结构化数据。",
+        "status": {
+          "streaming": "正在生成回复",
+          "assistantMessage": "AI 回复",
+          "runStarted": "Agent 已开始处理",
+          "runFinished": "Agent 已完成处理",
+          "runFailed": "Agent 处理失败"
+        }
+      },
       "messages": {
         "actionRejected": "已取消该待执行操作。你可以补充条件后重新下达指令。",
         "actionExecutionFailed": "执行该操作时出现错误，请稍后重试。",

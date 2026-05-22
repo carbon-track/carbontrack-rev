@@ -99,6 +99,8 @@
       "readActions": "Read actions",
       "writeActions": "Write actions",
       "pendingConfirmations": "Needs review",
+      "newConversationTitle": "New session",
+      "controlChannelTitle": "Control channel",
       "unavailableTitle": "New chats are currently unavailable",
       "unavailableDescription": "You can still browse sessions, capabilities, and quick links. To restore chat, check the backend LLM configuration and diagnostics.",
       "conversationsTitle": "Recent sessions",
@@ -131,6 +133,23 @@
       "navigationTitle": "Navigation targets",
       "managementActionsTitle": "Management actions",
       "requiredFields": "Required: {{fields}}",
+      "stream": {
+        "toolInput": "Tool input",
+        "toolResult": "Tool result",
+        "approvalProposal": "Approval proposal",
+        "approvalRequired": "Approval required",
+        "waitingApproval": "Waiting for admin approval before execution.",
+        "noAssistantText": "No assistant text returned.",
+        "unknownField": "Unknown field",
+        "emptyStructuredData": "No structured data attached.",
+        "status": {
+          "streaming": "Streaming response",
+          "assistantMessage": "Assistant message",
+          "runStarted": "Agent run started",
+          "runFinished": "Agent run finished",
+          "runFailed": "Agent run failed"
+        }
+      },
       "messages": {
         "actionRejected": "The pending action was cancelled. Add more details and send a new instruction when ready.",
         "actionExecutionFailed": "The action failed while executing. Please try again later.",

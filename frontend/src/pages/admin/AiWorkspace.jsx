@@ -28,6 +28,7 @@ import { adminAPI, streamApiRequest } from '../../lib/api';
 import { userManager } from '../../lib/auth';
 import { useTranslation } from '../../hooks/useTranslation';
 import { cn } from '../../lib/utils';
+import AdminAiMarkdown from '../../components/admin/AdminAiMarkdown';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/badge';
 import { Textarea } from '../../components/ui/textarea';
@@ -37,6 +38,66 @@ import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 const COMMAND_MIN_LENGTH = 2;
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
+const MAX_STREAM_ITEMS = 120;
+const CURRENT_CONVERSATION_POLL_INTERVAL_MS = 10000;
+
+function trimStreamItems(items) {
+  return items.length > MAX_STREAM_ITEMS ? items.slice(-MAX_STREAM_ITEMS) : items;
+}
+
+function createEmptyStreamState() {
+  return {
+    optimisticMessage: null,
+    items: [],
+  };
+}
+
+function getErrorMessage(error) {
+  return error?.response?.data?.error || error?.message || null;
+}
+
+function isActiveStreamItem(item) {
+  if (item?.kind === 'assistant_stream') {
+    return item.data?.streaming !== false;
+  }
+  if (item?.kind === 'stream_status') {
+    return !['finished', 'error'].includes(item.data?.status);
+  }
+  if (item?.kind === 'stream_tool') {
+    return ['running', 'waiting_input', 'waiting_approval'].includes(item.data?.status);
+  }
+  return false;
+}
+
+function preserveStreamDiagnosticsAfterError(state, error) {
+  const errorMessage = getErrorMessage(error);
+  const items = Array.isArray(state.items) ? state.items : [];
+
+  return {
+    ...state,
+    optimisticMessage: null,
+    items: items.map((item) => {
+      if (item?.kind === 'assistant_stream') {
+        return { ...item, data: { ...(item.data || {}), streaming: false } };
+      }
+      if (item?.kind === 'stream_status' && !['finished', 'error'].includes(item.data?.status)) {
+        return {
+          ...item,
+          event: 'run.error',
+          data: { ...(item.data || {}), status: 'error', error: item.data?.error || errorMessage },
+        };
+      }
+      if (item?.kind === 'stream_tool' && ['running', 'waiting_input', 'waiting_approval'].includes(item.data?.status)) {
+        return {
+          ...item,
+          event: 'tool.error',
+          data: { ...(item.data || {}), status: 'error', error: item.data?.error || errorMessage },
+        };
+      }
+      return item;
+    }),
+  };
+}
 
 async function streamAdminAiChat(payload, onEvent) {
   const response = await streamApiRequest('/admin/ai/chat/stream', {
@@ -584,6 +645,274 @@ function buildConversationTimeline(conversation) {
   });
 }
 
+function createOptimisticUserMessage(content, conversationId, baselineUserMessageMatches = 0, fallbackSequence = 0) {
+  const randomId = typeof globalThis.crypto?.randomUUID === 'function'
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${fallbackSequence}`;
+
+  return {
+    id: `local-user-${conversationId || 'new'}-${randomId}`,
+    kind: 'message',
+    role: 'user',
+    content,
+    created_at: new Date().toISOString(),
+    meta: {
+      data: {
+        source: 'client_stream_optimistic',
+        baseline_user_message_matches: baselineUserMessageMatches,
+      },
+    },
+  };
+}
+
+function getStreamToolKey(event, data, items = []) {
+  const runId = data?.run_id || 'run';
+  if (data?.step_id != null) {
+    return `tool:${runId}:${data.step_id}`;
+  }
+  if (data?.model_tool_call_id != null) {
+    return `tool:${runId}:model-call:${data.model_tool_call_id}`;
+  }
+
+  if (data?.proposal?.proposal_id) {
+    const proposalId = data.proposal.proposal_id;
+    const matched = items.find((item) => item?.kind === 'stream_tool' && item?.data?.proposal?.proposal_id === proposalId);
+    if (matched?.toolKey) {
+      return matched.toolKey;
+    }
+  }
+
+  if (data?.tool_name) {
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+      const item = items[index];
+      if (item?.kind === 'stream_tool'
+        && item?.data?.run_id === data.run_id
+        && item?.data?.tool_name === data.tool_name
+        && ['running', 'waiting_input', 'waiting_approval'].includes(item?.data?.status)) {
+        return item.toolKey;
+      }
+    }
+
+    return `tool:${runId}:${data.tool_name}:${data?.sequence ?? data?._client_sequence ?? items.length}`;
+  }
+
+  return null;
+}
+
+function getAssistantStreamKey(event, data, items = []) {
+  const runId = data?.run_id || 'run';
+  const stableKey = data?.message_id || data?.response_id || data?.step_id;
+  if (stableKey != null) {
+    return stableKey;
+  }
+
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index];
+    if (
+      item?.kind === 'assistant_stream'
+      && item?.data?.run_id === runId
+      && item?.data?.fallback_stream === true
+      && item?.data?.streaming !== false
+    ) {
+      return item.data.assistant_key;
+    }
+  }
+
+  if (event === 'assistant.delta') {
+    return `fallback-delta:${runId}:${data?.sequence ?? data?._client_sequence ?? items.length}`;
+  }
+
+  return `fallback-message:${runId}:${data?.sequence ?? data?._client_sequence ?? items.length}`;
+}
+
+function getStreamToolStatus(event, data, previousStatus) {
+  if (event === 'tool.started') return 'running';
+  if (event === 'tool.error') return 'error';
+  if (event === 'missing.input') return 'waiting_input';
+  if (event === 'approval.required') return 'waiting_approval';
+  return data?.status || previousStatus || 'success';
+}
+
+function summarizeObject(value, isZh, t) {
+  const emptyText = t('aiWorkspace.stream.emptyStructuredData', {
+    defaultValue: isZh ? '没有附带结构化数据。' : 'No structured data attached.',
+  });
+
+  if (!value || typeof value !== 'object') {
+    return emptyText;
+  }
+
+  const entries = Object.entries(value)
+    .filter(([, item]) => item !== null && item !== undefined && item !== '')
+    .slice(0, 4)
+    .map(([key, item]) => {
+      if (Array.isArray(item)) {
+        return `${key}: ${item.slice(0, 3).join(', ')}${item.length > 3 ? '…' : ''}`;
+      }
+      if (typeof item === 'object') {
+        return `${key}: ${Object.keys(item).slice(0, 3).join(', ') || '{}'}`;
+      }
+      return `${key}: ${String(item)}`;
+    });
+
+  if (entries.length === 0) {
+    return emptyText;
+  }
+
+  return entries.join(' | ');
+}
+
+function formatMissingFieldLabel(field, isZh, t) {
+  if (field == null || field === '') {
+    return t('aiWorkspace.stream.unknownField', { defaultValue: isZh ? '未知字段' : 'Unknown field' });
+  }
+  if (typeof field !== 'object') {
+    return String(field);
+  }
+
+  const label = field.field ?? field.label ?? field.name ?? field.key ?? field.path;
+  if (label != null && label !== '') {
+    return String(label);
+  }
+
+  try {
+    return JSON.stringify(field);
+  } catch {
+    return summarizeObject(field, isZh, t);
+  }
+}
+
+function mergeStreamToolData(previousData, event, data) {
+  return {
+    ...(previousData || {}),
+    ...(data || {}),
+    status: getStreamToolStatus(event, data, previousData?.status),
+    arguments: data?.arguments ?? previousData?.arguments,
+    result: data?.result ?? previousData?.result,
+    proposal: data?.proposal ?? previousData?.proposal,
+    suggestion: data?.suggestion ?? previousData?.suggestion,
+    missing: data?.missing ?? previousData?.missing,
+    error: data?.error ?? previousData?.error,
+    last_event: event,
+  };
+}
+
+function reduceStreamState(state, event, data) {
+  const currentState = state || createEmptyStreamState();
+  const items = Array.isArray(currentState.items) ? currentState.items : [];
+
+  if (event === 'run.started') {
+    const runId = data?.run_id || 'run';
+    const statusItem = {
+      kind: 'stream_status',
+      event,
+      data: { ...(data || {}), status: 'running' },
+      id: `${runId}-${data?.sequence ?? 1}`,
+    };
+    const existingIndex = items.findIndex((item) => item.kind === 'stream_status' && item.data?.run_id === runId);
+
+    return {
+      ...currentState,
+      items: existingIndex >= 0
+        ? items.map((item, index) => (index === existingIndex ? statusItem : item))
+        : trimStreamItems([...items, statusItem]),
+    };
+  }
+
+  if (event === 'run.finished') {
+    const runId = data?.run_id;
+    return {
+      ...currentState,
+      items: items.map((item) => {
+        if (item.kind === 'stream_status' && item.data?.run_id === runId) {
+          return { ...item, event, data: { ...item.data, ...(data || {}), status: 'finished' } };
+        }
+        if (item.kind === 'assistant_stream' && (!runId || item.data?.run_id === runId)) {
+          return { ...item, event, data: { ...item.data, ...(data || {}), streaming: false } };
+        }
+        return item;
+      }),
+    };
+  }
+
+  if (event === 'assistant.delta' || event === 'assistant.message') {
+    const runId = data?.run_id || 'run';
+    const hasStableAssistantKey = data?.message_id != null || data?.response_id != null || data?.step_id != null;
+    const assistantKey = getAssistantStreamKey(event, data, items);
+    const index = items.findIndex((item) => (
+      item.kind === 'assistant_stream'
+      && item.data?.run_id === runId
+      && item.data?.assistant_key === assistantKey
+    ));
+    const content = event === 'assistant.delta'
+      ? `${index >= 0 ? items[index].data?.content || '' : ''}${data?.content || ''}`
+      : (data?.content || (index >= 0 ? items[index].data?.content : '') || '');
+    const nextItem = {
+      kind: 'assistant_stream',
+      event,
+      data: {
+        ...(index >= 0 ? items[index].data : {}),
+        ...(data || {}),
+        assistant_key: assistantKey,
+        fallback_stream: !hasStableAssistantKey,
+        content,
+        streaming: event === 'assistant.delta',
+      },
+      id: `assistant-${runId}-${assistantKey}`,
+    };
+
+    if (index >= 0) {
+      return {
+        ...currentState,
+        items: items.map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
+      };
+    }
+
+    return {
+      ...currentState,
+      items: trimStreamItems([...items, nextItem]),
+    };
+  }
+
+  if (event?.startsWith('tool.') || event === 'missing.input' || event === 'approval.required') {
+    const toolKey = getStreamToolKey(event, data, items);
+    if (toolKey) {
+      const index = items.findIndex((item) => item.kind === 'stream_tool' && item.toolKey === toolKey);
+      const nextItem = {
+        kind: 'stream_tool',
+        event,
+        data: mergeStreamToolData(index >= 0 ? items[index].data : null, event, data),
+        id: toolKey,
+        toolKey,
+      };
+      if (index >= 0) {
+        return {
+          ...currentState,
+          items: items.map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
+        };
+      }
+
+      return {
+        ...currentState,
+        items: trimStreamItems([...items, nextItem]),
+      };
+    }
+  }
+
+  return {
+    ...currentState,
+    items: trimStreamItems([
+      ...items,
+      {
+        kind: 'stream_event',
+        event,
+        data,
+        id: `${event}-${data?.run_id || 'run'}-${data?.step_id ?? data?.sequence ?? data?._client_sequence ?? items.length}`,
+      },
+    ]),
+  };
+}
+
 function formatAbsoluteTime(value, locale = 'zh-CN') {
   if (!value) return '--';
 
@@ -758,32 +1087,7 @@ function getLocalizedEventKind(kind, isZh) {
   }
 }
 
-function summarizeObject(value, isZh) {
-  if (!value || typeof value !== 'object') {
-    return isZh ? '没有附带结构化数据。' : 'No structured data attached.';
-  }
-
-  const entries = Object.entries(value)
-    .filter(([, item]) => item !== null && item !== '' && item !== false)
-    .slice(0, 4)
-    .map(([key, item]) => {
-      if (Array.isArray(item)) {
-        return `${key}: ${item.slice(0, 3).join(', ')}${item.length > 3 ? '…' : ''}`;
-      }
-      if (typeof item === 'object') {
-        return `${key}: ${Object.keys(item).slice(0, 3).join(', ') || '{}'}`;
-      }
-      return `${key}: ${String(item)}`;
-    });
-
-  if (entries.length === 0) {
-    return isZh ? '没有附带结构化数据。' : 'No structured data attached.';
-  }
-
-  return entries.join(' | ');
-}
-
-function buildEventCopy(item, isZh) {
+function buildEventCopy(item, isZh, t) {
   const metaData = item?.meta?.data || {};
   const actionName = metaData.action_name || metaData.tool_name || item?.proposal?.action_name || item?.action || null;
   const actionLabel = getLocalizedActionLabel({
@@ -795,7 +1099,7 @@ function buildEventCopy(item, isZh) {
   if (item?.kind === 'tool') {
     return {
       title: isZh ? `调用工具：${actionLabel}` : `Tool call: ${actionLabel}`,
-      description: metaData.summary || summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh),
+      description: metaData.summary || summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh, t),
       tone: 'tool',
     };
   }
@@ -803,7 +1107,7 @@ function buildEventCopy(item, isZh) {
   if (item?.kind === 'action_proposed') {
     return {
       title: isZh ? `待确认：${actionLabel}` : `Pending: ${actionLabel}`,
-      description: item?.proposal?.summary || metaData.summary || summarizeObject(item?.proposal?.payload || metaData.payload || metaData, isZh),
+      description: item?.proposal?.summary || metaData.summary || summarizeObject(item?.proposal?.payload || metaData.payload || metaData, isZh, t),
       tone: 'proposal',
     };
   }
@@ -812,7 +1116,7 @@ function buildEventCopy(item, isZh) {
     if (status === 'failed') {
       return {
         title: isZh ? `执行失败：${actionLabel}` : `Failed: ${actionLabel}`,
-        description: summarizeObject(metaData.new_data || metaData.result || metaData.request_payload || metaData.payload || metaData, isZh),
+        description: summarizeObject(metaData.new_data || metaData.result || metaData.request_payload || metaData.payload || metaData, isZh, t),
         tone: 'failed',
       };
     }
@@ -820,7 +1124,7 @@ function buildEventCopy(item, isZh) {
     if ((item?.action || '').endsWith('_rejected')) {
       return {
         title: isZh ? `已驳回：${actionLabel}` : `Rejected: ${actionLabel}`,
-        description: summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh),
+        description: summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh, t),
         tone: 'muted',
       };
     }
@@ -828,7 +1132,7 @@ function buildEventCopy(item, isZh) {
     if ((item?.action || '').endsWith('_confirmed')) {
       return {
         title: isZh ? `已确认：${actionLabel}` : `Confirmed: ${actionLabel}`,
-        description: summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh),
+        description: summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh, t),
         tone: 'success',
       };
     }
@@ -836,7 +1140,7 @@ function buildEventCopy(item, isZh) {
     if ((item?.action || '').endsWith('_executed')) {
       return {
         title: isZh ? `已执行：${actionLabel}` : `Executed: ${actionLabel}`,
-        description: summarizeObject(metaData.new_data || metaData.result || metaData, isZh),
+        description: summarizeObject(metaData.new_data || metaData.result || metaData, isZh, t),
         tone: 'success',
       };
     }
@@ -844,7 +1148,7 @@ function buildEventCopy(item, isZh) {
 
   return {
     title: actionLabel,
-    description: item?.content || summarizeObject(metaData, isZh),
+    description: item?.content || summarizeObject(metaData, isZh, t),
     tone: 'muted',
   };
 }
@@ -1158,22 +1462,35 @@ function WorkspaceSectionButton({ active, icon, label, count, onClick }) {
 function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
   const event = item?.event;
   const data = item?.data || {};
+  const isToolItem = item?.kind === 'stream_tool' || event?.startsWith('tool.');
   const hasToolInput = data.arguments != null && data.arguments !== '';
   const hasToolResult = data.result != null && data.result !== '';
 
-  if (event === 'run.started') {
+  if (item?.kind === 'stream_status') {
+    const status = data.status || (event === 'run.finished' ? 'finished' : 'running');
+    const label = status === 'finished'
+      ? t('aiWorkspace.stream.status.runFinished', { defaultValue: isZh ? 'Agent 已完成处理' : 'Agent run finished' })
+      : status === 'error'
+        ? t('aiWorkspace.stream.status.runFailed', { defaultValue: isZh ? 'Agent 处理失败' : 'Agent run failed' })
+        : t('aiWorkspace.stream.status.runStarted', { defaultValue: isZh ? 'Agent 已开始处理' : 'Agent run started' });
+    const statusToneClass = status === 'error'
+      ? 'border-red-200/80 bg-red-50/80 text-red-900 dark:border-red-400/25 dark:bg-red-400/10 dark:text-red-100'
+      : status === 'finished'
+        ? 'border-emerald-200/80 bg-emerald-50/80 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100'
+        : 'border-sky-200/80 bg-sky-50/80 text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100';
+
     return (
-      <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100">
+      <div className={cn('rounded-2xl border px-4 py-3 text-sm', statusToneClass)}>
         <div className="flex items-center gap-2 font-medium">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {isZh ? 'Agent 已开始处理' : 'Agent run started'}
+          {status === 'running' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+          {label}
         </div>
         {data.run_id ? <div className="mt-1 font-mono text-[11px] opacity-70">{data.run_id}</div> : null}
       </div>
     );
   }
 
-  if (event === 'assistant.delta' || event === 'assistant.message') {
+  if (item?.kind === 'assistant_stream' || event === 'assistant.delta' || event === 'assistant.message') {
     const content = event === 'assistant.message'
       ? translateI18nMessage(
           t,
@@ -1187,23 +1504,26 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
         <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-          <Bot className="h-3.5 w-3.5" />
-          {event === 'assistant.delta'
-            ? (isZh ? '正在生成回复' : 'Streaming response')
-            : (isZh ? 'AI 回复' : 'Assistant message')}
+          {data.streaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
+          {data.streaming
+            ? t('aiWorkspace.stream.status.streaming', { defaultValue: isZh ? '正在生成回复' : 'Streaming response' })
+            : t('aiWorkspace.stream.status.assistantMessage', { defaultValue: isZh ? 'AI 回复' : 'Assistant message' })}
         </div>
-        <div className="whitespace-pre-wrap">{content}</div>
+        <AdminAiMarkdown content={content} />
       </div>
     );
   }
 
-  if (event?.startsWith('tool.')) {
-    const status = event === 'tool.started' ? 'running' : event === 'tool.error' ? 'error' : data.status || 'success';
+  if (isToolItem) {
+    const status = data.status || 'success';
     const tone = status === 'error'
       ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100'
       : status === 'running'
         ? 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100'
+        : status === 'waiting_approval' || status === 'waiting_input'
+          ? 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100'
         : 'border-slate-200 bg-slate-50 text-slate-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-100';
+    const missing = Array.isArray(data.missing) ? data.missing : [];
 
     return (
       <div className={cn('rounded-2xl border px-4 py-3 text-sm', tone)}>
@@ -1216,13 +1536,27 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         </div>
         {data.error ? <div className="mt-2 text-xs opacity-80">{data.error}</div> : null}
         {data.proposal?.summary ? <div className="mt-2 text-xs opacity-80">{data.proposal.summary}</div> : null}
+        {data.message ? <div className="mt-2 text-xs opacity-80">{data.message}</div> : null}
         {data.step_id ? <div className="mt-2 font-mono text-[11px] opacity-60">{data.step_id}</div> : null}
-        {hasToolInput || hasToolResult ? (
-          <div className="mt-3 grid gap-3 lg:grid-cols-2">
-            <ResultSnapshot title={isZh ? '工具输入' : 'Tool input'} value={data.arguments} isZh={isZh} />
-            <ResultSnapshot title={isZh ? '工具结果' : 'Tool result'} value={data.result} isZh={isZh} />
+        {missing.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {missing.map((field, index) => {
+              const label = formatMissingFieldLabel(field, isZh, t);
+              return (
+                <Badge key={`${label}-${index}`} variant="outline" className="border-current/20 text-current">
+                  {label}
+                </Badge>
+              );
+            })}
           </div>
         ) : null}
+        {hasToolInput || hasToolResult ? (
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <ResultSnapshot title={t('aiWorkspace.stream.toolInput', { defaultValue: isZh ? '工具输入' : 'Tool input' })} value={data.arguments} isZh={isZh} />
+            <ResultSnapshot title={t('aiWorkspace.stream.toolResult', { defaultValue: isZh ? '工具结果' : 'Tool result' })} value={data.result} isZh={isZh} />
+          </div>
+        ) : null}
+        {data.proposal ? <ResultSnapshot title={t('aiWorkspace.stream.approvalProposal', { defaultValue: isZh ? '确认提案' : 'Approval proposal' })} value={data.proposal} isZh={isZh} /> : null}
       </div>
     );
   }
@@ -1232,9 +1566,9 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
       <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
         <div className="flex items-center gap-2 font-semibold">
           <ShieldAlert className="h-4 w-4" />
-          {isZh ? '需要在对话中确认' : 'Approval required'}
+          {t('aiWorkspace.stream.approvalRequired', { defaultValue: isZh ? '需要在对话中确认' : 'Approval required' })}
         </div>
-        <div className="mt-2 leading-6">{data.proposal?.summary || data.proposal?.label || (isZh ? '等待管理员确认后执行。' : 'Waiting for admin approval before execution.')}</div>
+        <div className="mt-2 leading-6">{data.proposal?.summary || data.proposal?.label || t('aiWorkspace.stream.waitingApproval', { defaultValue: isZh ? '等待管理员确认后执行。' : 'Waiting for admin approval before execution.' })}</div>
       </div>
     );
   }
@@ -1750,8 +2084,8 @@ function RunInspector({ runs, currentRun, isZh, locale }) {
   );
 }
 
-function EventTimelineRow({ item, locale, isZh, disabled, onConfirmProposal, onRejectProposal, onRollback }) {
-  const event = buildEventCopy(item, isZh);
+function EventTimelineRow({ item, locale, isZh, t, disabled, onConfirmProposal, onRejectProposal, onRollback }) {
+  const event = buildEventCopy(item, isZh, t);
   const proposal = item?.proposal;
   const metaData = item?.meta?.data || {};
   const decisionMeta = metaData.decision_meta || {};
@@ -1935,7 +2269,11 @@ function MessageBubble({
             ? 'rounded-tr-lg border-slate-200 bg-white text-slate-900 dark:border-white/12 dark:bg-white/[0.08] dark:text-white'
             : 'rounded-tl-lg border-emerald-200 bg-emerald-50/85 text-slate-800 dark:border-emerald-400/14 dark:bg-emerald-400/[0.08] dark:text-slate-100'
         )}>
-          {messageContent || (isZh ? 'AI 未返回文本。' : 'No assistant text returned.')}
+          {messageContent ? (
+            isUser
+              ? <div className="whitespace-pre-wrap">{messageContent}</div>
+              : <AdminAiMarkdown content={messageContent} />
+          ) : t('aiWorkspace.stream.noAssistantText', { defaultValue: isZh ? 'AI 未返回文本。' : 'No assistant text returned.' })}
         </div>
 
         {!isUser && (actionName || result || missing.length > 0) ? (
@@ -2054,8 +2392,16 @@ export default function AdminAiWorkspacePage() {
   const [conversationFilter, setConversationFilter] = useState('all');
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [workspaceSection, setWorkspaceSection] = useState('actions');
-  const [streamEvents, setStreamEvents] = useState([]);
+  const [streamState, setStreamState] = useState(createEmptyStreamState);
+  const [streamConversationId, setStreamConversationId] = useState(null);
+  const [isDocumentVisible, setIsDocumentVisible] = useState(
+    () => typeof document === 'undefined' || document.visibilityState === 'visible'
+  );
   const [autonomyMode, setAutonomyMode] = useState('read_only_auto');
+  const selectedConversationIdRef = useRef(selectedConversationId);
+  const isCreatingConversationRef = useRef(isCreatingConversation);
+  const optimisticMessageSequenceRef = useRef(0);
+  const streamItemSequenceRef = useRef(0);
 
   const aiContext = useMemo(() => ({
     activeRoute: '/admin/ai',
@@ -2063,6 +2409,14 @@ export default function AdminAiWorkspacePage() {
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai',
     autonomyMode,
   }), [autonomyMode, locale]);
+
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
+
+  useEffect(() => {
+    isCreatingConversationRef.current = isCreatingConversation;
+  }, [isCreatingConversation]);
 
   const workspaceQuery = useQuery(
     ['adminAiWorkspace'],
@@ -2081,7 +2435,9 @@ export default function AdminAiWorkspacePage() {
       });
       return response.data?.data || [];
     },
-    { keepPreviousData: true }
+    {
+      keepPreviousData: true,
+    }
   );
 
   const conversationItems = useMemo(() => {
@@ -2129,21 +2485,61 @@ export default function AdminAiWorkspacePage() {
   }, [filteredConversationItems, isCreatingConversation, selectedConversationId]);
 
   useEffect(() => {
+    if (
+      streamConversationId
+      && conversationItems.some((item) => String(item.conversation_id) === String(streamConversationId))
+    ) {
+      setStreamConversationId(null);
+    }
+  }, [conversationItems, streamConversationId]);
+
+  useEffect(() => {
     if (isCreatingConversation || !selectedConversationId) {
       return;
     }
 
-    const stillVisible = filteredConversationItems.some((item) => item.conversation_id === selectedConversationId);
+    const stillVisible = filteredConversationItems.some((item) => String(item.conversation_id) === String(selectedConversationId));
+    const streamConversationPendingInList = streamConversationId != null
+      && !conversationItems.some((item) => String(item.conversation_id) === String(streamConversationId));
+    if (
+      !stillVisible
+      && streamConversationId != null
+      && streamConversationPendingInList
+      && String(selectedConversationId) === String(streamConversationId)
+    ) {
+      return;
+    }
     if (!stillVisible && filteredConversationItems.length > 0) {
       setSelectedConversationId(filteredConversationItems[0].conversation_id);
     }
-  }, [filteredConversationItems, isCreatingConversation, selectedConversationId]);
+  }, [conversationItems, filteredConversationItems, isCreatingConversation, selectedConversationId, streamConversationId]);
 
   useEffect(() => {
     if (searchParams.get('focus') === 'composer') {
       requestAnimationFrame(() => composerRef.current?.focus());
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const updateVisibility = () => {
+      setIsDocumentVisible(document.visibilityState === 'visible');
+    };
+
+    updateVisibility();
+    document.addEventListener('visibilitychange', updateVisibility);
+    return () => document.removeEventListener('visibilitychange', updateVisibility);
+  }, []);
+
+  const hasLocalStreamItems = Boolean(streamState.optimisticMessage)
+    || (Array.isArray(streamState.items) && streamState.items.some(isActiveStreamItem));
+  const shouldPollCurrentConversation = Boolean(selectedConversationId)
+    && !isCreatingConversation
+    && !hasLocalStreamItems
+    && isDocumentVisible;
 
   const conversationDetailQuery = useQuery(
     ['adminAiConversation', selectedConversationId],
@@ -2153,6 +2549,8 @@ export default function AdminAiWorkspacePage() {
     },
     {
       enabled: Boolean(selectedConversationId),
+      refetchOnWindowFocus: true,
+      refetchInterval: shouldPollCurrentConversation ? CURRENT_CONVERSATION_POLL_INTERVAL_MS : false,
     }
   );
 
@@ -2168,6 +2566,34 @@ export default function AdminAiWorkspacePage() {
     () => conversationTimeline.filter((item) => item?.kind === 'message'),
     [conversationTimeline]
   );
+  const shouldRenderOptimisticMessage = useMemo(() => {
+    const optimisticMessage = streamState.optimisticMessage;
+    if (!optimisticMessage) {
+      return false;
+    }
+
+    const optimisticContent = String(optimisticMessage.content || optimisticMessage.message || '').trim();
+    if (!optimisticContent) {
+      return true;
+    }
+    const baselineUserMessageMatches = Number(
+      optimisticMessage.meta?.data?.baseline_user_message_matches ?? 0
+    );
+    let currentUserMessageMatches = 0;
+
+    for (let index = visibleMessages.length - 1; index >= 0; index -= 1) {
+      const message = visibleMessages[index];
+      if (message?.role !== 'user') {
+        continue;
+      }
+
+      if (String(message.content || message.message || '').trim() === optimisticContent) {
+        currentUserMessageMatches += 1;
+      }
+    }
+
+    return currentUserMessageMatches <= baselineUserMessageMatches;
+  }, [streamState.optimisticMessage, visibleMessages]);
   const pendingActions = useMemo(
     () => (Array.isArray(activeConversation?.pending_actions) ? activeConversation.pending_actions : []),
     [activeConversation]
@@ -2187,46 +2613,66 @@ export default function AdminAiWorkspacePage() {
     queryClient.invalidateQueries(['adminAiConversations', currentAdminId]);
   }, [currentAdminId, queryClient]);
 
+  const invalidateConversationDetail = useCallback((conversationId) => {
+    const targetConversationId = conversationId ?? selectedConversationId;
+    if (targetConversationId != null) {
+      queryClient.invalidateQueries(['adminAiConversation', targetConversationId]);
+      return;
+    }
+
+    queryClient.invalidateQueries(['adminAiConversation']);
+  }, [queryClient, selectedConversationId]);
+
   const hasStaleConversationDetail = Boolean(normalizedSelectedConversationId)
     && activeConversationId !== normalizedSelectedConversationId;
 
   const handleStreamEvent = useCallback(({ event, data }) => {
-    setStreamEvents((items) => {
-      if (event === 'run.started') {
-        return [{ event, data, id: `${data?.run_id || 'run'}-${data?.sequence || 1}` }];
-      }
+    streamItemSequenceRef.current += 1;
+    const eventData = data && typeof data === 'object'
+      ? { ...data, _client_sequence: streamItemSequenceRef.current }
+      : data;
+    const eventConversationId = eventData?.conversation_id || eventData?.result?.conversation_id || null;
+    const normalizedEventConversationId = eventConversationId == null ? null : String(eventConversationId);
+    const latestSelectedConversationId = selectedConversationIdRef.current == null
+      ? null
+      : String(selectedConversationIdRef.current);
+    const isInactiveConversationEvent = normalizedEventConversationId != null
+      && latestSelectedConversationId != null
+      && normalizedEventConversationId !== latestSelectedConversationId
+      && !isCreatingConversationRef.current;
 
-      if (event === 'assistant.delta') {
-        const last = items[items.length - 1];
-        if (last?.event === 'assistant.delta') {
-          return [
-            ...items.slice(0, -1),
-            {
-              ...last,
-              data: {
-                ...last.data,
-                content: `${last.data?.content || ''}${data?.content || ''}`,
-                sequence: data?.sequence || last.data?.sequence,
-              },
-            },
-          ];
-        }
+    if (isInactiveConversationEvent) {
+      invalidateConversationDetail(eventConversationId);
+      if (event === 'run.finished' || event === 'run.error') {
+        queryClient.invalidateQueries(['adminAiConversations', currentAdminId]);
       }
+      return;
+    }
 
-      return [
-        ...items,
-        {
-          event,
-          data,
-          id: `${event}-${data?.run_id || 'run'}-${data?.step_id || data?.sequence || items.length}`,
-        },
-      ];
-    });
-  }, []);
+    if (event === 'run.started' && eventData?.conversation_id) {
+      const nextConversationId = eventData.conversation_id;
+      const eventConversationId = String(nextConversationId);
+      const shouldSelectStreamConversation = (
+        isCreatingConversationRef.current
+        || latestSelectedConversationId == null
+        || latestSelectedConversationId === eventConversationId
+      );
+
+      setStreamConversationId(nextConversationId);
+      if (shouldSelectStreamConversation) {
+        selectedConversationIdRef.current = nextConversationId;
+        setSelectedConversationId(nextConversationId);
+      }
+      isCreatingConversationRef.current = false;
+      setIsCreatingConversation(false);
+      queryClient.invalidateQueries(['adminAiConversations', currentAdminId]);
+      invalidateConversationDetail(nextConversationId);
+    }
+    setStreamState((state) => reduceStreamState(state, event, eventData));
+  }, [currentAdminId, invalidateConversationDetail, queryClient]);
 
   const sendMutation = useMutation(
     async ({ message, conversationId }) => {
-      setStreamEvents([]);
       try {
         const payload = await streamAdminAiChat({
           conversation_id: conversationId || undefined,
@@ -2259,6 +2705,28 @@ export default function AdminAiWorkspacePage() {
       }
     },
     {
+      onMutate: (variables) => {
+        const optimisticContent = String(variables.message || '').trim();
+        const baselineUserMessageMatches = visibleMessages.reduce((count, message) => {
+          if (
+            message?.role === 'user'
+            && String(message.content || message.message || '').trim() === optimisticContent
+          ) {
+            return count + 1;
+          }
+          return count;
+        }, 0);
+
+        setStreamState({
+          optimisticMessage: createOptimisticUserMessage(
+            variables.message,
+            variables.conversationId,
+            baselineUserMessageMatches,
+            optimisticMessageSequenceRef.current += 1
+          ),
+          items: [],
+        });
+      },
       onSuccess: (response, variables) => {
         const payload = response.data || {};
         const nextConversation = buildFallbackConversation(
@@ -2270,22 +2738,41 @@ export default function AdminAiWorkspacePage() {
           normalizeI18nMessagePayload(payload.message_i18n || payload.metadata?.message_i18n)
         );
         const nextConversationId = payload.conversation_id || nextConversation?.conversation_id || null;
+        const latestSelectedConversationId = selectedConversationIdRef.current == null
+          ? null
+          : String(selectedConversationIdRef.current);
+        const requestConversationId = variables?.conversationId == null
+          ? null
+          : String(variables.conversationId);
+        const normalizedNextConversationId = nextConversationId == null ? null : String(nextConversationId);
 
         if (nextConversationId) {
           queryClient.setQueryData(['adminAiConversation', nextConversationId], nextConversation);
-          setSelectedConversationId(nextConversationId);
+          const shouldSelectNextConversation = (
+            isCreatingConversationRef.current
+            || latestSelectedConversationId == null
+            || latestSelectedConversationId === normalizedNextConversationId
+            || latestSelectedConversationId === requestConversationId
+          );
+          if (shouldSelectNextConversation) {
+            selectedConversationIdRef.current = nextConversationId;
+            setSelectedConversationId(nextConversationId);
+          }
         }
 
+        isCreatingConversationRef.current = false;
         setIsCreatingConversation(false);
-        setDraft('');
-        setStreamEvents([]);
+        setStreamConversationId(nextConversationId || null);
+        setStreamState(createEmptyStreamState());
+        setDraft((current) => (current.trim() === variables.message ? '' : current));
+        invalidateConversationDetail(nextConversationId || variables?.conversationId);
         invalidateWorkspace();
       },
-      onError: (error) => {
+      onError: (error, variables) => {
+        setStreamState((state) => preserveStreamDiagnosticsAfterError(state, error));
+        setStreamConversationId(null);
         invalidateWorkspace();
-        if (normalizedSelectedConversationId) {
-          queryClient.invalidateQueries(['adminAiConversation', normalizedSelectedConversationId]);
-        }
+        invalidateConversationDetail(variables?.conversationId);
         if (error?.code === 'AI_STREAM_DISCONNECTED') {
           toast.error(isZh ? 'AI 连接中断，正在恢复会话记录。' : 'AI stream disconnected. Restoring the session timeline.');
           return;
@@ -2301,7 +2788,7 @@ export default function AdminAiWorkspacePage() {
 
   const decisionMutation = useMutation(
     async ({ proposalId, outcome, conversationId, rollback }) => {
-      setStreamEvents([]);
+      setStreamState(createEmptyStreamState());
       const decisionPayload = {
         proposal_id: proposalId,
         outcome,
@@ -2330,7 +2817,7 @@ export default function AdminAiWorkspacePage() {
           throw error;
         }
 
-        setStreamEvents([]);
+        setStreamState(createEmptyStreamState());
         return adminAPI.chatWithAdminAi(requestPayload);
       }
     },
@@ -2355,13 +2842,15 @@ export default function AdminAiWorkspacePage() {
         }
 
         invalidateWorkspace();
-        setStreamEvents([]);
+        invalidateConversationDetail(nextConversationId || variables?.conversationId);
+        setStreamConversationId(nextConversationId || variables?.conversationId || null);
+        setStreamState(createEmptyStreamState());
       },
-      onError: (error) => {
+      onError: (error, variables) => {
+        setStreamState((state) => preserveStreamDiagnosticsAfterError(state, error));
+        setStreamConversationId(null);
         invalidateWorkspace();
-        if (normalizedSelectedConversationId) {
-          queryClient.invalidateQueries(['adminAiConversation', normalizedSelectedConversationId]);
-        }
+        invalidateConversationDetail(variables?.conversationId);
         if (error?.code === 'AI_PROVIDER_TIMEOUT' || error?.response?.data?.code === 'AI_PROVIDER_TIMEOUT') {
           toast.error(isZh ? '模型处理超时，可能请求过复杂，请拆分任务或稍后重试。' : 'The model timed out. Try splitting the task or retry later.');
           return;
@@ -2390,8 +2879,14 @@ export default function AdminAiWorkspacePage() {
     [workspaceData?.management_actions]
   );
 
-  const currentSummary = activeConversation?.summary || conversationItems.find((item) => item.conversation_id === selectedConversationId) || {};
-  const selectedConversationTitle = currentSummary.title || (isCreatingConversation ? (isZh ? '新会话' : 'New session') : (isZh ? '控制通道' : 'Control channel'));
+  const currentSummary = activeConversation?.summary
+    || conversationItems.find((item) => String(item.conversation_id) === String(selectedConversationId))
+    || {};
+  const selectedConversationTitle = currentSummary.title || (
+    isCreatingConversation
+      ? t('aiWorkspace.newConversationTitle', { defaultValue: isZh ? '新会话' : 'New session' })
+      : t('aiWorkspace.controlChannelTitle', { defaultValue: isZh ? '控制通道' : 'Control channel' })
+  );
   const currentConversationIdLabel = activeConversationId || normalizedSelectedConversationId || null;
   const lastActivityLabel = formatAbsoluteTime(currentSummary.last_activity_at, locale);
   const canSend = draft.trim().length >= COMMAND_MIN_LENGTH && !sendMutation.isLoading && assistant.chat_enabled !== false;
@@ -2526,8 +3021,12 @@ export default function AdminAiWorkspacePage() {
   const currentSection = secondarySections.find((item) => item.id === workspaceSection) || secondarySections[0];
 
   const handleSelectConversation = useCallback((conversationId) => {
+    isCreatingConversationRef.current = false;
+    selectedConversationIdRef.current = conversationId;
     setIsCreatingConversation(false);
     setSelectedConversationId(conversationId);
+    setStreamConversationId(null);
+    setStreamState(createEmptyStreamState());
   }, []);
 
   const handleUsePrompt = useCallback((prompt) => {
@@ -2536,8 +3035,12 @@ export default function AdminAiWorkspacePage() {
   }, []);
 
   const handleStartConversation = useCallback(() => {
+    isCreatingConversationRef.current = true;
+    selectedConversationIdRef.current = null;
     setIsCreatingConversation(true);
     setSelectedConversationId(null);
+    setStreamConversationId(null);
+    setStreamState(createEmptyStreamState());
     queryClient.removeQueries(['adminAiConversation']);
     requestAnimationFrame(() => composerRef.current?.focus());
   }, [queryClient]);
@@ -2815,7 +3318,7 @@ export default function AdminAiWorkspacePage() {
                       <div className="flex h-full items-center justify-center">
                         <Loader2 className="h-5 w-5 animate-spin text-slate-400 dark:text-slate-500" />
                       </div>
-                    ) : conversationTimeline.length === 0 && streamEvents.length === 0 ? (
+                    ) : conversationTimeline.length === 0 && !streamState.optimisticMessage && streamState.items.length === 0 ? (
                       <EmptyConversationState
                         isZh={isZh}
                         starterPrompts={starterPrompts}
@@ -2853,6 +3356,7 @@ export default function AdminAiWorkspacePage() {
                                   item={item}
                                   locale={locale}
                                   isZh={isZh}
+                                  t={t}
                                   disabled={disableProposalActions}
                                   onRollback={handleCreateRollback}
                                 />
@@ -2862,6 +3366,7 @@ export default function AdminAiWorkspacePage() {
                                   item={item}
                                   locale={locale}
                                   isZh={isZh}
+                                  t={t}
                                   disabled={disableProposalActions}
                                   onConfirmProposal={(proposalId) => normalizedSelectedConversationId && decisionMutation.mutate({
                                     proposalId,
@@ -2877,7 +3382,28 @@ export default function AdminAiWorkspacePage() {
                                 />
                               )
                             ))}
-                            {streamEvents.map((item) => (
+                            {shouldRenderOptimisticMessage ? (
+                              <MessageBubble
+                                key={streamState.optimisticMessage.id}
+                                message={streamState.optimisticMessage}
+                                locale={locale}
+                                isZh={isZh}
+                                t={t}
+                                disabled={disableProposalActions}
+                                onNavigateSuggestion={handleNavigateSuggestion}
+                                onConfirmProposal={(proposalId) => normalizedSelectedConversationId && decisionMutation.mutate({
+                                  proposalId,
+                                  outcome: 'confirm',
+                                  conversationId: normalizedSelectedConversationId,
+                                })}
+                                onRejectProposal={(proposalId) => normalizedSelectedConversationId && decisionMutation.mutate({
+                                  proposalId,
+                                  outcome: 'reject',
+                                  conversationId: normalizedSelectedConversationId,
+                                })}
+                              />
+                            ) : null}
+                            {streamState.items.map((item) => (
                               <AgentStreamEventCard
                                 key={item.id}
                                 item={item}
