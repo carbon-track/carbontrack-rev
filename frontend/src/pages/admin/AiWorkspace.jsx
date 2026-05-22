@@ -647,7 +647,7 @@ function buildConversationTimeline(conversation) {
 function createOptimisticUserMessage(content, conversationId, baselineUserMessageMatches = 0, fallbackSequence = 0) {
   const randomId = typeof globalThis.crypto?.randomUUID === 'function'
     ? globalThis.crypto.randomUUID()
-    : `${Date.now()}-${fallbackSequence}`;
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${fallbackSequence}`;
 
   return {
     id: `local-user-${conversationId || 'new'}-${randomId}`,
@@ -2833,7 +2833,7 @@ export default function AdminAiWorkspacePage() {
   const lastActivityLabel = formatAbsoluteTime(currentSummary.last_activity_at, locale);
   const canSend = draft.trim().length >= COMMAND_MIN_LENGTH && !sendMutation.isLoading && assistant.chat_enabled !== false;
   const canCreateConversation = !sendMutation.isLoading && !decisionMutation.isLoading;
-  const disableProposalActions = sendMutation.isLoading || decisionMutation.isLoading || hasStaleConversationDetail;
+  const disableProposalActions = decisionMutation.isLoading || hasStaleConversationDetail;
   const autonomyOptions = useMemo(() => ([
     {
       id: 'read_only_auto',
