@@ -2600,13 +2600,27 @@ export default function AdminAiWorkspacePage() {
     const eventData = data && typeof data === 'object'
       ? { ...data, _client_sequence: streamItemSequenceRef.current }
       : data;
+    const eventConversationId = eventData?.conversation_id || eventData?.result?.conversation_id || null;
+    const normalizedEventConversationId = eventConversationId == null ? null : String(eventConversationId);
+    const latestSelectedConversationId = selectedConversationIdRef.current == null
+      ? null
+      : String(selectedConversationIdRef.current);
+    const isInactiveConversationEvent = normalizedEventConversationId != null
+      && latestSelectedConversationId != null
+      && normalizedEventConversationId !== latestSelectedConversationId
+      && !isCreatingConversationRef.current;
+
+    if (isInactiveConversationEvent) {
+      invalidateConversationDetail(eventConversationId);
+      if (event === 'run.finished' || event === 'run.error') {
+        queryClient.invalidateQueries(['adminAiConversations', currentAdminId]);
+      }
+      return;
+    }
 
     if (event === 'run.started' && eventData?.conversation_id) {
       const nextConversationId = eventData.conversation_id;
       const eventConversationId = String(nextConversationId);
-      const latestSelectedConversationId = selectedConversationIdRef.current == null
-        ? null
-        : String(selectedConversationIdRef.current);
       const shouldSelectStreamConversation = (
         isCreatingConversationRef.current
         || latestSelectedConversationId == null
