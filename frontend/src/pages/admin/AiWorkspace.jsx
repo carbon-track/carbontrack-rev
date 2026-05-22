@@ -39,6 +39,7 @@ const COMMAND_MIN_LENGTH = 2;
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
 const MAX_STREAM_ITEMS = 120;
+const CURRENT_CONVERSATION_POLL_INTERVAL_MS = 10000;
 
 function trimStreamItems(items) {
   return items.length > MAX_STREAM_ITEMS ? items.slice(-MAX_STREAM_ITEMS) : items;
@@ -2397,6 +2398,9 @@ export default function AdminAiWorkspacePage() {
         admin_id: currentAdminId || undefined,
       });
       return response.data?.data || [];
+    },
+    {
+      keepPreviousData: true,
     }
   );
 
@@ -2510,7 +2514,7 @@ export default function AdminAiWorkspacePage() {
     {
       enabled: Boolean(selectedConversationId),
       refetchOnWindowFocus: true,
-      refetchInterval: shouldPollCurrentConversation ? 10000 : false,
+      refetchInterval: shouldPollCurrentConversation ? CURRENT_CONVERSATION_POLL_INTERVAL_MS : false,
     }
   );
 
