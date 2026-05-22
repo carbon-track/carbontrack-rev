@@ -52,6 +52,53 @@ function createEmptyStreamState() {
   };
 }
 
+function getErrorMessage(error) {
+  return error?.response?.data?.error || error?.message || null;
+}
+
+function isActiveStreamItem(item) {
+  if (item?.kind === 'assistant_stream') {
+    return item.data?.streaming !== false;
+  }
+  if (item?.kind === 'stream_status') {
+    return !['finished', 'error'].includes(item.data?.status);
+  }
+  if (item?.kind === 'stream_tool') {
+    return ['running', 'waiting_input', 'waiting_approval'].includes(item.data?.status);
+  }
+  return false;
+}
+
+function preserveStreamDiagnosticsAfterError(state, error) {
+  const errorMessage = getErrorMessage(error);
+  const items = Array.isArray(state.items) ? state.items : [];
+
+  return {
+    ...state,
+    optimisticMessage: null,
+    items: items.map((item) => {
+      if (item?.kind === 'assistant_stream') {
+        return { ...item, data: { ...(item.data || {}), streaming: false } };
+      }
+      if (item?.kind === 'stream_status' && !['finished', 'error'].includes(item.data?.status)) {
+        return {
+          ...item,
+          event: 'run.error',
+          data: { ...(item.data || {}), status: 'error', error: item.data?.error || errorMessage },
+        };
+      }
+      if (item?.kind === 'stream_tool' && ['running', 'waiting_input', 'waiting_approval'].includes(item.data?.status)) {
+        return {
+          ...item,
+          event: 'tool.error',
+          data: { ...(item.data || {}), status: 'error', error: item.data?.error || errorMessage },
+        };
+      }
+      return item;
+    }),
+  };
+}
+
 async function streamAdminAiChat(payload, onEvent) {
   const response = await streamApiRequest('/admin/ai/chat/stream', {
     method: 'POST',
@@ -658,9 +705,13 @@ function getStreamToolStatus(event, data, previousStatus) {
   return data?.status || previousStatus || 'success';
 }
 
-function summarizeObject(value, isZh) {
+function summarizeObject(value, isZh, t) {
+  const emptyText = t('admin.aiWorkspace.stream.emptyStructuredData', {
+    defaultValue: isZh ? '没有附带结构化数据。' : 'No structured data attached.',
+  });
+
   if (!value || typeof value !== 'object') {
-    return isZh ? '没有附带结构化数据。' : 'No structured data attached.';
+    return emptyText;
   }
 
   const entries = Object.entries(value)
@@ -677,7 +728,7 @@ function summarizeObject(value, isZh) {
     });
 
   if (entries.length === 0) {
-    return isZh ? '没有附带结构化数据。' : 'No structured data attached.';
+    return emptyText;
   }
 
   return entries.join(' | ');
@@ -699,7 +750,7 @@ function formatMissingFieldLabel(field, isZh, t) {
   try {
     return JSON.stringify(field);
   } catch {
-    return summarizeObject(field, isZh);
+    return summarizeObject(field, isZh, t);
   }
 }
 
@@ -1006,7 +1057,7 @@ function getLocalizedEventKind(kind, isZh) {
   }
 }
 
-function buildEventCopy(item, isZh) {
+function buildEventCopy(item, isZh, t) {
   const metaData = item?.meta?.data || {};
   const actionName = metaData.action_name || metaData.tool_name || item?.proposal?.action_name || item?.action || null;
   const actionLabel = getLocalizedActionLabel({
@@ -1018,7 +1069,7 @@ function buildEventCopy(item, isZh) {
   if (item?.kind === 'tool') {
     return {
       title: isZh ? `调用工具：${actionLabel}` : `Tool call: ${actionLabel}`,
-      description: metaData.summary || summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh),
+      description: metaData.summary || summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh, t),
       tone: 'tool',
     };
   }
@@ -1026,7 +1077,7 @@ function buildEventCopy(item, isZh) {
   if (item?.kind === 'action_proposed') {
     return {
       title: isZh ? `待确认：${actionLabel}` : `Pending: ${actionLabel}`,
-      description: item?.proposal?.summary || metaData.summary || summarizeObject(item?.proposal?.payload || metaData.payload || metaData, isZh),
+      description: item?.proposal?.summary || metaData.summary || summarizeObject(item?.proposal?.payload || metaData.payload || metaData, isZh, t),
       tone: 'proposal',
     };
   }
@@ -1035,7 +1086,7 @@ function buildEventCopy(item, isZh) {
     if (status === 'failed') {
       return {
         title: isZh ? `执行失败：${actionLabel}` : `Failed: ${actionLabel}`,
-        description: summarizeObject(metaData.new_data || metaData.result || metaData.request_payload || metaData.payload || metaData, isZh),
+        description: summarizeObject(metaData.new_data || metaData.result || metaData.request_payload || metaData.payload || metaData, isZh, t),
         tone: 'failed',
       };
     }
@@ -1043,7 +1094,7 @@ function buildEventCopy(item, isZh) {
     if ((item?.action || '').endsWith('_rejected')) {
       return {
         title: isZh ? `已驳回：${actionLabel}` : `Rejected: ${actionLabel}`,
-        description: summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh),
+        description: summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh, t),
         tone: 'muted',
       };
     }
@@ -1051,7 +1102,7 @@ function buildEventCopy(item, isZh) {
     if ((item?.action || '').endsWith('_confirmed')) {
       return {
         title: isZh ? `已确认：${actionLabel}` : `Confirmed: ${actionLabel}`,
-        description: summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh),
+        description: summarizeObject(metaData.request_payload || metaData.payload || metaData, isZh, t),
         tone: 'success',
       };
     }
@@ -1059,7 +1110,7 @@ function buildEventCopy(item, isZh) {
     if ((item?.action || '').endsWith('_executed')) {
       return {
         title: isZh ? `已执行：${actionLabel}` : `Executed: ${actionLabel}`,
-        description: summarizeObject(metaData.new_data || metaData.result || metaData, isZh),
+        description: summarizeObject(metaData.new_data || metaData.result || metaData, isZh, t),
         tone: 'success',
       };
     }
@@ -1067,7 +1118,7 @@ function buildEventCopy(item, isZh) {
 
   return {
     title: actionLabel,
-    description: item?.content || summarizeObject(metaData, isZh),
+    description: item?.content || summarizeObject(metaData, isZh, t),
     tone: 'muted',
   };
 }
@@ -1998,8 +2049,8 @@ function RunInspector({ runs, currentRun, isZh, locale }) {
   );
 }
 
-function EventTimelineRow({ item, locale, isZh, disabled, onConfirmProposal, onRejectProposal, onRollback }) {
-  const event = buildEventCopy(item, isZh);
+function EventTimelineRow({ item, locale, isZh, t, disabled, onConfirmProposal, onRejectProposal, onRollback }) {
+  const event = buildEventCopy(item, isZh, t);
   const proposal = item?.proposal;
   const metaData = item?.meta?.data || {};
   const decisionMeta = metaData.decision_meta || {};
@@ -2444,7 +2495,7 @@ export default function AdminAiWorkspacePage() {
   }, []);
 
   const hasLocalStreamItems = Boolean(streamState.optimisticMessage)
-    || (Array.isArray(streamState.items) && streamState.items.length > 0);
+    || (Array.isArray(streamState.items) && streamState.items.some(isActiveStreamItem));
   const shouldPollCurrentConversation = Boolean(selectedConversationId)
     && !isCreatingConversation
     && !hasLocalStreamItems
@@ -2658,6 +2709,7 @@ export default function AdminAiWorkspacePage() {
         invalidateWorkspace();
       },
       onError: (error, variables) => {
+        setStreamState((state) => preserveStreamDiagnosticsAfterError(state, error));
         setStreamConversationId(null);
         invalidateWorkspace();
         invalidateConversationDetail(variables?.conversationId);
@@ -2735,6 +2787,7 @@ export default function AdminAiWorkspacePage() {
         setStreamState(createEmptyStreamState());
       },
       onError: (error, variables) => {
+        setStreamState((state) => preserveStreamDiagnosticsAfterError(state, error));
         setStreamConversationId(null);
         invalidateWorkspace();
         invalidateConversationDetail(variables?.conversationId);
@@ -3239,6 +3292,7 @@ export default function AdminAiWorkspacePage() {
                                   item={item}
                                   locale={locale}
                                   isZh={isZh}
+                                  t={t}
                                   disabled={disableProposalActions}
                                   onRollback={handleCreateRollback}
                                 />

@@ -139,6 +139,7 @@
         "waitingApproval": "Waiting for admin approval before execution.",
         "noAssistantText": "No assistant text returned.",
         "unknownField": "Unknown field",
+        "emptyStructuredData": "No structured data attached.",
         "status": {
           "streaming": "Streaming response",
           "assistantMessage": "Assistant message",
