@@ -40,9 +40,15 @@ const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
 const MAX_STREAM_ITEMS = 120;
 let optimisticMessageSequence = 0;
+let streamItemSequence = 0;
 
 function trimStreamItems(items) {
   return items.length > MAX_STREAM_ITEMS ? items.slice(-MAX_STREAM_ITEMS) : items;
+}
+
+function createStreamItemSequence() {
+  streamItemSequence += 1;
+  return streamItemSequence;
 }
 
 function createEmptyStreamState() {
@@ -691,7 +697,7 @@ function getStreamToolKey(event, data, items = []) {
       }
     }
 
-    return `tool:${runId}:${data.tool_name}:${data?.sequence ?? items.length}`;
+    return `tool:${runId}:${data.tool_name}:${data?.sequence ?? createStreamItemSequence()}`;
   }
 
   return null;
@@ -715,7 +721,7 @@ function summarizeObject(value, isZh, t) {
   }
 
   const entries = Object.entries(value)
-    .filter(([, item]) => item !== null && item !== '' && item !== false)
+    .filter(([, item]) => item !== null && item !== undefined && item !== '')
     .slice(0, 4)
     .map(([key, item]) => {
       if (Array.isArray(item)) {
@@ -877,7 +883,7 @@ function reduceStreamState(state, event, data) {
         kind: 'stream_event',
         event,
         data,
-        id: `${event}-${data?.run_id || 'run'}-${data?.step_id ?? data?.sequence ?? items.length}`,
+        id: `${event}-${data?.run_id || 'run'}-${data?.step_id ?? data?.sequence ?? createStreamItemSequence()}`,
       },
     ]),
   };
@@ -3302,6 +3308,7 @@ export default function AdminAiWorkspacePage() {
                                   item={item}
                                   locale={locale}
                                   isZh={isZh}
+                                  t={t}
                                   disabled={disableProposalActions}
                                   onConfirmProposal={(proposalId) => normalizedSelectedConversationId && decisionMutation.mutate({
                                     proposalId,

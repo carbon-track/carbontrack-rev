@@ -78,7 +78,7 @@ export default function AdminAiMarkdown({ content, className }) {
             const isBlock = /language-/.test(className || '') || rawCode.includes('\n');
 
             return isBlock ? (
-              <code className="block overflow-x-auto whitespace-pre rounded-2xl border border-current/10 bg-current/5 px-3 py-3 font-mono text-xs leading-5 text-current">
+              <code className="block overflow-x-auto whitespace-pre-wrap rounded-2xl border border-current/10 bg-current/5 px-3 py-3 font-mono text-xs leading-5 text-current">
                 {children}
               </code>
             ) : (
