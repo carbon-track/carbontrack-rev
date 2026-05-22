@@ -658,6 +658,31 @@ function getStreamToolStatus(event, data, previousStatus) {
   return data?.status || previousStatus || 'success';
 }
 
+function summarizeObject(value, isZh) {
+  if (!value || typeof value !== 'object') {
+    return isZh ? '没有附带结构化数据。' : 'No structured data attached.';
+  }
+
+  const entries = Object.entries(value)
+    .filter(([, item]) => item !== null && item !== '' && item !== false)
+    .slice(0, 4)
+    .map(([key, item]) => {
+      if (Array.isArray(item)) {
+        return `${key}: ${item.slice(0, 3).join(', ')}${item.length > 3 ? '…' : ''}`;
+      }
+      if (typeof item === 'object') {
+        return `${key}: ${Object.keys(item).slice(0, 3).join(', ') || '{}'}`;
+      }
+      return `${key}: ${String(item)}`;
+    });
+
+  if (entries.length === 0) {
+    return isZh ? '没有附带结构化数据。' : 'No structured data attached.';
+  }
+
+  return entries.join(' | ');
+}
+
 function formatMissingFieldLabel(field, isZh, t) {
   if (field == null || field === '') {
     return t('admin.aiWorkspace.stream.unknownField', { defaultValue: isZh ? '未知字段' : 'Unknown field' });
@@ -979,31 +1004,6 @@ function getLocalizedEventKind(kind, isZh) {
     default:
       return isZh ? '事件' : 'Event';
   }
-}
-
-function summarizeObject(value, isZh) {
-  if (!value || typeof value !== 'object') {
-    return isZh ? '没有附带结构化数据。' : 'No structured data attached.';
-  }
-
-  const entries = Object.entries(value)
-    .filter(([, item]) => item !== null && item !== '' && item !== false)
-    .slice(0, 4)
-    .map(([key, item]) => {
-      if (Array.isArray(item)) {
-        return `${key}: ${item.slice(0, 3).join(', ')}${item.length > 3 ? '…' : ''}`;
-      }
-      if (typeof item === 'object') {
-        return `${key}: ${Object.keys(item).slice(0, 3).join(', ') || '{}'}`;
-      }
-      return `${key}: ${String(item)}`;
-    });
-
-  if (entries.length === 0) {
-    return isZh ? '没有附带结构化数据。' : 'No structured data attached.';
-  }
-
-  return entries.join(' | ');
 }
 
 function buildEventCopy(item, isZh) {
@@ -2538,28 +2538,21 @@ export default function AdminAiWorkspacePage() {
   const handleStreamEvent = useCallback(({ event, data }) => {
     if (event === 'run.started' && data?.conversation_id) {
       const nextConversationId = data.conversation_id;
+      const eventConversationId = String(nextConversationId);
+      const latestSelectedConversationId = selectedConversationIdRef.current == null
+        ? null
+        : String(selectedConversationIdRef.current);
+      const shouldSelectStreamConversation = (
+        isCreatingConversationRef.current
+        || latestSelectedConversationId == null
+        || latestSelectedConversationId === eventConversationId
+      );
+
       setStreamConversationId(nextConversationId);
-      setSelectedConversationId((current) => {
-        const currentConversationId = current == null ? null : String(current);
-        const eventConversationId = String(nextConversationId);
-        const latestSelectedConversationId = selectedConversationIdRef.current == null
-          ? null
-          : String(selectedConversationIdRef.current);
-
-        const shouldSelectStreamConversation = (
-          isCreatingConversationRef.current
-          || currentConversationId == null
-          || currentConversationId === eventConversationId
-          || latestSelectedConversationId === eventConversationId
-        );
-
-        if (shouldSelectStreamConversation) {
-          selectedConversationIdRef.current = nextConversationId;
-          return nextConversationId;
-        }
-
-        return current;
-      });
+      if (shouldSelectStreamConversation) {
+        selectedConversationIdRef.current = nextConversationId;
+        setSelectedConversationId(nextConversationId);
+      }
       isCreatingConversationRef.current = false;
       setIsCreatingConversation(false);
       queryClient.invalidateQueries(['adminAiConversations', currentAdminId]);
@@ -2665,7 +2658,6 @@ export default function AdminAiWorkspacePage() {
         invalidateWorkspace();
       },
       onError: (error, variables) => {
-        setStreamState(createEmptyStreamState());
         setStreamConversationId(null);
         invalidateWorkspace();
         invalidateConversationDetail(variables?.conversationId);
@@ -2743,7 +2735,6 @@ export default function AdminAiWorkspacePage() {
         setStreamState(createEmptyStreamState());
       },
       onError: (error, variables) => {
-        setStreamState(createEmptyStreamState());
         setStreamConversationId(null);
         invalidateWorkspace();
         invalidateConversationDetail(variables?.conversationId);
