@@ -670,6 +670,9 @@ function getStreamToolKey(event, data, items = []) {
   if (data?.step_id != null) {
     return `tool:${runId}:${data.step_id}`;
   }
+  if (data?.model_tool_call_id != null) {
+    return `tool:${runId}:model-call:${data.model_tool_call_id}`;
+  }
 
   if (data?.proposal?.proposal_id) {
     const proposalId = data.proposal.proposal_id;
@@ -694,6 +697,32 @@ function getStreamToolKey(event, data, items = []) {
   }
 
   return null;
+}
+
+function getAssistantStreamKey(event, data, items = []) {
+  const runId = data?.run_id || 'run';
+  const stableKey = data?.message_id || data?.response_id || data?.step_id;
+  if (stableKey != null) {
+    return stableKey;
+  }
+
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index];
+    if (
+      item?.kind === 'assistant_stream'
+      && item?.data?.run_id === runId
+      && item?.data?.fallback_stream === true
+      && item?.data?.streaming !== false
+    ) {
+      return item.data.assistant_key;
+    }
+  }
+
+  if (event === 'assistant.delta') {
+    return `fallback-delta:${runId}:${data?.sequence ?? data?._client_sequence ?? items.length}`;
+  }
+
+  return `fallback-message:${runId}:${data?.sequence ?? data?._client_sequence ?? items.length}`;
 }
 
 function getStreamToolStatus(event, data, previousStatus) {
@@ -808,11 +837,12 @@ function reduceStreamState(state, event, data) {
 
   if (event === 'assistant.delta' || event === 'assistant.message') {
     const runId = data?.run_id || 'run';
-    const assistantKey = data?.message_id || data?.response_id || data?.step_id || runId;
+    const hasStableAssistantKey = data?.message_id != null || data?.response_id != null || data?.step_id != null;
+    const assistantKey = getAssistantStreamKey(event, data, items);
     const index = items.findIndex((item) => (
       item.kind === 'assistant_stream'
       && item.data?.run_id === runId
-      && (item.data?.assistant_key || item.data?.message_id || item.data?.response_id || item.data?.step_id || item.data?.run_id) === assistantKey
+      && item.data?.assistant_key === assistantKey
     ));
     const content = event === 'assistant.delta'
       ? `${index >= 0 ? items[index].data?.content || '' : ''}${data?.content || ''}`
@@ -824,6 +854,7 @@ function reduceStreamState(state, event, data) {
         ...(index >= 0 ? items[index].data : {}),
         ...(data || {}),
         assistant_key: assistantKey,
+        fallback_stream: !hasStableAssistantKey,
         content,
         streaming: event === 'assistant.delta',
       },
