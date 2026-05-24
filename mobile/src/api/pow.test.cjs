@@ -57,6 +57,7 @@ const loadSolveProofOfWork = ({ includeTextEncoder }) => {
     String,
     Uint8Array,
     Uint32Array,
+    CarbonTrackPowNative: null,
     clearTimeout,
     module: { exports: {} },
     setTimeout,
@@ -73,7 +74,7 @@ const loadSolveProofOfWork = ({ includeTextEncoder }) => {
   return context.module.exports.solveProofOfWork;
 };
 
-const loadProofOfWorkModule = ({ apiClient, storeState }) => {
+const loadProofOfWorkModule = ({ apiClient, storeState, nativeModule = null }) => {
   const sourcePath = path.join(__dirname, 'pow.js');
   const source = fs.readFileSync(sourcePath, 'utf8');
   const start = source.indexOf('const HASH_BATCH_SIZE');
@@ -97,6 +98,7 @@ const loadProofOfWorkModule = ({ apiClient, storeState }) => {
     Uint32Array,
     apiClient,
     clearTimeout,
+    CarbonTrackPowNative: nativeModule,
     mobileClientType: 'mobile',
     module: { exports: {} },
     requireMobileClientToken: () => {},
@@ -136,6 +138,82 @@ test('solveProofOfWork fallback UTF-8 path matches Node crypto for unicode chall
   const nonce = await solveProofOfWork(challenge, difficulty, { maxAttempts, timeoutMs: 5000 });
 
   assert.equal(nonce, expectedNonce(challenge, difficulty, maxAttempts));
+});
+
+test('solveProofOfWork returns the fixed vector nonce through the JS fallback', async () => {
+  const solveProofOfWork = loadSolveProofOfWork({ includeTextEncoder: true });
+  const challenge = 'carbontrack-native-pow-vector';
+  const difficulty = 12;
+
+  const nonce = await solveProofOfWork(challenge, difficulty, {
+    maxAttempts: 10000,
+    timeoutMs: 5000,
+  });
+
+  assert.equal(nonce, '2547');
+  const digest = crypto.createHash('sha256').update(`${challenge}:${nonce}`).digest('hex');
+  assert.equal(digest, '000207000830575945a9e1031a7c9f770d69432f93508be3c1851c7ddbe74f8e');
+  assert.equal(hasLeadingZeroBits(digest, difficulty), true);
+});
+
+test('solveProofOfWork prefers native solver when available', async () => {
+  let calls = 0;
+  const nativeModule = {
+    solve: async (challenge, difficulty, maxAttempts, timeoutMs, operationId) => {
+      calls += 1;
+      assert.equal(challenge, 'native-challenge');
+      assert.equal(difficulty, 20);
+      assert.equal(maxAttempts, 3145728);
+      assert.equal(timeoutMs, 30000);
+      assert.match(operationId, /^pow-/);
+      return { nonce: '42', attempts: 43, elapsedMs: 7 };
+    },
+    cancel: () => {},
+  };
+  const { solveProofOfWork } = loadProofOfWorkModule({
+    apiClient: { post: async () => ({ data: { data: {} } }) },
+    storeState: { begin: () => 'op', end: () => {} },
+    nativeModule,
+  });
+
+  const nonce = await solveProofOfWork('native-challenge', 20);
+
+  assert.equal(nonce, '42');
+  assert.equal(calls, 1);
+});
+
+test('solveProofOfWork falls back to JS when native module is unavailable', async () => {
+  const { solveProofOfWork } = loadProofOfWorkModule({
+    apiClient: { post: async () => ({ data: { data: {} } }) },
+    storeState: { begin: () => 'op', end: () => {} },
+    nativeModule: null,
+  });
+
+  const nonce = await solveProofOfWork('carbontrack-pow-test', 10, {
+    maxAttempts: 5000,
+    timeoutMs: 5000,
+  });
+
+  assert.equal(nonce, expectedNonce('carbontrack-pow-test', 10, 5000));
+});
+
+test('solveProofOfWork does not fall back after native timeout', async () => {
+  const nativeModule = {
+    solve: async () => {
+      throw new Error('Proof-of-work calculation timed out');
+    },
+    cancel: () => {},
+  };
+  const { solveProofOfWork } = loadProofOfWorkModule({
+    apiClient: { post: async () => ({ data: { data: {} } }) },
+    storeState: { begin: () => 'op', end: () => {} },
+    nativeModule,
+  });
+
+  await assert.rejects(
+    solveProofOfWork('native-timeout', 8, { maxAttempts: 5000, timeoutMs: 5000 }),
+    /timed out/,
+  );
 });
 
 test('solveProofOfWork stops when cancelled before solving', async () => {
@@ -195,4 +273,51 @@ test('withMobileProofOfWork does not start queued work after cancellation', asyn
   await assert.rejects(first, /aborted|cancelled/);
   await assert.rejects(second, /cancelled/);
   assert.equal(challengeRequests, 1);
+});
+
+test('withMobileProofOfWork cancels native work when the active operation is cancelled', async () => {
+  let activeCancel = null;
+  const cancelledOperationIds = [];
+  const storeState = {
+    begin: (scope, cancel) => {
+      activeCancel = cancel;
+      return `${scope}-operation`;
+    },
+    end: () => {},
+  };
+  const apiClient = {
+    post: async () => ({
+      data: {
+        data: {
+          challenge: 'native-cancel',
+          difficulty: 20,
+        },
+      },
+    }),
+  };
+  const nativeModule = {
+    solve: async (challenge, difficulty, maxAttempts, timeoutMs, operationId) => new Promise((resolve, reject) => {
+      setTimeout(() => {
+        if (cancelledOperationIds.includes(operationId)) {
+          reject(new Error('Proof-of-work calculation cancelled'));
+          return;
+        }
+        resolve({ nonce: '1', attempts: 2, elapsedMs: 10 });
+      }, 20);
+    }),
+    cancel: (operationId) => {
+      cancelledOperationIds.push(operationId);
+    },
+  };
+  const { withMobileProofOfWork } = loadProofOfWorkModule({ apiClient, storeState, nativeModule });
+
+  const request = withMobileProofOfWork('auth.login', { login: true });
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+  activeCancel();
+
+  await assert.rejects(request, /cancelled/);
+  assert.equal(cancelledOperationIds.length, 1);
+  assert.match(cancelledOperationIds[0], /^pow-/);
 });

@@ -1,6 +1,7 @@
 import apiClient from './client';
 import { mobileClientType, requireMobileClientToken } from './mobileClientConfig';
 import useProofOfWorkStore from '../store/proofOfWorkStore';
+import CarbonTrackPowNative from '../../modules/carbontrack-pow';
 
 const HASH_BATCH_SIZE = 512;
 const YIELD_INTERVAL = HASH_BATCH_SIZE * 2;
@@ -12,6 +13,7 @@ const EXPECTED_ATTEMPT_MULTIPLIER = 3;
 const POW_UI_WATCHDOG_MS = MAX_DYNAMIC_SOLVE_MS + 10000;
 const scopeQueues = new Map();
 let cachedTextEncoder = null;
+let nextNativeOperationId = 1;
 // PoW needs hundreds of thousands of hashes; keep hashing inside JS instead of
 // crossing the Expo native module boundary once per nonce.
 const SHA256_INITIAL_STATE = [
@@ -217,25 +219,26 @@ const hasLeadingZeroBits = (bytes, difficulty) => {
   return (bytes[fullBytes] & mask) === 0;
 };
 
-export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
-  const normalizedDifficulty = Number(difficulty);
-  if (!challenge || !Number.isFinite(normalizedDifficulty) || normalizedDifficulty < 1) {
-    throw new Error('Invalid proof-of-work challenge');
+const getNativeProofOfWorkModule = () => {
+  if (CarbonTrackPowNative && typeof CarbonTrackPowNative.solve === 'function') {
+    return CarbonTrackPowNative;
   }
+  return null;
+};
 
-  const expectedAttempts = 2 ** Math.min(28, Math.floor(normalizedDifficulty));
-  const maxAttempts = Number.isFinite(options.maxAttempts)
-    ? Math.max(1, Math.floor(options.maxAttempts))
-    : Math.min(
-      MAX_DYNAMIC_SOLVE_ATTEMPTS,
-      Math.max(MAX_SOLVE_ATTEMPTS, expectedAttempts * EXPECTED_ATTEMPT_MULTIPLIER),
-    );
-  const maxSolveMs = Number.isFinite(options.timeoutMs)
-    ? Math.max(1000, Math.floor(options.timeoutMs))
-    : Math.min(
-      MAX_DYNAMIC_SOLVE_MS,
-      normalizedDifficulty >= 22 ? MAX_DYNAMIC_SOLVE_MS : MAX_SOLVE_MS,
-    );
+const createNativeOperationId = () => {
+  const operationId = `pow-${Date.now()}-${nextNativeOperationId}`;
+  nextNativeOperationId += 1;
+  return operationId;
+};
+
+const solveProofOfWorkWithJavaScript = async (
+  challenge,
+  normalizedDifficulty,
+  maxAttempts,
+  maxSolveMs,
+  options,
+) => {
   const startedAt = Date.now();
   const hashNonce = createProofOfWorkHasher(challenge, maxAttempts);
   let nonce = 0;
@@ -262,6 +265,72 @@ export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
   }
 
   throw new Error('Proof-of-work attempt limit exceeded');
+};
+
+export const solveProofOfWork = async (challenge, difficulty, options = {}) => {
+  const normalizedDifficulty = Number(difficulty);
+  if (!challenge || !Number.isFinite(normalizedDifficulty) || normalizedDifficulty < 1) {
+    throw new Error('Invalid proof-of-work challenge');
+  }
+
+  const expectedAttempts = 2 ** Math.min(28, Math.floor(normalizedDifficulty));
+  const maxAttempts = Number.isFinite(options.maxAttempts)
+    ? Math.max(1, Math.floor(options.maxAttempts))
+    : Math.min(
+      MAX_DYNAMIC_SOLVE_ATTEMPTS,
+      Math.max(MAX_SOLVE_ATTEMPTS, expectedAttempts * EXPECTED_ATTEMPT_MULTIPLIER),
+    );
+  const maxSolveMs = Number.isFinite(options.timeoutMs)
+    ? Math.max(1000, Math.floor(options.timeoutMs))
+    : Math.min(
+      MAX_DYNAMIC_SOLVE_MS,
+      normalizedDifficulty >= 22 ? MAX_DYNAMIC_SOLVE_MS : MAX_SOLVE_MS,
+    );
+
+  if (options.signal?.aborted) {
+    throw new Error('Proof-of-work calculation cancelled');
+  }
+
+  const nativeModule = options.forceJavaScript ? null : getNativeProofOfWorkModule();
+  if (nativeModule) {
+    const operationId = options.operationId || createNativeOperationId();
+    const cancelNativeWork = () => {
+      if (typeof nativeModule.cancel === 'function') {
+        nativeModule.cancel(operationId);
+      }
+    };
+
+    if (options.signal?.addEventListener) {
+      options.signal.addEventListener('abort', cancelNativeWork, { once: true });
+    }
+
+    try {
+      if (options.signal?.aborted) {
+        cancelNativeWork();
+        throw new Error('Proof-of-work calculation cancelled');
+      }
+      const result = await nativeModule.solve(
+        challenge,
+        Math.floor(normalizedDifficulty),
+        maxAttempts,
+        maxSolveMs,
+        operationId,
+      );
+      return String(result?.nonce ?? result);
+    } finally {
+      if (options.signal?.removeEventListener) {
+        options.signal.removeEventListener('abort', cancelNativeWork);
+      }
+    }
+  }
+
+  return solveProofOfWorkWithJavaScript(
+    challenge,
+    normalizedDifficulty,
+    maxAttempts,
+    maxSolveMs,
+    options,
+  );
 };
 
 export const getProofOfWorkChallenge = async (scope, options = {}) => {

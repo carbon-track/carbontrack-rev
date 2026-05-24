@@ -7,6 +7,7 @@ import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/
 import useAuthStore from '../store/authStore';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
+import { isNativeIosTabsEnabled } from '../lib/nativeFeatureFlags';
 import { useEdgeSwipeBack } from '../lib/navigationGestures';
 
 import LoginScreen from '../screens/LoginScreen';
@@ -22,7 +23,7 @@ import ProfileSettingsScreen from '../screens/ProfileSettingsScreen';
 
 const shouldUseNativeTabs = () => (
   Platform.OS === 'ios'
-  && process.env.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS === 'true'
+  && isNativeIosTabsEnabled()
 );
 
 const hasNativeTabsHost = () => {

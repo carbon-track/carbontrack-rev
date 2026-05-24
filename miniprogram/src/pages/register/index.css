@@ -1,0 +1,13 @@
+.register-page .auth-form {
+  gap: 16px;
+}
+
+.region-row {
+  display: flex;
+  gap: 12px;
+}
+
+.region-input {
+  flex: 1;
+  min-width: 0;
+}
