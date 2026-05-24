@@ -1,0 +1,72 @@
+.profile-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 22px;
+}
+
+.profile-name {
+  display: block;
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.profile-stats,
+.profile-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.profile-stats {
+  margin-top: 22px;
+  justify-content: space-between;
+}
+
+.profile-actions {
+  margin: 18px 0 24px;
+}
+
+.profile-actions .button-ghost,
+.profile-actions .button-primary {
+  flex: 1;
+}
+
+.profile-section {
+  display: block;
+  margin: 26px 0 12px;
+}
+
+.badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.badge-item {
+  box-sizing: border-box;
+  width: calc(50% - 6px);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.badge-name {
+  display: block;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.logout-button {
+  margin-top: 28px;
+  min-height: 44px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 16px;
+  font-weight: 800;
+}

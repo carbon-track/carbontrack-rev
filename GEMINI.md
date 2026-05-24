@@ -8,12 +8,13 @@ This document provides essential guidance for AI agents working on the CarbonTra
 
 ## Architecture Overview
 
-The project is a monorepo with three main parts:
+The project is a monorepo with four main parts:
 1.  **`backend/`**: A PHP-based REST API built with the Slim micro-framework.
 2.  **`frontend/`**: A React single-page application (SPA) built with Vite.
 3.  **`mobile/`**: An Expo / React Native mobile application.
+4.  **`miniprogram/`**: A WeChat Mini Program client.
 
-Communication between the frontend, mobile app, and backend is via a RESTful API, which is documented in `backend/openapi.json`.
+Communication between the frontend, mobile app, miniprogram, and backend is via a RESTful API, which is documented in `backend/openapi.json`.
 
 ### Key Files
 - `backend/openapi.json`: The OpenAPI specification that defines the contract between the frontend and backend. Keeping this up-to-date is crucial.
@@ -23,6 +24,7 @@ Communication between the frontend, mobile app, and backend is via a RESTful API
 - `frontend/src/pages/admin/AiWorkspace.jsx`: Dedicated admin AI workspace. Keep its UX, starter prompts, and capability presentation aligned with the backend admin AI catalogue and routes.
 - `frontend/src/pages/admin/Cron.jsx`: Admin cron console for task cadence, run history, and manual task execution.
 - `mobile/`: Expo / React Native mobile client. Keep its API assumptions aligned with `backend/openapi.json`.
+- `miniprogram/`: WeChat Mini Program client. Keep its API assumptions aligned with `backend/openapi.json` and its upload/release flow aligned with the `carbon-track/miniprogram` mirror repository.
 - `backend/database/localhost.sql`: Contains the primary database schema. All migration scripts in `backend/database/migrations/` have been executed, so this file, along with the migration scripts, represents the definitive schema.
 - `backend/config/admin_ai_commands.json`: Source of truth for the admin AI assistant's single multi-turn command and tool catalogue. Whenever you add, rename, or remove admin functionality that the AI should understand, update this file (and keep the companion loader `admin_ai_commands.php` in sync) so the knowledge base matches the code.
 
@@ -102,6 +104,19 @@ The mobile app is a React Native client built with Expo and lives under `mobile/
     - Run `pnpm install --frozen-lockfile` and `pnpm exec expo config --type public`.
     - Keep `mobile/pnpm-lock.yaml` committed and do not add `mobile/package-lock.json`.
     - If mobile behavior depends on backend endpoints, verify the contract against `backend/openapi.json`.
+
+## Miniprogram (WeChat Mini Program)
+
+The WeChat Mini Program client lives under `miniprogram/`.
+
+### Developer Workflow
+- **Setup**: Run `pnpm install` in the `miniprogram` directory.
+- **Validate**: Run `pnpm validate` to verify the Mini Program manifest, project config, sitemap, and declared pages.
+- **Run Locally**: Open `miniprogram/` with WeChat DevTools.
+- **After Miniprogram Changes (Required)**: After modifying Mini Program pages, config, API clients, or release metadata:
+    - Run `pnpm install --frozen-lockfile` and `pnpm validate`.
+    - Keep `miniprogram/pnpm-lock.yaml` committed and do not add `miniprogram/package-lock.json`.
+    - If Mini Program behavior depends on backend endpoints, verify the contract against `backend/openapi.json`.
 
 ## Admin AI Maintenance
 

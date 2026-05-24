@@ -1,0 +1,104 @@
+.home-header,
+.section-header,
+.list-item,
+.quick-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.home-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  display: block;
+  margin-top: 8px;
+  color: #0f172a;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.small-button {
+  min-width: 96px;
+  min-height: 40px;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 18px 0;
+}
+
+.metric-card,
+.list-item {
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.metric-card {
+  min-height: 118px;
+  padding: 20px;
+}
+
+.metric-value {
+  display: block;
+  color: #0f766e;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.metric-label,
+.item-meta {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.quick-row {
+  margin: 18px 0 26px;
+}
+
+.quick-button {
+  flex: 1;
+}
+
+.section-title,
+.item-title {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.section-title {
+  font-size: 19px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.list-item {
+  min-height: 82px;
+  padding: 16px;
+}
+
+.item-title,
+.item-meta {
+  display: block;
+}
+
+.item-points {
+  color: #0f766e;
+  font-size: 16px;
+  font-weight: 800;
+}

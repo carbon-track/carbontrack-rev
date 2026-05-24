@@ -430,8 +430,25 @@ class SupportTicketController
 
     private function shouldUseMobileProofOfWork(array $payload, Request $request): bool
     {
-        $clientType = strtolower(trim((string)($payload['client_type'] ?? $request->getHeaderLine('X-Client-Platform'))));
-        return $clientType === 'mobile' && trim($request->getHeaderLine('Origin')) === '';
+        $bodyClientType = strtolower(trim((string)($payload['client_type'] ?? '')));
+        $headerClientType = strtolower(trim($request->getHeaderLine('X-Client-Platform')));
+        if ($bodyClientType !== 'mobile' || $headerClientType !== 'mobile') {
+            return false;
+        }
+
+        if (trim($request->getHeaderLine('Origin')) !== ''
+            || trim($request->getHeaderLine('Sec-Fetch-Site')) !== '') {
+            return false;
+        }
+
+        // This token only gates access to the mobile PoW path; it is not app attestation.
+        $expected = trim((string)($_ENV['MOBILE_CLIENT_TOKEN'] ?? ''));
+        if ($expected === '') {
+            return false;
+        }
+
+        $supplied = trim($request->getHeaderLine('X-Mobile-Client-Token'));
+        return $supplied !== '' && hash_equals($expected, $supplied);
     }
 
     private function stripChallengeFields(array $payload): array

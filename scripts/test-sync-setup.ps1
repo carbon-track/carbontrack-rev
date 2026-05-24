@@ -100,6 +100,8 @@ Write-Host "`n📁 Checking directory structure..." -ForegroundColor Yellow
 
 $frontendExists = Test-DirectoryContent -Path ".\frontend" -Name "Frontend"
 $backendExists = Test-DirectoryContent -Path ".\backend" -Name "Backend"
+$mobileExists = Test-DirectoryContent -Path ".\mobile" -Name "Mobile"
+$miniprogramExists = Test-DirectoryContent -Path ".\miniprogram" -Name "Miniprogram"
 
 Write-Host "`n🔧 Checking GitHub Actions setup..." -ForegroundColor Yellow
 
@@ -111,7 +113,7 @@ $branchModelReady = Test-BranchModel
 
 Write-Host "`n📋 Setup status summary:" -Foregroundcolor Yellow
 
-if ($frontendExists -and $backendExists -and $workflowExists) {
+if ($frontendExists -and $backendExists -and $mobileExists -and $miniprogramExists -and $workflowExists) {
     Write-Host "✅ All required components are in place!" -ForegroundColor Green
     
     Write-Host "`n🔄 Would you like to create test changes? (y/n): " -ForegroundColor Cyan -NoNewline
@@ -122,13 +124,15 @@ if ($frontendExists -and $backendExists -and $workflowExists) {
         
         $frontendTestFile = New-TestChange -Directory ".\frontend" -Name "Frontend"
         $backendTestFile = New-TestChange -Directory ".\backend" -Name "Backend"
+        $mobileTestFile = New-TestChange -Directory ".\mobile" -Name "Mobile"
+        $miniprogramTestFile = New-TestChange -Directory ".\miniprogram" -Name "Miniprogram"
         
-        if ($frontendTestFile -or $backendTestFile) {
+        if ($frontendTestFile -or $backendTestFile -or $mobileTestFile -or $miniprogramTestFile) {
             Write-Host "`n🚀 Test files created! Next steps:" -ForegroundColor Green
             Write-Host "1. Commit these changes on a feature branch" -ForegroundColor White
             Write-Host "2. Open a PR into dev in the monorepo" -ForegroundColor White
-            Write-Host "3. Merge dev and confirm frontend/dev + backend/dev receive the mirror commit" -ForegroundColor White
-            Write-Host "4. Promote dev -> main and confirm frontend/main + backend/main update" -ForegroundColor White
+            Write-Host "3. Merge dev and confirm changed mirror repos receive the dev mirror commit" -ForegroundColor White
+            Write-Host "4. Promote dev -> main and confirm changed mirror repos update on main" -ForegroundColor White
             Write-Host "`nCommands to commit:" -ForegroundColor Cyan
             Write-Host "git add ." -ForegroundColor Gray
             Write-Host 'git commit -m "test(sync): 验镜像之流是否可行"' -ForegroundColor Gray
@@ -142,9 +146,9 @@ if ($frontendExists -and $backendExists -and $workflowExists) {
 Write-Host "`n📚 Additional steps needed:" -ForegroundColor Yellow
 Write-Host "1. Add MIRROR_SYNC_APP_ID as a repository variable" -ForegroundColor White
 Write-Host "2. Add MIRROR_SYNC_APP_PRIVATE_KEY as a repository secret" -ForegroundColor White
-Write-Host "3. Install the GitHub App on monorepo/frontend/backend and allow it to push main/dev in mirror repos" -ForegroundColor White
+Write-Host "3. Install the GitHub App on monorepo/frontend/backend/mobile/miniprogram and allow it to push main/dev in mirror repos" -ForegroundColor White
 Write-Host "4. Protect monorepo main/dev with PR + required checks from monorepo-ci.yml" -ForegroundColor White
-Write-Host "5. Required checks: monorepo / frontend-ci, monorepo / frontend-cd-readiness, monorepo / backend-ci, monorepo / backend-cd-readiness" -ForegroundColor White
+Write-Host "5. Required checks: monorepo / frontend-ci, monorepo / frontend-cd-readiness, monorepo / backend-ci, monorepo / backend-cd-readiness, monorepo / mobile-ci, monorepo / mobile-cd-readiness, monorepo / miniprogram-ci, monorepo / miniprogram-cd-readiness" -ForegroundColor White
 Write-Host "6. Keep child repos bot-only; their checks are push smoke checks, not merge gates" -ForegroundColor White
 Write-Host "7. See SYNC_SETUP.md for detailed instructions" -ForegroundColor White
 

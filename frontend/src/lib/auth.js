@@ -340,7 +340,11 @@ export const authAPI = {
       const api = await getApi();
       await api.post('/auth/logout');
     } catch (error) {
-      console.warn('Logout API call failed:', error);
+      console.warn('Logout API call failed:', {
+        status: error?.response?.status ?? null,
+        code: error?.response?.data?.code ?? error?.code ?? null,
+        message: error?.response?.data?.message ?? error?.message ?? 'unknown',
+      });
     } finally {
       tokenManager.removeToken();
       userManager.removeUser();

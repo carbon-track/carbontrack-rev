@@ -3,6 +3,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { makeShadow, useTheme } from '../theme';
+import { isNativeLiquidGlassEnabled } from '../lib/nativeFeatureFlags';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 
@@ -11,7 +12,7 @@ const fallbackLiquidGlass = {
   Surface: View,
   isSupported: false,
 };
-const liquidGlassEnabled = process.env.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS === 'true';
+const liquidGlassEnabled = isNativeLiquidGlassEnabled();
 
 const loadLiquidGlass = () => {
   if (!liquidGlassEnabled) {

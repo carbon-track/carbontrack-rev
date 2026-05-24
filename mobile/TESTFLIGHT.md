@@ -39,7 +39,7 @@
 
 ## 发布前配置
 
-移动端运行时配置统一走环境变量。`eas.json` 选择 build profile 和 EAS environment；production profile 仅内联正式 API 基地址，原生功能开关仍从 EAS Environment Variables 或本地 `.env` 读取。
+移动端运行时配置统一走环境变量。`eas.json` 选择 build profile 和 EAS environment；production profile 内联正式 API 基地址，并把 iOS 原生页签与 Liquid Glass 默认设为开启，避免 EAS Environment Variables 漏配时生成不带玻璃外观的生产 JS bundle。
 
 本地开发前，确认 `mobile/.env` 包含：
 
@@ -50,7 +50,7 @@ EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS=true
 EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS=true
 ```
 
-EAS 云构建前，把同名变量配置到 EAS Environment Variables 中，并按 profile 选择：
+EAS 云构建前，把 `EXPO_PUBLIC_MOBILE_CLIENT_TOKEN` 配置到 EAS Environment Variables 中，并按 profile 选择；两个原生外观开关只在需要临时回退旧 binary 时显式设为 `false`：
 
 ```bash
 npx eas-cli env:pull --environment development .env

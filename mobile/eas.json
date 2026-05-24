@@ -8,6 +8,10 @@
       "developmentClient": true,
       "distribution": "internal",
       "environment": "development",
+      "env": {
+        "EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS": "true",
+        "EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS": "true"
+      },
       "ios": {
         "image": "latest"
       }
@@ -16,7 +20,9 @@
       "autoIncrement": true,
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.carbontrackapp.com/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://api.carbontrackapp.com/api/v1",
+        "EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS": "true",
+        "EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS": "true"
       },
       "ios": {
         "image": "latest"

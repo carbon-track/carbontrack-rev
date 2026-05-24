@@ -1,0 +1,31 @@
+.detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 20px;
+  margin: 18px 0;
+}
+
+.detail-title {
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: #334155;
+  font-size: 15px;
+}
+
+.detail-notes {
+  border-top: 1px solid #e2e8f0;
+  color: #475569;
+  line-height: 1.6;
+  padding-top: 14px;
+}
