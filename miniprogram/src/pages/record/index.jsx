@@ -66,8 +66,13 @@ export default function RecordPage() {
   };
 
   const chooseImage = async () => {
-    const result = await Taro.chooseImage({ count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'] });
-    setImagePath(result.tempFilePaths?.[0] || '');
+    const result = await Taro.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera'],
+    });
+    setImagePath(result.tempFiles?.[0]?.tempFilePath || '');
   };
 
   const validate = () => {
