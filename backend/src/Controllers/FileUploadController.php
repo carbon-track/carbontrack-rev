@@ -1201,13 +1201,13 @@ class FileUploadController
             return '';
         }
 
+        $segments = explode('/', $normalized);
         $bucketPrefix = trim($this->r2Service->getBucketName(), " /\t\n\r\0\x0B");
-        if ($bucketPrefix !== '' && str_starts_with($normalized, $bucketPrefix . '/')) {
-            $normalized = substr($normalized, strlen($bucketPrefix) + 1);
-            $normalized = ltrim($normalized, '/');
+        if ($bucketPrefix !== '' && ($segments[0] ?? '') === $bucketPrefix && count($segments) > 2) {
+            array_shift($segments);
         }
 
-        return strtolower(explode('/', $normalized, 2)[0] ?? '');
+        return strtolower($segments[0] ?? '');
     }
 
     private function adminOnlyUploadDirectoryError(Response $response): Response
