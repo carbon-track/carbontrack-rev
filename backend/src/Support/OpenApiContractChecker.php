@@ -269,7 +269,7 @@ final class OpenApiContractChecker
 
     private function normalizeRoutePattern(string $pattern): string
     {
-        return (string) preg_replace('/\{([^}:]+):[^}]+\}/', '{$1}', $pattern);
+        return (string) preg_replace('/\{([^}:]+)(?::[^}]*)?\}/', '{$1}', $pattern);
     }
 
     private function stringifyCallable(mixed $callable): string

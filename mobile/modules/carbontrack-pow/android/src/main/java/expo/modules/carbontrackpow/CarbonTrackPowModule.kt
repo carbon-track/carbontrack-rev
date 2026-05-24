@@ -42,6 +42,7 @@ class CarbonTrackPowModule : Module() {
     val startedAt = System.currentTimeMillis()
     val prefix = "$challenge:".toByteArray(StandardCharsets.UTF_8)
     val digest = MessageDigest.getInstance("SHA-256")
+    val nonceBuffer = ByteArray(maxAttempts.toString().length)
 
     try {
       for (nonce in 0 until maxAttempts) {
@@ -56,7 +57,8 @@ class CarbonTrackPowModule : Module() {
 
         digest.reset()
         digest.update(prefix)
-        digest.update(nonce.toString().toByteArray(StandardCharsets.UTF_8))
+        val nonceLength = writeDecimalBytes(nonce, nonceBuffer)
+        digest.update(nonceBuffer, 0, nonceLength)
         val hash = digest.digest()
         if (hasLeadingZeroBits(hash, difficulty)) {
           return mapOf(
@@ -71,6 +73,30 @@ class CarbonTrackPowModule : Module() {
     } finally {
       cancellations.remove(operationId)
     }
+  }
+
+  private fun writeDecimalBytes(value: Int, buffer: ByteArray): Int {
+    if (value == 0) {
+      buffer[0] = '0'.code.toByte()
+      return 1
+    }
+
+    var divisor = 1
+    while (value / divisor >= 10) {
+      divisor *= 10
+    }
+
+    var remaining = value
+    var length = 0
+    while (divisor > 0) {
+      val digit = remaining / divisor
+      buffer[length] = ('0'.code + digit).toByte()
+      length += 1
+      remaining %= divisor
+      divisor /= 10
+    }
+
+    return length
   }
 
   private fun hasLeadingZeroBits(bytes: ByteArray, difficulty: Int): Boolean {
