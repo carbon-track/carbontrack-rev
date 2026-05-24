@@ -201,6 +201,35 @@ final class OpenApiContractCheckerTest extends TestCase
         );
     }
 
+    public function testRuntimeCheckRestoresTemporaryEnvironmentOverrides(): void
+    {
+        $keys = ['DATABASE_PATH', 'DB_CONNECTION', 'DB_DATABASE', 'JWT_SECRET', 'TURNSTILE_SECRET_KEY'];
+        $previous = [];
+        $existed = [];
+        foreach ($keys as $key) {
+            $existed[$key] = array_key_exists($key, $_ENV);
+            $previous[$key] = $_ENV[$key] ?? null;
+            $_ENV[$key] = 'sentinel_' . strtolower($key);
+        }
+
+        try {
+            $checker = new OpenApiContractChecker(dirname(__DIR__, 2));
+            $checker->check();
+
+            foreach ($keys as $key) {
+                $this->assertSame('sentinel_' . strtolower($key), $_ENV[$key] ?? null);
+            }
+        } finally {
+            foreach ($keys as $key) {
+                if ($existed[$key]) {
+                    $_ENV[$key] = $previous[$key];
+                } else {
+                    unset($_ENV[$key]);
+                }
+            }
+        }
+    }
+
     /**
      * @param array<string,mixed> $overrides
      * @return array<string,mixed>

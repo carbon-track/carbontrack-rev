@@ -247,22 +247,24 @@ final class OpenApiContractChecker
 
     private function bootApplication(): App
     {
-        $_ENV['DATABASE_PATH'] = $this->backendRoot . '/test.db';
-        $_ENV['DB_CONNECTION'] = 'sqlite';
-        $_ENV['DB_DATABASE'] = $_ENV['DATABASE_PATH'];
-        $_ENV['JWT_SECRET'] = 'test_secret';
-        $_ENV['TURNSTILE_SECRET_KEY'] = 'test_turnstile';
+        return $this->withTemporaryEnv([
+            'DATABASE_PATH' => $this->backendRoot . '/test.db',
+            'DB_CONNECTION' => 'sqlite',
+            'DB_DATABASE' => $this->backendRoot . '/test.db',
+            'JWT_SECRET' => 'test_secret',
+            'TURNSTILE_SECRET_KEY' => 'test_turnstile',
+        ], function (): App {
+            $container = new Container();
+            require $this->backendRoot . '/src/dependencies.php';
 
-        $container = new Container();
-        require $this->backendRoot . '/src/dependencies.php';
+            $app = AppFactory::createFromContainer($container);
+            $app->addRoutingMiddleware();
 
-        $app = AppFactory::createFromContainer($container);
-        $app->addRoutingMiddleware();
+            $routes = require $this->backendRoot . '/src/routes.php';
+            $routes($app);
 
-        $routes = require $this->backendRoot . '/src/routes.php';
-        $routes($app);
-
-        return $app;
+            return $app;
+        });
     }
 
     private function normalizeRoutePattern(string $pattern): string
@@ -295,34 +297,64 @@ final class OpenApiContractChecker
             return true;
         }
 
-        if (!str_contains($handler, '::')) {
+        $classMethod = $this->splitClassMethodHandler($handler);
+        if ($classMethod === null) {
             return false;
         }
 
-        [$class, $method] = explode('::', $handler, 2);
-        $sourceFile = $this->resolveSourceFile($class);
-        if ($sourceFile !== null && is_file($sourceFile)) {
-            $source = file_get_contents($sourceFile);
-            if ($source === false) {
-                return false;
-            }
-
-            return (bool) preg_match('/function\s+' . preg_quote($method, '/') . '\s*\(/', $source);
-        }
+        [$class, $method] = $classMethod;
 
         return class_exists($class) && method_exists($class, $method);
     }
 
-    private function resolveSourceFile(string $class): ?string
+    /**
+     * @return array{0:string,1:string}|null
+     */
+    private function splitClassMethodHandler(string $handler): ?array
     {
-        $prefix = 'CarbonTrack\\';
-        if (!str_starts_with($class, $prefix)) {
+        $delimiter = str_contains($handler, '::') ? '::' : (str_contains($handler, ':') ? ':' : null);
+        if ($delimiter === null) {
             return null;
         }
 
-        $relative = str_replace('\\', '/', substr($class, strlen($prefix)));
+        [$class, $method] = explode($delimiter, $handler, 2);
+        $class = trim($class);
+        $method = trim($method);
+        if ($class === '' || $method === '') {
+            return null;
+        }
 
-        return $this->backendRoot . '/src/' . $relative . '.php';
+        return [$class, $method];
+    }
+
+    /**
+     * @template T
+     * @param array<string,string> $values
+     * @param callable():T $callback
+     * @return T
+     */
+    private function withTemporaryEnv(array $values, callable $callback): mixed
+    {
+        $previous = [];
+        $existed = [];
+
+        foreach ($values as $key => $value) {
+            $existed[$key] = array_key_exists($key, $_ENV);
+            $previous[$key] = $_ENV[$key] ?? null;
+            $_ENV[$key] = $value;
+        }
+
+        try {
+            return $callback();
+        } finally {
+            foreach ($values as $key => $_) {
+                if ($existed[$key]) {
+                    $_ENV[$key] = $previous[$key];
+                } else {
+                    unset($_ENV[$key]);
+                }
+            }
+        }
     }
 
     /**
