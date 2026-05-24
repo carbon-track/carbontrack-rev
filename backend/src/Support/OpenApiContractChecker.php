@@ -247,7 +247,12 @@ final class OpenApiContractChecker
 
     private function bootApplication(): App
     {
-        return $this->withTemporaryEnv([
+        static $app = null;
+        if ($app instanceof App) {
+            return $app;
+        }
+
+        $app = $this->withTemporaryEnv([
             'DATABASE_PATH' => $this->backendRoot . '/test.db',
             'DB_CONNECTION' => 'sqlite',
             'DB_DATABASE' => $this->backendRoot . '/test.db',
@@ -265,6 +270,8 @@ final class OpenApiContractChecker
 
             return $app;
         });
+
+        return $app;
     }
 
     private function normalizeRoutePattern(string $pattern): string
