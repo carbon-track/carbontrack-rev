@@ -942,8 +942,11 @@ class FileUploadController
             $result = $this->r2Service->completeMultipartUpload($filePath, $uploadId, $parts);
             $completedMultipartObject = true;
             $fileInfo = $this->r2Service->getFileInfo($filePath);
-            $originalName = (string) ($fileInfo['metadata']['original_name'] ?? basename($filePath));
             try {
+                $originalName = trim((string) ($fileInfo['metadata']['original_name'] ?? ''));
+                if ($originalName === '') {
+                    throw new \InvalidArgumentException('Missing original upload metadata');
+                }
                 $this->r2Service->validateDirectUploadObject($filePath, $originalName, $fileInfo ?? []);
             } catch (\InvalidArgumentException $e) {
                 try {

@@ -18,24 +18,18 @@ const {
 
 const REQUEST_TIMEOUT_MS = 15000;
 const MOBILE_CLIENT_TYPE = 'mobile';
+const API_URL = (process.env.TARO_APP_API_URL || '').trim();
+const MOBILE_CLIENT_TOKEN = (process.env.TARO_APP_MOBILE_CLIENT_TOKEN || '').trim();
 let refreshPromise = null;
 
-const getEnv = () => {
-  if (typeof process !== 'undefined' && process.env) {
-    return process.env;
-  }
-  return {};
-};
-
 export const resolveApiUrl = () => {
-  const apiUrl = (getEnv().TARO_APP_API_URL || '').trim();
-  if (!apiUrl) {
+  if (!API_URL) {
     throw new Error('TARO_APP_API_URL must be configured with the backend API base URL');
   }
-  return apiUrl.replace(/\/+$/, '');
+  return API_URL.replace(/\/+$/, '');
 };
 
-export const getMobileClientToken = () => (getEnv().TARO_APP_MOBILE_CLIENT_TOKEN || '').trim();
+export const getMobileClientToken = () => MOBILE_CLIENT_TOKEN;
 
 export const requireMobileClientToken = () => {
   const token = getMobileClientToken();

@@ -47,6 +47,9 @@ public class CarbonTrackPowModule: Module {
     let startedAt = DispatchTime.now().uptimeNanoseconds
     let timeoutNanos = UInt64(timeoutMs) * 1_000_000
     let prefix = Data("\(challenge):".utf8)
+    var message = Data()
+    message.reserveCapacity(prefix.count + String(maxAttempts).count)
+    message.append(prefix)
 
     defer {
       removeCancellation(operationId: operationId)
@@ -68,9 +71,10 @@ public class CarbonTrackPowModule: Module {
         }
       }
 
-      var message = Data()
-      message.append(prefix)
-      message.append(Data(String(nonce).utf8))
+      if message.count > prefix.count {
+        message.removeSubrange(prefix.count..<message.count)
+      }
+      appendDecimalBytes(nonce, to: &message)
       let hash = SHA256.hash(data: message)
       if hasLeadingZeroBits(hash, difficulty: difficulty) {
         let elapsedMs = Int((DispatchTime.now().uptimeNanoseconds - startedAt) / 1_000_000)
@@ -85,6 +89,26 @@ public class CarbonTrackPowModule: Module {
     throw NSError(domain: "CarbonTrackPow", code: 4, userInfo: [
       NSLocalizedDescriptionKey: "Proof-of-work attempt limit exceeded"
     ])
+  }
+
+  private func appendDecimalBytes(_ value: Int, to data: inout Data) {
+    if value == 0 {
+      data.append(48)
+      return
+    }
+
+    var divisor = 1
+    while value / divisor >= 10 {
+      divisor *= 10
+    }
+
+    var remaining = value
+    while divisor > 0 {
+      let digit = remaining / divisor
+      data.append(UInt8(48 + digit))
+      remaining %= divisor
+      divisor /= 10
+    }
   }
 
   private func hasLeadingZeroBits<D: Sequence>(_ digest: D, difficulty: Int) -> Bool where D.Element == UInt8 {

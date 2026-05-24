@@ -7,7 +7,13 @@ import { getSession, redirectToLogin } from '../../store/session';
 import { formatNumber } from '../../utils/format';
 import './index.css';
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export default function RecordPage() {
   const [activities, setActivities] = useState([]);
