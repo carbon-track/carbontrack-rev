@@ -534,7 +534,10 @@ class FileUploadControllerTest extends TestCase
     public function testConfirmRejectsNewObjectWithoutMatchingUploadedByMetadata(): void
     {
         $fileMeta = $this->createMock(FileMetadataService::class);
-        $fileMeta->expects($this->never())->method('findByFilePath');
+        $fileMeta->expects($this->once())
+            ->method('findByFilePath')
+            ->with(self::NEW_UPLOAD_PATH)
+            ->willReturn(null);
         $fileMeta->expects($this->never())->method('createRecord');
 
         $c = $this->controller(['id' => 30], function($r2){
@@ -598,6 +601,67 @@ class FileUploadControllerTest extends TestCase
         $this->assertSame(403, $resp->getStatusCode());
         $payload = json_decode((string) $resp->getBody(), true);
         $this->assertSame('ADMIN_UPLOAD_DIRECTORY_REQUIRED', $payload['code']);
+    }
+
+    public function testConfirmRejectsBucketPrefixedAdminOnlyRootForNonAdmin(): void
+    {
+        $fileMeta = $this->createMock(FileMetadataService::class);
+        $fileMeta->expects($this->never())->method('createRecord');
+
+        $c = $this->controller(['id' => 30, 'is_admin' => 0], function($r2) {
+            $r2->method('getBucketName')->willReturn('CarbonTrack-Images');
+            $r2->expects($this->never())->method('getFileInfo');
+            $r2->expects($this->never())->method('validateDirectUploadObject');
+        }, $fileMeta);
+
+        $resp = $c->confirmDirectUpload(makeRequest('POST', self::ROUTE_CONFIRM, [
+            'file_path' => 'carbontrack-images/products',
+            'original_name' => 'item.jpg',
+            'sha256' => str_repeat('b', 64),
+        ]), new \Slim\Psr7\Response());
+
+        $this->assertSame(403, $resp->getStatusCode());
+        $payload = json_decode((string) $resp->getBody(), true);
+        $this->assertSame('ADMIN_UPLOAD_DIRECTORY_REQUIRED', $payload['code']);
+    }
+
+    public function testConfirmAllowsOwnedExistingRecordWhenObjectMetadataIsMissing(): void
+    {
+        $existing = $this->getMockBuilder(File::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['save'])
+            ->getMock();
+        $existing->file_path = self::OWNERLESS_UPLOAD_PATH;
+        $existing->user_id = 14;
+        $existing->mime_type = null;
+        $existing->size = 0;
+        $existing->original_name = null;
+        $existing->reference_count = 1;
+
+        $fileMeta = $this->createMock(FileMetadataService::class);
+        $fileMeta->expects($this->once())
+            ->method('findByFilePath')
+            ->with(self::OWNERLESS_UPLOAD_PATH)
+            ->willReturn($existing);
+
+        $existing->expects($this->once())
+            ->method('save');
+
+        $c = $this->controller(['id'=>14], function($r2){
+            $r2->method('getFileInfo')->willReturn([
+                'file_path'=>self::OWNERLESS_UPLOAD_PATH,
+                'size'=>2048,
+                'mime_type'=>self::MIME_JPEG,
+                'metadata'=>[]
+            ]);
+        }, $fileMeta);
+
+        $resp = $c->confirmDirectUpload(makeRequest('POST', self::ROUTE_CONFIRM,[
+            'file_path'=>self::OWNERLESS_UPLOAD_PATH,'original_name'=>'ownerless.jpg'
+        ]), new \Slim\Psr7\Response());
+
+        $this->assertSame(200,$resp->getStatusCode());
+        $this->assertSame(14, $existing->user_id);
     }
 
     public function testConfirmDuplicateIncrements(): void
