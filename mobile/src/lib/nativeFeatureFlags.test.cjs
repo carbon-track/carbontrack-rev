@@ -7,9 +7,11 @@ const {
   isNativeLiquidGlassEnabled,
 } = require('./nativeFeatureFlags');
 
-test('native feature flags stay enabled when production build env omits them', () => {
-  assert.equal(isNativeIosTabsEnabled({}), true);
-  assert.equal(isNativeLiquidGlassEnabled({}), true);
+test('native feature flags stay disabled unless explicitly enabled', () => {
+  assert.equal(isNativeIosTabsEnabled({}), false);
+  assert.equal(isNativeLiquidGlassEnabled({}), false);
+  assert.equal(isEnabledByDefault(''), false);
+  assert.equal(isEnabledByDefault('unexpected'), false);
 });
 
 test('native feature flags can be explicitly disabled for old binaries', () => {
