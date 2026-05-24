@@ -295,10 +295,14 @@ class AdminAiConversationStoreService
                 $existing['data'] = isset($existing['data']) && is_array($existing['data']) ? $existing['data'] : [];
                 $existing['data']['decision_meta'] = $meta;
 
-                $whereStatus = $expectedStatus !== null ? ' AND status = :expected_status' : '';
-                $update = $this->db->prepare("UPDATE admin_ai_messages
-                    SET status = :status, meta_json = :meta_json, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = :id{$whereStatus}");
+                $sql = $expectedStatus !== null
+                    ? "UPDATE admin_ai_messages
+                        SET status = :status, meta_json = :meta_json, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = :id AND status = :expected_status"
+                    : "UPDATE admin_ai_messages
+                        SET status = :status, meta_json = :meta_json, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = :id";
+                $update = $this->db->prepare($sql);
                 $params = [
                     ':status' => $status,
                     ':meta_json' => json_encode($existing, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
