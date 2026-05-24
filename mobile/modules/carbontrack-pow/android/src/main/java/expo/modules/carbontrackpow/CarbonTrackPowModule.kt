@@ -34,7 +34,7 @@ class CarbonTrackPowModule : Module() {
     timeoutMs: Int,
     operationId: String
   ): Map<String, Any> {
-    if (challenge.isBlank() || difficulty < 1 || maxAttempts < 1 || timeoutMs < 1 || operationId.isBlank()) {
+    if (challenge.isBlank() || difficulty < 1 || difficulty > 256 || maxAttempts < 1 || timeoutMs < 1 || operationId.isBlank()) {
       throw IllegalArgumentException("Invalid proof-of-work challenge")
     }
 
@@ -100,6 +100,10 @@ class CarbonTrackPowModule : Module() {
   }
 
   private fun hasLeadingZeroBits(bytes: ByteArray, difficulty: Int): Boolean {
+    if (difficulty < 1 || difficulty > bytes.size * 8) {
+      return false
+    }
+
     val fullBytes = difficulty / 8
     for (index in 0 until fullBytes) {
       if ((bytes[index].toInt() and 0xff) != 0) {

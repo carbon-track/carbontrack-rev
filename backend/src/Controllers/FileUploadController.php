@@ -1233,7 +1233,7 @@ class FileUploadController
         $segments = explode('/', $normalized);
         $bucketPrefix = trim($this->r2Service->getBucketName(), " /\t\n\r\0\x0B");
         // Strip an accidental bucket prefix only when at least one upload root segment remains.
-        if ($bucketPrefix !== '' && strcasecmp($segments[0] ?? '', $bucketPrefix) === 0 && count($segments) > 1) {
+        if ($bucketPrefix !== '' && strcasecmp((string) ($segments[0] ?? ''), $bucketPrefix) === 0 && count($segments) > 1) {
             array_shift($segments);
         }
 
