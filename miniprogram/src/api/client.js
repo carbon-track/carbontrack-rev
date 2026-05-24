@@ -70,6 +70,16 @@ const createHttpError = (response, fallback) => {
   return error;
 };
 
+const buildApiHeaders = ({ token, requestId, contentType, header } = {}) => ({
+  ...buildRequestHeaders({
+    token,
+    mobileClientToken: getMobileClientToken(),
+    requestId,
+    contentType,
+  }),
+  ...(header || {}),
+});
+
 const assertOkResponse = (response) => {
   const statusCode = response?.statusCode || 0;
   const body = parseUploadBody(response?.data);
@@ -86,9 +96,8 @@ const assertOkResponse = (response) => {
 
 const refreshToken = async (token) => {
   if (!refreshPromise) {
-    const headers = buildRequestHeaders({
+    const headers = buildApiHeaders({
       token,
-      mobileClientToken: getMobileClientToken(),
       requestId: createRequestId(),
     });
     refreshPromise = Taro.request({
@@ -136,15 +145,12 @@ export const request = async (path, options = {}) => {
   const method = (options.method || 'GET').toUpperCase();
   const shouldAttachRequestId = ['POST', 'PUT', 'PATCH'].includes(method);
   const token = await getFreshToken(options.auth);
-  const headers = {
-    ...buildRequestHeaders({
-      token,
-      mobileClientToken: getMobileClientToken(),
-      requestId: shouldAttachRequestId ? createRequestId() : undefined,
-      contentType: options.contentType === undefined ? 'application/json' : options.contentType,
-    }),
-    ...(options.header || {}),
-  };
+  const headers = buildApiHeaders({
+    token,
+    requestId: shouldAttachRequestId ? createRequestId() : undefined,
+    contentType: options.contentType === undefined ? 'application/json' : options.contentType,
+    header: options.header,
+  });
 
   const response = await Taro.request({
     url: buildUrl(path),
