@@ -972,19 +972,27 @@ class FileUploadController
                     $multipartTrackingCleared = true;
                 }
 
-                $this->auditLogService->log([
-                    'user_id' => (int) $user['id'],
-                    'action' => 'multipart_upload_completed',
-                    'operation_category' => 'file_management',
-                    'affected_table' => 'files',
-                    'status' => 'failed',
-                    'data' => [
+                try {
+                    $this->auditLogService->log([
+                        'user_id' => (int) $user['id'],
+                        'action' => 'multipart_upload_completed',
+                        'operation_category' => 'file_management',
+                        'affected_table' => 'files',
+                        'status' => 'failed',
+                        'data' => [
+                            'file_path' => $filePath,
+                            'upload_id' => $uploadId,
+                            'error' => $e->getMessage(),
+                            'error_code' => 'INVALID_FILE_CONTENT',
+                        ],
+                    ]);
+                } catch (\Throwable $auditError) {
+                    $this->logger->error('AuditLogService failed for invalid multipart upload object', [
                         'file_path' => $filePath,
                         'upload_id' => $uploadId,
-                        'error' => $e->getMessage(),
-                        'error_code' => 'INVALID_FILE_CONTENT',
-                    ],
-                ]);
+                        'error' => $auditError->getMessage(),
+                    ]);
+                }
 
                 return $this->jsonResponse($response, [
                     'success' => false,
