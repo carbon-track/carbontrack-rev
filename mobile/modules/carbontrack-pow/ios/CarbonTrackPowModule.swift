@@ -37,7 +37,7 @@ public class CarbonTrackPowModule: Module {
     timeoutMs: Int,
     operationId: String
   ) throws -> [String: Any] {
-    if challenge.isEmpty || difficulty < 1 || maxAttempts < 1 || timeoutMs < 1 || operationId.isEmpty {
+    if challenge.isEmpty || difficulty < 1 || difficulty > 256 || maxAttempts < 1 || timeoutMs < 1 || operationId.isEmpty {
       throw NSError(domain: "CarbonTrackPow", code: 1, userInfo: [
         NSLocalizedDescriptionKey: "Invalid proof-of-work challenge"
       ])
@@ -113,6 +113,10 @@ public class CarbonTrackPowModule: Module {
 
   private func hasLeadingZeroBits<D: Sequence>(_ digest: D, difficulty: Int) -> Bool where D.Element == UInt8 {
     let bytes = Array(digest)
+    if difficulty < 1 || difficulty > bytes.count * 8 {
+      return false
+    }
+
     let fullBytes = difficulty / 8
     for index in 0..<fullBytes {
       if bytes[index] != 0 {

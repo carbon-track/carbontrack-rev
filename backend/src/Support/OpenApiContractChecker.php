@@ -260,7 +260,7 @@ final class OpenApiContractChecker
             'TURNSTILE_SECRET_KEY' => 'test_turnstile',
         ], function (): App {
             $container = new Container();
-            require $this->backendRoot . '/src/dependencies.php';
+            require_once $this->backendRoot . '/src/dependencies.php';
 
             $app = AppFactory::createFromContainer($container);
             $app->addRoutingMiddleware();

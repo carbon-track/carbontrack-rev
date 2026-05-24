@@ -70,6 +70,14 @@ const createHttpError = (response, fallback) => {
   return error;
 };
 
+const createNetworkError = (error) => {
+  const message = error?.errMsg || error?.message || '网络异常，请检查连接后重试';
+  const normalized = new Error(message);
+  normalized.code = error?.code || 'NETWORK_ERROR';
+  normalized.cause = error;
+  return normalized;
+};
+
 const buildApiHeaders = ({ token, requestId, contentType, header } = {}) => ({
   ...buildRequestHeaders({
     token,
@@ -152,13 +160,18 @@ export const request = async (path, options = {}) => {
     header: options.header,
   });
 
-  const response = await Taro.request({
-    url: buildUrl(path),
-    method,
-    data: options.data || {},
-    header: headers,
-    timeout: REQUEST_TIMEOUT_MS,
-  });
+  let response;
+  try {
+    response = await Taro.request({
+      url: buildUrl(path),
+      method,
+      data: options.data || {},
+      header: headers,
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+  } catch (error) {
+    throw createNetworkError(error);
+  }
 
   return assertOkResponse(response);
 };
@@ -175,14 +188,19 @@ export const uploadFile = async (path, options = {}) => {
     ...(options.header || {}),
   };
 
-  const response = await Taro.uploadFile({
-    url: buildUrl(path),
-    filePath: options.filePath,
-    name: options.name || 'image',
-    formData: options.formData || {},
-    header: headers,
-    timeout: REQUEST_TIMEOUT_MS,
-  });
+  let response;
+  try {
+    response = await Taro.uploadFile({
+      url: buildUrl(path),
+      filePath: options.filePath,
+      name: options.name || 'image',
+      formData: options.formData || {},
+      header: headers,
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+  } catch (error) {
+    throw createNetworkError(error);
+  }
 
   return assertOkResponse(response);
 };
