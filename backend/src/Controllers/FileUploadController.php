@@ -1203,8 +1203,8 @@ class FileUploadController
 
         $segments = explode('/', $normalized);
         $bucketPrefix = trim($this->r2Service->getBucketName(), " /\t\n\r\0\x0B");
-        // Only strip an accidental bucket prefix when a real upload root and child path remain.
-        if ($bucketPrefix !== '' && strcasecmp($segments[0] ?? '', $bucketPrefix) === 0 && count($segments) > 2) {
+        // Strip an accidental bucket prefix only when at least one upload root segment remains.
+        if ($bucketPrefix !== '' && strcasecmp($segments[0] ?? '', $bucketPrefix) === 0 && count($segments) > 1) {
             array_shift($segments);
         }
 
@@ -1266,16 +1266,34 @@ class FileUploadController
         return $uploadedBy !== null && trim((string) $uploadedBy) === (string) $userId;
     }
 
-    private function persistDirectUploadOwnership(string $filePath, int $userId, string $originalName, array $fileInfo, ?string $sha256 = null): array
+    private function objectMetadataHasUploadedBy(array $fileInfo): bool
     {
-        if (!$this->objectMetadataBelongsToUser($fileInfo, $userId)) {
-            throw new FileOwnershipConflictException('File ownership conflict detected for direct upload');
+        $metadata = $fileInfo['metadata'] ?? [];
+        if (!is_array($metadata)) {
+            return false;
         }
 
+        return isset($metadata['uploaded_by']) && trim((string) $metadata['uploaded_by']) !== '';
+    }
+
+    private function persistDirectUploadOwnership(string $filePath, int $userId, string $originalName, array $fileInfo, ?string $sha256 = null): array
+    {
         $fileRecord = $this->fileMetadataService->findByFilePath($filePath);
         if ($fileRecord) {
+            if (!$this->isOwnedFileRecord($fileRecord, $userId)) {
+                if (!$this->objectMetadataBelongsToUser($fileInfo, $userId)) {
+                    throw new FileOwnershipConflictException('File ownership conflict detected for direct upload');
+                }
+            } elseif ($this->objectMetadataHasUploadedBy($fileInfo) && !$this->objectMetadataBelongsToUser($fileInfo, $userId)) {
+                throw new FileOwnershipConflictException('File ownership conflict detected for direct upload');
+            }
+
             $updated = $this->syncDirectUploadFileRecord($fileRecord, $filePath, $userId, $originalName, $fileInfo, $sha256);
             return ['file' => $updated, 'duplicate' => false];
+        }
+
+        if (!$this->objectMetadataBelongsToUser($fileInfo, $userId)) {
+            throw new FileOwnershipConflictException('File ownership conflict detected for direct upload');
         }
 
         $duplicated = false;
