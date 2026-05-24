@@ -912,6 +912,8 @@ class FileUploadController
     {
         $user = null;
         $body = [];
+        $filePath = '';
+        $uploadId = '';
         $completedMultipartObject = false;
         $multipartTrackingCleared = false;
         try {
@@ -942,12 +944,16 @@ class FileUploadController
             $result = $this->r2Service->completeMultipartUpload($filePath, $uploadId, $parts);
             $completedMultipartObject = true;
             $fileInfo = $this->r2Service->getFileInfo($filePath);
+            $fileInfoData = is_array($fileInfo) ? $fileInfo : [];
             try {
-                $originalName = trim((string) ($fileInfo['metadata']['original_name'] ?? ''));
+                $metadata = isset($fileInfoData['metadata']) && is_array($fileInfoData['metadata'])
+                    ? $fileInfoData['metadata']
+                    : [];
+                $originalName = trim((string) ($metadata['original_name'] ?? ''));
                 if ($originalName === '') {
                     throw new \InvalidArgumentException('Missing original upload metadata');
                 }
-                $this->r2Service->validateDirectUploadObject($filePath, $originalName, $fileInfo ?? []);
+                $this->r2Service->validateDirectUploadObject($filePath, $originalName, $fileInfoData);
             } catch (\InvalidArgumentException $e) {
                 try {
                     $this->r2Service->deleteFile($filePath, (int) $user['id']);
@@ -1002,7 +1008,7 @@ class FileUploadController
             }
             $ownershipPersisted = false;
             try {
-                $ownershipPersisted = $this->persistMultipartOwnership($filePath, (int) $user['id'], $fileInfo, $effectiveSha256);
+                $ownershipPersisted = $this->persistMultipartOwnership($filePath, (int) $user['id'], $fileInfoData, $effectiveSha256);
             } finally {
                 $this->multipartUploadService->clearUpload($uploadId);
                 $multipartTrackingCleared = true;
@@ -1025,10 +1031,11 @@ class FileUploadController
 
             return $this->jsonResponse($response, ['success' => true, 'data' => $result]);
         } catch (FileOwnershipConflictException $e) {
-            if ($completedMultipartObject && !$multipartTrackingCleared && !empty($body['upload_id'])) {
-                $this->multipartUploadService->clearUpload((string) $body['upload_id']);
-                $multipartTrackingCleared = true;
-            }
+            $multipartTrackingCleared = $this->clearCompletedMultipartTrackingIfNeeded(
+                $completedMultipartObject,
+                $multipartTrackingCleared,
+                $uploadId
+            );
             $userId = isset($user['id']) ? (int) $user['id'] : null;
             $this->auditLogService->log([
                 'user_id' => $userId,
@@ -1037,8 +1044,8 @@ class FileUploadController
                 'affected_table' => 'files',
                 'status' => 'failed',
                 'data' => [
-                    'file_path' => $body['file_path'] ?? null,
-                    'upload_id' => $body['upload_id'] ?? null,
+                    'file_path' => $filePath !== '' ? $filePath : null,
+                    'upload_id' => $uploadId !== '' ? $uploadId : null,
                     'error' => $e->getMessage(),
                     'error_code' => 'FILE_OWNERSHIP_CONFLICT',
                 ],
@@ -1049,10 +1056,11 @@ class FileUploadController
                 'code' => 'FILE_OWNERSHIP_CONFLICT'
             ], 409);
         } catch (\Exception $e) {
-            if ($completedMultipartObject && !$multipartTrackingCleared && !empty($body['upload_id'])) {
-                $this->multipartUploadService->clearUpload((string) $body['upload_id']);
-                $multipartTrackingCleared = true;
-            }
+            $multipartTrackingCleared = $this->clearCompletedMultipartTrackingIfNeeded(
+                $completedMultipartObject,
+                $multipartTrackingCleared,
+                $uploadId
+            );
             $userId = isset($user['id']) ? (int) $user['id'] : null;
             $this->auditLogService->log([
                 'user_id' => $userId,
@@ -1061,14 +1069,27 @@ class FileUploadController
                 'affected_table' => 'files',
                 'status' => 'failed',
                 'data' => [
-                    'file_path' => $body['file_path'] ?? null,
-                    'upload_id' => $body['upload_id'] ?? null,
+                    'file_path' => $filePath !== '' ? $filePath : null,
+                    'upload_id' => $uploadId !== '' ? $uploadId : null,
                     'error' => $e->getMessage(),
                 ],
             ]);
             try { $this->errorLogService->logException($e, $request); } catch (\Throwable $ignore) { $this->logger->error('ErrorLogService failed: ' . $ignore->getMessage()); }
             return $this->jsonResponse($response, ['success' => false, 'message' => 'Failed to complete multipart'], 500);
         }
+    }
+
+    private function clearCompletedMultipartTrackingIfNeeded(
+        bool $completedMultipartObject,
+        bool $multipartTrackingCleared,
+        string $uploadId
+    ): bool {
+        if ($completedMultipartObject && !$multipartTrackingCleared && $uploadId !== '') {
+            $this->multipartUploadService->clearUpload($uploadId);
+            return true;
+        }
+
+        return $multipartTrackingCleared;
     }
 
     /**
