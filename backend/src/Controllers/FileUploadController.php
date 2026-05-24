@@ -1203,7 +1203,7 @@ class FileUploadController
 
         $segments = explode('/', $normalized);
         $bucketPrefix = trim($this->r2Service->getBucketName(), " /\t\n\r\0\x0B");
-        if ($bucketPrefix !== '' && ($segments[0] ?? '') === $bucketPrefix && count($segments) > 2) {
+        if ($bucketPrefix !== '' && strcasecmp($segments[0] ?? '', $bucketPrefix) === 0 && count($segments) > 2) {
             array_shift($segments);
         }
 
@@ -1267,14 +1267,14 @@ class FileUploadController
 
     private function persistDirectUploadOwnership(string $filePath, int $userId, string $originalName, array $fileInfo, ?string $sha256 = null): array
     {
+        if (!$this->objectMetadataBelongsToUser($fileInfo, $userId)) {
+            throw new FileOwnershipConflictException('File ownership conflict detected for direct upload');
+        }
+
         $fileRecord = $this->fileMetadataService->findByFilePath($filePath);
         if ($fileRecord) {
             $updated = $this->syncDirectUploadFileRecord($fileRecord, $filePath, $userId, $originalName, $fileInfo, $sha256);
             return ['file' => $updated, 'duplicate' => false];
-        }
-
-        if (!$this->objectMetadataBelongsToUser($fileInfo, $userId)) {
-            throw new FileOwnershipConflictException('File ownership conflict detected for direct upload');
         }
 
         $duplicated = false;

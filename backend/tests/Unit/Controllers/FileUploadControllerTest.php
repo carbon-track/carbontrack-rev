@@ -534,10 +534,7 @@ class FileUploadControllerTest extends TestCase
     public function testConfirmRejectsNewObjectWithoutMatchingUploadedByMetadata(): void
     {
         $fileMeta = $this->createMock(FileMetadataService::class);
-        $fileMeta->expects($this->once())
-            ->method('findByFilePath')
-            ->with(self::NEW_UPLOAD_PATH)
-            ->willReturn(null);
+        $fileMeta->expects($this->never())->method('findByFilePath');
         $fileMeta->expects($this->never())->method('createRecord');
 
         $c = $this->controller(['id' => 30], function($r2){
@@ -587,7 +584,7 @@ class FileUploadControllerTest extends TestCase
         $fileMeta->expects($this->never())->method('createRecord');
 
         $c = $this->controller(['id' => 30, 'is_admin' => 0], function($r2) {
-            $r2->method('getBucketName')->willReturn('carbontrack-images');
+            $r2->method('getBucketName')->willReturn('CarbonTrack-Images');
             $r2->expects($this->never())->method('getFileInfo');
             $r2->expects($this->never())->method('validateDirectUploadObject');
         }, $fileMeta);
@@ -1090,7 +1087,7 @@ class FileUploadControllerTest extends TestCase
                 'file_path'=>self::OWNERLESS_UPLOAD_PATH,
                 'size'=>2048,
                 'mime_type'=>self::MIME_JPEG,
-                'metadata'=>[]
+                'metadata'=>['uploaded_by'=>'14']
             ]);
         }, $fileMeta);
 
@@ -1129,7 +1126,7 @@ class FileUploadControllerTest extends TestCase
                 'file_path'=>self::OWNERLESS_UPLOAD_PATH,
                 'size'=>2048,
                 'mime_type'=>self::MIME_JPEG,
-                'metadata'=>[]
+                'metadata'=>['uploaded_by'=>'14']
             ]);
         }, $fileMeta);
 
