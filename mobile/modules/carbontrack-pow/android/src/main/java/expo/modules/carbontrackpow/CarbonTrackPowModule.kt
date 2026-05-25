@@ -23,7 +23,7 @@ class CarbonTrackPowModule : Module() {
     }
 
     Function("cancel") { operationId: String ->
-      cancellations.computeIfAbsent(operationId) { AtomicBoolean(false) }.set(true)
+      cancellations[operationId]?.set(true)
     }
   }
 
@@ -39,7 +39,8 @@ class CarbonTrackPowModule : Module() {
     }
 
     val cancelled = cancellations.computeIfAbsent(operationId) { AtomicBoolean(false) }
-    val startedAt = System.currentTimeMillis()
+    val startedAt = System.nanoTime()
+    val timeoutNanos = timeoutMs.toLong() * 1_000_000L
     val prefix = "$challenge:".toByteArray(StandardCharsets.UTF_8)
     val digest = MessageDigest.getInstance("SHA-256")
     val nonceBuffer = ByteArray(maxAttempts.toString().length)
@@ -50,7 +51,7 @@ class CarbonTrackPowModule : Module() {
           if (cancelled.get()) {
             throw IllegalStateException("Proof-of-work calculation cancelled")
           }
-          if (System.currentTimeMillis() - startedAt > timeoutMs) {
+          if (System.nanoTime() - startedAt > timeoutNanos) {
             throw IllegalStateException("Proof-of-work calculation timed out")
           }
         }
@@ -64,7 +65,7 @@ class CarbonTrackPowModule : Module() {
           return mapOf(
             "nonce" to nonce.toString(),
             "attempts" to nonce + 1,
-            "elapsedMs" to (System.currentTimeMillis() - startedAt)
+            "elapsedMs" to ((System.nanoTime() - startedAt) / 1_000_000L)
           )
         }
       }
