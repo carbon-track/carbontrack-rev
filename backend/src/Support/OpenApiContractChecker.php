@@ -252,10 +252,15 @@ final class OpenApiContractChecker
             return $app;
         }
 
+        $databasePath = tempnam(sys_get_temp_dir(), 'carbontrack_openapi_contract_');
+        if ($databasePath === false) {
+            throw new RuntimeException('Unable to create temporary OpenAPI contract database path');
+        }
+
         $app = $this->withTemporaryEnv([
-            'DATABASE_PATH' => $this->backendRoot . '/test.db',
+            'DATABASE_PATH' => $databasePath,
             'DB_CONNECTION' => 'sqlite',
-            'DB_DATABASE' => $this->backendRoot . '/test.db',
+            'DB_DATABASE' => $databasePath,
             'JWT_SECRET' => 'test_secret',
             'TURNSTILE_SECRET_KEY' => 'test_turnstile',
         ], function (): App {
