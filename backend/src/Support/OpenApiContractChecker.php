@@ -256,6 +256,13 @@ final class OpenApiContractChecker
         if ($databasePath === false) {
             throw new RuntimeException('Unable to create temporary OpenAPI contract database path');
         }
+        register_shutdown_function(static function () use ($databasePath): void {
+            foreach ([$databasePath, $databasePath . '-journal', $databasePath . '-wal', $databasePath . '-shm'] as $path) {
+                if (is_file($path)) {
+                    @unlink($path);
+                }
+            }
+        });
 
         $app = $this->withTemporaryEnv([
             'DATABASE_PATH' => $databasePath,
