@@ -17,6 +17,7 @@ const {
 } = clientCore;
 
 const REQUEST_TIMEOUT_MS = 15000;
+const UPLOAD_TIMEOUT_MS = 60000;
 const MOBILE_CLIENT_TYPE = 'mobile';
 const API_URL = (process.env.TARO_APP_API_URL || '').trim();
 const MOBILE_CLIENT_TOKEN = (process.env.TARO_APP_MOBILE_CLIENT_TOKEN || '').trim();
@@ -196,7 +197,7 @@ export const uploadFile = async (path, options = {}) => {
       name: options.name || 'image',
       formData: options.formData || {},
       header: headers,
-      timeout: REQUEST_TIMEOUT_MS,
+      timeout: UPLOAD_TIMEOUT_MS,
     });
   } catch (error) {
     throw createNetworkError(error);
