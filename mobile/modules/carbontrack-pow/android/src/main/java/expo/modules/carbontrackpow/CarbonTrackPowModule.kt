@@ -8,7 +8,13 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 class CarbonTrackPowModule : Module() {
-  private val cancellations = ConcurrentHashMap<String, AtomicBoolean>()
+  private data class CancellationState(
+    val cancelled: AtomicBoolean,
+    val createdAtNanos: Long
+  )
+
+  private val cancellations = ConcurrentHashMap<String, CancellationState>()
+  private val cancellationTtlNanos = 5L * 60L * 1_000_000_000L
 
   override fun definition() = ModuleDefinition {
     Name("CarbonTrackPow")
@@ -23,7 +29,13 @@ class CarbonTrackPowModule : Module() {
     }
 
     Function("cancel") { operationId: String ->
-      cancellations[operationId]?.set(true)
+      if (operationId.isNotBlank()) {
+        val now = System.nanoTime()
+        pruneStaleCancellations(now)
+        cancellations.compute(operationId) { _, existing ->
+          existing?.also { it.cancelled.set(true) } ?: CancellationState(AtomicBoolean(true), now)
+        }
+      }
     }
   }
 
@@ -38,7 +50,10 @@ class CarbonTrackPowModule : Module() {
       throw IllegalArgumentException("Invalid proof-of-work challenge")
     }
 
-    val cancelled = cancellations.computeIfAbsent(operationId) { AtomicBoolean(false) }
+    pruneStaleCancellations()
+    val cancellation = cancellations.computeIfAbsent(operationId) {
+      CancellationState(AtomicBoolean(false), System.nanoTime())
+    }
     val startedAt = System.nanoTime()
     val timeoutNanos = timeoutMs.toLong() * 1_000_000L
     val prefix = "$challenge:".toByteArray(StandardCharsets.UTF_8)
@@ -48,7 +63,7 @@ class CarbonTrackPowModule : Module() {
     try {
       for (nonce in 0 until maxAttempts) {
         if ((nonce and 0x3ff) == 0) {
-          if (cancelled.get()) {
+          if (cancellation.cancelled.get()) {
             throw IllegalStateException("Proof-of-work calculation cancelled")
           }
           if (System.nanoTime() - startedAt > timeoutNanos) {
@@ -119,5 +134,13 @@ class CarbonTrackPowModule : Module() {
 
     val mask = (0xff shl (8 - remainingBits)) and 0xff
     return ((bytes[fullBytes].toInt() and 0xff) and mask) == 0
+  }
+
+  private fun pruneStaleCancellations(nowNanos: Long = System.nanoTime()) {
+    for ((operationId, state) in cancellations) {
+      if (nowNanos - state.createdAtNanos > cancellationTtlNanos) {
+        cancellations.remove(operationId, state)
+      }
+    }
   }
 }
