@@ -3,7 +3,7 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import { Button, Image, Input, Picker, Text, Textarea, View } from '@tarojs/components';
 import { carbonApi } from '../../api/carbon';
 import { getErrorMessage } from '../../api/client';
-import { getSession, redirectToLogin } from '../../store/session';
+import { getSession, redirectToEmailVerification, redirectToLogin } from '../../store/session';
 import { formatNumber } from '../../utils/format';
 import './index.css';
 
@@ -13,6 +13,11 @@ const today = () => {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+const parsePositiveAmount = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
 export default function RecordPage() {
@@ -34,8 +39,13 @@ export default function RecordPage() {
   ), [activities]);
 
   const loadActivities = async () => {
-    if (!getSession().isAuthenticated) {
+    const session = getSession();
+    if (!session.isAuthenticated) {
       redirectToLogin();
+      return;
+    }
+    if (session.requiresEmailVerification) {
+      redirectToEmailVerification();
       return;
     }
     setLoading(true);
@@ -66,20 +76,27 @@ export default function RecordPage() {
   };
 
   const chooseImage = async () => {
-    const result = await Taro.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-    });
-    setImagePath(result.tempFiles?.[0]?.tempFilePath || '');
+    try {
+      const result = await Taro.chooseMedia({
+        count: 1,
+        mediaType: ['image'],
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+      });
+      setImagePath(result.tempFiles?.[0]?.tempFilePath || '');
+    } catch (err) {
+      const message = err?.errMsg || err?.message || '';
+      if (!message.includes('cancel')) {
+        setError(getErrorMessage(err, '图片选择失败'));
+      }
+    }
   };
 
   const validate = () => {
     if (!selectedActivity?.id) {
       return '请选择活动类型';
     }
-    if (!amount || Number(amount) <= 0) {
+    if (parsePositiveAmount(amount) === null) {
       return '请输入有效数量';
     }
     if (!date) {
@@ -92,7 +109,7 @@ export default function RecordPage() {
   };
 
   const handleCalculate = async () => {
-    if (!selectedActivity?.id || !amount) {
+    if (!selectedActivity?.id || parsePositiveAmount(amount) === null) {
       setError('请选择活动并输入数量');
       return;
     }
