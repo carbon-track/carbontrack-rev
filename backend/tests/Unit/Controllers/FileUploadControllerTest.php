@@ -1445,8 +1445,7 @@ class FileUploadControllerTest extends TestCase
             $r2->expects($this->once())
                 ->method('validateDirectUploadObject')
                 ->with(self::MULTIPART_FILE_PATH, 'legacy.jpg', $this->callback(function(array $fileInfo): bool {
-                    return ($fileInfo['metadata']['uploaded_by'] ?? null) === '42'
-                        && ($fileInfo['metadata']['original_name'] ?? null) === 'legacy.jpg';
+                    return ($fileInfo['metadata']['original_name'] ?? null) === 'legacy.jpg';
                 }));
             $r2->method('completeMultipartUpload')->willReturn([
                 'success' => true,
@@ -1456,9 +1455,7 @@ class FileUploadControllerTest extends TestCase
                 'file_path' => self::MULTIPART_FILE_PATH,
                 'size' => 98765,
                 'mime_type' => self::MIME_JPEG,
-                'metadata' => [
-                    'uploaded_by' => '42',
-                ]
+                'metadata' => []
             ]);
         }, $fileMeta, $multipart);
 

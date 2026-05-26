@@ -9,6 +9,7 @@ use DI\Container;
 use RuntimeException;
 use Slim\App;
 use Slim\Factory\AppFactory;
+use Symfony\Component\Filesystem\Filesystem;
 
 final class OpenApiContractChecker
 {
@@ -292,6 +293,7 @@ final class OpenApiContractChecker
             return false;
         }
 
+        $filesystem = new Filesystem();
         foreach ([$databasePath, $databasePath . '-journal', $databasePath . '-wal', $databasePath . '-shm'] as $path) {
             $realPath = realpath($path);
             if ($realPath === false || !is_file($realPath)) {
@@ -304,8 +306,7 @@ final class OpenApiContractChecker
                 continue;
             }
 
-            // nosemgrep: php.lang.security.unlink-use.unlink-use
-            @unlink($realPath);
+            $filesystem->remove($realPath);
         }
 
         return true;

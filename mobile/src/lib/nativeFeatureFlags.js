@@ -1,7 +1,7 @@
 const disabledValues = new Set(['0', 'false', 'no', 'off', 'disabled']);
 const enabledValues = new Set(['1', 'true', 'yes', 'on', 'enabled']);
 
-const isEnabledByDefault = (value) => {
+const parseBooleanFlag = (value) => {
   if (value === true || value === 1) {
     return true;
   }
@@ -19,15 +19,15 @@ const isEnabledByDefault = (value) => {
 };
 
 const isNativeIosTabsEnabled = (env = process.env) => (
-  isEnabledByDefault(env?.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS)
+  parseBooleanFlag(env?.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS)
 );
 
 const isNativeLiquidGlassEnabled = (env = process.env) => (
-  isEnabledByDefault(env?.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS)
+  parseBooleanFlag(env?.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS)
 );
 
 module.exports = {
-  isEnabledByDefault,
+  parseBooleanFlag,
   isNativeIosTabsEnabled,
   isNativeLiquidGlassEnabled,
 };

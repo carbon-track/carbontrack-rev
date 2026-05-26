@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { useDidShow, useRouter } from '@tarojs/taro';
+import Taro, { useDidShow, useRouter } from '@tarojs/taro';
 import { Button, Text, View } from '@tarojs/components';
-import Taro from '@tarojs/taro';
 import { carbonApi } from '../../api/carbon';
 import { getErrorMessage } from '../../api/client';
 import { formatDate, formatNumber, getRecordTitle, statusText } from '../../utils/format';
