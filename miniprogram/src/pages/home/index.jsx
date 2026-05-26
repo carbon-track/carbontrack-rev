@@ -3,7 +3,7 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import { Button, Text, View } from '@tarojs/components';
 import { dashboardApi } from '../../api/dashboard';
 import { getErrorMessage } from '../../api/client';
-import { getSession, redirectToLogin } from '../../store/session';
+import { getSession, redirectToEmailVerification, redirectToLogin } from '../../store/session';
 import { formatDate, formatNumber, getRecordTitle, statusText } from '../../utils/format';
 import './index.css';
 
@@ -18,6 +18,10 @@ export default function HomePage() {
     const session = getSession();
     if (!session.isAuthenticated) {
       redirectToLogin();
+      return;
+    }
+    if (session.requiresEmailVerification) {
+      redirectToEmailVerification();
       return;
     }
     setUser(session.user);

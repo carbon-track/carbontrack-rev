@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow, useReachBottom } from '@tarojs/taro';
 import { Button, Text, View } from '@tarojs/components';
 import { carbonApi } from '../../api/carbon';
 import { getErrorMessage } from '../../api/client';
-import { getSession, redirectToLogin } from '../../store/session';
+import { getSession, redirectToEmailVerification, redirectToLogin } from '../../store/session';
 import { formatDate, formatNumber, getRecordTitle, statusText } from '../../utils/format';
 import './index.css';
 
@@ -13,17 +13,23 @@ export default function RecordsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const load = async (page = 1) => {
-    if (!getSession().isAuthenticated) {
+  const load = async (page = 1, { append = false } = {}) => {
+    const session = getSession();
+    if (!session.isAuthenticated) {
       redirectToLogin();
+      return;
+    }
+    if (session.requiresEmailVerification) {
+      redirectToEmailVerification();
       return;
     }
     setLoading(true);
     setError('');
     try {
       const result = await carbonApi.getRecords({ page, limit: 20 });
-      setRecords(result.records);
-      setPagination(result.pagination || { page, pages: 1, total: result.records.length });
+      const nextRecords = result.records || [];
+      setRecords((current) => (append ? [...current, ...nextRecords] : nextRecords));
+      setPagination(result.pagination || { page, pages: 1, total: nextRecords.length });
     } catch (err) {
       setError(getErrorMessage(err, '记录列表加载失败'));
     } finally {
@@ -32,6 +38,14 @@ export default function RecordsPage() {
   };
 
   useDidShow(() => load(1));
+
+  const hasMore = (pagination.page || 1) < (pagination.pages || 1);
+
+  useReachBottom(() => {
+    if (!loading && hasMore) {
+      load((pagination.page || 1) + 1, { append: true });
+    }
+  });
 
   return (
     <View className="page records-page">
@@ -56,6 +70,11 @@ export default function RecordsPage() {
           </View>
         ))}
       </View>
+      {hasMore ? (
+        <Button className="small-button" loading={loading} onClick={() => load((pagination.page || 1) + 1, { append: true })}>
+          加载更多
+        </Button>
+      ) : null}
     </View>
   );
 }

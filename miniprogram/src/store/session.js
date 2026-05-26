@@ -107,3 +107,11 @@ export const redirectToLogin = () => {
   }
   Taro.reLaunch({ url: '/pages/login/index' });
 };
+
+export const redirectToEmailVerification = () => {
+  const current = Taro.getCurrentPages?.()?.slice(-1)?.[0];
+  if (current?.route === 'pages/verify-email/index') {
+    return;
+  }
+  Taro.navigateTo({ url: '/pages/verify-email/index' });
+};
