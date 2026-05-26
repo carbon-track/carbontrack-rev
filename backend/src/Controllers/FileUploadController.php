@@ -949,10 +949,11 @@ class FileUploadController
                 $metadata = isset($fileInfoData['metadata']) && is_array($fileInfoData['metadata'])
                     ? $fileInfoData['metadata']
                     : [];
-                $originalName = trim((string) ($metadata['original_name'] ?? ''));
+                $originalName = $this->resolveMultipartOriginalName($metadata, $body);
                 if ($originalName === '') {
                     throw new \InvalidArgumentException('Missing original upload metadata');
                 }
+                $fileInfoData['metadata'] = $metadata + ['original_name' => $originalName];
                 $this->r2Service->validateDirectUploadObject($filePath, $originalName, $fileInfoData);
             } catch (\InvalidArgumentException $e) {
                 try {
@@ -1090,6 +1091,26 @@ class FileUploadController
         }
 
         return $multipartTrackingCleared;
+    }
+
+    private function resolveMultipartOriginalName(array $metadata, array $body): string
+    {
+        $originalName = trim((string) ($metadata['original_name'] ?? ''));
+        if ($originalName !== '') {
+            return $originalName;
+        }
+
+        $bodyOriginalName = trim((string) ($body['original_name'] ?? ''));
+        if ($bodyOriginalName === '') {
+            return '';
+        }
+
+        $extension = strtolower(pathinfo($bodyOriginalName, PATHINFO_EXTENSION));
+        if (!in_array($extension, $this->r2Service->getAllowedExtensions(), true)) {
+            return '';
+        }
+
+        return $bodyOriginalName;
     }
 
     /**

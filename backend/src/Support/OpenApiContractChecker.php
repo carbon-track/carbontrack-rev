@@ -256,13 +256,7 @@ final class OpenApiContractChecker
         if ($databasePath === false) {
             throw new RuntimeException('Unable to create temporary OpenAPI contract database path');
         }
-        register_shutdown_function(static function () use ($databasePath): void {
-            foreach ([$databasePath, $databasePath . '-journal', $databasePath . '-wal', $databasePath . '-shm'] as $path) {
-                if (is_file($path)) {
-                    @unlink($path);
-                }
-            }
-        });
+        register_shutdown_function(fn (): bool => $this->removeTemporaryDatabaseFiles($databasePath));
 
         $app = $this->withTemporaryEnv([
             'DATABASE_PATH' => $databasePath,
@@ -289,6 +283,32 @@ final class OpenApiContractChecker
     private function normalizeRoutePattern(string $pattern): string
     {
         return (string) preg_replace('/\{([^}:]+)(?::[^}]*)?\}/', '{$1}', $pattern);
+    }
+
+    private function removeTemporaryDatabaseFiles(string $databasePath): bool
+    {
+        $tempRoot = realpath(sys_get_temp_dir());
+        if ($tempRoot === false) {
+            return false;
+        }
+
+        foreach ([$databasePath, $databasePath . '-journal', $databasePath . '-wal', $databasePath . '-shm'] as $path) {
+            $realPath = realpath($path);
+            if ($realPath === false || !is_file($realPath)) {
+                continue;
+            }
+
+            $isTempChild = str_starts_with($realPath, $tempRoot . DIRECTORY_SEPARATOR);
+            $isContractFile = str_starts_with(basename($realPath), 'carbontrack_openapi_contract_');
+            if (!$isTempChild || !$isContractFile) {
+                continue;
+            }
+
+            // nosemgrep: php.lang.security.unlink-use.unlink-use
+            @unlink($realPath);
+        }
+
+        return true;
     }
 
     private function stringifyCallable(mixed $callable): string

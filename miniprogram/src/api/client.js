@@ -210,6 +210,8 @@ const apiClient = {
   get: (path, params = {}, options = {}) => request(path, { ...options, method: 'GET', data: params }),
   post: (path, data = {}, options = {}) => request(path, { ...options, method: 'POST', data }),
   put: (path, data = {}, options = {}) => request(path, { ...options, method: 'PUT', data }),
+  patch: (path, data = {}, options = {}) => request(path, { ...options, method: 'PATCH', data }),
+  delete: (path, data = {}, options = {}) => request(path, { ...options, method: 'DELETE', data }),
   uploadFile,
 };
 

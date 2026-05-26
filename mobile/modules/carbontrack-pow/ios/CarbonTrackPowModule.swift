@@ -72,7 +72,7 @@ public class CarbonTrackPowModule: Module {
       }
 
       if message.count > prefix.count {
-        message.removeSubrange(prefix.count..<message.count)
+        message.count = prefix.count
       }
       appendDecimalBytes(nonce, to: &message)
       let hash = SHA256.hash(data: message)
