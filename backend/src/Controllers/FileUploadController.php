@@ -1009,7 +1009,16 @@ class FileUploadController
             }
             $ownershipPersisted = false;
             try {
-                $ownershipPersisted = $this->persistMultipartOwnership($filePath, (int) $user['id'], $fileInfoData, $effectiveSha256);
+                $trustedMultipartUpload = $upload !== null
+                    && (int) $upload->user_id === (int) $user['id']
+                    && (string) $upload->file_path === $filePath;
+                $ownershipPersisted = $this->persistMultipartOwnership(
+                    $filePath,
+                    (int) $user['id'],
+                    $fileInfoData,
+                    $effectiveSha256,
+                    $trustedMultipartUpload
+                );
             } finally {
                 $this->multipartUploadService->clearUpload($uploadId);
                 $multipartTrackingCleared = true;
@@ -1086,8 +1095,15 @@ class FileUploadController
         string $uploadId
     ): bool {
         if ($completedMultipartObject && !$multipartTrackingCleared && $uploadId !== '') {
-            $this->multipartUploadService->clearUpload($uploadId);
-            return true;
+            try {
+                $this->multipartUploadService->clearUpload($uploadId);
+                return true;
+            } catch (\Throwable $cleanupError) {
+                $this->logger->error('Failed to clear multipart upload tracking after completion', [
+                    'upload_id' => $uploadId,
+                    'error' => $cleanupError->getMessage(),
+                ]);
+            }
         }
 
         return $multipartTrackingCleared;
@@ -1423,7 +1439,13 @@ class FileUploadController
         return $recordData;
     }
 
-    private function persistMultipartOwnership(string $filePath, int $userId, ?array $fileInfo = null, ?string $sha256 = null): bool
+    private function persistMultipartOwnership(
+        string $filePath,
+        int $userId,
+        ?array $fileInfo = null,
+        ?string $sha256 = null,
+        bool $trustedMultipartUpload = false
+    ): bool
     {
         if ($userId <= 0) {
             return false;
@@ -1438,7 +1460,7 @@ class FileUploadController
             throw new \InvalidArgumentException('Missing sha256 for multipart upload ownership persistence');
         }
 
-        if (!$this->objectMetadataBelongsToUser($fileInfo ?? [], $userId)) {
+        if (!$trustedMultipartUpload && !$this->objectMetadataBelongsToUser($fileInfo ?? [], $userId)) {
             throw new FileOwnershipConflictException('File ownership conflict detected for multipart upload');
         }
 

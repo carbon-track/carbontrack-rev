@@ -42,9 +42,10 @@ const blockLengthForMessage = (messageLength) => (
 );
 
 const utf8Bytes = (message) => {
-  if (typeof globalThis.TextEncoder === 'function') {
+  const textEncoder = typeof globalThis !== 'undefined' ? globalThis.TextEncoder : undefined;
+  if (typeof textEncoder === 'function') {
     if (!cachedTextEncoder) {
-      cachedTextEncoder = new globalThis.TextEncoder();
+      cachedTextEncoder = new textEncoder();
     }
     return cachedTextEncoder.encode(message);
   }

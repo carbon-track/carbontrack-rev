@@ -29,8 +29,8 @@
 
 ### 3. 前端要求 (Node.js)
 - **Node.js**: v20.9+（推荐使用 Node 20 LTS，并与 CI 保持一致）
-- **pnpm**: v10.4.1（必需，请勿使用 npm 或 yarn；CI 也固定此版本）
-  - 安装：`npm install -g pnpm`
+- **pnpm**: 使用 Corepack 并遵循各目录 `packageManager` 声明（必需，请勿使用 npm 或 yarn）
+  - 启用：`corepack enable`
 
 ### 4. 微信小程序要求
 - **微信开发者工具**: 用于打开 `miniprogram/` 并进行预览、真机调试和上传。
