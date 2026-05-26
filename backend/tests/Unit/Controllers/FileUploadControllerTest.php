@@ -1410,6 +1410,68 @@ class FileUploadControllerTest extends TestCase
         $this->assertSame(200, $resp->getStatusCode());
     }
 
+    public function testCompleteMultipartUsesRequestOriginalNameWhenLegacyMetadataIsMissing(): void
+    {
+        $upload = new MultipartUpload();
+        $upload->upload_id = 'up-legacy';
+        $upload->file_path = self::MULTIPART_FILE_PATH;
+        $upload->sha256 = self::MULTIPART_SHA256;
+        $upload->user_id = 42;
+
+        $fileMeta = $this->createMock(FileMetadataService::class);
+        $fileMeta->expects($this->once())
+            ->method('findByFilePath')
+            ->with(self::MULTIPART_FILE_PATH)
+            ->willReturn(null);
+        $fileMeta->expects($this->once())
+            ->method('findBySha256')
+            ->with(self::MULTIPART_SHA256)
+            ->willReturn(null);
+        $fileMeta->expects($this->once())
+            ->method('createRecord')
+            ->with($this->callback(function(array $data): bool {
+                return ($data['file_path'] ?? null) === self::MULTIPART_FILE_PATH
+                    && ($data['original_name'] ?? null) === 'legacy.jpg'
+                    && ($data['sha256'] ?? null) === self::MULTIPART_SHA256;
+            }))
+            ->willReturn(new File());
+
+        $multipart = $this->createMock(MultipartUploadService::class);
+        $multipart->method('findActiveUpload')->with('up-legacy')->willReturn($upload);
+        $multipart->expects($this->once())->method('clearUpload')->with('up-legacy');
+
+        $c = $this->controller(['id' => 42], function($r2) {
+            $r2->method('getAllowedExtensions')->willReturn(['jpg', 'jpeg', 'png', 'webp']);
+            $r2->expects($this->once())
+                ->method('validateDirectUploadObject')
+                ->with(self::MULTIPART_FILE_PATH, 'legacy.jpg', $this->callback(function(array $fileInfo): bool {
+                    return ($fileInfo['metadata']['uploaded_by'] ?? null) === '42'
+                        && ($fileInfo['metadata']['original_name'] ?? null) === 'legacy.jpg';
+                }));
+            $r2->method('completeMultipartUpload')->willReturn([
+                'success' => true,
+                'file_path' => self::MULTIPART_FILE_PATH
+            ]);
+            $r2->method('getFileInfo')->with(self::MULTIPART_FILE_PATH)->willReturn([
+                'file_path' => self::MULTIPART_FILE_PATH,
+                'size' => 98765,
+                'mime_type' => self::MIME_JPEG,
+                'metadata' => [
+                    'uploaded_by' => '42',
+                ]
+            ]);
+        }, $fileMeta, $multipart);
+
+        $resp = $c->completeMultipartUpload(makeRequest('POST', self::ROUTE_MULTIPART_COMPLETE, [
+            'file_path' => self::MULTIPART_FILE_PATH,
+            'upload_id' => 'up-legacy',
+            'original_name' => 'legacy.jpg',
+            'parts' => [['part_number' => 1, 'etag' => 'etag-1']]
+        ]), new \Slim\Psr7\Response());
+
+        $this->assertSame(200, $resp->getStatusCode());
+    }
+
     public function testCompleteMultipartDeletesObjectAndClearsTrackingWhenContentValidationFails(): void
     {
         $upload = new MultipartUpload();
