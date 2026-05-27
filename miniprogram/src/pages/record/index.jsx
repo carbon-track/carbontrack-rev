@@ -129,6 +129,10 @@ export default function RecordPage() {
   };
 
   const handleSubmit = async () => {
+    if (submitting) {
+      return;
+    }
+
     const validationError = validate();
     if (validationError) {
       setError(validationError);
@@ -186,7 +190,7 @@ export default function RecordPage() {
           </View>
         ) : null}
         <Button className="button-ghost" loading={loading} onClick={handleCalculate}>计算减碳量</Button>
-        <Button className="button-primary" loading={submitting} onClick={handleSubmit}>提交记录</Button>
+        <Button className="button-primary" disabled={submitting} loading={submitting} onClick={handleSubmit}>提交记录</Button>
       </View>
     </View>
   );

@@ -13,6 +13,10 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   const handleLogin = async () => {
+    if (loading) {
+      return;
+    }
+
     if (!identifier.trim() || !password) {
       setError('请输入账号和密码');
       return;
@@ -62,7 +66,7 @@ export default function LoginPage() {
           onInput={(event) => setPassword(event.detail.value)}
         />
         {error ? <Text className="error">{error}</Text> : null}
-        <Button className="button-primary" loading={loading} onClick={handleLogin}>登录</Button>
+        <Button className="button-primary" disabled={loading} loading={loading} onClick={handleLogin}>登录</Button>
         <Button className="button-ghost" onClick={() => Taro.navigateTo({ url: '/pages/register/index' })}>注册新账号</Button>
       </View>
     </View>
