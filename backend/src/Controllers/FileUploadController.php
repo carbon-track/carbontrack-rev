@@ -1006,6 +1006,67 @@ class FileUploadController
                     'message' => $e->getMessage(),
                     'code' => 'INVALID_FILE_CONTENT'
                 ], 400);
+            } catch (\Throwable $e) {
+                try {
+                    $this->r2Service->deleteFile($filePath, (int) $user['id']);
+                } catch (\Throwable $cleanupError) {
+                    $this->logger->error('Failed to delete multipart upload object after validation error', [
+                        'file_path' => $filePath,
+                        'upload_id' => $uploadId,
+                        'user_id' => $user['id'],
+                        'error' => $cleanupError->getMessage(),
+                    ]);
+                    try {
+                        $this->errorLogService->logException($cleanupError, $request, [
+                            'context' => 'multipart_upload_validation_cleanup_failed',
+                            'file_path' => $filePath,
+                            'upload_id' => $uploadId,
+                        ]);
+                    } catch (\Throwable $ignore) {
+                        $this->logger->error('ErrorLogService failed: ' . $ignore->getMessage());
+                    }
+                } finally {
+                    $this->multipartUploadService->clearUpload($uploadId);
+                    $multipartTrackingCleared = true;
+                }
+
+                try {
+                    $this->auditLogService->log([
+                        'user_id' => (int) $user['id'],
+                        'action' => 'multipart_upload_completed',
+                        'operation_category' => 'file_management',
+                        'affected_table' => 'files',
+                        'status' => 'failed',
+                        'data' => [
+                            'file_path' => $filePath,
+                            'upload_id' => $uploadId,
+                            'error' => $e->getMessage(),
+                            'error_code' => 'FILE_CONTENT_VALIDATION_ERROR',
+                        ],
+                    ]);
+                } catch (\Throwable $auditError) {
+                    $this->logger->error('AuditLogService failed for multipart upload validation error', [
+                        'file_path' => $filePath,
+                        'upload_id' => $uploadId,
+                        'error' => $auditError->getMessage(),
+                    ]);
+                }
+
+                try {
+                    $this->errorLogService->logException($e, $request, [
+                        'context' => 'multipart_upload_content_validation_failed',
+                        'file_path' => $filePath,
+                        'upload_id' => $uploadId,
+                    ]);
+                } catch (\Throwable $ignore) {
+                    $this->logger->error('ErrorLogService failed: ' . $ignore->getMessage());
+                }
+
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'message' => 'Failed to complete multipart',
+                    'code' => 'FILE_CONTENT_VALIDATION_ERROR'
+                ], 500);
             }
             $ownershipPersisted = false;
             try {

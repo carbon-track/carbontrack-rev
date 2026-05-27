@@ -13,6 +13,7 @@ use CarbonTrack\Services\SupportTicketService;
 use CarbonTrack\Services\TurnstileService;
 use CarbonTrack\Services\ProofOfWorkService;
 use CarbonTrack\Support\ClientIpResolver;
+use CarbonTrack\Support\Environment;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Log\LoggerInterface;
@@ -442,7 +443,7 @@ class SupportTicketController
         }
 
         // This token only gates access to the mobile PoW path; it is not app attestation.
-        $expected = trim((string)($_ENV['MOBILE_CLIENT_TOKEN'] ?? ''));
+        $expected = trim(Environment::string('MOBILE_CLIENT_TOKEN'));
         if ($expected === '') {
             return false;
         }

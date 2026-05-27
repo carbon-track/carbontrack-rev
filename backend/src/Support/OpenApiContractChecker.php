@@ -375,23 +375,47 @@ final class OpenApiContractChecker
      */
     private function withTemporaryEnv(array $values, callable $callback): mixed
     {
-        $previous = [];
-        $existed = [];
+        $previousEnv = [];
+        $previousServer = [];
+        $previousProcess = [];
+        $existedEnv = [];
+        $existedServer = [];
+        $existedProcess = [];
 
         foreach ($values as $key => $value) {
-            $existed[$key] = array_key_exists($key, $_ENV);
-            $previous[$key] = $_ENV[$key] ?? null;
+            $existedEnv[$key] = array_key_exists($key, $_ENV);
+            $previousEnv[$key] = $_ENV[$key] ?? null;
+            $existedServer[$key] = array_key_exists($key, $_SERVER);
+            $previousServer[$key] = $_SERVER[$key] ?? null;
+            $processValue = getenv($key);
+            $existedProcess[$key] = $processValue !== false;
+            $previousProcess[$key] = $processValue;
+
             $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+            putenv($key . '=' . $value);
         }
 
         try {
             return $callback();
         } finally {
             foreach ($values as $key => $_) {
-                if ($existed[$key]) {
-                    $_ENV[$key] = $previous[$key];
+                if ($existedEnv[$key]) {
+                    $_ENV[$key] = $previousEnv[$key];
                 } else {
                     unset($_ENV[$key]);
+                }
+
+                if ($existedServer[$key]) {
+                    $_SERVER[$key] = $previousServer[$key];
+                } else {
+                    unset($_SERVER[$key]);
+                }
+
+                if ($existedProcess[$key]) {
+                    putenv($key . '=' . $previousProcess[$key]);
+                } else {
+                    putenv($key);
                 }
             }
         }

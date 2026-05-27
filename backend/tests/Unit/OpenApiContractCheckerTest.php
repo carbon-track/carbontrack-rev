@@ -204,12 +204,24 @@ final class OpenApiContractCheckerTest extends TestCase
     public function testRuntimeCheckRestoresTemporaryEnvironmentOverrides(): void
     {
         $keys = ['DATABASE_PATH', 'DB_CONNECTION', 'DB_DATABASE', 'JWT_SECRET', 'TURNSTILE_SECRET_KEY'];
-        $previous = [];
-        $existed = [];
+        $previousEnv = [];
+        $previousServer = [];
+        $previousProcess = [];
+        $existedEnv = [];
+        $existedServer = [];
+        $existedProcess = [];
         foreach ($keys as $key) {
-            $existed[$key] = array_key_exists($key, $_ENV);
-            $previous[$key] = $_ENV[$key] ?? null;
+            $existedEnv[$key] = array_key_exists($key, $_ENV);
+            $previousEnv[$key] = $_ENV[$key] ?? null;
+            $existedServer[$key] = array_key_exists($key, $_SERVER);
+            $previousServer[$key] = $_SERVER[$key] ?? null;
+            $processValue = getenv($key);
+            $existedProcess[$key] = $processValue !== false;
+            $previousProcess[$key] = $processValue;
+
             $_ENV[$key] = 'sentinel_' . strtolower($key);
+            $_SERVER[$key] = 'sentinel_server_' . strtolower($key);
+            putenv($key . '=sentinel_process_' . strtolower($key));
         }
 
         try {
@@ -218,13 +230,27 @@ final class OpenApiContractCheckerTest extends TestCase
 
             foreach ($keys as $key) {
                 $this->assertSame('sentinel_' . strtolower($key), $_ENV[$key] ?? null);
+                $this->assertSame('sentinel_server_' . strtolower($key), $_SERVER[$key] ?? null);
+                $this->assertSame('sentinel_process_' . strtolower($key), getenv($key));
             }
         } finally {
             foreach ($keys as $key) {
-                if ($existed[$key]) {
-                    $_ENV[$key] = $previous[$key];
+                if ($existedEnv[$key]) {
+                    $_ENV[$key] = $previousEnv[$key];
                 } else {
                     unset($_ENV[$key]);
+                }
+
+                if ($existedServer[$key]) {
+                    $_SERVER[$key] = $previousServer[$key];
+                } else {
+                    unset($_SERVER[$key]);
+                }
+
+                if ($existedProcess[$key]) {
+                    putenv($key . '=' . $previousProcess[$key]);
+                } else {
+                    putenv($key);
                 }
             }
         }

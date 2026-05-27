@@ -1573,7 +1573,10 @@ class FileUploadControllerTest extends TestCase
                 ->method('validateDirectUploadObject')
                 ->with(self::MULTIPART_FILE_PATH, 'big.jpg', $this->isType('array'))
                 ->willThrowException(new \RuntimeException('Failed to verify uploaded file content'));
-            $r2->expects($this->never())->method('deleteFile');
+            $r2->expects($this->once())
+                ->method('deleteFile')
+                ->with(self::MULTIPART_FILE_PATH, 42)
+                ->willReturn(true);
         }, $fileMeta, $multipart);
 
         $resp = $c->completeMultipartUpload(makeRequest('POST', self::ROUTE_MULTIPART_COMPLETE, [
@@ -1583,6 +1586,8 @@ class FileUploadControllerTest extends TestCase
         ]), new \Slim\Psr7\Response());
 
         $this->assertSame(500, $resp->getStatusCode());
+        $payload = json_decode((string) $resp->getBody(), true);
+        $this->assertSame('FILE_CONTENT_VALIDATION_ERROR', $payload['code']);
     }
 
     public function testCompleteMultipartCrossOwnerSha256CreatesRecordWithoutPersistingHash(): void
