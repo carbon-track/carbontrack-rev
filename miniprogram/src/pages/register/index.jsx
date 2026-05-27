@@ -62,7 +62,12 @@ export default function RegisterPage() {
       const result = await authApi.register(payload);
       const data = result.data || {};
       setSession(data);
-      Taro.navigateTo({ url: '/pages/verify-email/index' });
+      if (data.email_verification_required) {
+        Taro.navigateTo({ url: '/pages/verify-email/index' });
+        return;
+      }
+
+      Taro.switchTab({ url: '/pages/home/index' });
     } catch (err) {
       setError(getErrorMessage(err, '注册失败，请稍后重试'));
     } finally {
