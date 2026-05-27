@@ -3,7 +3,7 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import { Button, Image, Input, Picker, Text, View } from '@tarojs/components';
 import { rewardsApi } from '../../api/rewards';
 import { getErrorMessage } from '../../api/client';
-import { getSession, redirectToLogin } from '../../store/session';
+import { getSession, redirectToEmailVerification, redirectToLogin } from '../../store/session';
 import { formatDate, formatNumber, getProductImage, statusText } from '../../utils/format';
 import './index.css';
 
@@ -25,8 +25,13 @@ export default function StorePage() {
   const selectedCategory = categoryIndex > 0 ? categories[categoryIndex - 1] : null;
 
   const load = async () => {
-    if (!getSession().isAuthenticated) {
+    const session = getSession();
+    if (!session.isAuthenticated) {
       redirectToLogin();
+      return;
+    }
+    if (session.requiresEmailVerification) {
+      redirectToEmailVerification();
       return;
     }
     setLoading(true);
@@ -56,6 +61,16 @@ export default function StorePage() {
 
   const handleExchange = async (product) => {
     if (exchangingId) {
+      return;
+    }
+
+    const session = getSession();
+    if (!session.isAuthenticated) {
+      redirectToLogin();
+      return;
+    }
+    if (session.requiresEmailVerification) {
+      redirectToEmailVerification();
       return;
     }
 

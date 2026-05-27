@@ -953,7 +953,7 @@ class FileUploadController
                 if ($originalName === '') {
                     throw new \InvalidArgumentException('Missing original upload metadata');
                 }
-                $fileInfoData['metadata'] = $metadata + ['original_name' => $originalName];
+                $fileInfoData['metadata'] = array_replace($metadata, ['original_name' => $originalName]);
                 $this->r2Service->validateDirectUploadObject($filePath, $originalName, $fileInfoData);
             } catch (\InvalidArgumentException $e) {
                 try {

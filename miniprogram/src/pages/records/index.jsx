@@ -55,7 +55,7 @@ export default function RecordsPage() {
     <View className="page records-page">
       <View className="home-header">
         <Text className="page-title">低碳记录</Text>
-        <Button className="small-button" disabled={loading} loading={loading} onClick={() => load(pagination.page || 1)}>刷新</Button>
+        <Button className="small-button" disabled={loading} loading={loading} onClick={() => load(1)}>刷新</Button>
       </View>
       {error ? <Text className="error">{error}</Text> : null}
       <View className="list">
