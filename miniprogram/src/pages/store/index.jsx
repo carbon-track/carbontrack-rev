@@ -55,6 +55,10 @@ export default function StorePage() {
   };
 
   const handleExchange = async (product) => {
+    if (exchangingId) {
+      return;
+    }
+
     const confirm = await Taro.showModal({
       title: '确认兑换',
       content: `兑换 ${product.name} 需要 ${formatNumber(product.points_required)} 积分。`,
@@ -110,7 +114,7 @@ export default function StorePage() {
                 <Text className="item-meta">库存 {product.stock === -1 ? '不限' : product.stock ?? '-'}</Text>
                 <View className="product-footer">
                   <Text className="item-points">{formatNumber(product.points_required)} 积分</Text>
-                  <Button className="exchange-button" loading={exchangingId === String(product.id)} onClick={() => handleExchange(product)}>兑换</Button>
+                  <Button className="exchange-button" disabled={Boolean(exchangingId)} loading={exchangingId === String(product.id)} onClick={() => handleExchange(product)}>兑换</Button>
                 </View>
               </View>
             </View>

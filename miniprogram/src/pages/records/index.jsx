@@ -14,6 +14,10 @@ export default function RecordsPage() {
   const [error, setError] = useState('');
 
   const load = async (page = 1, { append = false } = {}) => {
+    if (loading) {
+      return;
+    }
+
     const session = getSession();
     if (!session.isAuthenticated) {
       redirectToLogin();
@@ -51,7 +55,7 @@ export default function RecordsPage() {
     <View className="page records-page">
       <View className="home-header">
         <Text className="page-title">低碳记录</Text>
-        <Button className="small-button" loading={loading} onClick={() => load(pagination.page || 1)}>刷新</Button>
+        <Button className="small-button" disabled={loading} loading={loading} onClick={() => load(pagination.page || 1)}>刷新</Button>
       </View>
       {error ? <Text className="error">{error}</Text> : null}
       <View className="list">
@@ -71,7 +75,7 @@ export default function RecordsPage() {
         ))}
       </View>
       {hasMore ? (
-        <Button className="small-button" loading={loading} onClick={() => load((pagination.page || 1) + 1, { append: true })}>
+        <Button className="small-button" disabled={loading} loading={loading} onClick={() => load((pagination.page || 1) + 1, { append: true })}>
           加载更多
         </Button>
       ) : null}

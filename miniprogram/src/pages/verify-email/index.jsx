@@ -20,6 +20,10 @@ export default function VerifyEmailPage() {
   });
 
   const handleSend = async () => {
+    if (sending) {
+      return;
+    }
+
     if (!email.trim()) {
       setError('请先填写邮箱');
       return;
@@ -38,6 +42,10 @@ export default function VerifyEmailPage() {
   };
 
   const handleVerify = async () => {
+    if (loading) {
+      return;
+    }
+
     if (!email.trim() || !code.trim()) {
       setError('请填写邮箱和验证码');
       return;
@@ -74,8 +82,8 @@ export default function VerifyEmailPage() {
         <Input className="field auth-input" placeholder="验证码" value={code} onInput={(event) => setCode(event.detail.value)} />
         {message ? <Text className="success-text">{message}</Text> : null}
         {error ? <Text className="error">{error}</Text> : null}
-        <Button className="button-ghost" loading={sending} onClick={handleSend}>发送验证码</Button>
-        <Button className="button-primary" loading={loading} onClick={handleVerify}>完成验证</Button>
+        <Button className="button-ghost" disabled={sending} loading={sending} onClick={handleSend}>发送验证码</Button>
+        <Button className="button-primary" disabled={loading} loading={loading} onClick={handleVerify}>完成验证</Button>
       </View>
     </View>
   );

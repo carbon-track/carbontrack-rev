@@ -1247,11 +1247,22 @@ class FileUploadController
 
     private function canWriteToUploadDirectory(array $user, string $directoryOrPath): bool
     {
+        if ($this->hasUnsafePathSegments($directoryOrPath)) {
+            return false;
+        }
+
         if (!$this->isAdminOnlyUploadRoot($directoryOrPath)) {
             return true;
         }
 
         return $this->isAdminUser($user);
+    }
+
+    private function hasUnsafePathSegments(string $directoryOrPath): bool
+    {
+        $segments = explode('/', trim(str_replace('\\', '/', $directoryOrPath)));
+
+        return in_array('.', $segments, true) || in_array('..', $segments, true);
     }
 
     private function isAdminOnlyUploadRoot(string $directoryOrPath): bool

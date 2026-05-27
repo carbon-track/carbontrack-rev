@@ -34,6 +34,10 @@ export default function RegisterPage() {
   };
 
   const handleRegister = async () => {
+    if (loading) {
+      return;
+    }
+
     const validationError = validate();
     if (validationError) {
       setError(validationError);
@@ -85,7 +89,7 @@ export default function RegisterPage() {
         </View>
         <Input className="field auth-input" placeholder="学校名称（可选）" value={schoolName} onInput={(event) => setSchoolName(event.detail.value)} />
         {error ? <Text className="error">{error}</Text> : null}
-        <Button className="button-primary" loading={loading} onClick={handleRegister}>注册</Button>
+        <Button className="button-primary" disabled={loading} loading={loading} onClick={handleRegister}>注册</Button>
         <Button className="button-ghost" onClick={() => Taro.navigateBack({ delta: 1 })}>返回登录</Button>
       </View>
     </View>
