@@ -39,6 +39,27 @@ test('shouldRefreshToken only refreshes tokens near expiry', () => {
   assert.equal(shouldRefreshToken('not-a-token'), false);
 });
 
+test('shouldRefreshToken decodes JWT payloads without Buffer or atob globals', () => {
+  const encode = (payload) => Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const previousBuffer = global.Buffer;
+  const previousAtob = global.atob;
+  const previousTextDecoder = global.TextDecoder;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const nearExpiry = `x.${encode({ exp: nowSeconds + 120 })}.y`;
+
+  try {
+    global.Buffer = undefined;
+    global.atob = undefined;
+    global.TextDecoder = undefined;
+
+    assert.equal(shouldRefreshToken(nearExpiry), true);
+  } finally {
+    global.Buffer = previousBuffer;
+    global.atob = previousAtob;
+    global.TextDecoder = previousTextDecoder;
+  }
+});
+
 test('shouldLogoutForStatus only treats 401 as an auth logout signal', () => {
   assert.equal(shouldLogoutForStatus(401), true);
   assert.equal(shouldLogoutForStatus(403), false);

@@ -154,7 +154,7 @@ export default function RecordPage() {
       setDescription('');
       setImagePath('');
       setCalculation(null);
-      Taro.navigateTo({ url: '/pages/records/index' });
+      Taro.redirectTo({ url: '/pages/records/index' });
     } catch (err) {
       setError(getErrorMessage(err, '提交失败'));
     } finally {

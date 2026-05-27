@@ -10,16 +10,40 @@ const createRequestId = () => {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
 
+const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+const decodeBase64ToBytes = (value) => {
+  const bytes = [];
+  let buffer = 0;
+  let bits = 0;
+  String(value || '').replace(/=+$/g, '').split('').forEach((char) => {
+    const index = BASE64_ALPHABET.indexOf(char);
+    if (index < 0) {
+      return;
+    }
+
+    buffer = (buffer << 6) | index;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      bytes.push((buffer >> bits) & 0xff);
+    }
+  });
+  return bytes;
+};
+
+const decodeUtf8Bytes = (bytes) => {
+  if (typeof TextDecoder !== 'undefined') {
+    return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+  }
+
+  const encoded = bytes.map((byte) => `%${byte.toString(16).padStart(2, '0')}`).join('');
+  return decodeURIComponent(encoded);
+};
+
 const decodeBase64Url = (value) => {
   const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
-  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(padded, 'base64').toString('utf8');
-  }
-  if (typeof atob === 'function') {
-    return decodeURIComponent(escape(atob(padded)));
-  }
-  return '';
+  return decodeUtf8Bytes(decodeBase64ToBytes(normalized));
 };
 
 const decodeJwtPayload = (token) => {

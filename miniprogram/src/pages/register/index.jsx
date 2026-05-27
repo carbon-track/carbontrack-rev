@@ -63,7 +63,7 @@ export default function RegisterPage() {
       const data = result.data || {};
       setSession(data);
       if (data.email_verification_required) {
-        Taro.navigateTo({ url: '/pages/verify-email/index' });
+        Taro.redirectTo({ url: '/pages/verify-email/index' });
         return;
       }
 
