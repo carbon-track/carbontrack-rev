@@ -12,10 +12,19 @@ const makeDeviceId = () => {
 };
 
 export const getMobileDeviceSessionPayload = async () => {
-  let deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
-  if (!deviceId) {
+  let deviceId = null;
+  try {
+    deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+    if (!deviceId) {
+      deviceId = makeDeviceId();
+      await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
+    }
+  } catch (error) {
+    console.warn('Mobile device id persistence failed; using a transient id.', {
+      code: error?.code ?? null,
+      message: error?.message ?? 'unknown',
+    });
     deviceId = makeDeviceId();
-    await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
   }
 
   return {

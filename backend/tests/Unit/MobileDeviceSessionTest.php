@@ -153,6 +153,8 @@ final class MobileDeviceSessionTest extends TestCase
         $this->assertNotEmpty($refreshPayload['data']['refresh_token']);
         $this->assertNotSame($originalRefreshToken, $refreshPayload['data']['refresh_token']);
 
+        $this->pdo->exec("UPDATE mobile_device_sessions SET updated_at = '2000-01-01 00:00:00'");
+
         $reuseResponse = $this->makeController()->refresh(makeRequest('POST', '/api/v1/auth/refresh', [
             'refresh_token' => $originalRefreshToken,
         ]), new Response());
@@ -160,6 +162,29 @@ final class MobileDeviceSessionTest extends TestCase
         $this->assertSame(401, $reuseResponse->getStatusCode());
         $reusePayload = json_decode((string) $reuseResponse->getBody(), true);
         $this->assertSame('INVALID_REFRESH_TOKEN', $reusePayload['code']);
+    }
+
+    public function testRecentlyRotatedRefreshTokenRetryUsesGracePeriod(): void
+    {
+        $this->seedUser();
+        $loginPayload = $this->loginMobile();
+        $originalRefreshToken = $loginPayload['data']['refresh_token'];
+
+        $firstResponse = $this->makeController()->refresh(makeRequest('POST', '/api/v1/auth/refresh', [
+            'refresh_token' => $originalRefreshToken,
+        ]), new Response());
+        $this->assertSame(200, $firstResponse->getStatusCode());
+
+        $retryResponse = $this->makeController()->refresh(makeRequest('POST', '/api/v1/auth/refresh', [
+            'refresh_token' => $originalRefreshToken,
+        ]), new Response());
+
+        $this->assertSame(200, $retryResponse->getStatusCode());
+        $retryPayload = json_decode((string) $retryResponse->getBody(), true);
+        $this->assertTrue($retryPayload['success']);
+        $this->assertNotEmpty($retryPayload['data']['refresh_token']);
+        $this->assertNotSame($originalRefreshToken, $retryPayload['data']['refresh_token']);
+        $this->assertNull($this->pdo->query('SELECT revoked_at FROM mobile_device_sessions')->fetchColumn());
     }
 
     public function testBrowserSpoofedPlatformDoesNotReceiveMobileRefreshToken(): void

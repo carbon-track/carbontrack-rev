@@ -1447,6 +1447,14 @@ ALTER TABLE `mobile_device_sessions`
   ADD KEY `idx_mobile_device_sessions_active` (`user_id`,`revoked_at`,`expires_at`);
 
 --
+-- 表的约束 `mobile_device_sessions`
+--
+ALTER TABLE `mobile_device_sessions`
+  ADD CONSTRAINT `fk_mobile_device_sessions_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+    ON DELETE CASCADE;
+
+--
 -- 表的索引 `proof_of_work_challenges`
 --
 ALTER TABLE `proof_of_work_challenges`
