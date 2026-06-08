@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { ActivityIndicator, BackHandler, Platform, StyleSheet, UIManager, View } from 'react-native';
+import { ActivityIndicator, AppState, BackHandler, Platform, StyleSheet, UIManager, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import useAuthStore from '../store/authStore';
+import { ensureFreshAuthToken } from '../api/client';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
 import { isNativeIosTabsEnabled } from '../lib/nativeFeatureFlags';
@@ -268,6 +269,7 @@ function AuthFlow() {
 export default function AppNavigator() {
   const { colors, isDark, isHydrated: isThemeHydrated } = useTheme();
   const { isHydrated: isI18nHydrated } = useI18n();
+  const [authBootstrapComplete, setAuthBootstrapComplete] = React.useState(false);
   const navigationTheme = isDark ? DarkTheme : DefaultTheme;
   const hydrate = useAuthStore((state) => state.hydrate);
   const isHydrated = useAuthStore((state) => state.isHydrated);
@@ -276,10 +278,47 @@ export default function AppNavigator() {
   const verificationEmail = useAuthStore((state) => state.verificationEmail);
 
   useEffect(() => {
-    hydrate();
+    let cancelled = false;
+
+    const bootstrapAuth = async () => {
+      await hydrate();
+      try {
+        await ensureFreshAuthToken({ force: true, logoutOnFailure: true });
+      } catch {
+        // The refresh endpoint only accepts still-valid JWTs; failed bootstrap refresh means re-auth is required.
+      } finally {
+        if (!cancelled) {
+          setAuthBootstrapComplete(true);
+        }
+      }
+    };
+
+    bootstrapAuth();
+
+    return () => {
+      cancelled = true;
+    };
   }, [hydrate]);
 
-  if (!isHydrated || !isThemeHydrated || !isI18nHydrated) {
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return undefined;
+    }
+
+    const refreshActiveSession = () => {
+      ensureFreshAuthToken({ force: true, logoutOnFailure: true }).catch(() => {});
+    };
+
+    const subscription = AppState.addEventListener('change', (status) => {
+      if (status === 'active') {
+        refreshActiveSession();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [isAuthenticated]);
+
+  if (!isHydrated || !authBootstrapComplete || !isThemeHydrated || !isI18nHydrated) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} size="large" />
