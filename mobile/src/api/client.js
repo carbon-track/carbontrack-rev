@@ -74,8 +74,10 @@ const shouldRefreshToken = (token) => {
     return false;
   }
   const remainingSeconds = payload.exp - Math.floor(Date.now() / 1000);
-  return remainingSeconds > 0 && remainingSeconds <= REFRESH_THRESHOLD_SECONDS;
+  return remainingSeconds <= REFRESH_THRESHOLD_SECONDS;
 };
+
+const isAuthRefreshFailure = (error) => error?.response?.status === 401;
 
 const refreshToken = async (token, refreshTokenValue = null) => {
   const refreshKey = refreshTokenValue || token;
@@ -125,7 +127,7 @@ export const ensureFreshAuthToken = async ({ force = false, logoutOnFailure = fa
   try {
     return await refreshToken(token, refreshTokenValue);
   } catch (error) {
-    if (logoutOnFailure && useAuthStore.getState().token === token) {
+    if (logoutOnFailure && isAuthRefreshFailure(error) && useAuthStore.getState().token === token) {
       await useAuthStore.getState().logout();
     }
     throw error;
@@ -181,8 +183,8 @@ apiClient.interceptors.response.use(
             originalConfig.headers.Authorization = `Bearer ${nextToken}`;
             return apiClient(originalConfig);
           }
-        } catch {
-          if (useAuthStore.getState().token === token) {
+        } catch (refreshError) {
+          if (isAuthRefreshFailure(refreshError) && useAuthStore.getState().token === token) {
             await useAuthStore.getState().logout();
           }
         }

@@ -301,6 +301,13 @@ class AuthController
                     $userId,
                     $this->mobileDeviceMetadata($request, $data)
                 ));
+                $this->auditLogService->logAuthOperation('mobile_device_session_created', $userId, true, [
+                    'ip_address' => $this->getClientIP($request),
+                    'user_agent' => $request->getHeaderLine('User-Agent'),
+                    'device_id' => $responsePayload['device_session']['device_id'] ?? null,
+                    'platform' => $responsePayload['device_session']['platform'] ?? null,
+                    'source' => 'register',
+                ]);
             }
             return $this->jsonResponse($response, [
                 'success' => true,
@@ -838,6 +845,13 @@ class AuthController
                     (int) $userDetail['id'],
                     $this->mobileDeviceMetadata($request, $data)
                 ));
+                $this->auditLogService->logAuthOperation('mobile_device_session_created', (int) $userDetail['id'], true, [
+                    'ip_address' => $this->getClientIP($request),
+                    'user_agent' => $request->getHeaderLine('User-Agent'),
+                    'device_id' => $responsePayload['device_session']['device_id'] ?? null,
+                    'platform' => $responsePayload['device_session']['platform'] ?? null,
+                    'source' => 'email_verification',
+                ]);
             }
 
             return $this->jsonResponse($response, [
@@ -1566,7 +1580,7 @@ class AuthController
         return [
             'device_id' => $data['device_id'] ?? $request->getHeaderLine('X-Device-ID'),
             'device_name' => $data['device_name'] ?? $request->getHeaderLine('X-Device-Name'),
-            'platform' => $data['platform'] ?? $request->getHeaderLine('X-Client-Platform'),
+            'platform' => $data['platform'] ?? null,
             'user_agent' => $request->getHeaderLine('User-Agent'),
             'ip_address' => $this->getClientIP($request),
         ];
@@ -1668,7 +1682,7 @@ class AuthController
             ], 401);
         }
 
-        $token = $this->authService->generateToken($this->formatUserPayload($userDetail));
+        $token = $this->authService->generateToken($userDetail);
         $this->auditLogService->logAuthOperation('mobile_device_session_refresh', $userId, true, [
             'ip_address' => $this->getClientIP($request),
             'user_agent' => $request->getHeaderLine('User-Agent'),

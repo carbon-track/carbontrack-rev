@@ -283,9 +283,9 @@ export default function AppNavigator() {
     const bootstrapAuth = async () => {
       await hydrate();
       try {
-        await ensureFreshAuthToken({ force: true, logoutOnFailure: true });
+        await ensureFreshAuthToken({ logoutOnFailure: true });
       } catch {
-        // The refresh endpoint only accepts still-valid JWTs; failed bootstrap refresh means re-auth is required.
+        // Failed bootstrap refresh means the persisted session is invalid or expired.
       } finally {
         if (!cancelled) {
           setAuthBootstrapComplete(true);
@@ -306,7 +306,7 @@ export default function AppNavigator() {
     }
 
     const refreshActiveSession = () => {
-      ensureFreshAuthToken({ force: true, logoutOnFailure: true }).catch(() => {});
+      ensureFreshAuthToken({ logoutOnFailure: true }).catch(() => {});
     };
 
     const subscription = AppState.addEventListener('change', (status) => {

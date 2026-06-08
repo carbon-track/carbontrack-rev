@@ -221,6 +221,10 @@ class MobileDeviceSessionService
             return null;
         }
 
+        if (function_exists('mb_substr')) {
+            return mb_substr($value, 0, $maxLength, 'UTF-8');
+        }
+
         return substr($value, 0, $maxLength);
     }
 }
