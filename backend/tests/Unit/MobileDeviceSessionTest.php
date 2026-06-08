@@ -185,6 +185,11 @@ final class MobileDeviceSessionTest extends TestCase
         $this->assertNotEmpty($retryPayload['data']['refresh_token']);
         $this->assertNotSame($originalRefreshToken, $retryPayload['data']['refresh_token']);
         $this->assertNull($this->pdo->query('SELECT revoked_at FROM mobile_device_sessions')->fetchColumn());
+
+        $replayResponse = $this->makeController()->refresh(makeRequest('POST', '/api/v1/auth/refresh', [
+            'refresh_token' => $originalRefreshToken,
+        ]), new Response());
+        $this->assertSame(401, $replayResponse->getStatusCode());
     }
 
     public function testBrowserSpoofedPlatformDoesNotReceiveMobileRefreshToken(): void

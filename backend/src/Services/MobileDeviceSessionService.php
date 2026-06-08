@@ -23,7 +23,10 @@ class MobileDeviceSessionService
             $this->refreshTtlSeconds = self::DEFAULT_REFRESH_TTL_SECONDS;
         }
         if ($this->hashSecret === '') {
-            $this->hashSecret = $_ENV['JWT_SECRET'] ?? 'carbontrack-mobile-session-fallback';
+            $this->hashSecret = $_ENV['JWT_SECRET'] ?? '';
+        }
+        if ($this->hashSecret === '') {
+            throw new \InvalidArgumentException('Mobile refresh token secret must be configured');
         }
     }
 
@@ -91,7 +94,7 @@ class MobileDeviceSessionService
                 $matchHash = (string) $session['refresh_token_hash'];
             }
 
-            $rotation = $this->rotateSessionRow($session, $hash, $matchHash, $metadata, $now);
+            $rotation = $this->rotateSessionRow($session, $matchHash, $metadata, $now);
             if ($rotation !== null) {
                 return $rotation;
             }
@@ -209,7 +212,7 @@ class MobileDeviceSessionService
         return is_array($row) ? $row : null;
     }
 
-    private function rotateSessionRow(array $session, string $presentedHash, string $matchHash, array $metadata, string $now): ?array
+    private function rotateSessionRow(array $session, string $matchHash, array $metadata, string $now): ?array
     {
         $newToken = $this->generateRefreshToken();
         $expiresAt = $this->formatTimestamp(time() + $this->refreshTtlSeconds);
@@ -231,7 +234,7 @@ class MobileDeviceSessionService
         );
         $stmt->execute([
             'refresh_token_hash' => $this->hashToken($newToken),
-            'previous_refresh_token_hash' => $presentedHash,
+            'previous_refresh_token_hash' => $matchHash,
             'device_name' => $this->normalizeNullableString($metadata['device_name'] ?? null, 191),
             'platform' => $this->normalizeNullableString($metadata['platform'] ?? null, 64),
             'user_agent' => $this->normalizeNullableString($metadata['user_agent'] ?? null, 255),
