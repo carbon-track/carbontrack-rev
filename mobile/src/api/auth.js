@@ -1,14 +1,22 @@
 import apiClient from './client';
+import useAuthStore from '../store/authStore';
+import { getMobileDeviceSessionPayload } from './deviceSession';
 import { withMobileProofOfWork } from './pow';
 
 export const authApi = {
   async login(payload) {
-    const response = await apiClient.post('/auth/login', await withMobileProofOfWork('auth.login', payload));
+    const response = await apiClient.post(
+      '/auth/login',
+      await withMobileProofOfWork('auth.login', { ...payload, ...await getMobileDeviceSessionPayload() }),
+    );
     return response.data;
   },
 
   async register(payload) {
-    const response = await apiClient.post('/auth/register', await withMobileProofOfWork('auth.register', payload));
+    const response = await apiClient.post(
+      '/auth/register',
+      await withMobileProofOfWork('auth.register', { ...payload, ...await getMobileDeviceSessionPayload() }),
+    );
     return response.data;
   },
 
@@ -21,12 +29,19 @@ export const authApi = {
   },
 
   async verifyEmail(payload) {
-    const response = await apiClient.post('/auth/verify-email', await withMobileProofOfWork('auth.verify_email', payload));
+    const response = await apiClient.post(
+      '/auth/verify-email',
+      await withMobileProofOfWork('auth.verify_email', { ...payload, ...await getMobileDeviceSessionPayload() }),
+    );
     return response.data;
   },
 
   async logout() {
-    const response = await apiClient.post('/auth/logout');
+    const response = await apiClient.post('/auth/logout', {
+      refresh_token: useAuthStore.getState().refreshToken,
+    }, {
+      skipAuthRefresh: true,
+    });
     return response.data;
   },
 };
