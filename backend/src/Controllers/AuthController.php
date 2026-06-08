@@ -86,7 +86,6 @@ class AuthController
             $db,
             $logger,
             $auditLogService,
-            $errorLogService,
             Environment::int('MOBILE_REFRESH_TOKEN_TTL_SECONDS', 60 * 60 * 24 * 30),
             Environment::string('MOBILE_REFRESH_TOKEN_SECRET', Environment::string('JWT_SECRET'))
         );

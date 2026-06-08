@@ -887,7 +887,6 @@ $__deps_initializer = function (Container $container) {
             $c->get(PDO::class),
             $c->get(Logger::class),
             $c->get(AuditLogService::class),
-            $c->get(ErrorLogService::class),
             Environment::int('MOBILE_REFRESH_TOKEN_TTL_SECONDS', 60 * 60 * 24 * 30),
             Environment::string('MOBILE_REFRESH_TOKEN_SECRET', Environment::string('JWT_SECRET'))
         );

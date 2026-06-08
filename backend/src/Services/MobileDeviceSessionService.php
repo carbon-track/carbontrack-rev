@@ -16,7 +16,6 @@ class MobileDeviceSessionService
         private PDO $db,
         private Logger $logger,
         private ?AuditLogService $auditLogService = null,
-        private ?ErrorLogService $errorLogService = null,
         private int $refreshTtlSeconds = self::DEFAULT_REFRESH_TTL_SECONDS,
         private string $hashSecret = ''
     ) {
