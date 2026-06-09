@@ -23,7 +23,9 @@ function isSafeMarkdownHref(href) {
     }
   }
 
-  return /^https:\/\//i.test(trimmed) && isSafeHtmlUri(trimmed);
+  const isHttpsUrl = /^https:\/\//i.test(trimmed);
+  const isRootRelativePath = trimmed.startsWith('/') && !trimmed.startsWith('//');
+  return (isHttpsUrl || isRootRelativePath) && isSafeHtmlUri(trimmed);
 }
 
 const transformLinkUri = (href) => (isSafeMarkdownHref(href) ? href.trim() : '');

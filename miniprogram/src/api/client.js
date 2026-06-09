@@ -167,7 +167,7 @@ const getFreshToken = async (auth) => {
 export const request = async (path, options = {}) => {
   const method = (options.method || 'GET').toUpperCase();
   const shouldAttachRequestId = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
-  const token = await getFreshToken(options.auth);
+  const token = options.skipAuthRefresh ? getToken() : await getFreshToken(options.auth);
   const headers = buildApiHeaders({
     token,
     requestId: shouldAttachRequestId ? createRequestId() : undefined,

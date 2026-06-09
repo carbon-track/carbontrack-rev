@@ -1,5 +1,6 @@
 import apiClient from './client';
 import { withMobileProofOfWork } from './pow';
+import { getRefreshToken } from '../store/session';
 
 export const authApi = {
   async login(payload) {
@@ -23,6 +24,7 @@ export const authApi = {
   },
 
   async logout() {
-    return apiClient.post('/auth/logout');
+    const refreshToken = getRefreshToken();
+    return apiClient.post('/auth/logout', refreshToken ? { refresh_token: refreshToken } : {}, { skipAuthRefresh: true });
   },
 };
