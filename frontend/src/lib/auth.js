@@ -61,8 +61,10 @@ const shouldRefreshToken = (token) => {
 
 const isRefreshRequest = (url = '') => String(url).includes('/auth/refresh');
 const isLoginRequest = (url = '') => String(url).includes('/auth/login');
+const isLogoutRequest = (url = '') => String(url).includes('/auth/logout');
 const shouldPreserveAuthOnUnauthorized = (url = '') => (
   isLoginRequest(url)
+  || isLogoutRequest(url)
   || (String(url).includes('/files/') && String(url).includes('/presigned-url'))
 );
 

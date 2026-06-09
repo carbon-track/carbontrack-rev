@@ -46,7 +46,8 @@ function ensureRequestId(config) {
 }
 
 function shouldPreserveAuthOnUnauthorized(requestUrl = '') {
-  return requestUrl.includes('/files/') && requestUrl.includes('/presigned-url');
+  return requestUrl.includes('/auth/logout')
+    || (requestUrl.includes('/files/') && requestUrl.includes('/presigned-url'));
 }
 
 // 创建axios实例
