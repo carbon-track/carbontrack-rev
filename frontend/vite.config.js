@@ -54,12 +54,23 @@ function resolveApiBaseUrl(env) {
   return configuredApiUrl
 }
 
+function assertDeployApiBaseUrl(apiBaseUrl, mode) {
+  if (mode !== 'production') return
+  if (!apiBaseUrl) {
+    throw new Error('VITE_API_URL must be explicitly configured for production builds')
+  }
+  if (/^https:\/\/dev-api\.carbontrackapp\.com(?:\/|$)/i.test(apiBaseUrl)) {
+    throw new Error('Production frontend builds must not target dev-api.carbontrackapp.com')
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig(async ({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const rawBuildId = (env.CF_PAGES_COMMIT_SHA || 'dev').toString().trim()
   const buildId = rawBuildId.length > 12 ? rawBuildId.slice(0, 12) : rawBuildId
   const apiBaseUrl = resolveApiBaseUrl(env)
+  assertDeployApiBaseUrl(apiBaseUrl, mode)
   const shouldAnalyze = mode === 'analyze' || env.ANALYZE === 'true'
   const plugins = [react(), tailwindcss()]
 

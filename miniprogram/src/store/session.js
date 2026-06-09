@@ -1,6 +1,7 @@
 import Taro from '@tarojs/taro';
 
 const TOKEN_KEY = 'carbontrack.auth.token';
+const REFRESH_TOKEN_KEY = 'carbontrack.auth.refreshToken';
 const USER_KEY = 'carbontrack.auth.user';
 const EMAIL_VERIFICATION_REQUIRED_KEY = 'carbontrack.auth.emailVerificationRequired';
 const VERIFICATION_EMAIL_KEY = 'carbontrack.auth.verificationEmail';
@@ -22,6 +23,8 @@ const readJson = (key) => {
 
 export const getToken = () => Taro.getStorageSync(TOKEN_KEY) || '';
 
+export const getRefreshToken = () => Taro.getStorageSync(REFRESH_TOKEN_KEY) || '';
+
 export const getUser = () => readJson(USER_KEY);
 
 export const getSession = () => {
@@ -32,6 +35,7 @@ export const getSession = () => {
 
   return {
     token,
+    refreshToken: getRefreshToken(),
     user,
     isAuthenticated: Boolean(token && user),
     requiresEmailVerification: Boolean(token && user && requiresEmailVerification),
@@ -41,12 +45,16 @@ export const getSession = () => {
 
 export const setSession = ({
   token,
+  refresh_token: refreshToken,
   user,
   email_verification_required: emailVerificationRequired,
   preserve_email_verification_required: preserveEmailVerificationRequired,
 }) => {
   if (token) {
     Taro.setStorageSync(TOKEN_KEY, token);
+  }
+  if (refreshToken) {
+    Taro.setStorageSync(REFRESH_TOKEN_KEY, refreshToken);
   }
   if (user) {
     Taro.setStorageSync(USER_KEY, JSON.stringify(user));
@@ -76,6 +84,14 @@ export const setToken = (token) => {
   }
 };
 
+export const setRefreshToken = (refreshToken) => {
+  if (refreshToken) {
+    Taro.setStorageSync(REFRESH_TOKEN_KEY, refreshToken);
+  } else {
+    Taro.removeStorageSync(REFRESH_TOKEN_KEY);
+  }
+};
+
 export const setUser = (user) => {
   if (user) {
     Taro.setStorageSync(USER_KEY, JSON.stringify(user));
@@ -92,6 +108,7 @@ export const clearEmailVerificationRequired = () => {
 export const clearSession = () => {
   [
     TOKEN_KEY,
+    REFRESH_TOKEN_KEY,
     USER_KEY,
     EMAIL_VERIFICATION_REQUIRED_KEY,
     VERIFICATION_EMAIL_KEY,

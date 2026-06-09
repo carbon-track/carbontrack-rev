@@ -138,6 +138,8 @@ jobs:
 
       - name: Validate frontend in monorepo
         working-directory: frontend
+        env:
+          VITE_API_URL: https://api.carbontrackapp.com/api/v1
         run: |
           pnpm install --frozen-lockfile
           pnpm lint

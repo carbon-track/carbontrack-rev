@@ -411,6 +411,7 @@
       "passwordMismatch": "两次输入的新密码不一致。",
       "passwordSaved": "已修改",
       "passwordSavedMessage": "密码已更新。",
+      "passwordReauthMessage": "密码已更新，请重新登录。",
       "passwordFailed": "密码修改失败",
       "activityTitle": "安全活动",
       "unknownActivity": "安全事件",

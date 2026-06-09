@@ -55,6 +55,7 @@
     "newPassword": "新密码",
     "confirmNewPassword": "确认新密码",
     "passwordChangeSuccess": "密码修改成功",
+    "passwordChangeReauthRequired": "密码已修改，请重新登录。",
     "passwordChangeFailed": "修改密码失败",
     "avatarUpdateSuccess": "头像更新成功",
     "avatarUpdateFailed": "更新头像失败",

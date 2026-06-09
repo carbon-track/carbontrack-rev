@@ -4,6 +4,7 @@ import {
   clearSession,
   getSession,
   getToken,
+  getRefreshToken,
   redirectToLogin,
   setSession,
 } from '../store/session';
@@ -105,6 +106,7 @@ const assertOkResponse = (response) => {
 
 const refreshToken = async (token) => {
   if (!refreshPromise) {
+    const refreshTokenValue = getRefreshToken();
     const headers = buildApiHeaders({
       token,
       requestId: createRequestId(),
@@ -112,7 +114,7 @@ const refreshToken = async (token) => {
     refreshPromise = Taro.request({
       url: buildUrl('/auth/refresh'),
       method: 'POST',
-      data: {},
+      data: refreshTokenValue ? { refresh_token: refreshTokenValue } : {},
       header: headers,
       timeout: REQUEST_TIMEOUT_MS,
     }).then((response) => {
@@ -121,6 +123,7 @@ const refreshToken = async (token) => {
       if (data.token) {
         setSession({
           token: data.token,
+          refresh_token: data.refresh_token || refreshTokenValue,
           user: data.user || getSession().user,
           preserve_email_verification_required: true,
         });
@@ -140,7 +143,18 @@ const getFreshToken = async (auth) => {
     return '';
   }
   const token = getToken();
-  if (!token || !shouldRefreshToken(token)) {
+  const refreshTokenValue = getRefreshToken();
+  if (!refreshTokenValue && (!token || !shouldRefreshToken(token))) {
+    return token;
+  }
+  if (refreshTokenValue && (!token || shouldRefreshToken(token))) {
+    try {
+      return await refreshToken(token);
+    } catch {
+      return token;
+    }
+  }
+  if (!shouldRefreshToken(token)) {
     return token;
   }
   try {

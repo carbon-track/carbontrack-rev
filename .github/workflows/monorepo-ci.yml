@@ -2,6 +2,7 @@ name: Monorepo CI
 
 env:
   NODE_VERSION: '20.9.0'
+  FRONTEND_API_URL: 'https://api.carbontrackapp.com/api/v1'
 
 on:
   pull_request:
@@ -53,6 +54,8 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
+        env:
+          VITE_API_URL: ${{ env.FRONTEND_API_URL }}
         run: pnpm build
 
   frontend-cd-readiness:
@@ -95,6 +98,8 @@ jobs:
 
       - name: Build mirrored frontend
         working-directory: /tmp/frontend-mirror
+        env:
+          VITE_API_URL: ${{ env.FRONTEND_API_URL }}
         run: pnpm build
 
   backend-ci:

@@ -64,7 +64,7 @@ const shouldRefreshToken = (token) => {
     return false;
   }
   const remainingSeconds = Number(payload.exp) - Math.floor(Date.now() / 1000);
-  return remainingSeconds > 0 && remainingSeconds < REFRESH_THRESHOLD_SECONDS;
+  return remainingSeconds < REFRESH_THRESHOLD_SECONDS;
 };
 
 const shouldLogoutForStatus = (statusCode) => Number(statusCode) === 401;

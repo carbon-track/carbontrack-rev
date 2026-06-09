@@ -196,6 +196,7 @@ function ProfileEditor({ user }) {
 function PasswordEditor() {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const logout = useAuthStore((state) => state.logout);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [errors, setErrors] = useState({});
@@ -204,12 +205,13 @@ function PasswordEditor() {
   const mutation = useMutation({
     mutationFn: profileApi.changePassword,
     onError: (error) => Alert.alert(t('profile.security.passwordFailed'), apiError(error, t('profile.security.passwordFailed'))),
-    onSuccess: () => {
+    onSuccess: async () => {
       setConfirmPassword('');
       setCurrentPassword('');
       setNewPassword('');
       setErrors({});
-      Alert.alert(t('profile.security.passwordSaved'), t('profile.security.passwordSavedMessage'));
+      await logout();
+      Alert.alert(t('profile.security.passwordSaved'), t('profile.security.passwordReauthMessage'));
     },
   });
 

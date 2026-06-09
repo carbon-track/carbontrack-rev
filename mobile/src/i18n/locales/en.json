@@ -411,6 +411,7 @@
       "passwordMismatch": "New passwords do not match.",
       "passwordSaved": "Updated",
       "passwordSavedMessage": "Password was updated.",
+      "passwordReauthMessage": "Password was updated. Please sign in again.",
       "passwordFailed": "Password change failed",
       "activityTitle": "Security activity",
       "unknownActivity": "Security event",

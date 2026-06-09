@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { toast } from 'react-hot-toast';
 import api from '../../lib/api';
+import { authAPI } from '../../lib/auth';
 
 export function PasswordChangeForm() {
   const { t } = useTranslation(['errors', 'profile', 'validation']);
@@ -12,9 +13,14 @@ export function PasswordChangeForm() {
 
   const onSubmit = async (data) => {
     try {
-      await api.post('/auth/change-password', data);
-      toast.success(t('profile.passwordChangeSuccess'));
+      await api.post('/auth/change-password', {
+        current_password: data.current_password,
+        new_password: data.new_password,
+        confirm_password: data.confirm_new_password,
+      });
+      toast.success(t('profile.passwordChangeReauthRequired'));
       reset();
+      await authAPI.logout();
     } catch (error) {
       toast.error(t('profile.passwordChangeFailed'));
       console.error('Password change failed:', error);

@@ -33,8 +33,10 @@ test('shouldRefreshToken only refreshes tokens near expiry', () => {
   const nowSeconds = Math.floor(Date.now() / 1000);
   const nearExpiry = `x.${encode({ exp: nowSeconds + 120 })}.y`;
   const later = `x.${encode({ exp: nowSeconds + 3600 })}.y`;
+  const expired = `x.${encode({ exp: nowSeconds - 60 })}.y`;
 
   assert.equal(shouldRefreshToken(nearExpiry), true);
+  assert.equal(shouldRefreshToken(expired), true);
   assert.equal(shouldRefreshToken(later), false);
   assert.equal(shouldRefreshToken('not-a-token'), false);
 });

@@ -23,12 +23,10 @@ function isSafeMarkdownHref(href) {
     }
   }
 
-  if (/^\.{1,2}\//.test(trimmed)) {
-    return true;
-  }
-
-  return isSafeHtmlUri(trimmed);
+  return /^https:\/\//i.test(trimmed) && isSafeHtmlUri(trimmed);
 }
+
+const transformLinkUri = (href) => (isSafeMarkdownHref(href) ? href.trim() : '');
 
 const MARKDOWN_REMARK_PLUGINS = [remarkGfm];
 const MARKDOWN_REHYPE_PLUGINS = [rehypeSanitize];
@@ -99,8 +97,8 @@ export default function AdminAiMarkdown({ content, className }) {
       <ReactMarkdown
         remarkPlugins={MARKDOWN_REMARK_PLUGINS}
         rehypePlugins={MARKDOWN_REHYPE_PLUGINS}
-        skipHtml
         components={MARKDOWN_COMPONENTS}
+        urlTransform={transformLinkUri}
       >
         {text}
       </ReactMarkdown>
