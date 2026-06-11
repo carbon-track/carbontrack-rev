@@ -7,7 +7,7 @@
         "aws/aws-sdk-php": "^3.368.0",
         "firebase/php-jwt": "^7.0",
         "guzzlehttp/guzzle": "7.10",
-        "guzzlehttp/psr7": "2.8",
+        "guzzlehttp/psr7": "2.10.2",
         "http-interop/http-factory-guzzle": "1.2",
         "illuminate/database": "^8.0",
         "illuminate/events": "^8.0",
