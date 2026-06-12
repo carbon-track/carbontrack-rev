@@ -55,6 +55,7 @@
     "newPassword": "New Password",
     "confirmNewPassword": "Confirm New Password",
     "passwordChangeSuccess": "Password changed successfully",
+    "passwordChangeReauthRequired": "Password changed. Please sign in again.",
     "passwordChangeFailed": "Failed to change password",
     "avatarUpdateSuccess": "Avatar updated successfully",
     "avatarUpdateFailed": "Failed to update avatar",

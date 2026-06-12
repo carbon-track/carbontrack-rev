@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify';
+import { isSafeHtmlUri } from './safeUrl';
 
-const SAFE_URI_PATTERN = /^(?:(?:https?|mailto|tel):|#|\/)/i;
 const SANITIZE_OPTIONS = {
   ALLOWED_TAGS: [
     'a',
@@ -47,7 +47,7 @@ function sanitizeLinkAttributes(node) {
   }
 
   const href = (node.getAttribute('href') || '').trim();
-  if (!href || !SAFE_URI_PATTERN.test(href)) {
+  if (!href || !isSafeHtmlUri(href)) {
     node.removeAttribute('href');
   }
 

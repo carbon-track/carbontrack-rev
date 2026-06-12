@@ -51,11 +51,17 @@ function normalizeApiBaseUrl(value) {
 
 function resolveApiBaseUrl(env) {
   const configuredApiUrl = normalizeApiBaseUrl(env.VITE_API_URL)
-  if (configuredApiUrl) {
-    return configuredApiUrl
+  return configuredApiUrl
+}
+
+function assertDeployApiBaseUrl(apiBaseUrl, mode) {
+  if (mode !== 'production') return
+  if (!apiBaseUrl) {
+    throw new Error('VITE_API_URL must be explicitly configured for production builds')
   }
-
-
+  if (/^https:\/\/dev-api\.carbontrackapp\.com(?:\/|$)/i.test(apiBaseUrl)) {
+    throw new Error('Production frontend builds must not target dev-api.carbontrackapp.com')
+  }
 }
 
 // https://vite.dev/config/
@@ -64,6 +70,7 @@ export default defineConfig(async ({ mode }) => {
   const rawBuildId = (env.CF_PAGES_COMMIT_SHA || 'dev').toString().trim()
   const buildId = rawBuildId.length > 12 ? rawBuildId.slice(0, 12) : rawBuildId
   const apiBaseUrl = resolveApiBaseUrl(env)
+  assertDeployApiBaseUrl(apiBaseUrl, mode)
   const shouldAnalyze = mode === 'analyze' || env.ANALYZE === 'true'
   const plugins = [react(), tailwindcss()]
 
@@ -97,6 +104,19 @@ export default defineConfig(async ({ mode }) => {
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(apiBaseUrl),
       'import.meta.env.VITE_BUILD_ID': JSON.stringify(buildId),
+      // W-203: physically erase any dev-only auth bootstrap envs from the
+      // production bundle so they cannot survive even if the build environment
+      // accidentally exports them. `undefined` here lets terser/dead-code
+      // elimination prune the dev fallback path entirely.
+      ...(mode === 'production'
+        ? {
+            'import.meta.env.VITE_DEV_AUTH_TOKEN': 'undefined',
+            'import.meta.env.VITE_DEV_AUTH_USER_INFO_JSON': 'undefined',
+            'import.meta.env.VITE_DEV_AUTH_USER_INFO_BASE64': 'undefined',
+            'import.meta.env.VITE_DEV_AUTH_FORCE_SYNC': 'undefined',
+            'import.meta.env.VITE_ENABLE_DEV_AUTH_FROM_ENV': 'undefined',
+          }
+        : {}),
     },
   }
 })

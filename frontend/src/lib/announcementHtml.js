@@ -1,10 +1,10 @@
 import DOMPurify from 'dompurify';
+import { isSafeHtmlUri } from './safeUrl';
 
 export const ANNOUNCEMENT_CONTENT_FORMAT_TEXT = 'text';
 export const ANNOUNCEMENT_CONTENT_FORMAT_HTML = 'html';
 export const ANNOUNCEMENT_RENDER_PROFILE_HTML = 'announcement_html_v1';
 
-const SAFE_URI_PATTERN = /^(?:(?:https?|mailto|tel):|#|\/)/i;
 const SAFE_ALIGN_VALUES = new Set(['left', 'center', 'right']);
 const SAFE_SCOPE_VALUES = new Set(['col', 'row', 'colgroup', 'rowgroup']);
 export const ALLOWED_ANNOUNCEMENT_TAGS = [
@@ -82,7 +82,7 @@ function sanitizeAnnouncementNodeAttributes(node) {
 
   if (tagName === 'A') {
     const href = (node.getAttribute('href') || '').trim();
-    if (!href || !SAFE_URI_PATTERN.test(href)) {
+    if (!href || !isSafeHtmlUri(href)) {
       node.removeAttribute('href');
       node.removeAttribute('rel');
       node.removeAttribute('target');

@@ -1,0 +1,10 @@
+.records-page .list {
+  margin-top: 20px;
+}
+
+.record-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}

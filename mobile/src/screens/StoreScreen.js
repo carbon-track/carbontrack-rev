@@ -30,6 +30,7 @@ import { rewardsApi } from '../api/rewards';
 import useAuthStore from '../store/authStore';
 import { useI18n } from '../i18n';
 import { useTheme } from '../theme';
+import { getApiErrorMessage } from '../lib/apiError';
 
 const numberFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 const formatNumber = (value) => numberFormatter.format(Number(value || 0));
@@ -77,13 +78,6 @@ const resolveProductName = (exchange, t) => (
   || t('store.history.unknownProduct')
 );
 
-const getApiErrorMessage = (error, fallback) => (
-  error?.response?.data?.message
-  || error?.response?.data?.error
-  || error?.message
-  || fallback
-);
-
 function PointsCard({ points }) {
   const { t } = useI18n();
   const { colors } = useTheme();
@@ -109,6 +103,7 @@ function ProductCard({ product, onExchange, userPoints }) {
   const { t } = useI18n();
   const { colors } = useTheme();
   const imageUri = resolveProductImage(product);
+  const imageSource = imageUri ? { uri: imageUri, cache: 'force-cache' } : null;
   const pointsRequired = Number(product.points_required || 0);
   const stock = Number(product.stock ?? 0);
   const isAvailable = product.is_available !== false && (product.status ? product.status === 'active' : true);
@@ -129,9 +124,9 @@ function ProductCard({ product, onExchange, userPoints }) {
 
   return (
     <GlassSurface effect="regular" padded={false} style={styles.productCard}>
-      {imageUri ? (
-        <ImageLightbox uri={imageUri} title={product.name} style={styles.productImageButton} contentStyle={styles.imageFill}>
-          <Image source={{ uri: imageUri }} style={styles.productImage} />
+      {imageSource ? (
+        <ImageLightbox source={imageSource} uri={imageUri} style={styles.productImageButton} contentStyle={styles.imageFill}>
+          <Image resizeMode="contain" source={imageSource} style={styles.productImage} />
         </ImageLightbox>
       ) : (
         <View style={[styles.productImage, styles.productImageEmpty, { backgroundColor: colors.surfaceMuted }]}>
@@ -257,7 +252,7 @@ function ProductFilterMenu({
                   {t('store.filters.menuSubtitle', { category: activeCategoryLabel, sort: sortLabel })}
                 </Text>
               </View>
-              <GlassButtonSurface onPress={() => setVisible(false)} style={styles.closeButton}>
+              <GlassButtonSurface contentStyle={styles.closeButtonContent} onPress={() => setVisible(false)} style={styles.closeButton}>
                 <Ionicons color={colors.text} name="close" size={22} />
               </GlassButtonSurface>
             </View>
@@ -331,7 +326,7 @@ function OptionMenu({ icon = 'filter-outline', label, onChange, options, title, 
                 <Text style={[styles.menuTitle, { color: colors.text }]}>{title}</Text>
                 <Text style={[styles.menuSubtitle, { color: colors.textMuted }]}>{label || selected?.label}</Text>
               </View>
-              <GlassButtonSurface onPress={() => setVisible(false)} style={styles.closeButton}>
+              <GlassButtonSurface contentStyle={styles.closeButtonContent} onPress={() => setVisible(false)} style={styles.closeButton}>
                 <Ionicons color={colors.text} name="close" size={22} />
               </GlassButtonSurface>
             </View>
@@ -386,6 +381,7 @@ function ExchangeModal({ product, visible, onClose, onConfirm, loading, userEmai
   const totalPoints = pointsRequired * parsedQuantity;
   const canAfford = userPoints >= totalPoints;
   const imageUri = resolveProductImage(product);
+  const imageSource = imageUri ? { uri: imageUri, cache: 'force-cache' } : null;
 
   const submit = () => {
     const trimmedAddress = deliveryAddress.trim();
@@ -427,15 +423,15 @@ function ExchangeModal({ product, visible, onClose, onConfirm, loading, userEmai
                 <Text style={[styles.modalTitle, { color: colors.text }]}>{t('store.exchange.title')}</Text>
                 <Text style={[styles.modalSubtitle, { color: colors.textMuted }]}>{t('store.exchange.subtitle')}</Text>
               </View>
-              <GlassButtonSurface onPress={onClose} style={styles.closeButton}>
+              <GlassButtonSurface contentStyle={styles.closeButtonContent} onPress={onClose} style={styles.closeButton}>
                 <Ionicons color={colors.text} name="close" size={22} />
               </GlassButtonSurface>
             </View>
 
               <GlassListItemSurface contentStyle={styles.exchangeProductContent} style={styles.exchangeProduct}>
-                {imageUri ? (
-                  <ImageLightbox uri={imageUri} title={product.name} style={styles.exchangeImageButton} contentStyle={styles.imageFill}>
-                    <Image source={{ uri: imageUri }} style={styles.exchangeImage} />
+                {imageSource ? (
+                  <ImageLightbox source={imageSource} uri={imageUri} style={styles.exchangeImageButton} contentStyle={styles.imageFill}>
+                    <Image resizeMode="contain" source={imageSource} style={styles.exchangeImage} />
                   </ImageLightbox>
                 ) : null}
               <View style={styles.exchangeProductText}>
@@ -535,6 +531,7 @@ function ExchangeCard({ exchange }) {
   const { t } = useI18n();
   const { colors } = useTheme();
   const imageUri = resolveExchangeImage(exchange);
+  const imageSource = imageUri ? { uri: imageUri, cache: 'force-cache' } : null;
   const status = String(exchange.status || 'unknown').toLowerCase();
   const contact = [exchange.contact_area_code, exchange.contact_phone].filter(Boolean).join(' ');
   const quantity = Number(exchange.quantity || 1);
@@ -542,9 +539,9 @@ function ExchangeCard({ exchange }) {
 
   return (
     <GlassListItemSurface contentStyle={styles.exchangeCardContent} style={styles.exchangeCard}>
-      {imageUri ? (
-        <ImageLightbox uri={imageUri} title={resolveProductName(exchange, t)} style={styles.historyImageButton} contentStyle={styles.imageFill}>
-          <Image source={{ uri: imageUri }} style={styles.historyImage} />
+      {imageSource ? (
+        <ImageLightbox source={imageSource} uri={imageUri} style={styles.historyImageButton} contentStyle={styles.imageFill}>
+          <Image resizeMode="contain" source={imageSource} style={styles.historyImage} />
         </ImageLightbox>
       ) : (
         <View style={[styles.historyImage, styles.productImageEmpty, { backgroundColor: colors.surfaceMuted }]}>
@@ -1219,10 +1216,17 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     borderRadius: 19,
-    height: 38,
-    minHeight: 38,
+    height: 44,
+    minHeight: 44,
     paddingHorizontal: 0,
-    width: 38,
+    width: 44,
+  },
+  closeButtonContent: {
+    alignItems: 'center',
+    flex: 0,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
   },
   exchangeProduct: {
     borderRadius: 18,

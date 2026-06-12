@@ -8,7 +8,7 @@
 - `dev`: integration source of truth
 - `feature/*`: feature branches that merge into `dev`
 
-`carbon-track/frontend`, `carbon-track/backend`, and `carbon-track/mobile` are mirror repositories for deployment only.
+`carbon-track/frontend`, `carbon-track/backend`, `carbon-track/mobile`, and `carbon-track/miniprogram` are mirror repositories for deployment only.
 
 - `frontend/main` mirrors `monorepo/main`
 - `frontend/dev` mirrors `monorepo/dev`
@@ -16,6 +16,8 @@
 - `backend/dev` mirrors `monorepo/dev`
 - `mobile/main` mirrors `monorepo/main`
 - `mobile/dev` mirrors `monorepo/dev`
+- `miniprogram/main` mirrors `monorepo/main`
+- `miniprogram/dev` mirrors `monorepo/dev`
 
 Do not perform normal feature development in the split repositories. Any manual change there will be overwritten by the next sync run.
 
@@ -23,24 +25,26 @@ Do not perform normal feature development in the split repositories. Any manual 
 
 1. Create `feature/*` from `dev` in the monorepo.
 2. Open PRs from `feature/*` into `dev`.
-3. After merge to `dev`, `.github/workflows/sync-repositories.yml` pushes changed subtrees to `frontend/dev`, `backend/dev`, and/or `mobile/dev`.
+3. After merge to `dev`, `.github/workflows/sync-repositories.yml` pushes changed subtrees to `frontend/dev`, `backend/dev`, `mobile/dev`, and/or `miniprogram/dev`.
 4. Development infrastructure pulls directly from the split repositories:
    - frontend preview/dev deployment reads `frontend/dev`
    - backend development server pulls `backend/dev`
    - mobile development deployment reads `mobile/dev`
+   - WeChat Mini Program development upload reads `miniprogram/dev`
 5. When ready to release, open a PR from `dev` into `main` in the monorepo.
-6. After merge to `main`, the same sync workflow pushes changed subtrees to `frontend/main`, `backend/main`, and/or `mobile/main`.
+6. After merge to `main`, the same sync workflow pushes changed subtrees to `frontend/main`, `backend/main`, `mobile/main`, and/or `miniprogram/main`.
 7. Production infrastructure pulls directly from the split repositories:
    - Cloudflare Pages production reads `frontend/main`
    - production backend server pulls `backend/main`
    - production mobile deployment reads `mobile/main`
+   - WeChat Mini Program release upload reads `miniprogram/main`
 
 ## GitHub Actions In This Repo
 
 Two workflows support this model:
 
-- [`.github/workflows/monorepo-ci.yml`](.github/workflows/monorepo-ci.yml): runs the required PR gates in the monorepo for frontend CI, backend CI, mobile CI, and split-repo deployment readiness
-- [`.github/workflows/sync-repositories.yml`](.github/workflows/sync-repositories.yml): mirrors `frontend/`, `backend/`, and `mobile/` to the corresponding split-repo branch after a push to `dev` or `main`
+- [`.github/workflows/monorepo-ci.yml`](.github/workflows/monorepo-ci.yml): runs the required PR gates in the monorepo for frontend CI, backend CI, mobile CI, miniprogram CI, and split-repo deployment readiness
+- [`.github/workflows/sync-repositories.yml`](.github/workflows/sync-repositories.yml): mirrors `frontend/`, `backend/`, `mobile/`, and `miniprogram/` to the corresponding split-repo branch after a push to `dev` or `main`
 
 The sync workflow pushes directly to the target branch instead of opening PRs in the split repositories. That keeps the child repositories deployable while preserving a single human review surface in the monorepo.
 
@@ -55,7 +59,7 @@ Configure these values in the monorepo:
 - repository variable: `MIRROR_SYNC_APP_ID`
 - repository secret: `MIRROR_SYNC_APP_PRIVATE_KEY`
 
-The workflow uses `actions/create-github-app-token` to mint short-lived installation tokens for `frontend`, `backend`, and `mobile` at runtime.
+The workflow uses `actions/create-github-app-token` to mint short-lived installation tokens for `frontend`, `backend`, `mobile`, and `miniprogram` at runtime.
 
 Install the GitHub App on:
 
@@ -63,6 +67,7 @@ Install the GitHub App on:
 - `carbon-track/frontend`
 - `carbon-track/backend`
 - `carbon-track/mobile`
+- `carbon-track/miniprogram`
 
 Minimum repository permissions for the app:
 
@@ -87,13 +92,15 @@ Protect `dev` and `main`.
   - `monorepo / backend-cd-readiness`
   - `monorepo / mobile-ci`
   - `monorepo / mobile-cd-readiness`
+  - `monorepo / miniprogram-ci`
+  - `monorepo / miniprogram-cd-readiness`
 - require at least one approval
 
 Recommended extra rule for `main`:
 
 - restrict merges so releases come from `dev`
 
-### Frontend / Backend / Mobile Mirrors
+### Frontend / Backend / Mobile / Miniprogram Mirrors
 
 Protect `dev` and `main`, but keep them bot-writable.
 
@@ -119,3 +126,10 @@ Because deployment is front/back separated, let each environment pull directly f
 - production backend server tracks `carbon-track/backend:main`
 
 This preserves a clean deployment surface while keeping the monorepo as the only place where code is authored and reviewed.
+
+## WeChat Mini Program Pull Strategy
+
+Keep WeChat Mini Program development in the monorepo under `miniprogram/`, then upload from the mirror repository branch that matches the target environment:
+
+- development Mini Program builds track `carbon-track/miniprogram:dev`
+- production Mini Program builds track `carbon-track/miniprogram:main`

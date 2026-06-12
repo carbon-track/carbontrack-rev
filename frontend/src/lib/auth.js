@@ -1,3 +1,5 @@
+import { safeReturnPath } from './safeReturn';
+
 const DEV_AUTH_TRUTHY_VALUES = new Set(['1', 'true', 'yes', 'on']);
 
 let apiPromise;
@@ -58,6 +60,13 @@ const shouldRefreshToken = (token) => {
 };
 
 const isRefreshRequest = (url = '') => String(url).includes('/auth/refresh');
+const isLoginRequest = (url = '') => String(url).includes('/auth/login');
+const isLogoutRequest = (url = '') => String(url).includes('/auth/logout');
+const shouldPreserveAuthOnUnauthorized = (url = '') => (
+  isLoginRequest(url)
+  || isLogoutRequest(url)
+  || (String(url).includes('/files/') && String(url).includes('/presigned-url'))
+);
 
 const hasMinimalDevUserInfoFields = (userInfo) => (
   userInfo
@@ -195,6 +204,15 @@ export const getDefaultAuthenticatedRoute = (user = userManager.getUser()) => (
 );
 
 export const bootstrapDevAuthFromEnv = () => {
+  // Hard guard (W-203): never run dev-time identity injection in a production
+  // bundle, even if VITE_DEV_AUTH_TOKEN / VITE_ENABLE_DEV_AUTH_FROM_ENV leaked
+  // into the build environment. The Vite config also redacts these envs at
+  // build time, but defense-in-depth keeps us safe against prebuilt bundles
+  // shipping with stray dev envs.
+  if (import.meta.env.PROD) {
+    return false;
+  }
+
   if (!import.meta.env.DEV || !isDevTruthy(import.meta.env?.VITE_ENABLE_DEV_AUTH_FROM_ENV)) {
     return false;
   }
@@ -324,7 +342,11 @@ export const authAPI = {
       const api = await getApi();
       await api.post('/auth/logout');
     } catch (error) {
-      console.warn('Logout API call failed:', error);
+      console.warn('Logout API call failed:', {
+        status: error?.response?.status ?? null,
+        code: error?.response?.data?.code ?? error?.code ?? null,
+        message: error?.response?.data?.message ?? error?.message ?? 'unknown',
+      });
     } finally {
       tokenManager.removeToken();
       userManager.removeUser();
@@ -344,7 +366,12 @@ export const authAPI = {
         return response.data.data;
       }
     } catch (error) {
-      console.error('Get current user failed:', error);
+      // Log only the high-level shape; never log the raw error / config object,
+      // which can include Authorization headers or response bodies (W-201).
+      console.error('Get current user failed:', {
+        status: error?.response?.status ?? null,
+        message: error?.response?.data?.message ?? error?.message ?? 'unknown',
+      });
       this.logout();
     }
     return null;
@@ -427,7 +454,12 @@ export const redirectToLogin = (returnUrl = null) => {
 // 获取返回URL
 export const getReturnUrl = () => {
   const params = new URLSearchParams(window.location.search);
-  return params.get('return') || getDefaultAuthenticatedRoute();
+  const fallback = getDefaultAuthenticatedRoute();
+  const raw = params.get('return');
+  if (raw === null || raw === undefined) {
+    return fallback;
+  }
+  return safeReturnPath(raw, fallback);
 };
 
 // 权限检查
@@ -523,7 +555,10 @@ export const setupTokenRefresh = () => {
         await refreshAuthToken();
       }
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      console.warn('Token refresh failed:', {
+        status: error?.response?.status ?? null,
+        message: error?.response?.data?.message ?? error?.message ?? 'unknown',
+      });
       authAPI.logout();
     }
   };
@@ -543,7 +578,10 @@ export const initAuth = async () => {
         try {
           await refreshAuthToken();
         } catch (error) {
-          console.warn('Token refresh failed; continuing with the current valid token:', error);
+          console.warn('Token refresh failed; continuing with the current valid token:', {
+            status: error?.response?.status ?? null,
+            message: error?.response?.data?.message ?? error?.message ?? 'unknown',
+          });
         }
       }
 
@@ -556,7 +594,18 @@ export const initAuth = async () => {
   api.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (error.response?.status === 401) {
+      const status = error?.response?.status;
+      if (status === 401) {
+        const code = error?.response?.data?.code;
+        const requestUrl = error?.config?.url ?? '';
+        if (shouldPreserveAuthOnUnauthorized(requestUrl)) {
+          return Promise.reject(error);
+        }
+        // Token was server-side revoked (password change / "logout all"); log out
+        // and force re-auth, but never echo the raw error object to the console.
+        if (code === 'TOKEN_VERSION_MISMATCH') {
+          console.warn('Auth token revoked by server; forcing re-login.');
+        }
         authAPI.logout();
         redirectToLogin();
       }

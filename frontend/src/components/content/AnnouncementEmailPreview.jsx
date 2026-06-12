@@ -22,7 +22,7 @@ export function AnnouncementEmailPreview({
         title="announcement-email-preview"
         srcDoc={srcDoc}
         className="h-[640px] w-full bg-white"
-        sandbox="allow-same-origin"
+        sandbox=""
       />
     </div>
   );

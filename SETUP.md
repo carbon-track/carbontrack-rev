@@ -1,6 +1,6 @@
 # CarbonTrack 项目全栈开发环境配置指南
 
-本指南为新成员提供完整的全栈（前端 React + 后端 PHP）开发环境配置说明。
+本指南为新成员提供完整的全栈（前端 React + 后端 PHP + 移动端 + 微信小程序）开发环境配置说明。
 
 ## 目录
 
@@ -8,6 +8,7 @@
 - [项目获取](#项目获取)
 - [后端配置 (PHP/Slim)](#后端配置-phpslim)
 - [前端配置 (React/Vite)](#前端配置-reactvite)
+- [微信小程序配置](#微信小程序配置)
 - [启动运行](#启动运行)
 - [技术栈概览](#技术栈概览)
 - [常见问题](#常见问题)
@@ -28,8 +29,11 @@
 
 ### 3. 前端要求 (Node.js)
 - **Node.js**: v20.9+（推荐使用 Node 20 LTS，并与 CI 保持一致）
-- **pnpm**: v10.4.1（必需，请勿使用 npm 或 yarn；CI 也固定此版本）
-  - 安装：`npm install -g pnpm`
+- **pnpm**: 使用 Corepack 并遵循各目录 `packageManager` 声明（必需，请勿使用 npm 或 yarn）
+  - 启用：`corepack enable`
+
+### 4. 微信小程序要求
+- **微信开发者工具**: 用于打开 `miniprogram/` 并进行预览、真机调试和上传。
 
 ---
 
@@ -120,6 +124,25 @@ VITE_TURNSTILE_SITE_KEY=your_site_key
 
 ---
 
+## 微信小程序配置
+
+### 1. 安装校验依赖
+进入 `miniprogram` 目录并安装 Node 依赖：
+```bash
+cd ../miniprogram
+pnpm install
+```
+
+### 2. 本地打开
+使用微信开发者工具打开 `miniprogram/` 目录。个人 IDE 设置请写入 `project.private.config.json`，不要提交到仓库。
+
+### 3. 校验项目结构
+```bash
+pnpm validate
+```
+
+---
+
 ## 启动运行
 
 ### 方式 A：手动启动（推荐开发时使用）
@@ -135,6 +158,9 @@ VITE_TURNSTILE_SITE_KEY=your_site_key
    cd frontend
    pnpm dev
    ```
+
+3. **打开微信小程序**：
+   使用微信开发者工具打开 `miniprogram/`。
 
 ### 方式 B：VS Code 任务
 本项目已预配置 VS Code 任务，你可以通过 `Ctrl+Shift+B` 或 `Terminal -> Run Build Task` 同时运行前后端。
@@ -157,6 +183,11 @@ VITE_TURNSTILE_SITE_KEY=your_site_key
 - **State**: TanStack Query (React Query) + Zustand
 - **Form**: React Hook Form + Zod
 - **I18n**: i18next
+
+### 微信小程序 (Miniprogram)
+- **Runtime**: WeChat Mini Program
+- **Validation**: Node.js project structure checks
+- **API Contract**: 与 `backend/openapi.json` 保持一致
 
 ---
 

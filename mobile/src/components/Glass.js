@@ -1,9 +1,24 @@
 import React from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { makeShadow, useTheme } from '../theme';
+import { isNativeLiquidGlassEnabled } from '../lib/nativeFeatureFlags';
+
+const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
+
+const fallbackLiquidGlass = {
+  Container: View,
+  Surface: View,
+  isSupported: false,
+};
+const liquidGlassEnabled = isNativeLiquidGlassEnabled();
 
 const loadLiquidGlass = () => {
+  if (!liquidGlassEnabled) {
+    return fallbackLiquidGlass;
+  }
+
   try {
     const module = require('@callstack/liquid-glass');
     return {
@@ -15,11 +30,7 @@ const loadLiquidGlass = () => {
     if (__DEV__) {
       console.warn('Liquid Glass native module unavailable; using fallback surfaces.', error);
     }
-    return {
-      Container: View,
-      Surface: View,
-      isSupported: false,
-    };
+    return fallbackLiquidGlass;
   }
 };
 
@@ -64,21 +75,24 @@ function GlassLayer({
   );
 }
 
-export function ScreenBackground({ children, centered = false, style }) {
+export function ScreenBackground({ animatedStyle, children, centered = false, contentStyle, style, ...safeAreaProps }) {
   const { colors } = useTheme();
   return (
-    <SafeAreaView
+    <AnimatedSafeAreaView
+      {...safeAreaProps}
       style={[
         styles.screen,
         { backgroundColor: colors.background },
-        centered ? styles.centered : null,
+        animatedStyle,
         style,
       ]}
     >
       <View pointerEvents="none" style={[styles.glowOne, { backgroundColor: colors.primarySoft }]} />
       <View pointerEvents="none" style={[styles.glowTwo, { backgroundColor: colors.surfaceStrong }]} />
-      {children}
-    </SafeAreaView>
+      <Animated.View style={[styles.screenContent, centered ? styles.centered : null, contentStyle]}>
+        {children}
+      </Animated.View>
+    </AnimatedSafeAreaView>
   );
 }
 
@@ -317,21 +331,28 @@ export function GlassPressable({
 
 export function GlassButtonSurface({
   children,
+  wrapperStyle,
   contentStyle,
   disabled,
   effect = 'clear',
   onPress,
+  onPressIn,
   style,
+  tintColor,
   variant = 'secondary',
+  ...pressableProps
 }) {
   const { colors } = useTheme();
   const primary = variant === 'primary';
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={onPressIn}
       disabled={disabled}
+      {...pressableProps}
       style={({ pressed }) => [
         styles.pressableWrapper,
+        wrapperStyle,
         pressed ? { opacity: 0.78 } : null,
         disabled ? { opacity: 0.55 } : null,
       ]}
@@ -348,11 +369,34 @@ export function GlassButtonSurface({
           },
           style,
         ]}
-        tintColor={primary ? colors.primarySoft : colors.surfaceMuted}
+        tintColor={tintColor || (primary ? colors.primarySoft : colors.surfaceMuted)}
       >
         {children}
       </GlassLayer>
     </Pressable>
+  );
+}
+
+export function FrostedBackButton({ accessibilityLabel = 'Back', onPress, wrapperStyle }) {
+  const { colors } = useTheme();
+  const tint = colors.dark ? 'rgba(5, 18, 12, 0.112)' : 'rgba(255, 255, 255, 0.098)';
+  const borderColor = colors.dark ? 'rgba(210, 255, 226, 0.192)' : 'rgba(255, 255, 255, 0.576)';
+  return (
+    <GlassButtonSurface
+      accessibilityLabel={accessibilityLabel}
+      contentStyle={styles.frostedBackContent}
+      effect="regular"
+      onPress={onPress}
+      style={[
+        styles.frostedBackButton,
+        { backgroundColor: tint, borderColor },
+        makeShadow(colors, colors.dark ? 0.368 : 0.16, 11.2),
+      ]}
+      tintColor={tint}
+      wrapperStyle={[styles.frostedBackWrapper, wrapperStyle]}
+    >
+      <Ionicons color={colors.text} name="chevron-back" size={25} />
+    </GlassButtonSurface>
   );
 }
 
@@ -361,9 +405,34 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
+  screenContent: {
+    flex: 1,
+  },
   centered: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  frostedBackButton: {
+    borderRadius: 24,
+    borderWidth: 1.2,
+    height: 48,
+    minHeight: 48,
+    overflow: 'hidden',
+    paddingHorizontal: 0,
+    width: 48,
+  },
+  frostedBackContent: {
+    alignItems: 'center',
+    flex: 0,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  frostedBackWrapper: {
+    left: 16,
+    position: 'absolute',
+    top: 12,
+    zIndex: 30,
   },
   glowOne: {
     borderRadius: 220,
@@ -419,7 +488,7 @@ const styles = StyleSheet.create({
   },
   segmentedContent: {
     flexDirection: 'row',
-    minHeight: 48,
+    minHeight: 52,
     padding: 4,
     position: 'relative',
   },
@@ -442,13 +511,18 @@ const styles = StyleSheet.create({
   },
   segmentOption: {
     alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: 10,
   },
   segmentText: {
     fontSize: 13,
     fontWeight: '900',
+    includeFontPadding: false,
+    lineHeight: 17,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   fieldSurface: {
     borderRadius: 18,
@@ -473,6 +547,7 @@ const styles = StyleSheet.create({
   },
   buttonContentSurface: {
     alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
   },
   buttonSurface: {

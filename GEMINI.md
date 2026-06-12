@@ -8,12 +8,13 @@ This document provides essential guidance for AI agents working on the CarbonTra
 
 ## Architecture Overview
 
-The project is a monorepo with three main parts:
+The project is a monorepo with four main parts:
 1.  **`backend/`**: A PHP-based REST API built with the Slim micro-framework.
 2.  **`frontend/`**: A React single-page application (SPA) built with Vite.
 3.  **`mobile/`**: An Expo / React Native mobile application.
+4.  **`miniprogram/`**: A WeChat Mini Program client.
 
-Communication between the frontend, mobile app, and backend is via a RESTful API, which is documented in `backend/openapi.json`.
+Communication between the frontend, mobile app, miniprogram, and backend is via a RESTful API, which is documented in `backend/openapi.json`.
 
 ### Key Files
 - `backend/openapi.json`: The OpenAPI specification that defines the contract between the frontend and backend. Keeping this up-to-date is crucial.
@@ -23,6 +24,7 @@ Communication between the frontend, mobile app, and backend is via a RESTful API
 - `frontend/src/pages/admin/AiWorkspace.jsx`: Dedicated admin AI workspace. Keep its UX, starter prompts, and capability presentation aligned with the backend admin AI catalogue and routes.
 - `frontend/src/pages/admin/Cron.jsx`: Admin cron console for task cadence, run history, and manual task execution.
 - `mobile/`: Expo / React Native mobile client. Keep its API assumptions aligned with `backend/openapi.json`.
+- `miniprogram/`: WeChat Mini Program client. Keep its API assumptions aligned with `backend/openapi.json` and its upload/release flow aligned with the `carbon-track/miniprogram` mirror repository.
 - `backend/database/localhost.sql`: Contains the primary database schema. All migration scripts in `backend/database/migrations/` have been executed, so this file, along with the migration scripts, represents the definitive schema.
 - `backend/config/admin_ai_commands.json`: Source of truth for the admin AI assistant's single multi-turn command and tool catalogue. Whenever you add, rename, or remove admin functionality that the AI should understand, update this file (and keep the companion loader `admin_ai_commands.php` in sync) so the knowledge base matches the code.
 
@@ -41,7 +43,7 @@ The backend is a lean API service. Avoid adding redundant database structure che
 - **Setup**: Run `composer install` in the `backend` directory.
 - **Run Server**: `composer start` (runs `php -S localhost:8080 -t public`).
 - **Run Tests**: `composer test` (runs `phpunit`). Tests are located in `backend/tests/`.
-- **Debugging API**: To bypass Cloudflare firewall protection when debugging backend APIs, add the `x-debug-token` header with value `9c0d4f1a-5a0b-4b2c-9c7e-a1e2f3d4b5c6` to your requests.
+- **Debugging API**: There is no repository-implemented `x-debug-token` bypass. When Cloudflare or edge policy blocks local API debugging, use the environment's approved proxy/firewall-bypass setup instead of documenting or adding a backend bypass header.
 - **Logging & Audit Baseline (Mandatory)**: Any backend feature you add or modify must be wired into the project’s custom observability stack so operations can troubleshoot and auditors can trace behavior.
     - **System logs**: HTTP endpoints must remain covered by the global `RequestLoggingMiddleware` + `SystemLogService`. Non-HTTP execution paths (jobs, CLI flows, async tasks) must add an equivalent explicit system-event record or documented fallback.
     - **Audit logs**: Business actions, admin operations, user-triggered mutations, sensitive reads, exports, AI operations, and batch/system actions must record structured entries through `AuditLogService`.
@@ -102,6 +104,19 @@ The mobile app is a React Native client built with Expo and lives under `mobile/
     - Run `pnpm install --frozen-lockfile` and `pnpm exec expo config --type public`.
     - Keep `mobile/pnpm-lock.yaml` committed and do not add `mobile/package-lock.json`.
     - If mobile behavior depends on backend endpoints, verify the contract against `backend/openapi.json`.
+
+## Miniprogram (WeChat Mini Program)
+
+The WeChat Mini Program client lives under `miniprogram/`.
+
+### Developer Workflow
+- **Setup**: Run `pnpm install` in the `miniprogram` directory.
+- **Validate**: Run `pnpm validate` to verify the Mini Program manifest, project config, sitemap, and declared pages.
+- **Run Locally**: Open `miniprogram/` with WeChat DevTools.
+- **After Miniprogram Changes (Required)**: After modifying Mini Program pages, config, API clients, or release metadata:
+    - Run `pnpm install --frozen-lockfile` and `pnpm validate`.
+    - Keep `miniprogram/pnpm-lock.yaml` committed and do not add `miniprogram/package-lock.json`.
+    - If Mini Program behavior depends on backend endpoints, verify the contract against `backend/openapi.json`.
 
 ## Admin AI Maintenance
 

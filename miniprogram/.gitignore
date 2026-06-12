@@ -1,0 +1,11 @@
+node_modules/
+dist/
+miniprogram_npm/
+.swc/
+.env
+.env.local
+.env.*.local
+project.private.config.json
+*.local.*
+*.log
+.DS_Store

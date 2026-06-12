@@ -11,6 +11,7 @@
 .agent/
 .wrangler/
 /.worktrees/
+/.cursor/hooks/state/continual-learning.json
 
 # AI Agent Instructions
 
@@ -31,5 +32,15 @@
 /mobile/.env
 /mobile/dist/
 /mobile/web-build/
+
+# Miniprogram ignores
+/miniprogram/node_modules/
+/miniprogram/dist/
+/miniprogram/miniprogram_npm/
+/miniprogram/.swc/
+/miniprogram/.env
+/miniprogram/.env.local
+/miniprogram/.env.*.local
+/miniprogram/project.private.config.json
 # Added by code-review-graph
 .code-review-graph/

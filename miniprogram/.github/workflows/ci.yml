@@ -1,0 +1,43 @@
+# Miniprogram CI for mirror repo - runs push-time smoke checks after monorepo sync
+name: Miniprogram CI
+
+env:
+  NODE_VERSION: '20.9.0'
+  PACKAGE_JSON_FILE: package.json
+
+on:
+  push:
+    branches: [ main, dev ]
+
+jobs:
+  validate:
+    name: miniprogram:validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enforce pnpm-only lockfile
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "::error title=Unexpected npm lockfile::package-lock.json must be removed; use pnpm-lock.yaml only."
+            exit 1
+          fi
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: ${{ env.PACKAGE_JSON_FILE }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate miniprogram project
+        run: pnpm validate

@@ -1,0 +1,11 @@
+{
+  "name": "carbontrack-pow",
+  "version": "0.1.0",
+  "description": "Native batched proof-of-work solver for CarbonTrack mobile.",
+  "main": "index.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "peerDependencies": {
+    "expo": "*"
+  }
+}

@@ -5,6 +5,7 @@ import { focusManager, onlineManager, QueryClient, QueryClientProvider } from '@
 import { AppearanceProvider } from './src/theme';
 import { I18nProvider } from './src/i18n';
 import AppNavigator from './src/navigation/AppNavigator';
+import SecurityCheckIndicator from './src/components/SecurityCheckIndicator';
 
 const APP_DATA_REFRESH_INTERVAL_MS = 2 * 60 * 1000;
 
@@ -83,6 +84,7 @@ export default function App() {
       <AppearanceProvider>
         <I18nProvider>
           <AppNavigator />
+          <SecurityCheckIndicator />
         </I18nProvider>
       </AppearanceProvider>
     </QueryClientProvider>

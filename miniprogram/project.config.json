@@ -1,0 +1,26 @@
+{
+  "appid": "touristappid",
+  "compileType": "miniprogram",
+  "libVersion": "latest",
+  "miniprogramRoot": "dist/",
+  "projectname": "carbontrack-miniprogram",
+  "setting": {
+    "coverView": true,
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "enhance": true
+  },
+  "condition": {
+    "miniprogram": {
+      "list": [
+        {
+          "name": "Home",
+          "pathName": "pages/home/index",
+          "query": "",
+          "launchMode": "default"
+        }
+      ]
+    }
+  }
+}

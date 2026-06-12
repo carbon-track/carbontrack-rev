@@ -260,12 +260,13 @@ function BadgeRow({ item, locked = false }) {
   const { colors } = useTheme();
   const badge = item.badge || item;
   const imageUri = resolveBadgeImage(badge);
+  const imageSource = imageUri ? { uri: imageUri, cache: 'force-cache' } : null;
   return (
     <GlassListItemSurface contentStyle={styles.badgeRowContent} style={styles.badgeRow}>
       <View style={[styles.badgeIcon, { backgroundColor: colors.surfaceStrong, borderColor: colors.borderStrong }]}>
-        {imageUri ? (
-          <ImageLightbox uri={imageUri} title={badgeName(badge, resolvedLanguage, t('profile.badges.unknown'))} style={styles.badgeImageButton} contentStyle={styles.badgeImageContent}>
-            <Image source={{ uri: imageUri }} style={[styles.badgeImage, locked ? styles.lockedImage : null]} />
+        {imageSource ? (
+          <ImageLightbox source={imageSource} uri={imageUri} style={styles.badgeImageButton} contentStyle={styles.badgeImageContent}>
+            <Image resizeMode="contain" source={imageSource} style={[styles.badgeImage, locked ? styles.lockedImage : null]} />
           </ImageLightbox>
         ) : (
           <Ionicons color={locked ? colors.textMuted : colors.primary} name={locked ? 'lock-closed-outline' : 'ribbon-outline'} size={26} />
@@ -451,6 +452,10 @@ export default function ProfileScreen({ navigation }) {
     navigation?.navigate?.('Record', { checkinDate: date });
   };
 
+  const openSettings = (section) => {
+    navigation?.navigate?.('ProfileSettings', { section });
+  };
+
   return (
     <ScreenBackground>
       <ScrollView
@@ -476,6 +481,17 @@ export default function ProfileScreen({ navigation }) {
           myBadgesData={myBadgesQuery.data}
           loading={badgesQuery.isLoading || myBadgesQuery.isLoading}
         />
+
+        <GlassSurface contentStyle={styles.settings}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.account.title')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>{t('profile.account.subtitle')}</Text>
+          <View style={styles.actionGrid}>
+            <SecondaryButton icon="person-outline" onPress={() => openSettings('profile')} title={t('profile.account.profile')} />
+            <SecondaryButton icon="notifications-outline" onPress={() => openSettings('notifications')} title={t('profile.account.notifications')} />
+            <SecondaryButton icon="shield-checkmark-outline" onPress={() => openSettings('security')} title={t('profile.account.security')} />
+            <SecondaryButton icon="finger-print-outline" onPress={() => openSettings('passkeys')} title={t('profile.account.passkeys')} />
+          </View>
+        </GlassSurface>
 
         <GlassSurface contentStyle={styles.settings}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.appearance')}</Text>
@@ -617,11 +633,16 @@ const styles = StyleSheet.create({
   },
   dayCellContent: {
     alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
   },
   dayText: {
     fontSize: 12,
     fontWeight: '900',
+    includeFontPadding: false,
+    lineHeight: 16,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   selectedBox: {
     gap: 9,
@@ -717,6 +738,9 @@ const styles = StyleSheet.create({
   },
   settings: {
     gap: 18,
+  },
+  actionGrid: {
+    gap: 10,
   },
   settingGroup: {
     gap: 8,
