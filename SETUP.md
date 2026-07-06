@@ -47,6 +47,20 @@ cd carbontrack_rev
 
 ---
 
+### 安装 Git Hooks（推荐）
+
+仓库内已提供可追踪的 `.githooks/`，用于在提交前后执行 `code-review-graph` 检测与增量更新。
+
+- Windows / PowerShell：
+  ```powershell
+  ./scripts/install-git-hooks.ps1
+  ```
+- macOS / Linux / Git Bash：
+  ```bash
+  ./scripts/install-git-hooks.sh
+  ```
+
+---
 ## 后端配置 (PHP/Slim)
 
 ### 1. 安装依赖

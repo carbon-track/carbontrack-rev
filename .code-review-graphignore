@@ -1,0 +1,23 @@
+# Repo-specific heavy or local-only paths that should never enter the graph.
+.agent/**
+.openclaw/**
+.playwright-mcp/**
+.tmp_backup/**
+.vscode/**
+.worktrees/**
+.wrangler/**
+
+# Backend
+backend/.phpunit.cache/**
+
+# Frontend
+frontend/.vite/**
+
+# Mobile
+mobile/.expo/**
+mobile/web-build/**
+
+# WeChat mini program
+miniprogram/.swc/**
+miniprogram/miniprogram_npm/**
+miniprogram/project.private.config.json
