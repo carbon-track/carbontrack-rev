@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "node --test src/lib/userContent.test.cjs src/lib/thermalReceipt.test.cjs src/lib/nativeFeatureFlags.test.cjs src/api/pow.test.cjs src/store/authStore.test.cjs",
+    "test": "node --test src/lib/userContent.test.cjs src/lib/thermalReceipt.test.cjs src/lib/nativeFeatureFlags.test.cjs src/lib/smartActivity.test.cjs src/api/pow.test.cjs src/store/authStore.test.cjs",
     "start": "expo start",
     "start:dev-client": "expo start --dev-client",
     "android": "expo run:android",
@@ -27,6 +27,7 @@
     "expo-file-system": "~19.0.22",
     "expo-font": "~14.0.11",
     "expo-image-picker": "~17.0.11",
+    "expo-linear-gradient": "~15.0.8",
     "expo-localization": "~17.0.8",
     "expo-media-library": "~18.2.1",
     "expo-secure-store": "^15.0.8",
