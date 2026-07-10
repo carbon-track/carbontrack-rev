@@ -92,7 +92,7 @@ export default function HeroCarousel({ items = [], interval = 5000, className })
       onMouseLeave={() => setIsPaused(false)}
     >
       {/* 主要内容区 */}
-      <div className="relative min-h-[280px] overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card via-card to-secondary/35 shadow-2xl md:min-h-[320px]">
+      <div className="relative min-h-[260px] overflow-hidden rounded-lg border border-border/60 bg-gradient-to-br from-card via-card to-secondary/35 shadow-sm sm:min-h-[280px] md:min-h-[320px]">
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={currentIndex}
@@ -106,7 +106,7 @@ export default function HeroCarousel({ items = [], interval = 5000, className })
               opacity: { duration: 0.3 },
               scale: { duration: 0.3 },
             }}
-            className="px-8 py-12 md:px-16 md:py-16"
+            className="px-6 pb-20 pt-10 sm:px-12 sm:py-12 md:px-16 md:py-16"
           >
             {/* 装饰性背景图案 */}
             <div className="absolute inset-0 opacity-5">
@@ -121,7 +121,7 @@ export default function HeroCarousel({ items = [], interval = 5000, className })
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.1, duration: 0.5 }}
               >
-                <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold text-emerald-600 mb-4 leading-tight">
+                <h3 className="mb-4 text-xl font-bold leading-tight text-emerald-600 sm:text-2xl md:text-3xl lg:text-4xl">
                   {currentItem.title}
                 </h3>
               </motion.div>
@@ -131,7 +131,7 @@ export default function HeroCarousel({ items = [], interval = 5000, className })
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
               >
-                <p className="text-muted-foreground mx-auto max-w-2xl text-base leading-relaxed md:text-lg lg:text-xl">
+                <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base md:text-lg lg:text-xl">
                   {currentItem.description}
                 </p>
               </motion.div>
@@ -140,7 +140,7 @@ export default function HeroCarousel({ items = [], interval = 5000, className })
         </AnimatePresence>
         
         {/* 进度条 - 固定在容器底部，不参与动画 */}
-        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-100 via-emerald-200 to-emerald-100 rounded-b-3xl overflow-hidden">
+        <div className="absolute bottom-0 left-0 right-0 h-1.5 overflow-hidden rounded-b-lg bg-gradient-to-r from-emerald-100 via-emerald-200 to-emerald-100">
           {!isPaused && (
             <motion.div
               className="h-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600 shadow-lg relative"
@@ -161,7 +161,7 @@ export default function HeroCarousel({ items = [], interval = 5000, className })
             <button
               type="button"
               onClick={handlePrevious}
-              className="group absolute left-4 top-1/2 z-20 -translate-y-1/2 rounded-full border border-border/60 bg-card/90 p-2 text-emerald-600 shadow-lg backdrop-blur-sm transition-all hover:scale-110 hover:bg-card hover:shadow-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-background md:p-3"
+              className="group absolute bottom-4 left-3 z-20 rounded-full border border-border/60 bg-card/90 p-2 text-emerald-600 shadow-sm backdrop-blur-sm transition-all hover:scale-110 hover:bg-card focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-background sm:bottom-auto sm:left-4 sm:top-1/2 sm:-translate-y-1/2 md:p-3"
               aria-label={t('home.hero.carouselPrevious')}
             >
               <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:-translate-x-0.5" />
@@ -170,7 +170,7 @@ export default function HeroCarousel({ items = [], interval = 5000, className })
             <button
               type="button"
               onClick={handleNext}
-              className="group absolute right-4 top-1/2 z-20 -translate-y-1/2 rounded-full border border-border/60 bg-card/90 p-2 text-emerald-600 shadow-lg backdrop-blur-sm transition-all hover:scale-110 hover:bg-card hover:shadow-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-background md:p-3"
+              className="group absolute bottom-4 right-3 z-20 rounded-full border border-border/60 bg-card/90 p-2 text-emerald-600 shadow-sm backdrop-blur-sm transition-all hover:scale-110 hover:bg-card focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-background sm:bottom-auto sm:right-4 sm:top-1/2 sm:-translate-y-1/2 md:p-3"
               aria-label={t('home.hero.carouselNext')}
             >
               <ChevronRight className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:translate-x-0.5" />
@@ -183,7 +183,7 @@ export default function HeroCarousel({ items = [], interval = 5000, className })
           <button
             type="button"
             onClick={() => setIsPaused(!isPaused)}
-            className="group absolute right-4 top-4 z-20 rounded-full border border-border/60 bg-card/90 p-2 text-emerald-600 shadow-lg backdrop-blur-sm transition-all hover:scale-110 hover:bg-card hover:shadow-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-background"
+            className="group absolute right-3 top-3 z-20 rounded-full border border-border/60 bg-card/90 p-2 text-emerald-600 shadow-sm backdrop-blur-sm transition-all hover:scale-110 hover:bg-card focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-background sm:right-4 sm:top-4"
             aria-label={isPaused ? t('home.hero.carouselPlay') : t('home.hero.carouselPause')}
           >
             {isPaused ? (

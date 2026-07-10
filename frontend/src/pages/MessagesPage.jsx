@@ -159,33 +159,35 @@ export default function MessagesPage() {
   const pagination = data?.data?.pagination || {};
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
+    <div className="relative min-h-screen bg-background text-foreground">
       {/* Ambient Glow */}
-      <div className="absolute top-0 right-1/4 -z-10 h-[500px] w-[500px] blur-[120px] bg-gradient-to-tr from-indigo-50/50 via-purple-50/30 to-transparent opacity-50 dark:from-indigo-900/20 dark:via-purple-900/10 dark:opacity-30 pointer-events-none" />
+      <div className="pointer-events-none absolute right-0 top-0 -z-10 h-[500px] w-[min(500px,100vw)] bg-gradient-to-tr from-indigo-50/50 via-purple-50/30 to-transparent opacity-50 blur-[120px] dark:from-indigo-900/20 dark:via-purple-900/10 dark:opacity-30 sm:right-1/4" />
       
       <div className="container mx-auto py-8 px-4 relative">
-        <div className="mb-8 flex justify-between items-center">
-          <div>
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-white/60">{t('messages.title')}</h1>
             <p className="text-muted-foreground">{t('messages.subtitle')}</p>
           </div>
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            onClick={handleMarkAllRead}
-            disabled={markAllReadMutation.isLoading || messages.filter(m => !m.is_read).length === 0}
-          >
-            <MailOpen className="h-4 w-4 mr-2" /> {t('messages.markAllRead')}
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDeleteAll}
-            disabled={messages.length === 0}
-          >
-            <Trash2 className="h-4 w-4 mr-2" /> {t('messages.deleteAll')}
-          </Button>
+          <div className="grid w-full grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:flex sm:w-auto sm:shrink-0">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={handleMarkAllRead}
+              disabled={markAllReadMutation.isLoading || messages.filter(m => !m.is_read).length === 0}
+            >
+              <MailOpen className="h-4 w-4 mr-2" /> {t('messages.markAllRead')}
+            </Button>
+            <Button
+              variant="destructive"
+              className="w-full sm:w-auto"
+              onClick={handleDeleteAll}
+              disabled={messages.length === 0}
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> {t('messages.deleteAll')}
+            </Button>
+          </div>
         </div>
-      </div>
 
       <MessageFilters
         filters={filters}

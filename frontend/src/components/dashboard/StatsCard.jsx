@@ -55,7 +55,7 @@ export function StatsCard({
   if (loading) {
     return (
       <Card className="border-border/80 bg-card/95">
-        <CardContent className="p-6">
+        <CardContent className="p-6 sm:pt-6">
           <div className="animate-pulse">
             <div className="flex items-center justify-between mb-4">
               <div className="h-4 w-1/2 rounded bg-muted"></div>
@@ -71,7 +71,7 @@ export function StatsCard({
 
   return (
     <Card className="border-border/80 bg-card/95 transition-shadow duration-200 hover:shadow-md">
-      <CardContent className="p-6">
+      <CardContent className="p-6 sm:pt-6">
         <div className="flex items-center justify-between mb-4">
           <CardTitle className="text-sm font-medium text-muted-foreground">
             {title}

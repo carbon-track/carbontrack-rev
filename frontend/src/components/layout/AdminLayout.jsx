@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { QueryClientProvider } from 'react-query';
 import {
   Award,
@@ -36,6 +36,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
   SidebarInset,
+  SidebarRouteSync,
 } from '../ui/sidebar';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/badge';
@@ -61,6 +62,15 @@ const NAV_LINKS = [
   { key: 'diagnostics', to: '/admin/diagnostics', icon: Stethoscope },
 ];
 
+const normalizePath = (path) => (path.length > 1 ? path.replace(/\/+$/, '') : path);
+
+const matchesPath = (pathname, target) => {
+  const normalizedPathname = normalizePath(pathname);
+  const normalizedTarget = normalizePath(target);
+  return normalizedPathname === normalizedTarget || normalizedPathname.startsWith(`${normalizedTarget}/`);
+};
+
+
 export default function AdminLayout() {
   const { t } = useTranslation(['admin', 'footer', 'nav']);
   const navigate = useNavigate();
@@ -72,7 +82,9 @@ export default function AdminLayout() {
   })), [t]);
 
   const activeLink = useMemo(
-    () => translatedLinks.find((link) => location.pathname.startsWith(link.to)),
+    () => [...translatedLinks]
+      .sort((left, right) => normalizePath(right.to).length - normalizePath(left.to).length)
+      .find((link) => matchesPath(location.pathname, link.to)),
     [location.pathname, translatedLinks]
   );
 
@@ -93,28 +105,13 @@ export default function AdminLayout() {
     return () => target.removeEventListener('keydown', handler);
   }, [navigate]);
 
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return undefined;
-    }
-
-    const previousRootOverflowX = document.documentElement.style.overflowX;
-    const previousBodyOverflowX = document.body.style.overflowX;
-
-    document.documentElement.style.overflowX = 'hidden';
-    document.body.style.overflowX = 'hidden';
-
-    return () => {
-      document.documentElement.style.overflowX = previousRootOverflowX;
-      document.body.style.overflowX = previousBodyOverflowX;
-    };
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-background text-foreground">
         <Navbar />
         <SidebarProvider>
+          <SidebarRouteSync routeKey={`${location.pathname}${location.search}${location.hash}`} />
           <div className="relative flex min-h-[calc(100vh-4rem)] min-w-0 flex-col">
             <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.18),_transparent_65%)]" />
             <div className="flex min-w-0 flex-1">
@@ -132,7 +129,7 @@ export default function AdminLayout() {
                   <SidebarMenu className="gap-1.5">
                     {translatedLinks.map((link) => {
                       const Icon = link.icon;
-                      const isActive = location.pathname.startsWith(link.to);
+                      const isActive = activeLink?.to === link.to;
                       return (
                         <SidebarMenuItem key={link.to}>
                           <SidebarMenuButton
@@ -146,11 +143,12 @@ export default function AdminLayout() {
                               isActive && 'border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm dark:border-emerald-500/45 dark:bg-emerald-500/12 dark:text-emerald-200'
                             )}
                           >
-                            <NavLink
+                            <Link
                               to={link.to}
-                              className={({ isActive: navIsActive }) => cn(
+                              aria-current={isActive ? 'page' : undefined}
+                              className={cn(
                                 'flex w-full items-center gap-3 text-sm font-medium text-muted-foreground transition-colors',
-                                (isActive || navIsActive) && 'text-emerald-700 dark:text-emerald-200'
+                                isActive && 'text-emerald-700 dark:text-emerald-200'
                               )}
                             >
                               <span className={cn(
@@ -160,7 +158,7 @@ export default function AdminLayout() {
                                 <Icon className="h-4 w-4" />
                               </span>
                               <span className="truncate">{link.label}</span>
-                            </NavLink>
+                            </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       );
@@ -176,7 +174,7 @@ export default function AdminLayout() {
                   </div>
                 </SidebarFooter>
               </Sidebar>
-              <SidebarInset className="relative flex min-w-0 flex-1 flex-col overflow-x-hidden bg-transparent">
+              <SidebarInset className="relative flex max-w-full min-w-0 flex-1 flex-col bg-transparent">
                 <header className="top-16 z-30 flex w-full max-w-full flex-col gap-4 border-b border-transparent px-4 pb-4 pt-4 sm:px-6 md:px-10">
                   <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
                     <SidebarTrigger className="self-start md:hidden" />
@@ -222,7 +220,7 @@ export default function AdminLayout() {
                     </div>
                   </div>
                 </header>
-                <main className="min-w-0 overflow-x-hidden px-4 pb-10 pt-6 sm:px-6 md:px-10">
+                <main className="w-full max-w-full min-w-0 px-4 pb-10 pt-6 sm:px-6 md:px-10">
                   <div className="mx-auto w-full min-w-0 max-w-7xl space-y-6">
                     <Outlet />
                   </div>

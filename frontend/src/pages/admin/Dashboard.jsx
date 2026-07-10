@@ -667,18 +667,18 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen min-w-0 w-full max-w-full space-y-8 overflow-x-clip pb-8">
+    <div className="min-w-0 w-full max-w-full space-y-6 pb-8">
       {/* Hero Header Section */}
-      <Card className="min-w-0 overflow-hidden border-2 transition-shadow duration-300 hover:shadow-lg">
-        <CardHeader className="space-y-6">
+      <Card className="min-w-0 overflow-hidden">
+        <CardHeader className="space-y-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-6">
             <div className="min-w-0 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-500/20">
-                  <LineChartIcon className="h-7 w-7 text-white" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-600">
+                  <LineChartIcon className="h-6 w-6 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <CardTitle className="break-words bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-3xl">
+                  <CardTitle className="break-words text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                     {t('admin.dashboard.title')}
                   </CardTitle>
                   <CardDescription className="mt-1 break-words text-base">
@@ -688,7 +688,7 @@ export default function AdminDashboardPage() {
               </div>
             </div>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 shadow-sm">
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 shadow-sm">
                 <input
                   type="checkbox"
                   className="h-4 w-4 rounded border-input bg-background text-green-600 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
@@ -701,7 +701,7 @@ export default function AdminDashboardPage() {
               </div>
               <Button 
                 size="default" 
-                className="w-full rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 shadow-md transition-all duration-200 hover:from-green-600 hover:to-emerald-700 hover:shadow-lg sm:w-auto" 
+                className="w-full rounded-lg bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 sm:w-auto"
                 onClick={() => refetch()} 
                 disabled={isFetching}
               >
@@ -717,7 +717,7 @@ export default function AdminDashboardPage() {
             </span>
           </div>
         </CardHeader>
-          <CardContent className="pb-8">
+          <CardContent className="pb-6">
             {isLoading && (
               <div className="flex flex-col items-center justify-center py-16 space-y-4">
                 <div className="relative">
@@ -737,19 +737,9 @@ export default function AdminDashboardPage() {
             {!isLoading && !isError && (
               <>
                 {/* Main Stats Grid */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {summaryCards.map((item, index) => {
                     const Icon = item.icon;
-                    const gradients = [
-                      'from-blue-500/10 to-blue-600/10 dark:from-blue-500/20 dark:to-blue-600/20',
-                      'from-green-500/10 to-emerald-600/10 dark:from-green-500/20 dark:to-emerald-600/20',
-                      'from-purple-500/10 to-violet-600/10 dark:from-purple-500/20 dark:to-violet-600/20',
-                      'from-orange-500/10 to-amber-600/10 dark:from-orange-500/20 dark:to-amber-600/20',
-                      'from-pink-500/10 to-rose-600/10 dark:from-pink-500/20 dark:to-rose-600/20',
-                      'from-teal-500/10 to-cyan-600/10 dark:from-teal-500/20 dark:to-cyan-600/20',
-                      'from-indigo-500/10 to-blue-600/10 dark:from-indigo-500/20 dark:to-blue-600/20',
-                      'from-emerald-500/10 to-green-600/10 dark:from-emerald-500/20 dark:to-green-600/20',
-                    ];
                     const iconColors = [
                       'text-blue-600 dark:text-blue-400',
                       'text-green-600 dark:text-green-400',
@@ -763,27 +753,30 @@ export default function AdminDashboardPage() {
                     return (
                       <Card
                         key={item.key}
-                        className={`group relative overflow-hidden border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
-                          item.onClick ? 'cursor-pointer' : ''
+                        className={`relative overflow-hidden rounded-lg border border-border shadow-none ${
+                          item.onClick ? 'cursor-pointer transition-colors hover:bg-muted/40' : ''
                         }`}
                         onClick={item.onClick}
                       >
-                        <div className={`absolute inset-0 bg-gradient-to-br ${gradients[index % gradients.length]} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-                        <CardContent className="relative p-6 space-y-4">
-                          <div className="flex items-start justify-between">
-                            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${gradients[index % gradients.length]} shadow-md group-hover:scale-110 transition-transform duration-300`}>
-                              <Icon className={`h-7 w-7 ${iconColors[index % iconColors.length]}`} />
+                        <CardContent className="space-y-3 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                              <Icon className={`h-5 w-5 ${iconColors[index % iconColors.length]}`} />
                             </div>
                             {item.onClick && (
-                              <ArrowUpRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                              <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
                             )}
                           </div>
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+                          <div className="space-y-1.5">
+                            <p className="break-words text-xs font-medium text-muted-foreground">
                               {item.title}
                             </p>
-                            <p className="text-3xl font-bold tracking-tight">{item.primary}</p>
-                            <p className="text-xs text-muted-foreground leading-relaxed">{item.secondary}</p>
+                            <p className="break-words text-2xl font-semibold tabular-nums tracking-tight">
+                              {item.primary}
+                            </p>
+                            <p className="break-words text-xs leading-relaxed text-muted-foreground">
+                              {item.secondary}
+                            </p>
                           </div>
                         </CardContent>
                       </Card>
@@ -792,29 +785,20 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {/* Mini Stats Bar */}
-                <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
-                  {miniStats.map((item, index) => {
-                    const borderColors = [
-                      'border-l-blue-500',
-                      'border-l-green-500',
-                      'border-l-purple-500',
-                      'border-l-orange-500',
-                      'border-l-pink-500',
-                    ];
-                    return (
-                      <div 
-                        key={item.key} 
-                        className={`group rounded-xl border-2 border-l-4 ${borderColors[index % borderColors.length]} bg-card/50 backdrop-blur p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}
-                      >
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                          {item.label}
-                        </p>
-                        <p className="text-xl font-bold group-hover:scale-105 transition-transform duration-200">
-                          {item.value}
-                        </p>
-                      </div>
-                    );
-                  })}
+                <div className="mt-5 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                  {miniStats.map((item) => (
+                    <div
+                      key={item.key}
+                      className="min-w-0 rounded-lg border border-border bg-card p-4"
+                    >
+                      <p className="mb-1.5 break-words text-xs font-medium text-muted-foreground">
+                        {item.label}
+                      </p>
+                      <p className="break-words text-lg font-semibold tabular-nums">
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
                 </div>
             </>
           )}
