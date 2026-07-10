@@ -295,7 +295,6 @@ export default function RecordScreen({ navigation, route }) {
       return result;
     },
     onSuccess: (result) => {
-      setIsSmartFillAnalyzing(false);
       const { activity, draft } = buildSmartActivityDraft(result?.prediction, activities);
       if (!activity || !draft) {
         const message = t('record.smartFill.notFound');
@@ -327,7 +326,6 @@ export default function RecordScreen({ navigation, route }) {
       }
     },
     onError: (error) => {
-      setIsSmartFillAnalyzing(false);
       const message = getApiErrorMessage(error, t('record.smartFill.failedMessage'));
       Alert.alert(t('record.smartFill.failedTitle'), message);
     },
