@@ -753,10 +753,20 @@ export default function AdminDashboardPage() {
                     return (
                       <Card
                         key={item.key}
+                        role={item.onClick ? 'button' : undefined}
+                        tabIndex={item.onClick ? 0 : undefined}
                         className={`relative overflow-hidden rounded-lg border border-border shadow-none ${
-                          item.onClick ? 'cursor-pointer transition-colors hover:bg-muted/40' : ''
+                          item.onClick
+                            ? 'cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                            : ''
                         }`}
                         onClick={item.onClick}
+                        onKeyDown={(event) => {
+                          if (item.onClick && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            item.onClick();
+                          }
+                        }}
                       >
                         <CardContent className="space-y-3 p-4">
                           <div className="flex items-start justify-between gap-3">
