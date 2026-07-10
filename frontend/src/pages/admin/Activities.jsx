@@ -15,7 +15,12 @@ export default function AdminActivitiesPage() {
     const nextTab = tabParam === 'review' ? 'review' : 'library';
 
     setTab((currentTab) => (currentTab === nextTab ? currentTab : nextTab));
-  }, [searchParams]);
+    if (tabParam && tabParam !== 'review') {
+      const next = new URLSearchParams(searchParams);
+      next.delete('tab');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleTabChange = (nextTab) => {
     setTab(nextTab);

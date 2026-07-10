@@ -1104,7 +1104,7 @@ export default function AdminLlmUsagePage() {
             </div>
           )}
           {conversationDetailQuery.data && (
-            <ScrollArea className="max-h-[70vh] pr-2">
+            <ScrollArea className="min-h-0 flex-1 pr-2">
               <div className="space-y-4 text-xs">
                 <div className="grid gap-3 md:grid-cols-2">
                   <DetailItem label={t('admin.llmUsage.sessions.conversationId', { defaultValue: 'Conversation ID' })} value={conversationDetailQuery.data.conversation_id} />
@@ -1165,7 +1165,7 @@ export default function AdminLlmUsagePage() {
             </div>
           )}
           {logDetailQuery.data && (
-            <ScrollArea className="max-h-[70vh] pr-2">
+            <ScrollArea className="min-h-0 flex-1 pr-2">
               <div className="space-y-4 text-xs">
                 <div className="grid gap-3 md:grid-cols-2">
                   <DetailItem label={t('admin.llmUsage.logs.columns.conversationId', { defaultValue: 'Conversation' })} value={logDetailQuery.data.conversation_id || '-'} />
