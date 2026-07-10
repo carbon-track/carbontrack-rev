@@ -91,25 +91,46 @@ const getActivityName = (item, language) => {
   return item.name_en || item.name_zh || item.combined_name || item.category || '';
 };
 
+const SMART_PANEL_RADIUS = 22;
+const INTELLIGENCE_EDGE_WIDTH = 3;
+const INTELLIGENCE_FRAME_START_INSET = -1;
 const INTELLIGENCE_GRADIENT_COLORS = [
-  'rgba(255, 55, 95, 0.96)',
-  'rgba(255, 159, 10, 0.92)',
-  'rgba(255, 214, 10, 0.88)',
-  'rgba(50, 215, 75, 0.92)',
-  'rgba(100, 210, 255, 0.96)',
-  'rgba(10, 132, 255, 0.96)',
-  'rgba(191, 90, 242, 0.92)',
-  'rgba(255, 45, 85, 0.96)',
+  '#ff3b5c',
+  '#ff7a1a',
+  '#ffd60a',
+  '#9be21b',
+  '#32d974',
+  '#20d6c7',
+  '#22c7f2',
+  '#3b82f6',
+  '#635bff',
+  '#9b5de5',
+  '#e747c4',
+  '#ff3b5c',
+  '#ff3b5c',
+  '#ff3b5c',
+  '#ff7a1a',
+  '#ffd60a',
+  '#9be21b',
+  '#32d974',
+  '#20d6c7',
+  '#22c7f2',
+  '#3b82f6',
+  '#635bff',
+  '#9b5de5',
+  '#e747c4',
+  '#ff3b5c',
 ];
 
-const INTELLIGENCE_GRADIENT_LOCATIONS = [0, 0.14, 0.28, 0.42, 0.58, 0.72, 0.86, 1];
+const INTELLIGENCE_GRADIENT_LOCATIONS = [
+  0, 0.042, 0.083, 0.125, 0.167, 0.208, 0.25, 0.292, 0.333, 0.375, 0.417, 0.458, 0.5,
+  0.542, 0.583, 0.625, 0.667, 0.708, 0.75, 0.792, 0.833, 0.875, 0.917, 0.958, 1,
+];
 
 function AppleIntelligenceGlow({ active }) {
   const wave = React.useRef(new Animated.Value(0)).current;
-  const { width } = useWindowDimensions();
-  const bandWidth = Math.max(620, Math.min(width * 1.7, 820));
-  const horizontalDistance = Math.max(250, Math.min(width - 60, 470));
-  const verticalDistance = 196;
+  const { isDark } = useTheme();
+  const [frameSize, setFrameSize] = useState({ height: 0, width: 0 });
 
   useEffect(() => {
     if (!active) {
@@ -130,83 +151,70 @@ function AppleIntelligenceGlow({ active }) {
     return () => animation.stop();
   }, [active, wave]);
 
-  const horizontal = wave.interpolate({
+  const rotation = wave.interpolate({
     inputRange: [0, 1],
-    outputRange: [-bandWidth * 0.5, horizontalDistance],
-  });
-  const horizontalReverse = wave.interpolate({
-    inputRange: [0, 1],
-    outputRange: [horizontalDistance, -bandWidth * 0.5],
-  });
-  const vertical = wave.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-bandWidth * 0.22, verticalDistance],
-  });
-  const verticalReverse = wave.interpolate({
-    inputRange: [0, 1],
-    outputRange: [verticalDistance, -bandWidth * 0.22],
+    outputRange: ['0deg', '360deg'],
   });
   const pulse = wave.interpolate({
     inputRange: [0, 0.5, 1],
-    outputRange: [0.78, 1, 0.78],
+    outputRange: [0.84, 1, 0.84],
   });
+  const scale = wave.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1.04, 1.1, 1.04],
+  });
+  const gradientSize = Math.hypot(frameSize.width, frameSize.height) * 1.04;
+  const gradientLeft = (frameSize.width - gradientSize) / 2;
+  const gradientTop = (frameSize.height - gradientSize) / 2;
+  const cutoutColor = isDark ? 'rgba(12, 30, 21, 0.985)' : 'rgba(232, 249, 239, 0.985)';
+  const innerHaloStyle = {
+    boxShadow: [{
+      blurRadius: 16,
+      color: isDark ? 'rgba(226, 228, 255, 0.34)' : 'rgba(255, 255, 255, 0.32)',
+      inset: true,
+      offsetX: 0,
+      offsetY: 0,
+    }],
+  };
+  const handleLayout = React.useCallback((event) => {
+    const { height, width } = event.nativeEvent.layout;
+    setFrameSize((current) => (
+      current.height === height && current.width === width ? current : { height, width }
+    ));
+  }, []);
 
   return (
-    <View pointerEvents="none" style={[styles.aiGlowFrame, active ? styles.aiGlowFrameActive : null]}>
-      <View style={styles.aiGlowSoftWash} />
-      <View style={styles.aiGlowHairline} />
-      <Animated.View style={[
-        styles.aiGlowBandHorizontal,
-        styles.aiGlowTop,
-        { width: bandWidth, transform: [{ translateX: horizontal }, { scaleY: pulse }] },
-      ]}>
-        <LinearGradient
-          colors={INTELLIGENCE_GRADIENT_COLORS}
-          locations={INTELLIGENCE_GRADIENT_LOCATIONS}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={styles.aiGlowGradientFill}
-        />
-      </Animated.View>
-      <Animated.View style={[
-        styles.aiGlowBandHorizontal,
-        styles.aiGlowBottom,
-        { width: bandWidth, transform: [{ translateX: horizontalReverse }, { scaleY: pulse }] },
-      ]}>
-        <LinearGradient
-          colors={[...INTELLIGENCE_GRADIENT_COLORS].reverse()}
-          locations={INTELLIGENCE_GRADIENT_LOCATIONS}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={styles.aiGlowGradientFill}
-        />
-      </Animated.View>
-      <Animated.View style={[
-        styles.aiGlowBandVertical,
-        styles.aiGlowLeft,
-        { height: bandWidth * 0.62, transform: [{ translateY: vertical }, { scaleX: pulse }] },
-      ]}>
-        <LinearGradient
-          colors={INTELLIGENCE_GRADIENT_COLORS}
-          locations={INTELLIGENCE_GRADIENT_LOCATIONS}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.aiGlowGradientFill}
-        />
-      </Animated.View>
-      <Animated.View style={[
-        styles.aiGlowBandVertical,
-        styles.aiGlowRight,
-        { height: bandWidth * 0.62, transform: [{ translateY: verticalReverse }, { scaleX: pulse }] },
-      ]}>
-        <LinearGradient
-          colors={[...INTELLIGENCE_GRADIENT_COLORS].reverse()}
-          locations={INTELLIGENCE_GRADIENT_LOCATIONS}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.aiGlowGradientFill}
-        />
-      </Animated.View>
+    <View
+      onLayout={handleLayout}
+      pointerEvents="none"
+      style={[styles.aiGlowFrame, active ? styles.aiGlowFrameActive : null]}
+    >
+      {gradientSize > 0 ? (
+        <Animated.View
+          style={[
+            styles.aiGlowGradientLayer,
+            {
+              height: gradientSize,
+              left: gradientLeft,
+              opacity: pulse,
+              top: gradientTop,
+              transform: [{ rotate: rotation }, { scale }],
+              width: gradientSize,
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={INTELLIGENCE_GRADIENT_COLORS}
+            locations={INTELLIGENCE_GRADIENT_LOCATIONS}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.aiGlowGradientFill}
+          />
+        </Animated.View>
+      ) : null}
+      <View style={[styles.aiGlowCutout, { backgroundColor: cutoutColor }]} />
+      <Animated.View style={[styles.aiGlowInnerHalo, innerHaloStyle, { opacity: pulse }]} />
+      <View style={styles.aiGlowInnerHighlight} />
     </View>
   );
 }
@@ -227,6 +235,7 @@ export default function RecordScreen({ navigation, route }) {
   const [submittedReceipt, setSubmittedReceipt] = useState(null);
   const [smartQuery, setSmartQuery] = useState('');
   const [smartFillApplied, setSmartFillApplied] = useState(false);
+  const [isSmartFillAnalyzing, setIsSmartFillAnalyzing] = useState(false);
 
   useEffect(() => {
     const requestedDate = route?.params?.checkinDate;
@@ -324,14 +333,16 @@ export default function RecordScreen({ navigation, route }) {
       const message = getApiErrorMessage(error, t('record.smartFill.failedMessage'));
       Alert.alert(t('record.smartFill.failedTitle'), message);
     },
+    onSettled: () => setIsSmartFillAnalyzing(false),
   });
 
   const requestSmartFill = () => {
     const query = smartQuery.trim();
-    if (!query) {
+    if (!query || isSmartFillAnalyzing) {
       return;
     }
     setSmartFillApplied(false);
+    setIsSmartFillAnalyzing(true);
     smartFillMutation.mutate(query);
   };
 
@@ -444,10 +455,13 @@ export default function RecordScreen({ navigation, route }) {
 
               <GlassListItemSurface
                 contentStyle={styles.smartPanel}
-                style={styles.smartPanelSurface}
+                style={[
+                  styles.smartPanelSurface,
+                  isSmartFillAnalyzing ? styles.smartPanelSurfaceActive : null,
+                ]}
                 tintColor={colors.primarySoft}
               >
-                <AppleIntelligenceGlow active={smartFillMutation.isPending} />
+                <AppleIntelligenceGlow active={isSmartFillAnalyzing} />
                 <View style={styles.smartHeader}>
                   <View style={[styles.smartIcon, { backgroundColor: colors.primarySoft }]}>
                     <Ionicons color={colors.primary} name="sparkles-outline" size={18} />
@@ -458,7 +472,7 @@ export default function RecordScreen({ navigation, route }) {
                   </View>
                 </View>
                 <TextInput
-                  editable={!smartFillMutation.isPending}
+                  editable={!isSmartFillAnalyzing}
                   maxLength={500}
                   multiline
                   onChangeText={(value) => {
@@ -481,16 +495,20 @@ export default function RecordScreen({ navigation, route }) {
                 <View style={styles.smartFooter}>
                   <Text style={[styles.smartCount, { color: colors.textMuted }]}>{smartQuery.length}/500</Text>
                   <GlassPressable
-                    disabled={!smartQuery.trim() || smartFillMutation.isPending || factorsQuery.isLoading}
+                    disabled={!smartQuery.trim() || isSmartFillAnalyzing || factorsQuery.isLoading}
                     onPress={requestSmartFill}
-                    style={[
-                      styles.smartButton,
-                      { borderColor: colors.primary },
-                    ]}
+                    preserveGlassWhenDisabled
+                    style={styles.smartButton}
                     contentStyle={styles.smartButtonContent}
-                    tintColor={colors.primarySoft}
                   >
-                    <View style={styles.smartButtonInner}>
+                    <View
+                      style={[
+                        styles.smartButtonInner,
+                        (!smartQuery.trim() || factorsQuery.isLoading) && !isSmartFillAnalyzing
+                          ? styles.smartButtonInnerDisabled
+                          : null,
+                      ]}
+                    >
                       <View style={styles.smartButtonIconSlot}>
                         <Ionicons color={colors.primary} name="color-wand-outline" size={18} />
                       </View>
@@ -498,7 +516,7 @@ export default function RecordScreen({ navigation, route }) {
                         numberOfLines={1}
                         style={[styles.smartButtonText, { color: colors.primary }]}
                       >
-                        {smartFillMutation.isPending ? t('record.smartFill.analyzing') : t('record.smartFill.button')}
+                        {isSmartFillAnalyzing ? t('record.smartFill.analyzing') : t('record.smartFill.button')}
                       </Text>
                     </View>
                   </GlassPressable>
@@ -652,8 +670,11 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   smartPanelSurface: {
-    borderRadius: 22,
+    borderRadius: SMART_PANEL_RADIUS,
     position: 'relative',
+  },
+  smartPanelSurfaceActive: {
+    borderColor: 'transparent',
   },
   smartPanel: {
     gap: 12,
@@ -729,6 +750,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 20,
   },
+  smartButtonInnerDisabled: {
+    opacity: 0.52,
+  },
   smartButtonText: {
     fontSize: 14,
     fontWeight: '900',
@@ -744,68 +768,59 @@ const styles = StyleSheet.create({
   },
   aiGlowFrame: {
     borderCurve: 'continuous',
-    borderRadius: 22,
+    borderRadius: SMART_PANEL_RADIUS,
     bottom: 0,
-    left: 0,
+    boxShadow: [{
+      blurRadius: 18,
+      color: 'rgba(91, 105, 235, 0.30)',
+      offsetX: 0,
+      offsetY: 0,
+    }],
+    left: INTELLIGENCE_FRAME_START_INSET,
     opacity: 0,
     overflow: 'hidden',
     position: 'absolute',
     right: 0,
-    top: 0,
+    top: INTELLIGENCE_FRAME_START_INSET,
   },
   aiGlowFrameActive: {
     opacity: 1,
   },
-  aiGlowHairline: {
-    borderColor: 'rgba(255, 255, 255, 0.36)',
-    borderCurve: 'continuous',
-    borderRadius: 22,
-    borderWidth: 1,
-    bottom: 1,
-    left: 1,
+  aiGlowGradientLayer: {
     position: 'absolute',
-    right: 1,
-    top: 1,
-  },
-  aiGlowSoftWash: {
-    backgroundColor: 'rgba(255, 255, 255, 0.10)',
-    borderCurve: 'continuous',
-    borderRadius: 22,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   aiGlowGradientFill: {
     height: '100%',
     width: '100%',
   },
-  aiGlowBandHorizontal: {
-    borderRadius: 999,
-    height: 16,
-    opacity: 0.88,
-    overflow: 'hidden',
+  aiGlowCutout: {
+    borderCurve: 'continuous',
+    borderRadius: SMART_PANEL_RADIUS - INTELLIGENCE_EDGE_WIDTH,
+    bottom: INTELLIGENCE_EDGE_WIDTH,
+    left: INTELLIGENCE_EDGE_WIDTH,
     position: 'absolute',
+    right: INTELLIGENCE_EDGE_WIDTH,
+    top: INTELLIGENCE_EDGE_WIDTH,
   },
-  aiGlowBandVertical: {
-    borderRadius: 999,
-    opacity: 0.88,
-    overflow: 'hidden',
+  aiGlowInnerHalo: {
+    borderCurve: 'continuous',
+    borderRadius: SMART_PANEL_RADIUS,
+    bottom: 0,
+    left: 0,
     position: 'absolute',
-    width: 16,
+    right: 0,
+    top: 0,
   },
-  aiGlowTop: {
-    top: -5,
-  },
-  aiGlowBottom: {
-    bottom: -5,
-  },
-  aiGlowLeft: {
-    left: -5,
-  },
-  aiGlowRight: {
-    right: -5,
+  aiGlowInnerHighlight: {
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    borderCurve: 'continuous',
+    borderRadius: SMART_PANEL_RADIUS - INTELLIGENCE_EDGE_WIDTH,
+    borderWidth: 0.5,
+    bottom: INTELLIGENCE_EDGE_WIDTH,
+    left: INTELLIGENCE_EDGE_WIDTH,
+    position: 'absolute',
+    right: INTELLIGENCE_EDGE_WIDTH,
+    top: INTELLIGENCE_EDGE_WIDTH,
   },
   field: {
     gap: 6,
