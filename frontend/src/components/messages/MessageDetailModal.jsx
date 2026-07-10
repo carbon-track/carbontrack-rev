@@ -46,7 +46,7 @@ export function MessageDetailModal({ message, isOpen, onClose, onMarkRead }) {
             <DialogDescription>{t('messages.detail.subtitle')}</DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
             <div className="flex flex-wrap items-center gap-2">
               {message.priority && (
                 <Badge variant={message.priority}>
@@ -93,19 +93,19 @@ export function MessageDetailModal({ message, isOpen, onClose, onMarkRead }) {
               )}
             </div>
 
-            <DialogFooter className="shrink-0 border-t pt-4">
-              {!message.is_read && (
-                <Button
-                  variant="outline"
-                  onClick={() => onMarkRead(message.id)}
-                  className="mr-2"
-                >
-                  <MailOpen className="h-4 w-4 mr-1" /> {t('messages.markRead')}
-                </Button>
-              )}
-              <Button onClick={onClose}>{t('common.close')}</Button>
-            </DialogFooter>
           </div>
+          <DialogFooter className="shrink-0 border-t px-6 py-4">
+            {!message.is_read && (
+              <Button
+                variant="outline"
+                onClick={() => onMarkRead(message.id)}
+                className="mr-2"
+              >
+                <MailOpen className="h-4 w-4 mr-1" /> {t('messages.markRead')}
+              </Button>
+            )}
+            <Button onClick={onClose}>{t('common.close')}</Button>
+          </DialogFooter>
         </div>
       </DialogContent>
     </Dialog>
