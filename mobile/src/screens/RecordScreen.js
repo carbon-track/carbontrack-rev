@@ -168,9 +168,13 @@ function AppleIntelligenceGlow({ active }) {
   const gradientTop = (frameSize.height - gradientSize) / 2;
   const cutoutColor = isDark ? 'rgba(12, 30, 21, 0.985)' : 'rgba(232, 249, 239, 0.985)';
   const innerHaloStyle = {
-    boxShadow: isDark
-      ? 'inset 0 0 16px rgba(226, 228, 255, 0.34)'
-      : 'inset 0 0 16px rgba(255, 255, 255, 0.32)',
+    boxShadow: [{
+      blurRadius: 16,
+      color: isDark ? 'rgba(226, 228, 255, 0.34)' : 'rgba(255, 255, 255, 0.32)',
+      inset: true,
+      offsetX: 0,
+      offsetY: 0,
+    }],
   };
   const handleLayout = React.useCallback((event) => {
     const { height, width } = event.nativeEvent.layout;
@@ -766,7 +770,12 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     borderRadius: SMART_PANEL_RADIUS,
     bottom: 0,
-    boxShadow: '0 0 18px rgba(91, 105, 235, 0.30)',
+    boxShadow: [{
+      blurRadius: 18,
+      color: 'rgba(91, 105, 235, 0.30)',
+      offsetX: 0,
+      offsetY: 0,
+    }],
     left: INTELLIGENCE_FRAME_START_INSET,
     opacity: 0,
     overflow: 'hidden',
