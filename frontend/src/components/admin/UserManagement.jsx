@@ -1073,7 +1073,7 @@ export function UserManagement() {
             <DialogTitle>{t('admin.users.editUser')}</DialogTitle>
             <DialogDescription>{editDialog.user?.username}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmitDetailedEdit} className="space-y-4">
+          <form id="user-detailed-edit-form" onSubmit={handleSubmitDetailedEdit} className="space-y-4">
             <div>
               <Label>{t('admin.groups.title')}</Label>
               <select
@@ -1132,11 +1132,11 @@ export function UserManagement() {
                 onChange={e => setEditDialog({ ...editDialog, notes: e.target.value })}
               />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={closeDetailedEdit}>{t('common.cancel')}</Button>
-              <Button type="submit" disabled={updateUserMutation.isLoading}>{t('common.save')}</Button>
-            </DialogFooter>
           </form>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeDetailedEdit}>{t('common.cancel')}</Button>
+            <Button type="submit" form="user-detailed-edit-form" disabled={updateUserMutation.isLoading}>{t('common.save')}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
