@@ -171,13 +171,32 @@ export function Navbar() {
       'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
     )).filter((element) => element.getClientRects().length > 0);
 
+    const isElementInsidePortaledMenu = (element) => {
+      if (!element || typeof element.closest !== 'function') {
+        return false;
+      }
+
+      const menu = element.closest('[data-slot="dropdown-menu-content"], [role="menu"]');
+      return Boolean(menu && !panel.contains(menu));
+    };
+
     const focusFrame = window.requestAnimationFrame(() => {
       getFocusableElements()[0]?.focus();
     });
 
     const handleKeyDown = (event) => {
+      const activeElement = document.activeElement;
+
       if (event.key === 'Escape') {
+        if (isElementInsidePortaledMenu(activeElement)) {
+          return;
+        }
+
         event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === 'function') {
+          event.stopImmediatePropagation();
+        }
         setIsOpen(false);
         window.requestAnimationFrame(() => mobileToggleRef.current?.focus());
         return;
@@ -195,7 +214,10 @@ export function Navbar() {
 
       const firstElement = focusableElements[0];
       const lastElement = focusableElements[focusableElements.length - 1];
-      const activeElement = document.activeElement;
+
+      if (isElementInsidePortaledMenu(activeElement)) {
+        return;
+      }
 
       if (!panel.contains(activeElement)) {
         event.preventDefault();
@@ -209,10 +231,10 @@ export function Navbar() {
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown, true);
     return () => {
       window.cancelAnimationFrame(focusFrame);
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [renderMobileNav]);
 
