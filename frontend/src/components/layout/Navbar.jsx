@@ -146,7 +146,7 @@ export function Navbar() {
   }, [isOpen, renderMobileNav]);
 
   useEffect(() => {
-    if (!renderMobileNav || typeof document === 'undefined') {
+    if (!isOpen || typeof document === 'undefined') {
       return;
     }
     const originalOverflow = document.body.style.overflow;
@@ -155,10 +155,10 @@ export function Navbar() {
     return () => {
       document.body.style.overflow = originalOverflow;
     };
-  }, [renderMobileNav]);
+  }, [isOpen]);
 
   useEffect(() => {
-    if (!renderMobileNav || typeof document === 'undefined') {
+    if (!isOpen || !renderMobileNav || typeof document === 'undefined') {
       return;
     }
 
@@ -236,7 +236,7 @@ export function Navbar() {
       window.cancelAnimationFrame(focusFrame);
       document.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [renderMobileNav]);
+  }, [isOpen, renderMobileNav]);
 
   useEffect(() => {
     setIsOpen(false);

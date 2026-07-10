@@ -76,7 +76,7 @@ export function TabsTrigger({ value, children, active, setActive, tabsId, classN
       type="button"
       role="tab"
       id={triggerId}
-      aria-controls={panelId}
+      aria-controls={isActive ? panelId : undefined}
       aria-selected={isActive}
       data-state={isActive ? 'active' : 'inactive'}
       tabIndex={isActive ? 0 : -1}
