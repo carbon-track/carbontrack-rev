@@ -320,7 +320,7 @@ export function GlassPressable({
         contentStyle={contentStyle}
         effect={effect}
         fallbackStyle={fallbackStyle || { backgroundColor: colors.surfaceMuted }}
-        interactive={!disabled || preserveGlassWhenDisabled}
+        interactive={!disabled}
         style={[styles.pressableSurface, style]}
         tintColor={tintColor}
       >
