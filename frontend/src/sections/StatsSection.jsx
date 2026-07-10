@@ -88,9 +88,9 @@ export default function StatsSection() {
   }, [summaryData?.generated_at]);
 
   const renderSkeleton = () => (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+    <div className="grid grid-cols-1 gap-6 min-[420px]:grid-cols-2 md:grid-cols-4 md:gap-8">
       {Array.from({ length: 4 }).map((_, index) => (
-        <div key={`skeleton-${index}`} className="text-center">
+        <div key={`skeleton-${index}`} className="min-w-0 text-center">
           <div className="bg-muted mx-auto mb-3 h-8 w-24 animate-pulse rounded" />
           <div className="bg-muted mx-auto h-4 w-20 animate-pulse rounded" />
         </div>
@@ -106,13 +106,13 @@ export default function StatsSection() {
 
   const renderContent = () => (
     <div className="space-y-12">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 gap-6 min-[420px]:grid-cols-2 md:grid-cols-4 md:gap-8">
         {metrics.map((metric) => (
-          <div key={metric.key} className="text-center">
-            <div className={`text-3xl font-bold mb-2 ${metric.accent}`}>{metric.value}</div>
+          <div key={metric.key} className="min-w-0 text-center">
+            <div className={`mb-2 break-words text-2xl font-bold [overflow-wrap:anywhere] sm:text-3xl ${metric.accent}`}>{metric.value}</div>
             <div className="text-muted-foreground text-sm font-medium">{metric.label}</div>
             {metric.detail && (
-              <div className="text-muted-foreground/80 mt-1 text-xs">{metric.detail}</div>
+              <div className="mt-1 break-words text-xs text-muted-foreground/80">{metric.detail}</div>
             )}
           </div>
         ))}
@@ -121,7 +121,7 @@ export default function StatsSection() {
   );
 
   return (
-    <section className="bg-card/70 py-16 px-4 backdrop-blur-sm">
+    <section className="bg-card/70 px-4 py-12 backdrop-blur-sm sm:py-16">
       <div className="max-w-7xl mx-auto">
         {isLoading && renderSkeleton()}
         {!isLoading && isError && renderError()}

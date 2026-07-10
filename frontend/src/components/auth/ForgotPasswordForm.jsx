@@ -57,8 +57,8 @@ export function ForgotPasswordForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="w-full text-foreground">
+      <div className="mx-auto w-full max-w-md space-y-6 sm:space-y-8">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-green-100">
             <Mail className="h-6 w-6 text-green-600" />
@@ -72,13 +72,13 @@ export function ForgotPasswordForm() {
         </div>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <CardTitle>{t('auth.resetPassword.title')}</CardTitle>
             <CardDescription>
               {t('auth.enterEmailForReset')}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {error && (
                 <Alert variant="destructive">
@@ -117,6 +117,7 @@ export function ForgotPasswordForm() {
                 <Turnstile
                   ref={turnstileRef}
                   className="flex justify-center"
+                  size="flexible"
                   require={requiresTurnstile}
                   onVerify={(token) => setTurnstileToken(token)}
                   onExpire={() => setTurnstileToken('')}
