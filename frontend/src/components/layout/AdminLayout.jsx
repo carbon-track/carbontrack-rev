@@ -81,11 +81,15 @@ export default function AdminLayout() {
     label: t(`admin.nav.${link.key}`),
   })), [t]);
 
-  const activeLink = useMemo(
+  const linksByMatchPriority = useMemo(
     () => [...translatedLinks]
-      .sort((left, right) => normalizePath(right.to).length - normalizePath(left.to).length)
-      .find((link) => matchesPath(location.pathname, link.to)),
-    [location.pathname, translatedLinks]
+      .sort((left, right) => normalizePath(right.to).length - normalizePath(left.to).length),
+    [translatedLinks]
+  );
+
+  const activeLink = useMemo(
+    () => linksByMatchPriority.find((link) => matchesPath(location.pathname, link.to)),
+    [linksByMatchPriority, location.pathname]
   );
 
   useEffect(() => {
