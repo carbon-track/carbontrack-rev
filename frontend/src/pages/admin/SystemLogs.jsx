@@ -757,7 +757,7 @@ export default function SystemLogsPage() {
       )}
 
       <Dialog open={Boolean(selectedSystemId)} onOpenChange={(open) => !open && setSelectedSystemId(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent scrollable={false} className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               {selectedSystemId

@@ -1093,7 +1093,7 @@ export default function AdminLlmUsagePage() {
       </Card>
 
       <Dialog open={Boolean(selectedConversationId)} onOpenChange={(open) => !open && setSelectedConversationId(null)}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent scrollable={false} className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>{t('admin.llmUsage.sessions.detailTitle')}</DialogTitle>
           </DialogHeader>
@@ -1154,7 +1154,7 @@ export default function AdminLlmUsagePage() {
       </Dialog>
 
       <Dialog open={Boolean(selectedLogId)} onOpenChange={(open) => !open && setSelectedLogId(null)}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent scrollable={false} className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>{t('admin.llmUsage.logs.detailTitle', { id: selectedLogId })}</DialogTitle>
           </DialogHeader>
