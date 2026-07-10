@@ -39,7 +39,9 @@ export function TabsList({ children, active, setActive, tabsId, className = '' }
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
 
     const tabs = Array.from(event.currentTarget.querySelectorAll('[role="tab"]:not([disabled])'));
-    const currentIndex = tabs.indexOf(event.currentTarget.ownerDocument.activeElement);
+    const activeElement = event.currentTarget.ownerDocument.activeElement;
+    const activeTab = activeElement?.closest?.('[role="tab"]');
+    const currentIndex = tabs.indexOf(activeTab);
     if (currentIndex === -1 || tabs.length === 0) return;
 
     let nextIndex = currentIndex;
@@ -76,7 +78,7 @@ export function TabsTrigger({ value, children, active, setActive, tabsId, classN
       type="button"
       role="tab"
       id={triggerId}
-      aria-controls={isActive ? panelId : undefined}
+      aria-controls={panelId}
       aria-selected={isActive}
       data-state={isActive ? 'active' : 'inactive'}
       tabIndex={isActive ? 0 : -1}
@@ -89,17 +91,18 @@ export function TabsTrigger({ value, children, active, setActive, tabsId, classN
 }
 
 export function TabsContent({ value, active, children, tabsId, className = '' }) {
-  if (active !== value) return null;
+  const isActive = active === value;
   const { triggerId, panelId } = getTabIds(tabsId, value);
   return (
     <div
       role="tabpanel"
       id={panelId}
       aria-labelledby={triggerId}
-      tabIndex={0}
+      tabIndex={isActive ? 0 : -1}
+      hidden={!isActive}
       className={className}
     >
-      {children}
+      {isActive ? children : null}
     </div>
   );
 }
