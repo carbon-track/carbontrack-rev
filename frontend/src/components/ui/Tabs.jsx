@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 
-export function Tabs({ children, value, onValueChange, className = '' }) {
+function getTabIds(tabsId, value) {
+  const suffix = encodeURIComponent(String(value));
+  return {
+    triggerId: `${tabsId}-trigger-${suffix}`,
+    panelId: `${tabsId}-panel-${suffix}`,
+  };
+}
+
+export function Tabs({ children, value, onValueChange, className = '', idBase }) {
   const [internal, setInternal] = useState(value || '');
+  const generatedId = React.useId();
+  const tabsId = idBase || generatedId;
   const active = value !== undefined ? value : internal;
   const setActive = (v) => {
     if (onValueChange) onValueChange(v);
@@ -13,10 +23,10 @@ export function Tabs({ children, value, onValueChange, className = '' }) {
       {React.Children.map(children, (child) => {
         if (!React.isValidElement(child)) return child;
         if (child.type === TabsList) {
-          return React.cloneElement(child, { active, setActive });
+          return React.cloneElement(child, { active, setActive, tabsId });
         }
         if (child.type === TabsContent) {
-          return React.cloneElement(child, { active });
+          return React.cloneElement(child, { active, tabsId });
         }
         return child;
       })}
@@ -24,7 +34,7 @@ export function Tabs({ children, value, onValueChange, className = '' }) {
   );
 }
 
-export function TabsList({ children, active, setActive, className = '' }) {
+export function TabsList({ children, active, setActive, tabsId, className = '' }) {
   const handleKeyDown = (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
 
@@ -52,18 +62,21 @@ export function TabsList({ children, active, setActive, className = '' }) {
     >
       {React.Children.map(children, (child) => {
         if (!React.isValidElement(child)) return child;
-        return React.cloneElement(child, { active, setActive });
+        return React.cloneElement(child, { active, setActive, tabsId });
       })}
     </div>
   );
 }
 
-export function TabsTrigger({ value, children, active, setActive, className = '' }) {
+export function TabsTrigger({ value, children, active, setActive, tabsId, className = '' }) {
   const isActive = active === value;
+  const { triggerId, panelId } = getTabIds(tabsId, value);
   return (
     <button
       type="button"
       role="tab"
+      id={triggerId}
+      aria-controls={panelId}
       aria-selected={isActive}
       data-state={isActive ? 'active' : 'inactive'}
       tabIndex={isActive ? 0 : -1}
@@ -75,11 +88,14 @@ export function TabsTrigger({ value, children, active, setActive, className = ''
   );
 }
 
-export function TabsContent({ value, active, children, className = '' }) {
+export function TabsContent({ value, active, children, tabsId, className = '' }) {
   if (active !== value) return null;
+  const { triggerId, panelId } = getTabIds(tabsId, value);
   return (
     <div
       role="tabpanel"
+      id={panelId}
+      aria-labelledby={triggerId}
       tabIndex={0}
       className={className}
     >

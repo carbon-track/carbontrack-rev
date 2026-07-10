@@ -804,7 +804,7 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => (!open ? onClose() : null)}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{product ? t('admin.products.editProduct') : t('admin.products.addProduct')}</DialogTitle>
           <DialogDescription>{t('admin.products.formModal.description')}</DialogDescription>

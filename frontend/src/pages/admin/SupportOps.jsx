@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import { toast } from 'react-hot-toast';
@@ -277,6 +277,7 @@ export default function AdminSupportOpsPage() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState('team');
   const [settingsTab, setSettingsTab] = useState('rules');
+  const settingsTabsId = useId();
   const [reportDays, setReportDays] = useState(14);
   const [tagForm, setTagForm] = useState(EMPTY_TAG_FORM);
   const [ruleForm, setRuleForm] = useState(EMPTY_RULE_FORM);
@@ -1279,7 +1280,7 @@ export default function AdminSupportOpsPage() {
                 <CardTitle>{t('adminSupport.tabs.settings')}</CardTitle>
                 <CardDescription>{t('adminSupport.reports.subtitle')}</CardDescription>
               </div>
-              <Tabs value={settingsTab} onValueChange={setSettingsTab}>
+              <Tabs value={settingsTab} onValueChange={setSettingsTab} idBase={settingsTabsId}>
                 <TabsList className="rounded-2xl border border-border bg-card p-1">
                   <TabsTrigger value="routing" className="rounded-xl border-r-0">{t('adminSupport.tabs.routing')}</TabsTrigger>
                   <TabsTrigger value="rules" className="rounded-xl border-r-0">{t('adminSupport.tabs.rules')}</TabsTrigger>
@@ -1290,7 +1291,7 @@ export default function AdminSupportOpsPage() {
             </CardHeader>
           </Card>
 
-          <Tabs value={settingsTab} onValueChange={setSettingsTab} className="space-y-6">
+          <Tabs value={settingsTab} onValueChange={setSettingsTab} className="space-y-6" idBase={settingsTabsId}>
         <TabsContent value="routing">
           <Card>
             <CardHeader>
