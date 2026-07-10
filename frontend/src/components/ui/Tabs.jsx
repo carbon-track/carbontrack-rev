@@ -100,6 +100,7 @@ export function TabsContent({ value, active, children, tabsId, className = '' })
       aria-labelledby={triggerId}
       tabIndex={isActive ? 0 : -1}
       hidden={!isActive}
+      style={{ display: isActive ? undefined : 'none' }}
       className={className}
     >
       {isActive ? children : null}
