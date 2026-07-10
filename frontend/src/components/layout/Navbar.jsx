@@ -171,32 +171,24 @@ export function Navbar() {
       'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
     )).filter((element) => element.getClientRects().length > 0);
 
-    const isElementInsidePortaledMenu = (element) => {
-      if (!element || typeof element.closest !== 'function') {
-        return false;
-      }
-
-      const menu = element.closest('[data-slot="dropdown-menu-content"], [role="menu"]');
-      return Boolean(menu && !panel.contains(menu));
-    };
-
     const focusFrame = window.requestAnimationFrame(() => {
       getFocusableElements()[0]?.focus();
     });
 
     const handleKeyDown = (event) => {
       const activeElement = document.activeElement;
+      const focusIsInExternalLayer = activeElement?.closest?.(
+        '[data-slot="dropdown-menu-content"][data-state="open"], [role="menu"][data-state="open"], [data-slot="select-content"][data-state="open"], [data-slot="popover-content"][data-state="open"], [role="dialog"], [role="alertdialog"]'
+      );
+
+      if (focusIsInExternalLayer && !panel.contains(activeElement)) {
+        return;
+      }
 
       if (event.key === 'Escape') {
-        if (isElementInsidePortaledMenu(activeElement)) {
-          return;
-        }
-
         event.preventDefault();
         event.stopPropagation();
-        if (typeof event.stopImmediatePropagation === 'function') {
-          event.stopImmediatePropagation();
-        }
+        event.stopImmediatePropagation();
         setIsOpen(false);
         window.requestAnimationFrame(() => mobileToggleRef.current?.focus());
         return;
@@ -214,11 +206,6 @@ export function Navbar() {
 
       const firstElement = focusableElements[0];
       const lastElement = focusableElements[focusableElements.length - 1];
-
-      if (isElementInsidePortaledMenu(activeElement)) {
-        return;
-      }
-
       if (!panel.contains(activeElement)) {
         event.preventDefault();
         (event.shiftKey ? lastElement : firstElement).focus();
@@ -231,10 +218,10 @@ export function Navbar() {
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keydown', handleKeyDown, true);
     return () => {
       window.cancelAnimationFrame(focusFrame);
-      document.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [isOpen, renderMobileNav]);
 
