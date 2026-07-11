@@ -2123,6 +2123,13 @@ class SupportTicketServiceTest extends TestCase
             $this->createMock(FileMetadataService::class)
         );
 
+        $ticketBeforeUpdate = self::$capsule->table('support_tickets')->where('id', 73)->first();
+
+        $this->assertSame('open', $ticketBeforeUpdate->status);
+        $this->assertSame('pending', $ticketBeforeUpdate->sla_status);
+        $this->assertNull($ticketBeforeUpdate->resolved_at);
+        $this->assertSame($closedAt, $ticketBeforeUpdate->closed_at);
+
         $result = $service->updateTicketFromSupport(
             ['id' => (int) $supportUser->id, 'role' => 'support', 'is_support' => true, 'username' => 'support-a'],
             73,
@@ -2134,7 +2141,6 @@ class SupportTicketServiceTest extends TestCase
         $this->assertSame('in_progress', $result['status']);
         $this->assertSame('in_progress', $ticketRow->status);
         $this->assertSame('pending', $ticketRow->sla_status);
-        $this->assertNull($ticketRow->resolved_at);
         $this->assertNull($ticketRow->closed_at);
     }
 
