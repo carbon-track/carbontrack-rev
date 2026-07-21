@@ -61,6 +61,7 @@ jobs:
           semgrep scan --pro --config=".semgrep/custom-rules.yml" --sarif backend > semgrep-custom.sarif
 
       - name: Normalize SARIF rule tags
+        id: normalize
         if: always() && (hashFiles('semgrep.sarif') != '' || hashFiles('semgrep-custom.sarif') != '')
         run: |
           python - <<'PY'
@@ -68,7 +69,13 @@ jobs:
           from pathlib import Path
 
           for sarif_path in Path(".").glob("semgrep*.sarif"):
-              document = json.loads(sarif_path.read_text(encoding="utf-8"))
+              try:
+                  document = json.loads(sarif_path.read_text(encoding="utf-8"))
+              except (json.JSONDecodeError, OSError) as error:
+                  print(f"::warning file={sarif_path}::Skipping invalid SARIF: {error}")
+                  sarif_path.unlink(missing_ok=True)
+                  continue
+
               for run in document.get("runs", []):
                   driver = run.get("tool", {}).get("driver", {})
                   for rule in driver.get("rules", []):
@@ -86,14 +93,14 @@ jobs:
           PY
 
       - name: Upload SARIF
-        if: always() && hashFiles('semgrep.sarif') != ''
+        if: always() && steps.normalize.outcome == 'success' && hashFiles('semgrep.sarif') != ''
         uses: github/codeql-action/upload-sarif@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4
         with:
           sarif_file: semgrep.sarif
           category: semgrep-backend
 
       - name: Upload custom-rule SARIF
-        if: always() && hashFiles('semgrep-custom.sarif') != ''
+        if: always() && steps.normalize.outcome == 'success' && hashFiles('semgrep-custom.sarif') != ''
         uses: github/codeql-action/upload-sarif@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4
         with:
           sarif_file: semgrep-custom.sarif
