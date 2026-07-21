@@ -58,7 +58,14 @@ jobs:
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
         run: |
-          semgrep scan --pro --config=".semgrep/custom-rules.yml" --sarif backend > semgrep-custom.sarif
+          BASELINE_ARG=""
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            BASELINE_ARG="--baseline-commit=${{ github.event.pull_request.base.sha }}"
+          elif [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ]; then
+            BASELINE_ARG="--baseline-commit=${{ github.event.before }}"
+          fi
+
+          semgrep scan --pro --config=".semgrep/custom-rules.yml" $BASELINE_ARG --sarif backend > semgrep-custom.sarif
 
       - name: Normalize SARIF rule tags
         id: normalize
