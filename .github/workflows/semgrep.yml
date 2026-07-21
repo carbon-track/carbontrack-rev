@@ -42,20 +42,35 @@ jobs:
           fetch-depth: 0
 
       - name: Run Semgrep Pro
+        id: semgrep_pro
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
           SEMGREP_REPO_DISPLAY_NAME: ${{ github.repository }}/backend
         run: |
           if [ -z "${SEMGREP_APP_TOKEN}" ]; then
             echo "::error::SEMGREP_APP_TOKEN is required for Semgrep Pro scanning."
-            exit 1
+            echo "exit_code=2" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
-          semgrep ci --pro-languages --include=backend/ --sarif > semgrep.sarif
+          set +e
+          semgrep ci --pro --include=backend/ --sarif > semgrep.sarif
+          scan_exit=$?
+          set -e
+          echo "exit_code=${scan_exit}" >> "$GITHUB_OUTPUT"
 
-      - name: Run custom Semgrep rules
+      - name: Run custom Semgrep Pro rules
+        id: custom_rules
         if: always()
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
         run: |
+          if [ -z "${SEMGREP_APP_TOKEN}" ]; then
+            echo "::error::SEMGREP_APP_TOKEN is required for custom Semgrep Pro rules."
+            echo "exit_code=2" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           BASELINE_ARG=""
           if [ "${{ github.event_name }}" = "pull_request" ] && [ -n "${{ github.event.pull_request.base.sha }}" ]; then
             BASELINE_ARG="--baseline-commit=${{ github.event.pull_request.base.sha }}"
@@ -63,62 +78,143 @@ jobs:
             BASELINE_ARG="--baseline-commit=${{ github.event.before }}"
           fi
 
-          semgrep scan backend \
+          set +e
+          semgrep scan --pro backend \
             --config=".semgrep/custom-rules.yml" \
             $BASELINE_ARG \
             --sarif \
             --output=semgrep-custom.sarif
+          scan_exit=$?
+          set -e
+          echo "exit_code=${scan_exit}" >> "$GITHUB_OUTPUT"
 
       - name: Normalize SARIF rule tags
-        if: always() && (hashFiles('semgrep.sarif') != '' || hashFiles('semgrep-custom.sarif') != '')
+        id: normalize
+        if: always()
         run: |
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
 
           sarif_paths = (
-              (Path("semgrep.sarif"), Path("semgrep-normalized.sarif")),
-              (Path("semgrep-custom.sarif"), Path("semgrep-custom-normalized.sarif")),
+              ("pro", Path("semgrep.sarif"), Path("semgrep-normalized.sarif")),
+              ("custom", Path("semgrep-custom.sarif"), Path("semgrep-custom-normalized.sarif")),
           )
-          normalization_failed = False
 
-          for sarif_path, normalized_path in sarif_paths:
+          def set_output(name, value):
+              with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+                  print(f"{name}={value}", file=output)
+
+          for label, sarif_path, normalized_path in sarif_paths:
+              valid = False
+              finding_count = 0
               if not sarif_path.exists():
+                  print(f"::error file={sarif_path}::No SARIF output was generated.")
+                  set_output(f"{label}_valid", "false")
+                  set_output(f"{label}_findings", "0")
                   continue
               try:
                   document = json.loads(sarif_path.read_text(encoding="utf-8"))
-                  for run in document.get("runs", []):
-                      driver = run.get("tool", {}).get("driver", {})
-                      for rule in driver.get("rules", []):
+                  if not isinstance(document, dict):
+                      raise ValueError("SARIF document is not an object")
+                  runs = document.get("runs")
+                  if not isinstance(runs, list):
+                      raise ValueError("SARIF document does not contain a runs array")
+
+                  for run in runs:
+                      if not isinstance(run, dict):
+                          raise ValueError("SARIF runs array contains a non-object entry")
+                      tool = run.get("tool", {})
+                      if not isinstance(tool, dict):
+                          raise ValueError("SARIF run tool is not an object")
+                      driver = tool.get("driver", {})
+                      if not isinstance(driver, dict):
+                          raise ValueError("SARIF tool driver is not an object")
+                      rules = driver.get("rules", [])
+                      if not isinstance(rules, list):
+                          raise ValueError("SARIF tool driver rules is not an array")
+                      for rule in rules:
+                          if not isinstance(rule, dict):
+                              raise ValueError("SARIF tool driver rules contains a non-object entry")
                           properties = rule.get("properties")
                           if not isinstance(properties, dict):
                               continue
                           tags = properties.get("tags")
                           if isinstance(tags, list) and len(tags) > 10:
                               properties["tags"] = tags[:10]
+                      results = run.get("results", [])
+                      if not isinstance(results, list):
+                          raise ValueError("SARIF run results is not an array")
+                      finding_count += len(results)
 
                   normalized_path.write_text(
                       json.dumps(document, separators=(",", ":")),
                       encoding="utf-8",
                   )
+                  valid = True
               except (OSError, ValueError) as error:
-                  normalization_failed = True
                   print(f"::error file={sarif_path}::Failed to normalize SARIF: {error}")
 
-          if normalization_failed:
-              raise SystemExit(1)
+              set_output(f"{label}_valid", str(valid).lower())
+              set_output(f"{label}_findings", finding_count)
           PY
 
       - name: Upload SARIF
-        if: always() && hashFiles('semgrep-normalized.sarif') != ''
+        if: always() && steps.normalize.outputs.pro_valid == 'true'
         uses: github/codeql-action/upload-sarif@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4
         with:
           sarif_file: semgrep-normalized.sarif
           category: semgrep-backend
 
       - name: Upload custom-rule SARIF
-        if: always() && hashFiles('semgrep-custom-normalized.sarif') != ''
+        if: always() && steps.normalize.outputs.custom_valid == 'true'
         uses: github/codeql-action/upload-sarif@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4
         with:
           sarif_file: semgrep-custom-normalized.sarif
           category: semgrep-backend-custom
+
+      - name: Finalize Semgrep status
+        if: always()
+        env:
+          PRO_EXIT_CODE: ${{ steps.semgrep_pro.outputs.exit_code }}
+          PRO_SARIF_VALID: ${{ steps.normalize.outputs.pro_valid }}
+          PRO_FINDING_COUNT: ${{ steps.normalize.outputs.pro_findings }}
+          CUSTOM_EXIT_CODE: ${{ steps.custom_rules.outputs.exit_code }}
+          CUSTOM_SARIF_VALID: ${{ steps.normalize.outputs.custom_valid }}
+          CUSTOM_FINDING_COUNT: ${{ steps.normalize.outputs.custom_findings }}
+        run: |
+          failure=0
+
+          assess_scan() {
+            name="$1"
+            exit_code="$2"
+            sarif_valid="$3"
+            finding_count="$4"
+
+            if [ "$sarif_valid" != "true" ]; then
+              echo "::error::${name} did not produce valid SARIF (exit code: ${exit_code:-missing})."
+              failure=1
+              return
+            fi
+
+            if [ "$exit_code" = "0" ]; then
+              return
+            fi
+
+            if [ "$exit_code" = "1" ] && [ "$finding_count" = "0" ]; then
+              echo "::warning::${name} returned exit code 1 with valid zero-finding SARIF; allowing the known Semgrep exit-code mismatch."
+              return
+            fi
+
+            if [ "$exit_code" = "1" ]; then
+              echo "::error::${name} reported ${finding_count} finding(s)."
+            else
+              echo "::error::${name} failed with exit code ${exit_code:-missing}."
+            fi
+            failure=1
+          }
+
+          assess_scan "Semgrep Pro" "$PRO_EXIT_CODE" "$PRO_SARIF_VALID" "$PRO_FINDING_COUNT"
+          assess_scan "custom Semgrep Pro rules" "$CUSTOM_EXIT_CODE" "$CUSTOM_SARIF_VALID" "$CUSTOM_FINDING_COUNT"
+          exit "$failure"
