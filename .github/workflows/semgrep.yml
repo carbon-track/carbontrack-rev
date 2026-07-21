@@ -6,12 +6,14 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/semgrep.yml"
+      - ".semgrep/custom-rules.yml"
       - ".semgrepignore"
   pull_request:
     branches: [ "main", "dev" ]
     paths:
       - "backend/**"
       - ".github/workflows/semgrep.yml"
+      - ".semgrep/custom-rules.yml"
       - ".semgrepignore"
   workflow_dispatch:
   schedule:
@@ -29,60 +31,55 @@ jobs:
     container:
       image: semgrep/semgrep
 
-    if: github.actor != 'dependabot[bot]'
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
-      - name: Run Semgrep
-        run: |
-          BASELINE_ARG=""
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ -n "${{ github.event.pull_request.base.sha }}" ]; then
-            BASELINE_ARG="--baseline-commit=${{ github.event.pull_request.base.sha }}"
-          elif [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ]; then
-            BASELINE_ARG="--baseline-commit=${{ github.event.before }}"
-          fi
-
-          set +e
-          if [ -n "${SEMGREP_APP_TOKEN}" ]; then
-            echo "SEMGREP_APP_TOKEN detected; running Semgrep CI with Pro languages."
-            SEMGREP_REPO_DISPLAY_NAME="${{ github.repository }}/backend" \
-            semgrep ci --pro-languages --include=backend/ --sarif > semgrep.sarif
-          else
-            echo "SEMGREP_APP_TOKEN is not set; falling back to local Semgrep scan."
-            semgrep scan backend \
-              --config="auto" \
-              --config=".semgrep/custom-rules.yml" \
-              --config="p/php" \
-              --config="p/owasp-top-ten" \
-              $BASELINE_ARG \
-              --sarif \
-              --output semgrep.sarif
-          fi
-          SEMGREP_EXIT=$?
-          set -e
-
-          if [ "$SEMGREP_EXIT" -ne 0 ]; then
-            if [ -f semgrep.sarif ]; then
-              FINDINGS_COUNT=$(python -c "import json; d=json.load(open('semgrep.sarif', encoding='utf-8')); print(sum(len((r.get('results') or [])) for r in d.get('runs', [])))" 2>/dev/null || echo "-1")
-
-              if [ "$FINDINGS_COUNT" = "0" ]; then
-                echo "Semgrep exited with code $SEMGREP_EXIT but SARIF contains 0 findings; treating as success."
-                exit 0
-              fi
-            fi
-
-            exit "$SEMGREP_EXIT"
-          fi
+      - name: Run Semgrep Pro
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+          SEMGREP_REPO_DISPLAY_NAME: ${{ github.repository }}/backend
+        run: |
+          if [ -z "${SEMGREP_APP_TOKEN}" ]; then
+            echo "::error::SEMGREP_APP_TOKEN is required for Semgrep Pro scanning."
+            exit 1
+          fi
+
+          semgrep ci --pro-languages --include=backend/ --sarif > semgrep.sarif
+
+      - name: Normalize SARIF rule tags
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          sarif_path = Path("semgrep.sarif")
+          document = json.loads(sarif_path.read_text(encoding="utf-8"))
+          for run in document.get("runs", []):
+              driver = run.get("tool", {}).get("driver", {})
+              for rule in driver.get("rules", []):
+                  properties = rule.get("properties")
+                  if not isinstance(properties, dict):
+                      continue
+                  tags = properties.get("tags")
+                  if isinstance(tags, list) and len(tags) > 10:
+                      properties["tags"] = tags[:10]
+
+          sarif_path.write_text(
+              json.dumps(document, separators=(",", ":")),
+              encoding="utf-8",
+          )
+          PY
 
       - name: Upload SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
+        if: success()
+        uses: github/codeql-action/upload-sarif@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4
         with:
           sarif_file: semgrep.sarif
           category: semgrep-backend
