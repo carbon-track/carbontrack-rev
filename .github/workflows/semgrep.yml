@@ -53,33 +53,48 @@ jobs:
 
           semgrep ci --pro-languages --include=backend/ --sarif > semgrep.sarif
 
+      - name: Run custom Semgrep rules
+        if: always()
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        run: |
+          semgrep scan --pro --config=".semgrep/custom-rules.yml" --sarif backend > semgrep-custom.sarif
+
       - name: Normalize SARIF rule tags
+        if: always() && (hashFiles('semgrep.sarif') != '' || hashFiles('semgrep-custom.sarif') != '')
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
-          sarif_path = Path("semgrep.sarif")
-          document = json.loads(sarif_path.read_text(encoding="utf-8"))
-          for run in document.get("runs", []):
-              driver = run.get("tool", {}).get("driver", {})
-              for rule in driver.get("rules", []):
-                  properties = rule.get("properties")
-                  if not isinstance(properties, dict):
-                      continue
-                  tags = properties.get("tags")
-                  if isinstance(tags, list) and len(tags) > 10:
-                      properties["tags"] = tags[:10]
+          for sarif_path in Path(".").glob("semgrep*.sarif"):
+              document = json.loads(sarif_path.read_text(encoding="utf-8"))
+              for run in document.get("runs", []):
+                  driver = run.get("tool", {}).get("driver", {})
+                  for rule in driver.get("rules", []):
+                      properties = rule.get("properties")
+                      if not isinstance(properties, dict):
+                          continue
+                      tags = properties.get("tags")
+                      if isinstance(tags, list) and len(tags) > 10:
+                          properties["tags"] = tags[:10]
 
-          sarif_path.write_text(
-              json.dumps(document, separators=(",", ":")),
-              encoding="utf-8",
-          )
+              sarif_path.write_text(
+                  json.dumps(document, separators=(",", ":")),
+                  encoding="utf-8",
+              )
           PY
 
       - name: Upload SARIF
-        if: success()
+        if: always() && hashFiles('semgrep.sarif') != ''
         uses: github/codeql-action/upload-sarif@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4
         with:
           sarif_file: semgrep.sarif
           category: semgrep-backend
+
+      - name: Upload custom-rule SARIF
+        if: always() && hashFiles('semgrep-custom.sarif') != ''
+        uses: github/codeql-action/upload-sarif@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4
+        with:
+          sarif_file: semgrep-custom.sarif
+          category: semgrep-backend-custom
