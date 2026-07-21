@@ -55,8 +55,6 @@ jobs:
 
       - name: Run custom Semgrep rules
         if: always()
-        env:
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
         run: |
           BASELINE_ARG=""
           if [ "${{ github.event_name }}" = "pull_request" ] && [ -n "${{ github.event.pull_request.base.sha }}" ]; then
@@ -65,50 +63,62 @@ jobs:
             BASELINE_ARG="--baseline-commit=${{ github.event.before }}"
           fi
 
-          semgrep scan --pro --config=".semgrep/custom-rules.yml" $BASELINE_ARG --sarif backend > semgrep-custom.sarif
+          semgrep scan backend \
+            --config=".semgrep/custom-rules.yml" \
+            $BASELINE_ARG \
+            --sarif \
+            --output=semgrep-custom.sarif
 
       - name: Normalize SARIF rule tags
-        id: normalize
         if: always() && (hashFiles('semgrep.sarif') != '' || hashFiles('semgrep-custom.sarif') != '')
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
-          for sarif_path in Path(".").glob("semgrep*.sarif"):
+          sarif_paths = (
+              (Path("semgrep.sarif"), Path("semgrep-normalized.sarif")),
+              (Path("semgrep-custom.sarif"), Path("semgrep-custom-normalized.sarif")),
+          )
+          normalization_failed = False
+
+          for sarif_path, normalized_path in sarif_paths:
+              if not sarif_path.exists():
+                  continue
               try:
                   document = json.loads(sarif_path.read_text(encoding="utf-8"))
-              except (json.JSONDecodeError, OSError) as error:
-                  print(f"::warning file={sarif_path}::Skipping invalid SARIF: {error}")
-                  sarif_path.unlink(missing_ok=True)
-                  continue
+                  for run in document.get("runs", []):
+                      driver = run.get("tool", {}).get("driver", {})
+                      for rule in driver.get("rules", []):
+                          properties = rule.get("properties")
+                          if not isinstance(properties, dict):
+                              continue
+                          tags = properties.get("tags")
+                          if isinstance(tags, list) and len(tags) > 10:
+                              properties["tags"] = tags[:10]
 
-              for run in document.get("runs", []):
-                  driver = run.get("tool", {}).get("driver", {})
-                  for rule in driver.get("rules", []):
-                      properties = rule.get("properties")
-                      if not isinstance(properties, dict):
-                          continue
-                      tags = properties.get("tags")
-                      if isinstance(tags, list) and len(tags) > 10:
-                          properties["tags"] = tags[:10]
+                  normalized_path.write_text(
+                      json.dumps(document, separators=(",", ":")),
+                      encoding="utf-8",
+                  )
+              except (OSError, ValueError) as error:
+                  normalization_failed = True
+                  print(f"::error file={sarif_path}::Failed to normalize SARIF: {error}")
 
-              sarif_path.write_text(
-                  json.dumps(document, separators=(",", ":")),
-                  encoding="utf-8",
-              )
+          if normalization_failed:
+              raise SystemExit(1)
           PY
 
       - name: Upload SARIF
-        if: always() && steps.normalize.outcome == 'success' && hashFiles('semgrep.sarif') != ''
+        if: always() && hashFiles('semgrep-normalized.sarif') != ''
         uses: github/codeql-action/upload-sarif@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4
         with:
-          sarif_file: semgrep.sarif
+          sarif_file: semgrep-normalized.sarif
           category: semgrep-backend
 
       - name: Upload custom-rule SARIF
-        if: always() && steps.normalize.outcome == 'success' && hashFiles('semgrep-custom.sarif') != ''
+        if: always() && hashFiles('semgrep-custom-normalized.sarif') != ''
         uses: github/codeql-action/upload-sarif@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4
         with:
-          sarif_file: semgrep-custom.sarif
+          sarif_file: semgrep-custom-normalized.sarif
           category: semgrep-backend-custom
