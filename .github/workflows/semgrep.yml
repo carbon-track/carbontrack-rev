@@ -82,6 +82,7 @@ jobs:
           semgrep scan --pro backend \
             --config=".semgrep/custom-rules.yml" \
             $BASELINE_ARG \
+            --error \
             --sarif \
             --output=semgrep-custom.sarif
           scan_exit=$?
@@ -191,9 +192,16 @@ jobs:
             exit_code="$2"
             sarif_valid="$3"
             finding_count="$4"
+            block_on_findings="$5"
 
             if [ "$sarif_valid" != "true" ]; then
               echo "::error::${name} did not produce valid SARIF (exit code: ${exit_code:-missing})."
+              failure=1
+              return
+            fi
+
+            if [ "$block_on_findings" = "true" ] && [ "$finding_count" != "0" ]; then
+              echo "::error::${name} reported ${finding_count} finding(s)."
               failure=1
               return
             fi
@@ -215,6 +223,6 @@ jobs:
             failure=1
           }
 
-          assess_scan "Semgrep Pro" "$PRO_EXIT_CODE" "$PRO_SARIF_VALID" "$PRO_FINDING_COUNT"
-          assess_scan "custom Semgrep Pro rules" "$CUSTOM_EXIT_CODE" "$CUSTOM_SARIF_VALID" "$CUSTOM_FINDING_COUNT"
+          assess_scan "Semgrep Pro" "$PRO_EXIT_CODE" "$PRO_SARIF_VALID" "$PRO_FINDING_COUNT" "false"
+          assess_scan "custom Semgrep Pro rules" "$CUSTOM_EXIT_CODE" "$CUSTOM_SARIF_VALID" "$CUSTOM_FINDING_COUNT" "true"
           exit "$failure"
