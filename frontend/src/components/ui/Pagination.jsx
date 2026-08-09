@@ -50,7 +50,7 @@ export function Pagination({
   const visiblePages = getVisiblePages();
 
   return (
-    <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 ${className}`}>
+    <div className={`flex flex-col items-center justify-between gap-4 sm:flex-row ${className}`}>
       <div className="text-sm text-muted-foreground">
         {t('pagination.showing', {
           start: (safeCurrent - 1) * safePerPage + 1,
@@ -59,25 +59,32 @@ export function Pagination({
         })}
       </div>
 
-      <nav aria-label="Pagination">
-        <ul className="inline-flex items-center gap-1">
+      <nav className="max-w-full" aria-label="Pagination">
+        <ul className="inline-flex max-w-full items-center gap-1">
           <li>
             <button
               onClick={() => safeCurrent > 1 && onPageChange(safeCurrent - 1)}
-              className={`rounded-md border border-border px-3 py-2 text-sm text-foreground ${safeCurrent <= 1 ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted/60'}`}
+              className={`rounded-md border border-border px-2.5 py-2 text-sm text-foreground sm:px-3 ${safeCurrent <= 1 ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted/60'}`}
               disabled={safeCurrent <= 1}
             >
               {t('common.previous')}
             </button>
           </li>
 
+          <li className="sm:hidden">
+            <span className="inline-flex min-w-16 items-center justify-center px-2 py-2 text-sm font-medium text-foreground" aria-current="page">
+              {safeCurrent} / {safeTotalPages}
+            </span>
+          </li>
+
           {visiblePages.map((page, index) => (
-            <li key={index}>
+            <li key={index} className="hidden sm:list-item">
               {page === '...' ? (
                 <span className="px-3 py-2 text-sm text-muted-foreground">…</span>
               ) : (
                 <button
                   onClick={() => onPageChange(page)}
+                  aria-current={page === safeCurrent ? 'page' : undefined}
                   className={`rounded-md border px-3 py-2 text-sm ${page === safeCurrent ? 'border-border bg-muted text-foreground' : 'border-border text-foreground hover:bg-muted/60'}`}
                 >
                   {page}
@@ -89,7 +96,7 @@ export function Pagination({
           <li>
             <button
               onClick={() => safeCurrent < safeTotalPages && onPageChange(safeCurrent + 1)}
-              className={`rounded-md border border-border px-3 py-2 text-sm text-foreground ${safeCurrent >= safeTotalPages ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted/60'}`}
+              className={`rounded-md border border-border px-2.5 py-2 text-sm text-foreground sm:px-3 ${safeCurrent >= safeTotalPages ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted/60'}`}
               disabled={safeCurrent >= safeTotalPages}
             >
               {t('common.next')}

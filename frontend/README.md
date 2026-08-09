@@ -2,11 +2,12 @@
 
 ## API 基础地址配置（重要）
 
-前端直接读取 `VITE_API_URL` 作为后端 API 地址；Cloudflare Pages 也应在各环境里显式配置这个变量。
+前端直接读取 `VITE_API_URL` 作为后端 API 地址；部署环境仍可显式覆盖仓库内的模式默认值。
 
 说明：
-- 本地开发、CI、Cloudflare Pages 均必须显式设置 `VITE_API_URL`；未设置时应用会启动失败，避免误连开发 API 或静态站同源路径。
-- Cloudflare Pages 不再按分支名推算 API 地址，需在对应环境中直接设置 `VITE_API_URL`。
+- 本地开发默认读取 `.env` 中的开发 API 地址。
+- 生产构建默认由 `.env.production` 覆盖为正式 API，避免继承开发地址；CI 与 Cloudflare Pages 中显式设置的 `VITE_API_URL` 仍具有更高优先级。
+- Cloudflare Pages 不按分支名推算 API 地址；需要连接其他环境时，应在对应部署环境中直接设置 `VITE_API_URL`。
 
 - 后端主要在版本化前缀下提供接口，即 `/api/v1/...`。
 - 为了兼容历史调用，后端提供少量 `/api/...` 的别名路由；但为了避免未来的不一致，强烈建议始终使用 `/api/v1` 作为前缀。

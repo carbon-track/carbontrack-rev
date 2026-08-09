@@ -10,10 +10,12 @@ import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Alert, AlertDescription } from '../components/ui/Alert';
 
-const TogglePasswordButton = ({ visible, onClick }) => (
+const TogglePasswordButton = ({ visible, label, onClick }) => (
   <button
     type="button"
-    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+    aria-label={label}
+    aria-pressed={visible}
+    className="absolute inset-y-0 right-0 flex w-10 items-center justify-center"
     onClick={onClick}
   >
     {visible ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
@@ -78,8 +80,8 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-background text-foreground px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <div className="w-full max-w-md space-y-6 sm:space-y-8">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-green-100">
             <Lock className="h-6 w-6 text-green-600" />
@@ -93,13 +95,13 @@ export default function ResetPasswordPage() {
         </div>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <CardTitle>{t('auth.resetPassword.newTitle')}</CardTitle>
             <CardDescription>
               {t('auth.resetPassword.instructions')}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
             {!token && (
               <Alert variant="warning" className="mb-4">
                 <AlertDescription>{t('auth.resetPassword.tokenMissing')}</AlertDescription>
@@ -117,20 +119,27 @@ export default function ResetPasswordPage() {
                 <label htmlFor="password" className="block text-sm font-medium text-foreground">
                   {t('auth.resetPassword.newPasswordLabel')}
                 </label>
-                <div className="mt-1 relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    placeholder={t('auth.passwordPlaceholder')}
-                    disabled={isSubmitting}
-                    error={errors.password}
-                    {...register('password', {
-                      required: t('auth.passwordRequired'),
-                      minLength: { value: 8, message: t('auth.passwordMinLength') }
-                    })}
-                  />
-                  <TogglePasswordButton visible={showPassword} onClick={() => setShowPassword((prev) => !prev)} />
+                <div className="mt-1">
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      placeholder={t('auth.passwordPlaceholder')}
+                      disabled={isSubmitting}
+                      error={errors.password}
+                      className="pr-10"
+                      {...register('password', {
+                        required: t('auth.passwordRequired'),
+                        minLength: { value: 8, message: t('auth.passwordMinLength') }
+                      })}
+                    />
+                    <TogglePasswordButton
+                      visible={showPassword}
+                      label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    />
+                  </div>
                   {errors.password && (
                     <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
                   )}
@@ -141,20 +150,27 @@ export default function ResetPasswordPage() {
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground">
                   {t('auth.resetPassword.confirmPasswordLabel')}
                 </label>
-                <div className="mt-1 relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    placeholder={t('auth.confirmPasswordPlaceholder')}
-                    disabled={isSubmitting}
-                    error={errors.confirmPassword}
-                    {...register('confirmPassword', {
-                      required: t('auth.resetPassword.confirmPasswordRequired'),
-                      validate: (value) => value === passwordValue || t('auth.resetPassword.passwordMismatch')
-                    })}
-                  />
-                  <TogglePasswordButton visible={showConfirmPassword} onClick={() => setShowConfirmPassword((prev) => !prev)} />
+                <div className="mt-1">
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      placeholder={t('auth.confirmPasswordPlaceholder')}
+                      disabled={isSubmitting}
+                      error={errors.confirmPassword}
+                      className="pr-10"
+                      {...register('confirmPassword', {
+                        required: t('auth.resetPassword.confirmPasswordRequired'),
+                        validate: (value) => value === passwordValue || t('auth.resetPassword.passwordMismatch')
+                      })}
+                    />
+                    <TogglePasswordButton
+                      visible={showConfirmPassword}
+                      label={t(showConfirmPassword ? 'auth.hidePassword' : 'auth.showPassword')}
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    />
+                  </div>
                   {errors.confirmPassword && (
                     <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
                   )}

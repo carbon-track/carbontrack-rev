@@ -1073,7 +1073,7 @@ export function UserManagement() {
             <DialogTitle>{t('admin.users.editUser')}</DialogTitle>
             <DialogDescription>{editDialog.user?.username}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmitDetailedEdit} className="space-y-4">
+          <form id="user-detailed-edit-form" onSubmit={handleSubmitDetailedEdit} className="space-y-4">
             <div>
               <Label>{t('admin.groups.title')}</Label>
               <select
@@ -1132,16 +1132,16 @@ export function UserManagement() {
                 onChange={e => setEditDialog({ ...editDialog, notes: e.target.value })}
               />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={closeDetailedEdit}>{t('common.cancel')}</Button>
-              <Button type="submit" disabled={updateUserMutation.isLoading}>{t('common.save')}</Button>
-            </DialogFooter>
           </form>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeDetailedEdit}>{t('common.cancel')}</Button>
+            <Button type="submit" form="user-detailed-edit-form" disabled={updateUserMutation.isLoading}>{t('common.save')}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={detailState.open} onOpenChange={(open) => (!open ? closeUserDetail() : null)}>
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-none overflow-hidden p-0 sm:w-[calc(100vw-3rem)] sm:max-w-6xl xl:max-w-7xl 2xl:max-w-[1440px] rounded-[1.5rem] bg-white dark:bg-[#1C1C1E] border-none shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)]">
+        <DialogContent scrollable={false} className="w-[calc(100vw-1.5rem)] max-w-none overflow-hidden p-0 sm:w-[calc(100vw-3rem)] sm:max-w-6xl xl:max-w-7xl 2xl:max-w-[1440px] rounded-[1.5rem] bg-white dark:bg-[#1C1C1E] border-none shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)]">
           <div className="flex max-h-[calc(100dvh-2rem)] flex-col">
             <DialogHeader className="shrink-0 px-6 pt-8 pb-4 bg-white dark:bg-black/40 backdrop-blur-xl relative z-10 border-b border-transparent dark:border-white/5">
               <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 text-white shadow-sm ring-4 ring-white dark:ring-[#121212]">
