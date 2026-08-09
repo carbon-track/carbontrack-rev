@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -144,13 +144,13 @@ function MessageDetailModal({ message, onClose }) {
   const visible = Boolean(message);
   const sheetTranslateY = useRef(new Animated.Value(viewportHeight)).current;
 
-  useEffect(() => {
-    sheetTranslateY.stopAnimation();
-    sheetTranslateY.setValue(viewportHeight);
+  useLayoutEffect(() => {
     if (!visible) {
       return undefined;
     }
 
+    sheetTranslateY.stopAnimation();
+    sheetTranslateY.setValue(viewportHeight);
     const animation = Animated.timing(sheetTranslateY, {
       duration: 280,
       easing: Easing.out(Easing.cubic),
