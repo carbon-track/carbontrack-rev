@@ -32,6 +32,8 @@ export function Navbar() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const hasRefreshedUserRef = useRef(false);
+  const mobilePanelRef = useRef(null);
+  const mobileToggleRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -99,6 +101,32 @@ export function Navbar() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return;
+    }
+
+    const desktopQuery = window.matchMedia('(min-width: 1280px)');
+    const handleDesktopChange = (event) => {
+      if (!event.matches) {
+        return;
+      }
+
+      setIsOpen(false);
+      setRenderMobileNav(false);
+      setIsAnimatingOut(false);
+    };
+
+    handleDesktopChange(desktopQuery);
+    if (typeof desktopQuery.addEventListener === 'function') {
+      desktopQuery.addEventListener('change', handleDesktopChange);
+      return () => desktopQuery.removeEventListener('change', handleDesktopChange);
+    }
+
+    desktopQuery.addListener(handleDesktopChange);
+    return () => desktopQuery.removeListener(handleDesktopChange);
+  }, []);
+
+  useEffect(() => {
     if (isOpen) {
       setRenderMobileNav(true);
       setIsAnimatingOut(false);
@@ -118,7 +146,7 @@ export function Navbar() {
   }, [isOpen, renderMobileNav]);
 
   useEffect(() => {
-    if (!isPortrait || !renderMobileNav || typeof document === 'undefined') {
+    if (!isOpen || typeof document === 'undefined') {
       return;
     }
     const originalOverflow = document.body.style.overflow;
@@ -127,11 +155,79 @@ export function Navbar() {
     return () => {
       document.body.style.overflow = originalOverflow;
     };
-  }, [isPortrait, renderMobileNav]);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !renderMobileNav || typeof document === 'undefined') {
+      return;
+    }
+
+    const panel = mobilePanelRef.current;
+    if (!panel) {
+      return;
+    }
+
+    const getFocusableElements = () => Array.from(panel.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter((element) => element.getClientRects().length > 0);
+
+    const focusFrame = window.requestAnimationFrame(() => {
+      getFocusableElements()[0]?.focus();
+    });
+
+    const handleKeyDown = (event) => {
+      const activeElement = document.activeElement;
+      const focusIsInExternalLayer = activeElement?.closest?.(
+        '[data-slot="dropdown-menu-content"][data-state="open"], [role="menu"][data-state="open"], [data-slot="select-content"][data-state="open"], [data-slot="popover-content"][data-state="open"], [role="dialog"], [role="alertdialog"]'
+      );
+
+      if (focusIsInExternalLayer && !panel.contains(activeElement)) {
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        setIsOpen(false);
+        window.requestAnimationFrame(() => mobileToggleRef.current?.focus());
+        return;
+      }
+
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      const focusableElements = getFocusableElements();
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      if (!panel.contains(activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? lastElement : firstElement).focus();
+      } else if (event.shiftKey && activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [isOpen, renderMobileNav]);
 
   useEffect(() => {
     setIsOpen(false);
-  }, [location.pathname]);
+  }, [location.hash, location.pathname, location.search]);
 
   useEffect(() => {
     if (showSecondaryControls) {
@@ -193,6 +289,11 @@ export function Navbar() {
 
   const closeMobile = () => {
     setIsOpen(false);
+  };
+
+  const closeMobileAndRestoreFocus = () => {
+    setIsOpen(false);
+    window.requestAnimationFrame(() => mobileToggleRef.current?.focus());
   };
 
   const isActivePath = (path) => {
@@ -374,23 +475,26 @@ export function Navbar() {
           {isPortrait && (
             <button
               type="button"
-              onClick={closeMobile}
+              onClick={closeMobileAndRestoreFocus}
               aria-label={t('nav.closeMenu')}
               className={clsx(
-                'fixed inset-0 z-[55] bg-black/45 transition-opacity duration-200 ease-out md:hidden',
+                'fixed inset-0 z-[55] bg-black/45 transition-opacity duration-200 ease-out xl:hidden',
                 isAnimatingOut ? 'opacity-0' : 'opacity-100'
               )}
             />
           )}
           <div
+            ref={mobilePanelRef}
             id={mobilePanelId}
             role={isPortrait ? 'dialog' : 'region'}
             aria-modal={isPortrait ? 'true' : undefined}
+            aria-labelledby={`${mobilePanelId}-title`}
+            aria-describedby={`${mobilePanelId}-description`}
             className={clsx(
-              'md:hidden border-t border-border bg-background text-foreground',
+              'xl:hidden border-t border-border bg-background text-foreground',
               isPortrait
                 ? 'fixed inset-0 z-[60] border-0 rounded-none bg-background shadow-2xl shadow-black/20'
-                : 'absolute inset-x-0 top-16 z-10 rounded-b-2xl border border-border shadow-lg shadow-black/10',
+                : 'fixed inset-x-0 bottom-0 top-16 z-[60] overflow-hidden border-x-0 border-b-0 bg-background shadow-2xl shadow-black/20',
               isAnimatingOut ? 'animate-mobile-nav-out' : 'animate-mobile-nav-in'
             )}
           >
@@ -399,7 +503,7 @@ export function Navbar() {
                 'space-y-5',
                 isPortrait
                   ? 'h-[100dvh] overflow-y-auto px-4 pt-0 pb-[max(2rem,env(safe-area-inset-bottom))]'
-                  : 'px-3 pt-4 pb-6'
+                  : 'h-[calc(100dvh-4rem)] overflow-y-auto px-4 pt-4 pb-[max(2rem,env(safe-area-inset-bottom))]'
               )}
             >
               <div
@@ -409,17 +513,17 @@ export function Navbar() {
                 )}
               >
                 <div>
-                  <p className="text-sm font-semibold text-foreground">
+                  <p id={`${mobilePanelId}-title`} className="text-sm font-semibold text-foreground">
                     {t('nav.menuTitle')}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p id={`${mobilePanelId}-description`} className="text-xs text-muted-foreground">
                     {t('nav.menuSubtitle')}
                   </p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={closeMobile}
+                  onClick={closeMobileAndRestoreFocus}
                   aria-label={t('nav.closeMenu')}
                   className="h-9 w-9 rounded-full border border-border"
                 >
@@ -430,7 +534,7 @@ export function Navbar() {
               {mobileNavSections.map((section) => (
                 <div
                   key={section.key}
-                  className="rounded-2xl border border-border bg-card/95 p-4 shadow-sm shadow-black/5"
+                  className="rounded-lg border border-border bg-card/95 p-4 shadow-sm shadow-black/5"
                 >
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-green-600">
@@ -455,7 +559,7 @@ export function Navbar() {
                           to={item.path}
                           onClick={closeMobile}
                           className={clsx(
-                            'flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/40',
+                            'flex min-w-0 w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/40',
                             isActive
                               ? 'border-green-200 bg-green-50/80 text-green-700 shadow-sm dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300'
                               : 'border-border text-muted-foreground hover:border-green-200 hover:bg-accent hover:text-foreground'
@@ -483,7 +587,7 @@ export function Navbar() {
               ))}
 
               <div className="space-y-4">
-                <div className="rounded-2xl border border-border bg-card/95 p-4 shadow-sm shadow-black/5">
+                <div className="rounded-lg border border-border bg-card/95 p-4 shadow-sm shadow-black/5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wide text-green-600">
@@ -519,7 +623,7 @@ export function Navbar() {
                 </div>
 
                 {isAuthenticated ? (
-                  <div className="rounded-2xl border border-border bg-card/95 p-4 shadow-sm shadow-black/5">
+                  <div className="rounded-lg border border-border bg-card/95 p-4 shadow-sm shadow-black/5">
                     <div className="flex items-center gap-3">
                       {renderUserAvatar('h-12 w-12')}
                       <div>
@@ -546,7 +650,7 @@ export function Navbar() {
                               key={action.key}
                               to={action.to}
                               onClick={closeMobile}
-                              className="flex items-center gap-2 rounded-xl border border-border bg-background/80 px-3 py-3 text-sm font-medium text-muted-foreground transition hover:-translate-y-0.5 hover:border-green-200 hover:text-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/40 dark:bg-background/60"
+                              className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-background/80 px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-green-200 hover:text-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/40 dark:bg-background/60"
                             >
                               <ActionIcon className="h-4 w-4" />
                               <span>{action.label}</span>
@@ -566,14 +670,14 @@ export function Navbar() {
                         handleLogout();
                         closeMobile();
                       }}
-                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-transparent bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/60"
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-transparent bg-green-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/60"
                     >
                       <LogOut className="h-4 w-4" />
                       {t('nav.logout')}
                     </button>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-border bg-card/95 p-4 shadow-sm shadow-black/5">
+                  <div className="rounded-lg border border-border bg-card/95 p-4 shadow-sm shadow-black/5">
                     <p className="text-base font-semibold text-foreground">
                       {t('nav.getStarted')}
                     </p>
@@ -609,7 +713,7 @@ export function Navbar() {
           'sticky top-0 z-50 transition-all duration-300',
           isAdminRoute
             ? 'border-b border-border bg-background'
-            : isPortrait && renderMobileNav
+            : renderMobileNav
               ? 'border-b border-border bg-background'
             : 'border-b border-black/5 dark:border-white/10 bg-white/70 dark:bg-black/50 backdrop-blur-xl supports-[backdrop-filter]:backdrop-blur-xl'
         )}
@@ -623,14 +727,14 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-1 lg:gap-2">
+          <div className="hidden xl:flex items-center gap-1 2xl:gap-2">
             {filteredNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`relative flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors lg:px-4 ${
+                  className={`relative flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors 2xl:px-4 ${
                     isActivePath(item.path)
                       ? 'bg-green-50 text-green-600 dark:bg-emerald-500/15 dark:text-emerald-300'
                       : 'text-muted-foreground hover:bg-green-50/70 hover:text-green-600 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300'
@@ -649,22 +753,22 @@ export function Navbar() {
           </div>
 
           {/* Desktop User Menu */}
-          <div className="hidden md:flex items-center space-x-2">
+          <div className="hidden xl:flex items-center space-x-2">
             {showSecondaryControls ? (
               <React.Suspense fallback={null}>
                 <LanguageSwitcher
                   variant="outline"
-                  className="rounded-xl border-border bg-background text-foreground hover:bg-muted hover:text-foreground"
+                  className="rounded-lg border-border bg-background text-foreground hover:bg-muted hover:text-foreground"
                 />
                 <ThemeToggle
                   variant="outline"
-                  className="rounded-xl border-border bg-background text-foreground hover:bg-muted hover:text-foreground"
+                  className="rounded-lg border-border bg-background text-foreground hover:bg-muted hover:text-foreground"
                 />
               </React.Suspense>
             ) : (
               <div className="flex items-center space-x-2">
-                <div className="h-10 w-[88px] rounded-xl border border-border bg-background" />
-                <div className="h-10 w-10 rounded-xl border border-border bg-background" />
+                <div className="h-10 w-[88px] rounded-lg border border-border bg-background" />
+                <div className="h-10 w-10 rounded-lg border border-border bg-background" />
               </div>
             )}
             
@@ -674,7 +778,7 @@ export function Navbar() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="relative rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="relative rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
                   aria-label={t('nav.messages')}
                   onClick={() => navigate('/messages')}
                 >
@@ -687,7 +791,7 @@ export function Navbar() {
                 </Button>
                 {/* 用户菜单 */}
                 <div className="relative group">
-                  <Button variant="ghost" className="flex items-center gap-3 whitespace-nowrap rounded-xl px-2 text-foreground hover:bg-muted">
+                  <Button variant="ghost" className="flex items-center gap-3 whitespace-nowrap rounded-lg px-2 text-foreground hover:bg-muted">
                     {renderUserAvatar('h-8 w-8')}
                     <span className="hidden lg:inline">{user?.username}</span>
                   </Button>
@@ -755,12 +859,12 @@ export function Navbar() {
             ) : (
               <div className="flex items-center space-x-2">
                 <Link to="/auth/login">
-                  <Button variant="ghost" className="rounded-xl text-foreground hover:bg-muted">
+                  <Button variant="ghost" className="rounded-lg text-foreground hover:bg-muted">
                     {t('nav.login')}
                   </Button>
                 </Link>
                 <Link to="/auth/register">
-                  <Button className="rounded-xl bg-green-600 text-white hover:bg-green-700 dark:bg-emerald-500 dark:text-slate-950 dark:hover:bg-emerald-400">
+                  <Button className="rounded-lg bg-green-600 text-white hover:bg-green-700 dark:bg-emerald-500 dark:text-slate-950 dark:hover:bg-emerald-400">
                     {t('nav.register')}
                   </Button>
                 </Link>
@@ -769,8 +873,9 @@ export function Navbar() {
           </div>
 
             {/* Mobile menu button */}
-            <div className="md:hidden">
+            <div className="xl:hidden">
               <Button
+                ref={mobileToggleRef}
                 variant="ghost"
                 onClick={toggleMobile}
                 aria-expanded={isOpen}

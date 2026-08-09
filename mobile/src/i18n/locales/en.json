@@ -98,6 +98,17 @@
     "title": "Record low-carbon action",
     "subtitle": "Choose an activity, upload proof, and submit it for review.",
     "newRecord": "New record",
+    "smartFill": {
+      "title": "AI smart fill",
+      "subtitle": "Describe your low-carbon action and AI will match the activity, amount, date, and notes.",
+      "placeholder": "Example: I took the bus to school today for 5 km instead of driving",
+      "button": "Smart fill",
+      "analyzing": "Analyzing",
+      "applied": "Activity details filled. Review them, then upload proof.",
+      "notFound": "No matching activity type was found. Rephrase it or choose manually.",
+      "failedTitle": "Smart fill failed",
+      "failedMessage": "This activity could not be analyzed right now. Please try again later."
+    },
     "activityType": "Activity type",
     "loadingFactors": "Loading activity factors...",
     "activityPlaceholder": "Select activity type",

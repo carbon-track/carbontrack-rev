@@ -18,12 +18,15 @@ const parseBooleanFlag = (value) => {
   return enabledValues.has(normalized) && !disabledValues.has(normalized);
 };
 
-const isNativeIosTabsEnabled = (env = process.env) => (
-  parseBooleanFlag(env?.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS)
+const nativeIosTabsEnvValue = process.env.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS;
+const nativeLiquidGlassEnvValue = process.env.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS;
+
+const isNativeIosTabsEnabled = (env) => (
+  parseBooleanFlag(env ? env.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS : nativeIosTabsEnvValue)
 );
 
-const isNativeLiquidGlassEnabled = (env = process.env) => (
-  parseBooleanFlag(env?.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS)
+const isNativeLiquidGlassEnabled = (env) => (
+  parseBooleanFlag(env ? env.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS : nativeLiquidGlassEnvValue)
 );
 
 module.exports = {
