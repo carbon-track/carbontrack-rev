@@ -39,7 +39,7 @@ const todayString = (value = new Date()) => (
 const monthKey = (value) => `${value.getFullYear()}-${padDatePart(value.getMonth() + 1)}`;
 const addMonths = (value, delta) => new Date(value.getFullYear(), value.getMonth() + delta, 1);
 const isHttpUrl = (value) => typeof value === 'string' && /^https?:\/\//.test(value);
-const displayDateTime = (value) => String(value || '').split(/[T ]/).slice(0, 2).join(' ');
+const displayDate = (value) => String(value || '').split(/[T ]/)[0] || '--';
 
 const normalizeBadgeId = (value) => (value === undefined || value === null ? null : String(value));
 
@@ -281,7 +281,7 @@ function BadgeRow({ item, locked = false }) {
         </Text>
         {item.awardedAt ? (
           <Text style={[styles.badgeMeta, { color: colors.primary }]}>
-            {t('profile.badges.awardedAt')}: {displayDateTime(item.awardedAt)}
+            {t('profile.badges.awardedAt')}: {displayDate(item.awardedAt)}
           </Text>
         ) : null}
       </View>
@@ -388,7 +388,7 @@ function BadgesPanel({ badgesData, myBadgesData, loading }) {
             <View key={`timeline-${item.id}`} style={[styles.timelineRow, { borderColor: colors.borderStrong }]}>
               <Ionicons color={colors.primary} name="sparkles-outline" size={18} />
               <Text style={[styles.timelineText, { color: colors.textMuted }]}>
-                {badgeName(item.badge, undefined, t('profile.badges.unnamed'))} / {displayDateTime(item.awardedAt)}
+                {badgeName(item.badge, undefined, t('profile.badges.unnamed'))} / {displayDate(item.awardedAt)}
               </Text>
             </View>
           ))}
