@@ -34,7 +34,7 @@ const TeamMemberCard = React.memo(({ member, index, photoPlaceholderLabel }) => 
   );
 
   return (
-    <article className="flex h-full min-w-0 flex-col bg-[#304735] p-3 text-[#eff7e9] shadow-[0_18px_45px_rgba(35,58,41,0.12)] transition-transform duration-300 hover:-translate-y-1">
+    <article className="flex h-full min-w-0 flex-col bg-[#304735] px-5 py-3 text-[#eff7e9] shadow-[0_18px_45px_rgba(35,58,41,0.12)] transition-transform duration-300 hover:-translate-y-1">
       <div
         role="img"
         aria-label={photoPlaceholderLabel}
@@ -65,7 +65,7 @@ const TeamMemberCard = React.memo(({ member, index, photoPlaceholderLabel }) => 
         </h2>
 
         {member.role ? (
-          <p className="mt-2 text-sm font-bold leading-[1.15] text-white">
+          <p className="mt-2 text-[1.05rem] font-bold leading-[1.2] text-white">
             {member.role}
           </p>
         ) : null}
@@ -117,7 +117,7 @@ const AboutUsPage = () => {
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-[1280px] lg:grid-cols-[35.5%_64.5%]">
+      <main className="mx-auto grid w-full max-w-[1600px] lg:grid-cols-[35%_65%] xl:grid-cols-[29%_71%]">
         <aside className="border-b border-[#2f7b3a]/70 px-6 py-14 sm:px-8 lg:border-b-0 lg:border-r lg:px-9 lg:py-12">
           <div className="lg:sticky lg:top-28">
             <h2 className="max-w-sm whitespace-pre-line font-serif text-5xl font-bold leading-[1.02] tracking-[0.01em] text-[#267b2f] sm:text-6xl lg:text-[3.25rem]">
@@ -143,14 +143,14 @@ const AboutUsPage = () => {
           </div>
         </aside>
 
-        <section className="min-w-0 px-6 py-12 sm:px-10 lg:px-[5.5rem] lg:py-10">
+        <section className="min-w-0 px-6 py-12 sm:px-10 lg:px-16 lg:py-10 2xl:px-20">
           {team.intro ? (
             <p className="max-w-3xl font-serif text-[1.75rem] font-bold leading-[1.08] tracking-[0.015em] text-[#3b585d] sm:text-4xl sm:leading-[1.02] lg:text-[2.35rem]">
               {team.intro}
             </p>
           ) : null}
 
-          <div className="mt-20 grid items-stretch gap-x-8 gap-y-14 sm:grid-cols-2 xl:grid-cols-3 xl:gap-x-9 xl:gap-y-16">
+          <div className="mt-20 grid items-stretch gap-x-10 gap-y-20 sm:grid-cols-2 xl:grid-cols-3 xl:gap-x-12 xl:gap-y-24 2xl:gap-x-14 2xl:gap-y-28">
             {members.map((member, index) => (
               <TeamMemberCard
                 key={member.name}
