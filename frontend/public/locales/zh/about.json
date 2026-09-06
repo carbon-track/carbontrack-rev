@@ -2,6 +2,7 @@
   "about": {
     "hero": {
       "title": "关于 CarbonTrack",
+      "displayTitle": "关于 CarbonTrack",
       "subtitle": "我们是一群热爱环保与科技的年轻人，希望携手构建一个可持续的低碳未来。"
     },
     "contactLinks": [
@@ -31,6 +32,9 @@
     ],
     "team": {
       "title": "核心团队",
+      "displayTitle": "由伙伴们\n共同驱动",
+      "contactNavigationLabel": "联系与社群链接",
+      "photoPlaceholder": "{{name}} 的肖像占位图",
       "intro": "认识 CarbonTrack 背后的伙伴们，他们把创意、技术与热情倾注到每一次低碳行动之中。",
       "learnMore": "了解更多",
       "members": [

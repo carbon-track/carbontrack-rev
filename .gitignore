@@ -15,6 +15,9 @@
 /.worktrees/
 /.cursor/hooks/state/continual-learning.json
 
+# macOS metadata
+.DS_Store
+
 # AI Agent Instructions
 
 # Backend ignores

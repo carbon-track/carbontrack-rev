@@ -2,6 +2,7 @@
   "about": {
     "hero": {
       "title": "About CarbonTrack",
+      "displayTitle": "About CarbonTrack",
       "subtitle": "We are a group of young people passionate about environmental protection and technology, teaming up to build a sustainable, low-carbon future."
     },
     "contactLinks": [
@@ -31,6 +32,9 @@
     ],
     "team": {
       "title": "Our Team",
+      "displayTitle": "Powered by\nits People",
+      "contactNavigationLabel": "Contact and community links",
+      "photoPlaceholder": "Portrait placeholder for {{name}}",
       "intro": "Meet the dedicated members behind CarbonTrack who pour their creativity, technical expertise, and passion for environmental action into everything we do.",
       "learnMore": "Learn More",
       "members": [
