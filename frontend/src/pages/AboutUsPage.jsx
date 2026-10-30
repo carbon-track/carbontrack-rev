@@ -3,6 +3,7 @@ import { ArrowUpRight, Search, SearchX, UserRound, X } from 'lucide-react';
 import { Input } from '../components/ui/Input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
 import { useTranslation } from '../hooks/useTranslation';
+import { useTeamAvatarSpeech } from '../hooks/useTeamAvatarSpeech';
 import './AboutUsPage.css';
 
 const TEAM_CATEGORIES = ['all', 'engineering', 'design', 'research', 'community'];
@@ -31,6 +32,60 @@ const getMemberInitials = (name = '') => {
   const lastInitial = words.length > 1 ? words.at(-1).charAt(0) : '';
 
   return `${firstInitial}${lastInitial}`.toUpperCase();
+};
+
+const TeamAvatarButton = ({ member, index, label, onSelect, speech, onSpeechDismiss }) => {
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+
+  return (
+    <Tooltip
+      delayDuration={150}
+      open={Boolean(speech) || tooltipOpen}
+      onOpenChange={(open) => {
+        setTooltipOpen(open);
+        if (!open && speech) onSpeechDismiss();
+      }}
+    >
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={() => onSelect(index)}
+          aria-label={label}
+          aria-controls="team-results"
+          data-team-member-index={index}
+          data-speaking={Boolean(speech)}
+          className="about-team-avatar-button relative block aspect-square min-h-11 min-w-11 w-full rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-700"
+        >
+          <span className="relative isolate block h-full w-full overflow-hidden bg-[#f5f5f1]">
+            <span className="about-team-avatar-portrait absolute inset-0 block">
+              <img
+                src={member.avatar}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full scale-[1.15] object-contain"
+              />
+            </span>
+          </span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        key={speech?.id ?? 'name'}
+        side="top"
+        sideOffset={10}
+        onEscapeKeyDown={() => {
+          setTooltipOpen(false);
+          onSpeechDismiss();
+        }}
+        className={speech
+          ? 'about-team-speech-bubble max-w-48 rounded-2xl border border-[#304735] bg-[#f7efd9] px-4 py-1.5 font-mono text-sm font-semibold text-[#304735] shadow-[0_4px_0_rgba(48,71,53,0.12)] [&_svg]:bg-[#f7efd9] [&_svg]:fill-[#f7efd9]'
+          : 'bg-[#304735] font-serif text-sm font-semibold text-[#eff7e9] [&_svg]:bg-[#304735] [&_svg]:fill-[#304735]'}
+      >
+        {speech?.quote ?? member.name}
+      </TooltipContent>
+    </Tooltip>
+  );
 };
 
 const TeamMemberCard = React.memo(({ member, index, photoPlaceholderLabel, portraitAlt, cardRef }) => {
@@ -121,7 +176,7 @@ const AboutUsPage = () => {
     returnObjects: true,
     email: import.meta.env.VITE_SUPPORT_EMAIL,
   }) || [];
-  const team = t('about.team', { returnObjects: true }) || {};
+  const team = useMemo(() => t('about.team', { returnObjects: true }) || {}, [t]);
   const categoryLabels = team.directory?.categories;
 
   const members = useMemo(
@@ -157,8 +212,9 @@ const AboutUsPage = () => {
       : searchedMembers.filter(({ member }) => member.categories?.includes(category)).length,
   ]));
   const hasFilters = searchQuery.length > 0 || activeCategory !== 'all';
-  const avatarMembers = members.map((member, index) => ({ member, index }))
-    .filter(({ member }) => member.avatar);
+  const avatarMembers = useMemo(() => members.map((member, index) => ({ member, index }))
+    .filter(({ member }) => member.avatar), [members]);
+  const { navigationRef, activeSpeech, dismissSpeech } = useTeamAvatarSpeech(avatarMembers);
 
   useEffect(() => {
     if (pendingMemberIndex === null) {
@@ -226,7 +282,7 @@ const AboutUsPage = () => {
               {team.displayTitle || team.title || 'Our Team'}
             </h2>
 
-            <nav aria-label={team.contactNavigationLabel || team.title} className="mt-14 sm:mt-16">
+            <nav aria-label={team.contactNavigationLabel || team.title} className="mt-10 sm:mt-12">
               <ul className="flex flex-wrap gap-x-7 gap-y-4 lg:flex-col lg:items-start lg:gap-3">
                 {contactLinks.map((item) => (
                   <li key={`${item.type}-${item.href}`}>
@@ -244,44 +300,21 @@ const AboutUsPage = () => {
             </nav>
 
             {avatarMembers.length > 0 ? (
-              <nav aria-labelledby="team-avatar-nav-title" className="mt-10 max-w-sm font-serif">
+              <nav ref={navigationRef} aria-labelledby="team-avatar-nav-title" className="mt-4 max-w-sm font-serif">
                 <h3 id="team-avatar-nav-title" className="text-2xl font-bold text-[#304735]">
                   {t('about.team.avatarNavigation.title')}
                 </h3>
-                <ul className="mt-4 grid grid-cols-5 gap-2">
+                <ul className="mt-15 grid grid-cols-5 gap-2">
                   {avatarMembers.map(({ member, index }) => (
                     <li key={member.name} className="min-w-0">
-                      <Tooltip delayDuration={150}>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() => jumpToMember(index)}
-                            aria-label={t('about.team.avatarNavigation.jumpTo', { name: member.name })}
-                            aria-controls="team-results"
-                            className="about-team-avatar-button relative block aspect-square min-h-11 min-w-11 w-full rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-700"
-                          >
-                            <span className="relative isolate block h-full w-full overflow-hidden bg-[#f5f5f1]">
-                              <span className="about-team-avatar-portrait absolute inset-0 block">
-                                <img
-                                  src={member.avatar}
-                                  alt=""
-                                  aria-hidden="true"
-                                  loading="lazy"
-                                  decoding="async"
-                                  className="h-full w-full scale-[1.15] object-contain"
-                                />
-                              </span>
-                            </span>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          sideOffset={8}
-                          className="bg-[#304735] font-serif text-sm font-semibold text-[#eff7e9] [&_svg]:bg-[#304735] [&_svg]:fill-[#304735]"
-                        >
-                          {member.name}
-                        </TooltipContent>
-                      </Tooltip>
+                      <TeamAvatarButton
+                        member={member}
+                        index={index}
+                        label={t('about.team.avatarNavigation.jumpTo', { name: member.name })}
+                        onSelect={jumpToMember}
+                        speech={activeSpeech?.index === index ? activeSpeech : null}
+                        onSpeechDismiss={dismissSpeech}
+                      />
                     </li>
                   ))}
                 </ul>
