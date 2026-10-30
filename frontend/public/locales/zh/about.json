@@ -100,6 +100,70 @@
           ]
         },
         {
+          "name": "Eddie Peng",
+          "avatar": "/images/about/avatars/eddie-notion-avatar.png",
+          "role": "内容策划",
+          "bio": "Eddie 编写文案与教育内容，让每位探索低碳生活的伙伴都能获得清晰、友好的引导。",
+          "categories": [
+            "community"
+          ]
+        },
+        {
+          "name": "Zihan (Angela) Zhang",
+          "avatar": "/images/about/avatars/angela-notion-avatar.jpg",
+          "role": "产品创新者 & 倡导者",
+          "bio": "Angela 将 CarbonTrack 拓展至移动端，为用户提供更便捷、更易用的服务入口。她相信，技术可以通过实用而有吸引力的产品，有效传播环保意识。",
+          "categories": [
+            "engineering",
+            "design"
+          ]
+        },
+        {
+          "name": "Renyuan (Alex) Pu",
+          "avatar": "/images/about/avatars/alex-notion-avatar.jpg",
+          "role": "气候分析师 & 数据建模师",
+          "bio": "Alex 打造工具，帮助人们看见日常选择背后被忽视的气候影响。他热爱数学、数据分析与研究，善于把复杂的流程转化为建立在真实假设之上、清晰且可验证的模型。",
+          "categories": [
+            "research"
+          ]
+        },
+        {
+          "name": "Amily Gao",
+          "avatar": "/images/about/avatars/amily-notion-avatar.png",
+          "role": "联合创始人 & 研究负责人",
+          "bio": "Amily 负责背景调研与碳核算，确保内容既严谨又易于理解。",
+          "categories": [
+            "research"
+          ]
+        },
+        {
+          "name": "Andy Pan",
+          "avatar": "/images/about/avatars/andy-notion-avatar.jpg",
+          "role": "测试工程师 & 用户体验倡导者",
+          "bio": "Andy 通过实际测试与用户体验评估，专注于提升产品质量和使用体验。目前正参与 CarbonTrack Chrome 扩展项目，帮助验证功能与易用性，让用户能够以更流畅、更便捷的方式参与可持续行动。怀着对环境保护的热爱，Andy 相信，设计周到、经过充分测试的产品能够激励更多人养成环保习惯。",
+          "categories": [
+            "engineering",
+            "design"
+          ]
+        },
+        {
+          "name": "Aiden Song",
+          "avatar": "/images/about/avatars/aiden-notion-avatar.png",
+          "bio": "Aiden 参与应用与网站开发，并通过多媒体展览，让人们切身感受气候变化。他希望人们能看见、触摸，甚至品尝一个正在变暖的星球。",
+          "categories": [
+            "engineering",
+            "design"
+          ]
+        },
+        {
+          "name": "Teresa Zheng",
+          "avatar": "/images/about/avatars/teresa-notion-avatar.jpg",
+          "bio": "Teresa 立志将 CarbonTrack 这一环保项目升级为可持续发展、具备自主造血能力的新型环保组织，运用商业模式开展推广与创新经营。",
+          "categories": [
+            "community"
+          ]
+        },
+        {
           "name": "Smiley Ni",
           "role": "创意负责人",
           "bio": "Smiley 主导品牌视觉与内容创作，热爱舞蹈与艺术，希望让 CarbonTrack 在传播环保理念的同时带来快乐。",
@@ -137,40 +201,12 @@
           ]
         },
         {
-          "name": "Eddie Peng",
-          "avatar": "/images/about/avatars/eddie-notion-avatar.png",
-          "role": "内容策划",
-          "bio": "Eddie 编写文案与教育内容，让每位探索低碳生活的伙伴都能获得清晰、友好的引导。",
-          "categories": [
-            "community"
-          ]
-        },
-        {
           "name": "Michael Jiang",
           "role": "前端工程师",
           "bio": "Michael 专注于用户界面与功能开发，关注可访问性与愉悦的交互体验。",
           "categories": [
             "engineering",
             "design"
-          ]
-        },
-        {
-          "name": "Zihan (Angela) Zhang",
-          "avatar": "/images/about/avatars/angela-notion-avatar.jpg",
-          "role": "产品创新者 & 倡导者",
-          "bio": "Angela 将 CarbonTrack 拓展至移动端，为用户提供更便捷、更易用的服务入口。她相信，技术可以通过实用而有吸引力的产品，有效传播环保意识。",
-          "categories": [
-            "engineering",
-            "design"
-          ]
-        },
-        {
-          "name": "Renyuan (Alex) Pu",
-          "avatar": "/images/about/avatars/alex-notion-avatar.jpg",
-          "role": "气候分析师 & 数据建模师",
-          "bio": "Alex 打造工具，帮助人们看见日常选择背后被忽视的气候影响。他热爱数学、数据分析与研究，善于把复杂的流程转化为建立在真实假设之上、清晰且可验证的模型。",
-          "categories": [
-            "research"
           ]
         },
         {
@@ -228,15 +264,6 @@
           ]
         },
         {
-          "name": "Amily Gao",
-          "avatar": "/images/about/avatars/amily-notion-avatar.png",
-          "role": "联合创始人 & 研究负责人",
-          "bio": "Amily 负责背景调研与碳核算，确保内容既严谨又易于理解。",
-          "categories": [
-            "research"
-          ]
-        },
-        {
           "name": "Jerry Tang",
           "role": "联合创始人 & 碳排分析师",
           "bio": "Jerry 搭建碳核算模型并进行前期研究，为产品决策提供数据支撑。",
@@ -284,33 +311,6 @@
           "bio": "Mandy 负责插画与视觉创意，期待用作品激发好奇心与绿色生活灵感。",
           "categories": [
             "design"
-          ]
-        },
-        {
-          "name": "Andy Pan",
-          "avatar": "/images/about/avatars/andy-notion-avatar.jpg",
-          "role": "测试工程师 & 用户体验倡导者",
-          "bio": "Andy 通过实际测试与用户体验评估，专注于提升产品质量和使用体验。目前正参与 CarbonTrack Chrome 扩展项目，帮助验证功能与易用性，让用户能够以更流畅、更便捷的方式参与可持续行动。怀着对环境保护的热爱，Andy 相信，设计周到、经过充分测试的产品能够激励更多人养成环保习惯。",
-          "categories": [
-            "engineering",
-            "design"
-          ]
-        },
-        {
-          "name": "Aiden Song",
-          "avatar": "/images/about/avatars/aiden-notion-avatar.png",
-          "bio": "Aiden 参与应用与网站开发，并通过多媒体展览，让人们切身感受气候变化。他希望人们能看见、触摸，甚至品尝一个正在变暖的星球。",
-          "categories": [
-            "engineering",
-            "design"
-          ]
-        },
-        {
-          "name": "Teresa Zheng",
-          "avatar": "/images/about/avatars/teresa-notion-avatar.jpg",
-          "bio": "Teresa 立志将 CarbonTrack 这一环保项目升级为可持续发展、具备自主造血能力的新型环保组织，运用商业模式开展推广与创新经营。",
-          "categories": [
-            "community"
           ]
         }
       ]
