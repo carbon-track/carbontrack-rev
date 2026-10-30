@@ -79,7 +79,7 @@ const TeamAvatarButton = ({ member, index, label, onSelect, speech, onSpeechDism
           onSpeechDismiss();
         }}
         className={speech
-          ? 'about-team-speech-bubble max-w-48 rounded-2xl border border-[#304735] bg-[#f7efd9] px-4 py-1.5 font-mono text-sm font-semibold text-[#304735] shadow-[0_4px_0_rgba(48,71,53,0.12)] [&_svg]:bg-[#f7efd9] [&_svg]:fill-[#f7efd9]'
+          ? 'about-team-speech-bubble max-w-56 rounded-2xl border border-[#304735] bg-[#f7efd9] px-4 py-1.5 font-mono text-sm font-semibold text-[#304735] shadow-[0_4px_0_rgba(48,71,53,0.12)] [&_svg]:bg-[#f7efd9] [&_svg]:fill-[#f7efd9]'
           : 'bg-[#304735] font-serif text-sm font-semibold text-[#eff7e9] [&_svg]:bg-[#304735] [&_svg]:fill-[#304735]'}
       >
         {speech?.quote ?? member.name}

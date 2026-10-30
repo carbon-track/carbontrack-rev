@@ -78,7 +78,7 @@
         {
           "name": "Zining (Jeffery) Lyu",
           "avatar": "/images/about/avatars/jeffery-notion-avatar.png",
-          "avatarQuotes": ["Hello World"],
+          "avatarQuotes": ["print(\"helloworld\")"],
           "role": "联合创始人 & 全栈工程师",
           "bio": "Jeffery 是核心技术负责人，负责 CarbonTrack 网站的架构、开发与维护。",
           "link": "https://github.com/Jeffery2008",
