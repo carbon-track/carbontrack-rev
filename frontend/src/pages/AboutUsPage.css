@@ -13,6 +13,13 @@
   transform-origin: 50% 72%;
 }
 
+.about-team-speech-tail {
+  display: block;
+  overflow: visible;
+  /* Join the tail's fill across the bubble border without a dividing line. */
+  transform: translateY(-2px);
+}
+
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .about-team-avatar-button:hover .about-team-avatar-portrait {
     animation: about-team-avatar-wiggle 640ms ease-in-out;
