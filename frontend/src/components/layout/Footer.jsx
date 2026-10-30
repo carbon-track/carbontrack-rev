@@ -47,6 +47,7 @@ export function Footer({ summaryData = null, enableLiveSummary = true }) {
   const footerLinks = {
     platform: [
       { label: t('footer.about'), href: '/about-us' },
+      { label: t('footer.partnership'), href: '/partnership' },
       { label: t('footer.howItWorks'), href: '/how-it-works' },
       { label: t('footer.features'), href: '/features' },
       { label: t('footer.pricing'), href: '/pricing' }

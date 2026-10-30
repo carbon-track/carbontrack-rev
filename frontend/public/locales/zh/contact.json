@@ -41,8 +41,7 @@
       {
         "type": "partnership",
         "label": "合作洽谈",
-        "href": "https://carbontrack.org/partners",
-        "external": true
+        "href": "/partnership"
       }
     ]
   }

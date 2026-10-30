@@ -21,6 +21,7 @@ const OnboardingPage = React.lazy(() => import('../pages/OnboardingPage'));
 const AchievementsPage = React.lazy(() => import('../pages/AchievementsPage'));
 const NotificationSettingsPage = React.lazy(() => import('../pages/NotificationSettingsPage'));
 const AboutUsPage = React.lazy(() => import('../pages/AboutUsPage'));
+const PartnershipPage = React.lazy(() => import('../pages/PartnershipPage'));
 const ContactPage = React.lazy(() => import('../pages/ContactPage'));
 const HelpPage = React.lazy(() => import('../pages/HelpPage'));
 const PrivacyPolicyPage = React.lazy(() => import('../pages/PrivacyPolicyPage'));
@@ -66,6 +67,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <React.Suspense fallback={loadingSpinner}><HomePage /></React.Suspense> },
       { path: 'about-us', element: <React.Suspense fallback={loadingSpinner}><AboutUsPage /></React.Suspense> },
+      { path: 'partnership', element: <React.Suspense fallback={loadingSpinner}><PartnershipPage /></React.Suspense> },
       { path: 'contact', element: <React.Suspense fallback={loadingSpinner}><ContactPage /></React.Suspense> },
       { path: 'help', element: <React.Suspense fallback={loadingSpinner}><HelpPage /></React.Suspense> },
       { path: 'privacy', element: <React.Suspense fallback={loadingSpinner}><PrivacyPolicyPage /></React.Suspense> },
