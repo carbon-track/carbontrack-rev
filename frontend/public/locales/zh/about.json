@@ -34,151 +34,283 @@
       "displayTitle": "由伙伴们\n共同驱动",
       "contactNavigationLabel": "联系与社群链接",
       "photoPlaceholder": "{{name}} 的肖像占位图",
+      "portraitAlt": "{{name}} 的插画头像",
       "intro": "认识 CarbonTrack 背后的伙伴们，他们把创意、技术与热情倾注到每一次低碳行动之中。",
       "learnMore": "了解更多",
+      "avatarNavigation": {
+        "title": "认识伙伴们",
+        "hint": "点击头像，跳到这位伙伴的介绍。",
+        "jumpTo": "跳转到 {{name}} 的介绍"
+      },
+      "directory": {
+        "searchLabel": "搜索团队成员",
+        "searchPlaceholder": "搜索姓名、昵称或关键词…",
+        "searchHint": "可搜索姓名、英文昵称、分工及简介关键词，多个关键词可用空格分隔。",
+        "clearSearch": "清空搜索",
+        "filterLabel": "按分工筛选",
+        "filterHint": "成员可同时参与多个方向。",
+        "categories": {
+          "all": "全部",
+          "engineering": "技术开发",
+          "design": "产品与设计",
+          "research": "气候研究",
+          "community": "社区与运营"
+        },
+        "results": "显示 {{shown}} / {{total}} 位伙伴",
+        "clearFilters": "清空筛选",
+        "emptyTitle": "没有找到匹配的伙伴",
+        "emptyDescription": "换一个关键词或分工分类试试。",
+        "resetButton": "查看全部成员"
+      },
       "members": [
         {
           "name": "Yuanzheng (Jack) Yu",
+          "avatar": "/images/about/avatars/jack-yu-notion-avatar.png",
           "role": "创始人兼项目负责人",
           "bio": "Jack 负责团队协作、长期规划与产品体验，希望通过互联网连接更多人共同参与减排行动。",
           "link": "https://yuanzhengjackyu.com/",
-          "linkLabel": "个人主页"
+          "linkLabel": "个人主页",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Zining (Jeffery) Lyu",
+          "avatar": "/images/about/avatars/jeffery-notion-avatar.png",
           "role": "联合创始人 & 全栈工程师",
           "bio": "Jeffery 是核心技术负责人，负责 CarbonTrack 网站的架构、开发与维护。",
           "link": "https://github.com/Jeffery2008",
-          "linkLabel": "GitHub"
+          "linkLabel": "GitHub",
+          "categories": [
+            "engineering"
+          ]
         },
         {
           "name": "Minghan (Loren) Li",
+          "avatar": "/images/about/avatars/loren-notion-avatar.jpg",
           "role": "产品设计师 & 研究员",
           "bio": "Loren 将环境科学研究与设计结合，为用户呈现更具故事性的低碳体验，热爱摄影与户外探索。",
           "link": "https://lorenlmh.com/",
-          "linkLabel": "个人主页"
+          "linkLabel": "个人主页",
+          "categories": [
+            "design",
+            "research"
+          ]
         },
         {
           "name": "Smiley Ni",
           "role": "创意负责人",
           "bio": "Smiley 主导品牌视觉与内容创作，热爱舞蹈与艺术，希望让 CarbonTrack 在传播环保理念的同时带来快乐。",
           "link": "https://smileyn327.com/",
-          "linkLabel": "个人主页"
+          "linkLabel": "个人主页",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Lan Liu",
           "role": "产品设计师",
-          "bio": "刘澜负责产品运营与界面流程设计，喜欢徒步、陶艺，致力于推广可持续生活方式。"
+          "bio": "刘澜负责产品运营与界面流程设计，喜欢徒步、陶艺，致力于推广可持续生活方式。",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Jack Shi",
           "role": "产品设计师",
-          "bio": "石杰关注用户旅程与社区体验，长期参与海洋保护志愿行动，希望提升大众的环保意识。"
+          "bio": "石杰关注用户旅程与社区体验，长期参与海洋保护志愿行动，希望提升大众的环保意识。",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Tony Li",
           "role": "全栈工程师",
-          "bio": "Tony 负责新功能开发、性能优化与交互体验迭代，让 CarbonTrack 更高效、更易用。"
+          "bio": "Tony 负责新功能开发、性能优化与交互体验迭代，让 CarbonTrack 更高效、更易用。",
+          "categories": [
+            "engineering"
+          ]
         },
         {
           "name": "Eddie Peng",
+          "avatar": "/images/about/avatars/eddie-notion-avatar.png",
           "role": "内容策划",
-          "bio": "Eddie 编写文案与教育内容，让每位探索低碳生活的伙伴都能获得清晰、友好的引导。"
+          "bio": "Eddie 编写文案与教育内容，让每位探索低碳生活的伙伴都能获得清晰、友好的引导。",
+          "categories": [
+            "community"
+          ]
         },
         {
           "name": "Michael Jiang",
           "role": "前端工程师",
-          "bio": "Michael 专注于用户界面与功能开发，关注可访问性与愉悦的交互体验。"
+          "bio": "Michael 专注于用户界面与功能开发，关注可访问性与愉悦的交互体验。",
+          "categories": [
+            "engineering",
+            "design"
+          ]
         },
         {
           "name": "Zihan (Angela) Zhang",
+          "avatar": "/images/about/avatars/angela-notion-avatar.jpg",
           "role": "产品创新者 & 倡导者",
-          "bio": "Angela 将 CarbonTrack 拓展至移动端，为用户提供更便捷、更易用的服务入口。她相信，技术可以通过实用而有吸引力的产品，有效传播环保意识。"
+          "bio": "Angela 将 CarbonTrack 拓展至移动端，为用户提供更便捷、更易用的服务入口。她相信，技术可以通过实用而有吸引力的产品，有效传播环保意识。",
+          "categories": [
+            "engineering",
+            "design"
+          ]
         },
         {
           "name": "Renyuan (Alex) Pu",
+          "avatar": "/images/about/avatars/alex-notion-avatar.jpg",
           "role": "气候分析师 & 数据建模师",
-          "bio": "Alex 打造工具，帮助人们看见日常选择背后被忽视的气候影响。他热爱数学、数据分析与研究，善于把复杂的流程转化为建立在真实假设之上、清晰且可验证的模型。"
+          "bio": "Alex 打造工具，帮助人们看见日常选择背后被忽视的气候影响。他热爱数学、数据分析与研究，善于把复杂的流程转化为建立在真实假设之上、清晰且可验证的模型。",
+          "categories": [
+            "research"
+          ]
         },
         {
           "name": "Peter Zhao",
           "role": "内容与视觉设计",
-          "bio": "Peter 擅长故事化表达与视觉设计，热爱旅行、运动与游戏，希望号召更多人关注环保。"
+          "bio": "Peter 擅长故事化表达与视觉设计，热爱旅行、运动与游戏，希望号召更多人关注环保。",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Kiana Jin",
           "role": "市场负责人",
-          "bio": "Kiana 统筹活动、社交媒体与外部合作，把多元声音带入 CarbonTrack 社群。"
+          "bio": "Kiana 统筹活动、社交媒体与外部合作，把多元声音带入 CarbonTrack 社群。",
+          "categories": [
+            "community"
+          ]
         },
         {
           "name": "Kelly Du",
           "role": "环境科学顾问",
-          "bio": "Kelly 审核项目的科学严谨度，撰写通俗易懂的气候科普文章，分享对海洋与气候议题的热爱。"
+          "bio": "Kelly 审核项目的科学严谨度，撰写通俗易懂的气候科普文章，分享对海洋与气候议题的热爱。",
+          "categories": [
+            "research",
+            "community"
+          ]
         },
         {
           "name": "Thomas Lu",
           "role": "质量工程师",
           "bio": "Thomas 专注功能测试与用户体验优化，相信\"Attention is all you need\"，坚持细致迭代。",
           "link": "https://www.thomas-hub.com/",
-          "linkLabel": "个人主页"
+          "linkLabel": "个人主页",
+          "categories": [
+            "engineering",
+            "design"
+          ]
         },
         {
           "name": "Benson Zhou",
           "role": "运营与社区支持",
-          "bio": "Benson 参与早期视觉风格共创，如今负责审核用户提交、维护邮箱与社区反馈。"
+          "bio": "Benson 参与早期视觉风格共创，如今负责审核用户提交、维护邮箱与社区反馈。",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Arya Chen",
           "role": "界面设计师",
-          "bio": "Arya 擅长 Adobe Ps/Au 等设计工具，期待持续为 CarbonTrack 打造创意与易用兼顾的体验。"
+          "bio": "Arya 擅长 Adobe Ps/Au 等设计工具，期待持续为 CarbonTrack 打造创意与易用兼顾的体验。",
+          "categories": [
+            "design"
+          ]
         },
         {
           "name": "Amily Gao",
+          "avatar": "/images/about/avatars/amily-notion-avatar.png",
           "role": "联合创始人 & 研究负责人",
-          "bio": "Amily 负责背景调研与碳核算，确保内容既严谨又易于理解。"
+          "bio": "Amily 负责背景调研与碳核算，确保内容既严谨又易于理解。",
+          "categories": [
+            "research"
+          ]
         },
         {
           "name": "Jerry Tang",
           "role": "联合创始人 & 碳排分析师",
-          "bio": "Jerry 搭建碳核算模型并进行前期研究，为产品决策提供数据支撑。"
+          "bio": "Jerry 搭建碳核算模型并进行前期研究，为产品决策提供数据支撑。",
+          "categories": [
+            "research"
+          ]
         },
         {
           "name": "Yangyang Zhou",
           "role": "联合创始人",
-          "bio": "杨扬热爱经济学、数学与篮球，为 CarbonTrack 的启动与战略方向提供支持。"
+          "bio": "杨扬热爱经济学、数学与篮球，为 CarbonTrack 的启动与战略方向提供支持。",
+          "categories": [
+            "community"
+          ]
         },
         {
           "name": "Dora Xu",
           "role": "联合创始人 & 研究员",
-          "bio": "Dora 负责文献综述与内容协调，希望激励更多同学从日常小事开始实现减排。"
+          "bio": "Dora 负责文献综述与内容协调，希望激励更多同学从日常小事开始实现减排。",
+          "categories": [
+            "research",
+            "community"
+          ]
         },
         {
           "name": "Hannah Zhang",
           "role": "联合创始人 & 媒体主理",
-          "bio": "Hannah 策划阅读材料、制作媒体内容，倡导用点滴行动守护环境。"
+          "bio": "Hannah 策划阅读材料、制作媒体内容，倡导用点滴行动守护环境。",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Richard Hu",
           "role": "联合创始人 & 工程师",
-          "bio": "Richard 支持网站开发与跨团队协作，希望通过互联网传播更多节能减排理念。"
+          "bio": "Richard 支持网站开发与跨团队协作，希望通过互联网传播更多节能减排理念。",
+          "categories": [
+            "engineering"
+          ]
         },
         {
           "name": "Mandy Yu",
           "role": "联合创始人 & 艺术设计",
-          "bio": "Mandy 负责插画与视觉创意，期待用作品激发好奇心与绿色生活灵感。"
+          "bio": "Mandy 负责插画与视觉创意，期待用作品激发好奇心与绿色生活灵感。",
+          "categories": [
+            "design"
+          ]
         },
         {
           "name": "Andy Pan",
+          "avatar": "/images/about/avatars/andy-notion-avatar.jpg",
           "role": "测试工程师 & 用户体验倡导者",
-          "bio": "Andy 通过实际测试与用户体验评估，专注于提升产品质量和使用体验。目前正参与 CarbonTrack Chrome 扩展项目，帮助验证功能与易用性，让用户能够以更流畅、更便捷的方式参与可持续行动。怀着对环境保护的热爱，Andy 相信，设计周到、经过充分测试的产品能够激励更多人养成环保习惯。"
+          "bio": "Andy 通过实际测试与用户体验评估，专注于提升产品质量和使用体验。目前正参与 CarbonTrack Chrome 扩展项目，帮助验证功能与易用性，让用户能够以更流畅、更便捷的方式参与可持续行动。怀着对环境保护的热爱，Andy 相信，设计周到、经过充分测试的产品能够激励更多人养成环保习惯。",
+          "categories": [
+            "engineering",
+            "design"
+          ]
         },
         {
           "name": "Aiden Song",
-          "bio": "Aiden 参与应用与网站开发，并通过多媒体展览，让人们切身感受气候变化。他希望人们能看见、触摸，甚至品尝一个正在变暖的星球。"
+          "avatar": "/images/about/avatars/aiden-notion-avatar.png",
+          "bio": "Aiden 参与应用与网站开发，并通过多媒体展览，让人们切身感受气候变化。他希望人们能看见、触摸，甚至品尝一个正在变暖的星球。",
+          "categories": [
+            "engineering",
+            "design"
+          ]
         },
         {
           "name": "Teresa Zheng",
-          "bio": "Teresa 立志将 CarbonTrack 这一环保项目升级为可持续发展、具备自主造血能力的新型环保组织，运用商业模式开展推广与创新经营。"
+          "avatar": "/images/about/avatars/teresa-notion-avatar.jpg",
+          "bio": "Teresa 立志将 CarbonTrack 这一环保项目升级为可持续发展、具备自主造血能力的新型环保组织，运用商业模式开展推广与创新经营。",
+          "categories": [
+            "community"
+          ]
         }
       ]
     },

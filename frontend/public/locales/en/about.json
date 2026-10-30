@@ -34,151 +34,283 @@
       "displayTitle": "Powered by\nits People",
       "contactNavigationLabel": "Contact and community links",
       "photoPlaceholder": "Portrait placeholder for {{name}}",
+      "portraitAlt": "Illustrated portrait of {{name}}",
       "intro": "Meet the dedicated members behind CarbonTrack who pour their creativity, technical expertise, and passion for environmental action into everything we do.",
       "learnMore": "Learn More",
+      "avatarNavigation": {
+        "title": "Meet the team",
+        "hint": "Click a face to jump to their profile.",
+        "jumpTo": "Jump to {{name}}'s profile"
+      },
+      "directory": {
+        "searchLabel": "Search team members",
+        "searchPlaceholder": "Search name, nickname or keyword…",
+        "searchHint": "Search names, nicknames, roles and profile keywords. Use spaces to combine keywords.",
+        "clearSearch": "Clear search",
+        "filterLabel": "Filter by contribution",
+        "filterHint": "Members may contribute across teams.",
+        "categories": {
+          "all": "All",
+          "engineering": "Engineering",
+          "design": "Product & Design",
+          "research": "Climate Research",
+          "community": "Community & Operations"
+        },
+        "results": "Showing {{shown}} of {{total}} members",
+        "clearFilters": "Clear filters",
+        "emptyTitle": "No matching teammates",
+        "emptyDescription": "Try another keyword or contribution category.",
+        "resetButton": "Show all members"
+      },
       "members": [
         {
           "name": "Yuanzheng (Jack) Yu",
+          "avatar": "/images/about/avatars/jack-yu-notion-avatar.png",
           "role": "Founder & Project Lead",
           "bio": "Jack leads CarbonTrack, coordinating collaboration, defining the roadmap, and keeping our product experience polished. He believes the internet can connect more people with meaningful climate action.",
           "link": "https://yuanzhengjackyu.com/",
-          "linkLabel": "Portfolio"
+          "linkLabel": "Portfolio",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Zining (Jeffery) Lyu",
+          "avatar": "/images/about/avatars/jeffery-notion-avatar.png",
           "role": "Co-founder & Full-stack Engineer",
           "bio": "Jeffery is our core technology partner and full-stack engineer. He is responsible for the architecture, development, and maintenance of the CarbonTrack web experience.",
           "link": "https://github.com/Jeffery2008",
-          "linkLabel": "GitHub"
+          "linkLabel": "GitHub",
+          "categories": [
+            "engineering"
+          ]
         },
         {
           "name": "Minghan (Loren) Li",
+          "avatar": "/images/about/avatars/loren-notion-avatar.jpg",
           "role": "Product Designer & Researcher",
           "bio": "Loren combines environmental science research with thoughtful design. He brings our mission to life through storytelling, photography, and a love for the outdoors.",
           "link": "https://lorenlmh.com/",
-          "linkLabel": "Portfolio"
+          "linkLabel": "Portfolio",
+          "categories": [
+            "design",
+            "research"
+          ]
         },
         {
           "name": "Smiley Ni",
           "role": "Creative Lead",
           "bio": "Smiley drives our creative direction, from campaign visuals to community storytelling. A passionate dancer and artist, she wants CarbonTrack to spread joy along with climate awareness.",
           "link": "https://smileyn327.com/",
-          "linkLabel": "Portfolio"
+          "linkLabel": "Portfolio",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Lan Liu",
           "role": "Product Designer",
-          "bio": "Lan shapes our product operations and interface flows. She loves hiking, pottery, and bringing sustainable lifestyle ideas to the CarbonTrack community."
+          "bio": "Lan shapes our product operations and interface flows. She loves hiking, pottery, and bringing sustainable lifestyle ideas to the CarbonTrack community.",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Jack Shi",
           "role": "Product Designer",
-          "bio": "Jack focuses on user journeys and community experience. A lifelong ocean advocate, he volunteers with conservation groups and champions environmental literacy."
+          "bio": "Jack focuses on user journeys and community experience. A lifelong ocean advocate, he volunteers with conservation groups and champions environmental literacy.",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Tony Li",
           "role": "Full-stack Engineer",
-          "bio": "Tony helps deliver new features, performance improvements, and smooth interactions that make CarbonTrack both powerful and approachable."
+          "bio": "Tony helps deliver new features, performance improvements, and smooth interactions that make CarbonTrack both powerful and approachable.",
+          "categories": [
+            "engineering"
+          ]
         },
         {
           "name": "Eddie Peng",
+          "avatar": "/images/about/avatars/eddie-notion-avatar.png",
           "role": "Content Strategist",
-          "bio": "Eddie crafts copy, educational resources, and onboarding content. He keeps our tone friendly and supportive for everyone exploring low-carbon living."
+          "bio": "Eddie crafts copy, educational resources, and onboarding content. He keeps our tone friendly and supportive for everyone exploring low-carbon living.",
+          "categories": [
+            "community"
+          ]
         },
         {
           "name": "Michael Jiang",
           "role": "Frontend Engineer",
-          "bio": "Michael develops new user interface patterns and features. He cares deeply about accessible, joyful interaction design for climate products."
+          "bio": "Michael develops new user interface patterns and features. He cares deeply about accessible, joyful interaction design for climate products.",
+          "categories": [
+            "engineering",
+            "design"
+          ]
         },
         {
           "name": "Zihan (Angela) Zhang",
+          "avatar": "/images/about/avatars/angela-notion-avatar.jpg",
           "role": "Product Innovator & Advocate",
-          "bio": "Angela extends CarbonTrack to mobile platforms, creating more accessible and convenient ways for users to engage with our services. She believes that technology can serve as an effective tool to spread eco-awareness through practical, engaging products."
+          "bio": "Angela extends CarbonTrack to mobile platforms, creating more accessible and convenient ways for users to engage with our services. She believes that technology can serve as an effective tool to spread eco-awareness through practical, engaging products.",
+          "categories": [
+            "engineering",
+            "design"
+          ]
         },
         {
           "name": "Renyuan (Alex) Pu",
+          "avatar": "/images/about/avatars/alex-notion-avatar.jpg",
           "role": "Climate Analyst & Data Modeler",
-          "bio": "Alex builds tools that help people understand the hidden climate impact behind everyday choices. He is driven by a passion for math, data analysis, and research, and he enjoys turning complex logistics into clear, testable models grounded in real assumptions."
+          "bio": "Alex builds tools that help people understand the hidden climate impact behind everyday choices. He is driven by a passion for math, data analysis, and research, and he enjoys turning complex logistics into clear, testable models grounded in real assumptions.",
+          "categories": [
+            "research"
+          ]
         },
         {
           "name": "Peter Zhao",
           "role": "Content & Visual Design",
-          "bio": "Peter blends storytelling with visual design. He enjoys travel, sports, and video games, and hopes to inspire a broader environmental movement."
+          "bio": "Peter blends storytelling with visual design. He enjoys travel, sports, and video games, and hopes to inspire a broader environmental movement.",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Kiana Jin",
           "role": "Marketing Lead",
-          "bio": "Kiana leads marketing, events, and external partnerships. She brings diverse voices into our community and builds meaningful collaborations."
+          "bio": "Kiana leads marketing, events, and external partnerships. She brings diverse voices into our community and builds meaningful collaborations.",
+          "categories": [
+            "community"
+          ]
         },
         {
           "name": "Kelly Du",
           "role": "Environmental Science Consultant",
-          "bio": "Kelly validates the scientific accuracy of our programs and writes accessible climate explainers. She leverages scuba diving experience and climate research to deepen public understanding."
+          "bio": "Kelly validates the scientific accuracy of our programs and writes accessible climate explainers. She leverages scuba diving experience and climate research to deepen public understanding.",
+          "categories": [
+            "research",
+            "community"
+          ]
         },
         {
           "name": "Thomas Lu",
           "role": "Quality Engineer",
           "bio": "Thomas tests new features, finds edge cases, and helps us ship with confidence. He believes that \"Attention is all you need\" and champions thoughtful iteration.",
           "link": "https://www.thomas-hub.com/",
-          "linkLabel": "Portfolio"
+          "linkLabel": "Portfolio",
+          "categories": [
+            "engineering",
+            "design"
+          ]
         },
         {
           "name": "Benson Zhou",
           "role": "Operations & Community Support",
-          "bio": "Benson co-created our early design language and now reviews user submissions, manages shared inboxes, and keeps community feedback flowing."
+          "bio": "Benson co-created our early design language and now reviews user submissions, manages shared inboxes, and keeps community feedback flowing.",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Arya Chen",
           "role": "UI Designer",
-          "bio": "Arya contributes interface concepts and visual systems using tools like Photoshop and Audition. She is excited to deliver creative, user-friendly experiences."
+          "bio": "Arya contributes interface concepts and visual systems using tools like Photoshop and Audition. She is excited to deliver creative, user-friendly experiences.",
+          "categories": [
+            "design"
+          ]
         },
         {
           "name": "Amily Gao",
+          "avatar": "/images/about/avatars/amily-notion-avatar.png",
           "role": "Co-founder & Research Lead",
-          "bio": "Amily leads background research and carbon accounting. She ensures our content stays evidence-based and approachable for students."
+          "bio": "Amily leads background research and carbon accounting. She ensures our content stays evidence-based and approachable for students.",
+          "categories": [
+            "research"
+          ]
         },
         {
           "name": "Jerry Tang",
           "role": "Co-founder & Carbon Analyst",
-          "bio": "Jerry supports the carbon accounting model and conducts preliminary research that grounds our product decisions."
+          "bio": "Jerry supports the carbon accounting model and conducts preliminary research that grounds our product decisions.",
+          "categories": [
+            "research"
+          ]
         },
         {
           "name": "Yangyang Zhou",
           "role": "Co-founder",
-          "bio": "Yangyang enjoys economics, mathematics, and basketball. He helped launch CarbonTrack and continues to advise on strategy."
+          "bio": "Yangyang enjoys economics, mathematics, and basketball. He helped launch CarbonTrack and continues to advise on strategy.",
+          "categories": [
+            "community"
+          ]
         },
         {
           "name": "Dora Xu",
           "role": "Co-founder & Researcher",
-          "bio": "Dora leads literature reviews and coordinates content production. She hopes to motivate more students to adopt low-carbon habits."
+          "bio": "Dora leads literature reviews and coordinates content production. She hopes to motivate more students to adopt low-carbon habits.",
+          "categories": [
+            "research",
+            "community"
+          ]
         },
         {
           "name": "Hannah Zhang",
           "role": "Co-founder & Media Lead",
-          "bio": "Hannah curates reading lists, produces media assets, and encourages small, everyday actions that add up to big impact."
+          "bio": "Hannah curates reading lists, produces media assets, and encourages small, everyday actions that add up to big impact.",
+          "categories": [
+            "design",
+            "community"
+          ]
         },
         {
           "name": "Richard Hu",
           "role": "Co-founder & Engineer",
-          "bio": "Richard supports web development and cross-team collaboration. He wants to spread climate awareness and energy-saving tips widely."
+          "bio": "Richard supports web development and cross-team collaboration. He wants to spread climate awareness and energy-saving tips widely.",
+          "categories": [
+            "engineering"
+          ]
         },
         {
           "name": "Mandy Yu",
           "role": "Co-founder & Art Designer",
-          "bio": "Mandy contributes illustrations and visual concepts. She hopes her art sparks curiosity and inspires greener lifestyles."
+          "bio": "Mandy contributes illustrations and visual concepts. She hopes her art sparks curiosity and inspires greener lifestyles.",
+          "categories": [
+            "design"
+          ]
         },
         {
           "name": "Andy Pan",
+          "avatar": "/images/about/avatars/andy-notion-avatar.jpg",
           "role": "Test Engineer & UX Advocate",
-          "bio": "Andy focuses on product quality and user experience through practical testing and UX evaluation. Currently working on the CarbonTrack Chrome extension project, Andy helps validate functionality and usability so users can engage with sustainability in a smoother, more accessible way. Driven by a genuine passion for environmental protection, Andy believes that thoughtful, well-tested products can inspire more people to adopt eco-friendly habits."
+          "bio": "Andy focuses on product quality and user experience through practical testing and UX evaluation. Currently working on the CarbonTrack Chrome extension project, Andy helps validate functionality and usability so users can engage with sustainability in a smoother, more accessible way. Driven by a genuine passion for environmental protection, Andy believes that thoughtful, well-tested products can inspire more people to adopt eco-friendly habits.",
+          "categories": [
+            "engineering",
+            "design"
+          ]
         },
         {
           "name": "Aiden Song",
-          "bio": "Aiden helps build our app and website, and brings climate change to life through multimedia exhibitions. He hopes people can see, touch, and even taste a warming planet."
+          "avatar": "/images/about/avatars/aiden-notion-avatar.png",
+          "bio": "Aiden helps build our app and website, and brings climate change to life through multimedia exhibitions. He hopes people can see, touch, and even taste a warming planet.",
+          "categories": [
+            "engineering",
+            "design"
+          ]
         },
         {
           "name": "Teresa Zheng",
-          "bio": "Teresa aims to transform CarbonTrack into a sustainable environmental organization with the ability to fund its own operations, using business models to expand its reach and develop innovative ways to operate."
+          "avatar": "/images/about/avatars/teresa-notion-avatar.jpg",
+          "bio": "Teresa aims to transform CarbonTrack into a sustainable environmental organization with the ability to fund its own operations, using business models to expand its reach and develop innovative ways to operate.",
+          "categories": [
+            "community"
+          ]
         }
       ]
     },
