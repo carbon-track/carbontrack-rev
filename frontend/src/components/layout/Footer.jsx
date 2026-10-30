@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Github, Twitter, Facebook } from 'lucide-react';
+import { Mail, Phone, MapPin, Github, Instagram } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useQuery } from 'react-query';
 import { statsAPI } from '../../lib/api';
@@ -67,8 +67,7 @@ export function Footer({ summaryData = null, enableLiveSummary = true }) {
 
   const socialLinks = [
     { icon: Github, href: 'https://github.com', label: 'GitHub' },
-    { icon: Twitter, href: 'https://twitter.com', label: 'Twitter' },
-    { icon: Facebook, href: 'https://facebook.com', label: 'Facebook' }
+    { icon: Instagram, href: 'https://www.instagram.com/carbontrackorg', label: t('footer.instagram') }
   ];
 
   return (
