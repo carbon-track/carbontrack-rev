@@ -27,14 +27,14 @@ const TeamMemberCard = React.memo(({ member, index, photoPlaceholderLabel }) => 
       {member.link ? (
         <ArrowUpRight
           aria-hidden="true"
-          className="h-[0.8em] w-[0.8em] shrink-0 transition-transform duration-300 group-hover/name:-translate-y-0.5 group-hover/name:translate-x-0.5"
+          className="h-[0.8em] w-[0.8em] shrink-0"
         />
       ) : null}
     </>
   );
 
   return (
-    <article className="flex h-full min-w-0 flex-col bg-[#304735] px-5 py-3 text-[#eff7e9] shadow-[0_18px_45px_rgba(35,58,41,0.12)] transition-transform duration-300 hover:-translate-y-1">
+    <article className="flex h-full min-w-0 flex-col bg-[#304735] px-5 py-3 text-[#eff7e9] shadow-[0_18px_45px_rgba(35,58,41,0.12)]">
       <div
         role="img"
         aria-label={photoPlaceholderLabel}
@@ -55,7 +55,7 @@ const TeamMemberCard = React.memo(({ member, index, photoPlaceholderLabel }) => 
               href={member.link}
               target="_blank"
               rel="noreferrer"
-              className="group/name inline-flex items-start gap-1 underline decoration-1 underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e7f9df]/70"
+              className="inline-flex items-start gap-1 underline decoration-1 underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e7f9df]/70"
             >
               {nameContent}
             </a>
@@ -132,7 +132,7 @@ const AboutUsPage = () => {
                       href={item.href}
                       target={item.external ? '_blank' : undefined}
                       rel={item.external ? 'noreferrer' : undefined}
-                      className="font-serif text-xl font-bold text-[#3b585d] underline decoration-1 underline-offset-2 transition-colors hover:text-[#267b2f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#267b2f]/40"
+                      className="font-serif text-xl font-bold text-[#3b585d] underline decoration-1 underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#267b2f]/40"
                     >
                       {item.label}
                     </a>
