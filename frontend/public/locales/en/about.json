@@ -167,6 +167,19 @@
           "name": "Mandy Yu",
           "role": "Co-founder & Art Designer",
           "bio": "Mandy contributes illustrations and visual concepts. She hopes her art sparks curiosity and inspires greener lifestyles."
+        },
+        {
+          "name": "Andy Pan",
+          "role": "Test Engineer & UX Advocate",
+          "bio": "Andy focuses on product quality and user experience through practical testing and UX evaluation. Currently working on the CarbonTrack Chrome extension project, Andy helps validate functionality and usability so users can engage with sustainability in a smoother, more accessible way. Driven by a genuine passion for environmental protection, Andy believes that thoughtful, well-tested products can inspire more people to adopt eco-friendly habits."
+        },
+        {
+          "name": "Aiden Song",
+          "bio": "Aiden helps build our app and website, and brings climate change to life through multimedia exhibitions. He hopes people can see, touch, and even taste a warming planet."
+        },
+        {
+          "name": "Teresa Zheng",
+          "bio": "Teresa aims to transform CarbonTrack into a sustainable environmental organization with the ability to fund its own operations, using business models to expand its reach and develop innovative ways to operate."
         }
       ]
     },
