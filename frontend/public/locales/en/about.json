@@ -100,6 +100,70 @@
           ]
         },
         {
+          "name": "Eddie Peng",
+          "avatar": "/images/about/avatars/eddie-notion-avatar.png",
+          "role": "Content Strategist",
+          "bio": "Eddie crafts copy, educational resources, and onboarding content. He keeps our tone friendly and supportive for everyone exploring low-carbon living.",
+          "categories": [
+            "community"
+          ]
+        },
+        {
+          "name": "Zihan (Angela) Zhang",
+          "avatar": "/images/about/avatars/angela-notion-avatar.jpg",
+          "role": "Product Innovator & Advocate",
+          "bio": "Angela extends CarbonTrack to mobile platforms, creating more accessible and convenient ways for users to engage with our services. She believes that technology can serve as an effective tool to spread eco-awareness through practical, engaging products.",
+          "categories": [
+            "engineering",
+            "design"
+          ]
+        },
+        {
+          "name": "Renyuan (Alex) Pu",
+          "avatar": "/images/about/avatars/alex-notion-avatar.jpg",
+          "role": "Climate Analyst & Data Modeler",
+          "bio": "Alex builds tools that help people understand the hidden climate impact behind everyday choices. He is driven by a passion for math, data analysis, and research, and he enjoys turning complex logistics into clear, testable models grounded in real assumptions.",
+          "categories": [
+            "research"
+          ]
+        },
+        {
+          "name": "Amily Gao",
+          "avatar": "/images/about/avatars/amily-notion-avatar.png",
+          "role": "Co-founder & Research Lead",
+          "bio": "Amily leads background research and carbon accounting. She ensures our content stays evidence-based and approachable for students.",
+          "categories": [
+            "research"
+          ]
+        },
+        {
+          "name": "Andy Pan",
+          "avatar": "/images/about/avatars/andy-notion-avatar.jpg",
+          "role": "Test Engineer & UX Advocate",
+          "bio": "Andy focuses on product quality and user experience through practical testing and UX evaluation. Currently working on the CarbonTrack Chrome extension project, Andy helps validate functionality and usability so users can engage with sustainability in a smoother, more accessible way. Driven by a genuine passion for environmental protection, Andy believes that thoughtful, well-tested products can inspire more people to adopt eco-friendly habits.",
+          "categories": [
+            "engineering",
+            "design"
+          ]
+        },
+        {
+          "name": "Aiden Song",
+          "avatar": "/images/about/avatars/aiden-notion-avatar.png",
+          "bio": "Aiden helps build our app and website, and brings climate change to life through multimedia exhibitions. He hopes people can see, touch, and even taste a warming planet.",
+          "categories": [
+            "engineering",
+            "design"
+          ]
+        },
+        {
+          "name": "Teresa Zheng",
+          "avatar": "/images/about/avatars/teresa-notion-avatar.jpg",
+          "bio": "Teresa aims to transform CarbonTrack into a sustainable environmental organization with the ability to fund its own operations, using business models to expand its reach and develop innovative ways to operate.",
+          "categories": [
+            "community"
+          ]
+        },
+        {
           "name": "Smiley Ni",
           "role": "Creative Lead",
           "bio": "Smiley drives our creative direction, from campaign visuals to community storytelling. A passionate dancer and artist, she wants CarbonTrack to spread joy along with climate awareness.",
@@ -137,40 +201,12 @@
           ]
         },
         {
-          "name": "Eddie Peng",
-          "avatar": "/images/about/avatars/eddie-notion-avatar.png",
-          "role": "Content Strategist",
-          "bio": "Eddie crafts copy, educational resources, and onboarding content. He keeps our tone friendly and supportive for everyone exploring low-carbon living.",
-          "categories": [
-            "community"
-          ]
-        },
-        {
           "name": "Michael Jiang",
           "role": "Frontend Engineer",
           "bio": "Michael develops new user interface patterns and features. He cares deeply about accessible, joyful interaction design for climate products.",
           "categories": [
             "engineering",
             "design"
-          ]
-        },
-        {
-          "name": "Zihan (Angela) Zhang",
-          "avatar": "/images/about/avatars/angela-notion-avatar.jpg",
-          "role": "Product Innovator & Advocate",
-          "bio": "Angela extends CarbonTrack to mobile platforms, creating more accessible and convenient ways for users to engage with our services. She believes that technology can serve as an effective tool to spread eco-awareness through practical, engaging products.",
-          "categories": [
-            "engineering",
-            "design"
-          ]
-        },
-        {
-          "name": "Renyuan (Alex) Pu",
-          "avatar": "/images/about/avatars/alex-notion-avatar.jpg",
-          "role": "Climate Analyst & Data Modeler",
-          "bio": "Alex builds tools that help people understand the hidden climate impact behind everyday choices. He is driven by a passion for math, data analysis, and research, and he enjoys turning complex logistics into clear, testable models grounded in real assumptions.",
-          "categories": [
-            "research"
           ]
         },
         {
@@ -228,15 +264,6 @@
           ]
         },
         {
-          "name": "Amily Gao",
-          "avatar": "/images/about/avatars/amily-notion-avatar.png",
-          "role": "Co-founder & Research Lead",
-          "bio": "Amily leads background research and carbon accounting. She ensures our content stays evidence-based and approachable for students.",
-          "categories": [
-            "research"
-          ]
-        },
-        {
           "name": "Jerry Tang",
           "role": "Co-founder & Carbon Analyst",
           "bio": "Jerry supports the carbon accounting model and conducts preliminary research that grounds our product decisions.",
@@ -284,33 +311,6 @@
           "bio": "Mandy contributes illustrations and visual concepts. She hopes her art sparks curiosity and inspires greener lifestyles.",
           "categories": [
             "design"
-          ]
-        },
-        {
-          "name": "Andy Pan",
-          "avatar": "/images/about/avatars/andy-notion-avatar.jpg",
-          "role": "Test Engineer & UX Advocate",
-          "bio": "Andy focuses on product quality and user experience through practical testing and UX evaluation. Currently working on the CarbonTrack Chrome extension project, Andy helps validate functionality and usability so users can engage with sustainability in a smoother, more accessible way. Driven by a genuine passion for environmental protection, Andy believes that thoughtful, well-tested products can inspire more people to adopt eco-friendly habits.",
-          "categories": [
-            "engineering",
-            "design"
-          ]
-        },
-        {
-          "name": "Aiden Song",
-          "avatar": "/images/about/avatars/aiden-notion-avatar.png",
-          "bio": "Aiden helps build our app and website, and brings climate change to life through multimedia exhibitions. He hopes people can see, touch, and even taste a warming planet.",
-          "categories": [
-            "engineering",
-            "design"
-          ]
-        },
-        {
-          "name": "Teresa Zheng",
-          "avatar": "/images/about/avatars/teresa-notion-avatar.jpg",
-          "bio": "Teresa aims to transform CarbonTrack into a sustainable environmental organization with the ability to fund its own operations, using business models to expand its reach and develop innovative ways to operate.",
-          "categories": [
-            "community"
           ]
         }
       ]
