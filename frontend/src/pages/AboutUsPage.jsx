@@ -73,13 +73,30 @@ const TeamAvatarButton = ({ member, index, label, onSelect, speech, onSpeechDism
       <TooltipContent
         key={speech?.id ?? 'name'}
         side="top"
-        sideOffset={10}
+        sideOffset={speech ? 2 : 10}
+        arrow={speech ? (
+          <svg
+            aria-hidden="true"
+            width="28"
+            height="18"
+            viewBox="0 0 28 18"
+            className="about-team-speech-tail"
+          >
+            <path
+              d="M1 0 L14 17 L27 0"
+              fill="#f7efd9"
+              stroke="#304735"
+              strokeWidth="2"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : undefined}
         onEscapeKeyDown={() => {
           setTooltipOpen(false);
           onSpeechDismiss();
         }}
         className={speech
-          ? 'about-team-speech-bubble max-w-56 rounded-2xl border border-[#304735] bg-[#f7efd9] px-4 py-1.5 font-mono text-sm font-semibold text-[#304735] shadow-[0_4px_0_rgba(48,71,53,0.12)] [&_svg]:bg-[#f7efd9] [&_svg]:fill-[#f7efd9]'
+          ? 'about-team-speech-bubble max-w-56 rounded-2xl border-2 border-[#304735] bg-[#f7efd9] px-4 py-1.5 font-mono text-sm font-semibold text-[#304735] shadow-[0_4px_0_rgba(48,71,53,0.12)]'
           : 'bg-[#304735] font-serif text-sm font-semibold text-[#eff7e9] [&_svg]:bg-[#304735] [&_svg]:fill-[#304735]'}
       >
         {speech?.quote ?? member.name}
