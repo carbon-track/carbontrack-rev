@@ -12,7 +12,7 @@ const FIXED_DISPLAY_STATS = {
   total_records: 415,
   total_carbon_saved: 81.9,
   carbon_last7: 0,
-  total_points_awarded: 81.9,
+  total_points_awarded: 819,
   transactions_last7: 15,
 };
 
