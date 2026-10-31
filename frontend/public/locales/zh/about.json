@@ -164,6 +164,23 @@
           ]
         },
         {
+          "name": "Brian Ma",
+          "avatar": "/images/about/avatars/brian-notion-avatar.jpg",
+          "bio": "Brian 凭借技术与市场推广方面的经验，为 CarbonTrack 作出贡献，并参与最新的 Chrome 扩展项目。他希望提升公众对污染问题的认识，赋能更多人保护环境。",
+          "categories": [
+            "engineering",
+            "community"
+          ]
+        },
+        {
+          "name": "Isaac Ho",
+          "avatar": "/images/about/avatars/isaac-notion-avatar.jpg",
+          "bio": "Isaac 凭借技术专长，让 CarbonTrack 的产品落地，包括最新的 Chrome 扩展。他希望提升公众对排放监测的认识，让这项技术更普及、更易用。",
+          "categories": [
+            "engineering"
+          ]
+        },
+        {
           "name": "Smiley Ni",
           "role": "创意负责人",
           "bio": "Smiley 主导品牌视觉与内容创作，热爱舞蹈与艺术，希望让 CarbonTrack 在传播环保理念的同时带来快乐。",
