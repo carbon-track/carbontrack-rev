@@ -164,6 +164,23 @@
           ]
         },
         {
+          "name": "Brian Ma",
+          "avatar": "/images/about/avatars/brian-notion-avatar.jpg",
+          "bio": "Brian contributes to CarbonTrack through technical and marketing experiences, participating in its latest Chrome extension. He aims to raise awareness of pollution and empower people to protect the environment.",
+          "categories": [
+            "engineering",
+            "community"
+          ]
+        },
+        {
+          "name": "Isaac Ho",
+          "avatar": "/images/about/avatars/isaac-notion-avatar.jpg",
+          "bio": "Isaac brings CarbonTrack’s products to life through technical expertise, including its latest Chrome extension. He aims to raise awareness of emissions monitoring and make it more accessible for all.",
+          "categories": [
+            "engineering"
+          ]
+        },
+        {
           "name": "Smiley Ni",
           "role": "Creative Lead",
           "bio": "Smiley drives our creative direction, from campaign visuals to community storytelling. A passionate dancer and artist, she wants CarbonTrack to spread joy along with climate awareness.",
