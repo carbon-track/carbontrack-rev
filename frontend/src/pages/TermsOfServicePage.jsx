@@ -1,113 +1,74 @@
 import React from 'react';
-import { m as Motion, LazyMotion, domAnimation } from 'framer-motion';
 import { Trans } from 'react-i18next';
-import { Card, CardContent } from '../components/ui/Card';
-import { Scale, FileText, AlertTriangle, UserCheck, Gavel, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, FileText, Gavel, Scale, ShieldAlert, UserCheck } from 'lucide-react';
+
+import { LegalPageLayout, LegalSection } from '../components/legal/LegalPageLayout';
 import { useTranslation } from '../hooks/useTranslation';
 
-const Section = ({ title, icon: Icon, children }) => (
-    <Motion.div
-        className="mb-8"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-    >
-        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
-            {Icon && <Icon className="h-6 w-6 text-blue-600" />}
-            {title}
-        </h2>
-        <div className="text-muted-foreground leading-relaxed space-y-4">
-            {children}
-        </div>
-    </Motion.div>
-);
-
 const TermsOfServicePage = () => {
-    const { t } = useTranslation(['contact', 'legal']);
-    const currentDate = new Date().toLocaleDateString();
+  const { t } = useTranslation(['contact', 'legal']);
+  const currentDate = new Date().toLocaleDateString();
+  const responsibilityItems = t('legal.terms.sections.responsibility.items', { returnObjects: true });
 
-    const responsibilityItems = t('legal.terms.sections.responsibility.items', { returnObjects: true });
+  return (
+    <LegalPageLayout
+      title={t('legal.terms.title')}
+      lastUpdated={t('legal.lastUpdated', { date: currentDate })}
+      intro={t('legal.terms.intro')}
+    >
+      <LegalSection title={t('legal.terms.sections.agreement.title')} icon={FileText}>
+        <p>
+          <Trans ns="legal" i18nKey="legal.terms.sections.agreement.content1" components={{ strong: <strong /> }} />
+        </p>
+        <p>
+          <Trans ns="legal" i18nKey="legal.terms.sections.agreement.content2" components={{ strong: <strong /> }} />
+        </p>
+      </LegalSection>
 
-    return (
-        <LazyMotion features={domAnimation}>
-            <div className="min-h-screen bg-background text-foreground py-20 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-4xl mx-auto">
-                    <Motion.div
-                        className="text-center mb-12"
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <h1 className="text-4xl font-extrabold text-foreground mb-4">{t('legal.terms.title')}</h1>
-                        <p className="text-lg text-muted-foreground">
-                            {t('legal.lastUpdated', { date: currentDate })}
-                        </p>
-                        <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-                            {t('legal.terms.intro')}
-                        </p>
-                    </Motion.div>
+      <LegalSection title={t('legal.terms.sections.responsibility.title')} icon={UserCheck}>
+        <p>{t('legal.terms.sections.responsibility.intro')}</p>
+        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+          {Array.isArray(responsibilityItems) && responsibilityItems.map((item, index) => (
+            <li key={index}>
+              <Trans defaults={item} components={{ strong: <strong /> }} />
+            </li>
+          ))}
+        </ul>
+      </LegalSection>
 
-                    <Card className="border-border/60 bg-card/85 backdrop-blur shadow-xl">
-                        <CardContent className="p-8 md:p-12">
-                            <Section title={t('legal.terms.sections.agreement.title')} icon={FileText}>
-                                <p>
-                                    <Trans i18nKey="legal.terms.sections.agreement.content1" components={{ strong: <strong /> }} />
-                                </p>
-                                <p>
-                                    <Trans i18nKey="legal.terms.sections.agreement.content2" components={{ strong: <strong /> }} />
-                                </p>
-                            </Section>
+      <LegalSection title={t('legal.terms.sections.ip.title')} icon={Scale}>
+        <p>{t('legal.terms.sections.ip.content')}</p>
+      </LegalSection>
 
-                            <Section title={t('legal.terms.sections.responsibility.title')} icon={UserCheck}>
-                                <p>{t('legal.terms.sections.responsibility.intro')}</p>
-                                <ul className="list-disc pl-5 space-y-2">
-                                    {Array.isArray(responsibilityItems) && responsibilityItems.map((item, index) => (
-                                        <li key={index}>
-                                            <Trans defaults={item} components={{ strong: <strong /> }} />
-                                        </li>
-                                    ))}
-                                </ul>
-                            </Section>
+      <LegalSection title={t('legal.terms.sections.liability.title')} icon={AlertTriangle}>
+        <p>{t('legal.terms.sections.liability.content')}</p>
+      </LegalSection>
 
-                            <Section title={t('legal.terms.sections.ip.title')} icon={Scale}>
-                                <p>
-                                    {t('legal.terms.sections.ip.content')}
-                                </p>
-                            </Section>
+      <LegalSection title={t('legal.terms.sections.law.title')} icon={Gavel}>
+        <p>
+          <Trans ns="legal" i18nKey="legal.terms.sections.law.content1" components={{ strong: <strong /> }} />
+        </p>
+        <p>{t('legal.terms.sections.law.content2')}</p>
+      </LegalSection>
 
-                            <Section title={t('legal.terms.sections.liability.title')} icon={AlertTriangle}>
-                                <p>
-                                    {t('legal.terms.sections.liability.content')}
-                                </p>
-                            </Section>
+      <LegalSection title={t('legal.terms.sections.changes.title')} icon={ShieldAlert}>
+        <p>{t('legal.terms.sections.changes.content')}</p>
+      </LegalSection>
 
-                            <Section title={t('legal.terms.sections.law.title')} icon={Gavel}>
-                                <p>
-                                    <Trans i18nKey="legal.terms.sections.law.content1" components={{ strong: <strong /> }} />
-                                </p>
-                                <p>
-                                    {t('legal.terms.sections.law.content2')}
-                                </p>
-                            </Section>
-
-                            <Section title={t('legal.terms.sections.changes.title')} icon={ShieldAlert}>
-                                <p>
-                                    {t('legal.terms.sections.changes.content')}
-                                </p>
-                            </Section>
-
-                            <Section title={t('legal.terms.sections.contact.title')} icon={FileText}>
-                                <p>
-                                    <Trans i18nKey="legal.terms.sections.contact.content" values={{ email: import.meta.env.VITE_LEGAL_EMAIL }} components={{ a: <a className="text-blue-600 hover:underline dark:text-blue-400" /> }} />
-                                </p>
-                            </Section>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        </LazyMotion>
-    );
+      <LegalSection title={t('legal.terms.sections.contact.title')} icon={FileText}>
+        <p>
+          <Trans
+            ns="legal"
+            i18nKey="legal.terms.sections.contact.content"
+            values={{ email: import.meta.env.VITE_LEGAL_EMAIL }}
+            components={{
+              a: <a className="font-medium text-[#267b2f] underline underline-offset-4" />,
+            }}
+          />
+        </p>
+      </LegalSection>
+    </LegalPageLayout>
+  );
 };
 
 export default TermsOfServicePage;

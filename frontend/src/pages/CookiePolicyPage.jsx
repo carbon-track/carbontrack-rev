@@ -1,129 +1,78 @@
 import React from 'react';
-import { m as Motion, LazyMotion, domAnimation } from 'framer-motion';
-import PropTypes from 'prop-types';
 import { Trans } from 'react-i18next';
-import { Card, CardContent } from '../components/ui/Card';
-import { Cookie, Settings, Info, Eye } from 'lucide-react';
+import { Cookie, Eye, Info, Settings } from 'lucide-react';
+
+import { LegalPageLayout, LegalSection } from '../components/legal/LegalPageLayout';
 import { useTranslation } from '../hooks/useTranslation';
 
 const toItemKey = (prefix, item) => `${prefix}-${String(item).trim()}`;
 
-const Section = ({ title, icon: Icon, children }) => (
-    <Motion.div
-        className="mb-8"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-    >
-        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
-            {Icon && <Icon className="h-6 w-6 text-orange-600" />}
-            {title}
-        </h2>
-        <div className="text-muted-foreground leading-relaxed space-y-4">
-            {children}
-        </div>
-    </Motion.div>
-);
-
-Section.propTypes = {
-    title: PropTypes.node.isRequired,
-    icon: PropTypes.elementType,
-    children: PropTypes.node,
-};
-
 const CookiePolicyPage = () => {
-    const { t } = useTranslation(['legal']);
-    const currentDate = new Date().toLocaleDateString();
+  const { t } = useTranslation(['legal']);
+  const currentDate = new Date().toLocaleDateString();
+  const thirdPartyItems = t('legal.cookies.sections.thirdParty.items', { returnObjects: true });
 
-    const thirdPartyItems = t('legal.cookies.sections.thirdParty.items', { returnObjects: true });
+  return (
+    <LegalPageLayout
+      title={t('legal.cookies.title')}
+      lastUpdated={t('legal.lastUpdated', { date: currentDate })}
+      intro={t('legal.cookies.intro')}
+    >
+      <LegalSection title={t('legal.cookies.sections.what.title')} icon={Info}>
+        <p>{t('legal.cookies.sections.what.content')}</p>
+      </LegalSection>
 
-    return (
-        <LazyMotion features={domAnimation}>
-            <div className="min-h-screen bg-background text-foreground py-20 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-4xl mx-auto">
-                    <Motion.div
-                        className="text-center mb-12"
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <h1 className="text-4xl font-extrabold text-foreground mb-4">{t('legal.cookies.title')}</h1>
-                        <p className="text-lg text-muted-foreground">
-                            {t('legal.lastUpdated', { date: currentDate })}
-                        </p>
-                        <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-                            {t('legal.cookies.intro')}
-                        </p>
-                    </Motion.div>
+      <LegalSection title={t('legal.cookies.sections.how.title')} icon={Cookie}>
+        <p>{t('legal.cookies.sections.how.intro')}</p>
+        <div className="space-y-4 border-l-2 border-[#267b2f] pl-5">
+          <div className="border-t border-[#304735]/15 pt-4 first:border-t-0 first:pt-0">
+            <h3 className="font-serif text-xl font-bold text-[#304735]">
+              {t('legal.cookies.sections.how.types.essential.title')}
+            </h3>
+            <p className="mt-2 text-sm leading-6">
+              {t('legal.cookies.sections.how.types.essential.desc')}
+            </p>
+          </div>
+          <div className="border-t border-[#304735]/15 pt-4">
+            <h3 className="font-serif text-xl font-bold text-[#304735]">
+              {t('legal.cookies.sections.how.types.performance.title')}
+            </h3>
+            <p className="mt-2 text-sm leading-6">
+              {t('legal.cookies.sections.how.types.performance.desc')}
+            </p>
+          </div>
+          <div className="border-t border-[#304735]/15 pt-4">
+            <h3 className="font-serif text-xl font-bold text-[#304735]">
+              {t('legal.cookies.sections.how.types.functionality.title')}
+            </h3>
+            <p className="mt-2 text-sm leading-6">
+              {t('legal.cookies.sections.how.types.functionality.desc')}
+            </p>
+          </div>
+        </div>
+      </LegalSection>
 
-                    <Card className="border-border/60 bg-card/85 backdrop-blur shadow-xl">
-                        <CardContent className="p-8 md:p-12">
-                            <Section title={t('legal.cookies.sections.what.title')} icon={Info}>
-                                <p>{t('legal.cookies.sections.what.content')}</p>
-                            </Section>
+      <LegalSection title={t('legal.cookies.sections.thirdParty.title')} icon={Eye}>
+        <p>{t('legal.cookies.sections.thirdParty.intro')}</p>
+        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+          {Array.isArray(thirdPartyItems) && thirdPartyItems.map((item, index) => (
+            <li key={toItemKey(`third-party-${index}`, item)}>
+              <Trans defaults={item} components={{ strong: <strong /> }} />
+            </li>
+          ))}
+        </ul>
+      </LegalSection>
 
-                            <Section title={t('legal.cookies.sections.how.title')} icon={Cookie}>
-                                <p>{t('legal.cookies.sections.how.intro')}</p>
-                                <div className="space-y-4 mt-4">
-                                    <div className="rounded-lg border border-border bg-muted/50 p-4">
-                                        <h3 className="font-bold text-foreground mb-2">
-                                            {t('legal.cookies.sections.how.types.essential.title')}
-                                        </h3>
-                                        <p className="text-sm">
-                                            {t('legal.cookies.sections.how.types.essential.desc')}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-lg border border-border bg-muted/50 p-4">
-                                        <h3 className="font-bold text-foreground mb-2">
-                                            {t('legal.cookies.sections.how.types.performance.title')}
-                                        </h3>
-                                        <p className="text-sm">
-                                            {t('legal.cookies.sections.how.types.performance.desc')}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-lg border border-border bg-muted/50 p-4">
-                                        <h3 className="font-bold text-foreground mb-2">
-                                            {t('legal.cookies.sections.how.types.functionality.title')}
-                                        </h3>
-                                        <p className="text-sm">
-                                            {t('legal.cookies.sections.how.types.functionality.desc')}
-                                        </p>
-                                    </div>
-                                </div>
-                            </Section>
+      <LegalSection title={t('legal.cookies.sections.managing.title')} icon={Settings}>
+        <p>{t('legal.cookies.sections.managing.content1')}</p>
+        <p>{t('legal.cookies.sections.managing.content2')}</p>
+      </LegalSection>
 
-                            <Section title={t('legal.cookies.sections.thirdParty.title')} icon={Eye}>
-                                <p>{t('legal.cookies.sections.thirdParty.intro')}</p>
-                                <ul className="list-disc pl-5">
-                                    {Array.isArray(thirdPartyItems) && thirdPartyItems.map((item, index) => (
-                                        <li key={toItemKey(`third-party-${index}`, item)}>
-                                            <Trans defaults={item} components={{ strong: <strong /> }} />
-                                        </li>
-                                    ))}
-                                </ul>
-                            </Section>
-
-                            <Section title={t('legal.cookies.sections.managing.title')} icon={Settings}>
-                                <p>
-                                    {t('legal.cookies.sections.managing.content1')}
-                                </p>
-                                <p>
-                                    {t('legal.cookies.sections.managing.content2')}
-                                </p>
-                            </Section>
-
-                            <Section title={t('legal.cookies.sections.updates.title')} icon={Info}>
-                                <p>
-                                    {t('legal.cookies.sections.updates.content')}
-                                </p>
-                            </Section>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        </LazyMotion>
-    );
+      <LegalSection title={t('legal.cookies.sections.updates.title')} icon={Info}>
+        <p>{t('legal.cookies.sections.updates.content')}</p>
+      </LegalSection>
+    </LegalPageLayout>
+  );
 };
 
 export default CookiePolicyPage;

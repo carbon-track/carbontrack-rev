@@ -1,124 +1,80 @@
 import React from 'react';
-import { m as Motion, LazyMotion, domAnimation } from 'framer-motion';
-import PropTypes from 'prop-types';
 import { Trans } from 'react-i18next';
-import { Card, CardContent } from '../components/ui/Card';
-import { ShieldCheck, Lock, AlertCircle, Bug, Server } from 'lucide-react';
+import { AlertCircle, Bug, Lock, Server, ShieldCheck } from 'lucide-react';
+
+import { LegalPageLayout, LegalSection } from '../components/legal/LegalPageLayout';
 import { useTranslation } from '../hooks/useTranslation';
 
 const toItemKey = (prefix, item) => `${prefix}-${String(item).trim()}`;
-
 const toMailtoLink = (email) => `mailto:${String(email || '').trim()}`;
 
-const Section = ({ title, icon: Icon, children }) => (
-    <Motion.div
-        className="mb-8"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-    >
-        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
-            {Icon && <Icon className="h-6 w-6 text-green-600" />}
-            {title}
-        </h2>
-        <div className="text-muted-foreground leading-relaxed space-y-4">
-            {children}
-        </div>
-    </Motion.div>
-);
-
-Section.propTypes = {
-    title: PropTypes.node.isRequired,
-    icon: PropTypes.elementType,
-    children: PropTypes.node,
-};
-
 const SecurityPage = () => {
-    const { t } = useTranslation(['app', 'legal']);
+  const { t } = useTranslation(['app', 'legal']);
+  const infraItems = t('legal.security.sections.infrastructure.items', { returnObjects: true });
+  const appItems = t('legal.security.sections.app.items', { returnObjects: true });
+  const vulnItems = t('legal.security.sections.vuln.items', { returnObjects: true });
 
-    const infraItems = t('legal.security.sections.infrastructure.items', { returnObjects: true });
-    const appItems = t('legal.security.sections.app.items', { returnObjects: true });
-    const vulnItems = t('legal.security.sections.vuln.items', { returnObjects: true });
+  return (
+    <LegalPageLayout
+      title={t('legal.security.title')}
+      intro={t('legal.security.subtitle')}
+    >
+      <LegalSection title={t('legal.security.sections.commitment.title')} icon={ShieldCheck}>
+        <p>{t('legal.security.sections.commitment.content')}</p>
+      </LegalSection>
 
-    return (
-        <LazyMotion features={domAnimation}>
-            <div className="min-h-screen bg-background text-foreground py-20 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-4xl mx-auto">
-                    <Motion.div
-                        className="text-center mb-12"
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <h1 className="text-4xl font-extrabold text-foreground mb-4">{t('legal.security.title')}</h1>
-                        <p className="text-lg text-muted-foreground">
-                            {t('legal.security.subtitle')}
-                        </p>
-                    </Motion.div>
-                    <Card className="border-border/60 bg-card/85 backdrop-blur shadow-xl">
-                        <CardContent className="p-8 md:p-12">
-                            <Section title={t('legal.security.sections.commitment.title')} icon={ShieldCheck}>
-                                <p>
-                                    {t('legal.security.sections.commitment.content')}
-                                </p>
-                            </Section>
+      <LegalSection title={t('legal.security.sections.infrastructure.title')} icon={Server}>
+        <p>{t('legal.security.sections.infrastructure.intro')}</p>
+        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+          {Array.isArray(infraItems) && infraItems.map((item, index) => (
+            <li key={toItemKey(`infra-${index}`, item)}>
+              <Trans defaults={item} components={{ strong: <strong /> }} />
+            </li>
+          ))}
+        </ul>
+      </LegalSection>
 
-                            <Section title={t('legal.security.sections.infrastructure.title')} icon={Server}>
-                                <p>
-                                    {t('legal.security.sections.infrastructure.intro')}
-                                </p>
-                                <ul className="list-disc pl-5 mt-2 space-y-2">
-                                    {Array.isArray(infraItems) && infraItems.map((item, index) => (
-                                        <li key={toItemKey(`infra-${index}`, item)}>
-                                            <Trans defaults={item} components={{ strong: <strong /> }} />
-                                        </li>
-                                    ))}
-                                </ul>
-                            </Section>
+      <LegalSection title={t('legal.security.sections.app.title')} icon={Lock}>
+        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+          {Array.isArray(appItems) && appItems.map((item, index) => (
+            <li key={toItemKey(`app-${index}`, item)}>
+              <Trans defaults={item} components={{ strong: <strong /> }} />
+            </li>
+          ))}
+        </ul>
+      </LegalSection>
 
-                            <Section title={t('legal.security.sections.app.title')} icon={Lock}>
-                                <ul className="list-disc pl-5 mt-2 space-y-2">
-                                    {Array.isArray(appItems) && appItems.map((item, index) => (
-                                        <li key={toItemKey(`app-${index}`, item)}>
-                                            <Trans defaults={item} components={{ strong: <strong /> }} />
-                                        </li>
-                                    ))}
-                                </ul>
-                            </Section>
+      <LegalSection title={t('legal.security.sections.vuln.title')} icon={Bug}>
+        <p>{t('legal.security.sections.vuln.intro')}</p>
+        <div className="mt-6 border-l-2 border-[#267b2f] bg-[#e9ede3] px-5 py-4">
+          <h3 className="font-serif text-xl font-bold text-[#304735]">
+            {t('legal.security.sections.vuln.policyTitle')}
+          </h3>
+          <p className="mt-2 text-sm leading-6">
+            <Trans
+              ns="legal"
+              i18nKey="legal.security.sections.vuln.contact"
+              values={{ email: import.meta.env.VITE_SECURITY_EMAIL }}
+              components={{
+                a: <a href={toMailtoLink(import.meta.env.VITE_SECURITY_EMAIL)} className="font-medium text-[#267b2f] underline underline-offset-4" />,
+              }}
+            />
+          </p>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 marker:text-[#267b2f]">
+            {Array.isArray(vulnItems) && vulnItems.map((item, index) => (
+              <li key={toItemKey(`vuln-${index}`, item)}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </LegalSection>
 
-                            <Section title={t('legal.security.sections.vuln.title')} icon={Bug}>
-                                <p>
-                                    {t('legal.security.sections.vuln.intro')}
-                                </p>
-                                <div className="mt-4 rounded-lg border border-blue-500/20 bg-blue-500/10 p-4">
-                                    <h3 className="font-bold text-blue-700 dark:text-blue-300 mb-2">{t('legal.security.sections.vuln.policyTitle')}</h3>
-                                    <p className="mb-2 text-sm text-blue-700 dark:text-blue-300">
-                                        <Trans
-                                            i18nKey="legal.security.sections.vuln.contact"
-                                            values={{ email: import.meta.env.VITE_SECURITY_EMAIL }}
-                                            components={{ a: <a href={toMailtoLink(import.meta.env.VITE_SECURITY_EMAIL)} className="underline font-semibold" /> }}
-                                        />
-                                    </p>
-                                    <ul className="list-disc pl-5 text-sm text-blue-700 dark:text-blue-300">
-                                        {Array.isArray(vulnItems) && vulnItems.map((item, index) => (
-                                            <li key={toItemKey(`vuln-${index}`, item)}>{item}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </Section>
-
-                            <Section title={t('legal.security.sections.breach.title')} icon={AlertCircle}>
-                                <p>
-                                    <Trans i18nKey="legal.security.sections.breach.content" components={{ strong: <strong /> }} />
-                                </p>
-                            </Section>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        </LazyMotion>
-    );
+      <LegalSection title={t('legal.security.sections.breach.title')} icon={AlertCircle}>
+        <p>
+          <Trans ns="legal" i18nKey="legal.security.sections.breach.content" components={{ strong: <strong /> }} />
+        </p>
+      </LegalSection>
+    </LegalPageLayout>
+  );
 };
 
 export default SecurityPage;

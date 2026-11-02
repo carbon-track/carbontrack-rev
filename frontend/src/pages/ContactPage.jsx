@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { motion as Motion } from 'framer-motion';
 import { ArrowRight, AtSign, Building2, MapPin, Phone } from 'lucide-react';
 
+import { buttonVariants } from '../components/ui/button-variants';
 import { useTranslation } from '../hooks/useTranslation';
 
 const supportEmail = import.meta.env?.VITE_SUPPORT_EMAIL || 'support@carbontrack.org';
@@ -44,106 +44,106 @@ export default function ContactPage() {
   ];
 
   return (
-    <div className="bg-background text-foreground">
-      <section className="border-b border-border bg-muted/30">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)] lg:px-8 lg:py-18">
-          <Motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-300">
+    <div className="bg-[#f5f5f1] text-[#304735]">
+      <section className="border-b border-[#304735]/20">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 sm:px-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center lg:gap-16 lg:py-24">
+          <div>
+            <p className="text-sm font-semibold tracking-[0.12em] text-[#267b2f]">
               {t('contact.hero.eyebrow')}
             </p>
-            <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
+            <h1 className="mt-5 max-w-3xl font-serif text-[clamp(1.75rem,9vw,3rem)] font-bold leading-[1.08] tracking-tight sm:text-6xl">
               {t('contact.hero.title')}
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+            <p className="mt-6 max-w-xl text-base leading-7 text-[#3b585d] sm:text-lg">
               {t('contact.hero.subtitle')}
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <a
                 href={`mailto:${supportEmail}`}
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-500"
+                className={buttonVariants({
+                  size: 'lg',
+                  className: 'w-full rounded-none bg-[#304735] text-[#eff7e9] hover:bg-[#263b2b] focus-visible:ring-[#267b2f] sm:w-auto',
+                })}
               >
-                <AtSign className="h-4 w-4" />
+                <AtSign aria-hidden="true" className="mr-2 h-4 w-4" />
                 {t('contact.hero.primaryAction')}
               </a>
               <Link
                 to="/help"
-                className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-medium text-foreground transition hover:bg-muted"
+                className={buttonVariants({
+                  variant: 'outline',
+                  size: 'lg',
+                  className: 'w-full rounded-none border-[#304735]/30 bg-transparent text-[#304735] hover:bg-[#e7ecdf] hover:text-[#304735] focus-visible:ring-[#267b2f] sm:w-auto',
+                })}
               >
                 {t('contact.hero.secondaryAction')}
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
               </Link>
             </div>
-          </Motion.div>
+          </div>
 
-          <Motion.div
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut', delay: 0.05 }}
-            className="rounded-[2rem] border border-border bg-card p-6 shadow-sm"
-          >
-            <div className="flex items-center gap-3 text-emerald-700 dark:text-emerald-300">
-              <Building2 className="h-5 w-5" />
-              <span className="text-sm font-medium">{t('contact.panel.title')}</span>
+          <aside aria-labelledby="contact-panel-title" className="bg-[#304735] px-7 py-10 text-[#eff7e9] sm:px-9 sm:py-12">
+            <div className="flex items-center gap-3 text-[#d2e4cb]">
+              <Building2 aria-hidden="true" className="h-5 w-5" />
+              <span className="text-sm font-medium tracking-[0.12em]">{t('contact.panel.title')}</span>
             </div>
-            <p className="mt-4 text-lg font-medium">{t('contact.panel.body')}</p>
-          </Motion.div>
+            <p id="contact-panel-title" className="mt-5 font-serif text-3xl font-bold leading-tight sm:text-4xl">
+              {t('contact.panel.body')}
+            </p>
+          </aside>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid gap-4">
+      <section aria-labelledby="contact-methods" className="mx-auto max-w-6xl px-6 py-16 sm:px-8 lg:py-20">
+        <h2 id="contact-methods" className="font-serif text-4xl font-bold leading-tight">
+          {t('contact.hero.eyebrow')}
+        </h2>
+        <ul className="mt-10 grid gap-x-12 gap-y-8 md:grid-cols-3">
           {contactCards.map((card) => {
             const Icon = card.icon;
             const content = (
-              <div className="group flex items-start justify-between gap-4 rounded-[1.75rem] border border-border bg-card/70 px-5 py-5 shadow-sm transition duration-200 hover:border-emerald-300 hover:bg-card">
-                <div className="flex items-start gap-4">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-muted-foreground">
-                      {card.eyebrow}
-                    </p>
-                    <p className="mt-2 text-lg font-medium text-foreground">{card.title}</p>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{card.description}</p>
-                  </div>
-                </div>
-                {card.href ? <ArrowRight className="mt-1 h-4 w-4 text-muted-foreground transition group-hover:text-emerald-600" /> : null}
-              </div>
+              <>
+                <Icon aria-hidden="true" className="h-7 w-7 text-[#267b2f]" strokeWidth={1.5} />
+                <p className="mt-5 text-sm font-semibold tracking-[0.1em] text-[#267b2f]">{card.eyebrow}</p>
+                <p className="mt-3 break-words font-serif text-2xl font-bold text-[#304735]">{card.title}</p>
+                <p className="mt-3 text-base leading-7 text-[#3b585d]">{card.description}</p>
+                {card.href ? <ArrowRight aria-hidden="true" className="mt-5 h-5 w-5 text-[#267b2f]" /> : null}
+              </>
             );
 
             return card.href ? (
-              <a key={card.eyebrow} href={card.href} className="block">
-                {content}
-              </a>
+              <li key={card.eyebrow} className="border-t border-[#304735]/25 pt-7">
+                <a href={card.href} className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#267b2f]">
+                  {content}
+                </a>
+              </li>
             ) : (
-              <div key={card.eyebrow}>{content}</div>
+              <li key={card.eyebrow} className="border-t border-[#304735]/25 pt-7">{content}</li>
             );
           })}
-        </div>
+        </ul>
+      </section>
 
-        <div className="mt-8 rounded-[1.8rem] border border-border/80 bg-card/70 p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-muted-foreground">
+      <section aria-labelledby="contact-links" className="border-y border-[#304735]/20 bg-[#e9ede3]">
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:px-8 lg:py-20">
+          <h2 id="contact-links" className="font-serif text-4xl font-bold leading-tight">
             {t('contact.linksTitle')}
-          </p>
-          <div className="mt-4 grid gap-3">
+          </h2>
+          <ul className="mt-8 grid gap-x-12 gap-y-5 md:grid-cols-2">
             {contactLinks.map((link, index) => (
-              <a
-                key={`${link.type}-${index}`}
-                href={link.href}
-                target={link.external ? '_blank' : undefined}
-                rel={link.external ? 'noopener noreferrer' : undefined}
-                className="flex items-center justify-between gap-3 rounded-[1.3rem] border border-transparent bg-background px-4 py-3 text-sm font-medium text-foreground transition hover:border-emerald-300"
-              >
-                <span>{link.label}</span>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </a>
+              <li key={`${link.type}-${index}`} className="border-t border-[#304735]/25 pt-4">
+                <a
+                  href={link.href}
+                  target={link.external ? '_blank' : undefined}
+                  rel={link.external ? 'noopener noreferrer' : undefined}
+                  className="flex items-center justify-between gap-3 text-base font-semibold text-[#304735] underline decoration-1 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#267b2f]"
+                >
+                  <span>{link.label}</span>
+                  <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#267b2f]" />
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
     </div>
