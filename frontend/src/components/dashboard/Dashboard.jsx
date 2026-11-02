@@ -231,7 +231,7 @@ export function Dashboard() {
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:p-6">
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -240,11 +240,11 @@ export function Dashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="mx-auto max-w-7xl space-y-4 px-4 py-6 sm:space-y-6 sm:p-6">
       {/* 欢迎标题 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl font-bold text-foreground [overflow-wrap:anywhere] sm:text-3xl">
             {t('dashboard.welcome')}{user?.username && `, ${user.username}`}！
           </h1>
           <p className="mt-1 text-muted-foreground">
@@ -252,14 +252,14 @@ export function Dashboard() {
           </p>
         </div>
         
-        <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
+        <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex sm:max-w-[45%] sm:shrink-0 sm:justify-end sm:text-right">
           <span>{t('dashboard.lastLogin')}:</span>
           <span>{user?.lastlgn ? new Date(user.lastlgn).toLocaleString(currentLanguage) : t('dashboard.firstTime')}</span>
         </div>
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title={t('dashboard.totalPoints')}
           value={stats.total_points || 0}

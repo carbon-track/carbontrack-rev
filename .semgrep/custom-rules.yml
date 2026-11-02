@@ -74,43 +74,57 @@ rules:
       - php
     patterns:
       - pattern: |
-          catch ($TYPE $EXP) {
+          try {
+            ...
+          } catch ($TYPE $EXP) {
             ...
           }
       - pattern-not: |
-          catch ($TYPE $EXP) {
+          try {
             ...
-            $X->error(...)
+          } catch ($TYPE $EXP) {
             ...
-          }
-      - pattern-not: |
-          catch ($TYPE $EXP) {
-            ...
-            $X->log(...)
+            $X->error(...);
             ...
           }
       - pattern-not: |
-          catch ($TYPE $EXP) {
+          try {
             ...
-            $X->logException(...)
+          } catch ($TYPE $EXP) {
             ...
-          }
-      - pattern-not: |
-          catch ($TYPE $EXP) {
-            ...
-            $this->errorLogService->logException(...)
+            $X->log(...);
             ...
           }
       - pattern-not: |
-          catch ($TYPE $EXP) {
+          try {
             ...
-            $X->logExceptionWithFallback(...)
+          } catch ($TYPE $EXP) {
+            ...
+            $X->logException(...);
             ...
           }
       - pattern-not: |
-          catch ($TYPE $EXP) {
+          try {
             ...
-            $this->logExceptionWithFallback(...)
+          } catch ($TYPE $EXP) {
+            ...
+            $this->errorLogService->logException(...);
+            ...
+          }
+      - pattern-not: |
+          try {
+            ...
+          } catch ($TYPE $EXP) {
+            ...
+            $X->logExceptionWithFallback(...);
+            ...
+          }
+      - pattern-not: |
+          try {
+            ...
+          } catch ($TYPE $EXP) {
+            ...
+            $this->logExceptionWithFallback(...);
             ...
           }
     paths:

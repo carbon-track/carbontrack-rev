@@ -41,6 +41,16 @@ function useSidebar() {
 
   return context
 }
+function SidebarRouteSync({ routeKey }) {
+  const { setOpenMobile } = useSidebar()
+
+  React.useEffect(() => {
+    setOpenMobile(false)
+  }, [routeKey, setOpenMobile])
+
+  return null
+}
+
 
 function SidebarProvider({
   defaultOpen = true,
@@ -655,6 +665,7 @@ function SidebarMenuSubButton({
 }
 
 export {
+  SidebarRouteSync,
   Sidebar,
   SidebarContent,
   SidebarFooter,

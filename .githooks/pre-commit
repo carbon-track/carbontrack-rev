@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Keep lightweight graph change hints available before commit.
+if command -v code-review-graph >/dev/null 2>&1; then
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
+    if [ -n "$repo_root" ]; then
+        code-review-graph detect-changes --brief --repo "$repo_root" || true
+    else
+        code-review-graph detect-changes --brief || true
+    fi
+fi
+
+exit 0

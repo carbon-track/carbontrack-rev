@@ -1,4 +1,6 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 
 const {
@@ -24,4 +26,11 @@ test('native feature flags treat truthy deployment values as enabled', () => {
   for (const value of ['true', '1', 'yes', 'on', 'enabled', true, 1]) {
     assert.equal(parseBooleanFlag(value), true);
   }
+});
+
+test('native feature flags use Expo static env access for production bundles', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'nativeFeatureFlags.js'), 'utf8');
+
+  assert.match(source, /process\.env\.EXPO_PUBLIC_ENABLE_NATIVE_IOS_TABS/);
+  assert.match(source, /process\.env\.EXPO_PUBLIC_ENABLE_NATIVE_LIQUID_GLASS/);
 });

@@ -37,6 +37,11 @@ export const carbonApi = {
     unit,
   })),
 
+  suggestActivity: async (query, meta = {}) => unwrap(await apiClient.post('/ai/suggest-activity', {
+    query,
+    ...meta,
+  })),
+
   submitRecord: async (options) => {
     const {
       activityId,

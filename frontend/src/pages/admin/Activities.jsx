@@ -12,10 +12,15 @@ export default function AdminActivitiesPage() {
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if ((tabParam === 'library' || tabParam === 'review') && tabParam !== tab) {
-      setTab(tabParam);
+    const nextTab = tabParam === 'review' ? 'review' : 'library';
+
+    setTab((currentTab) => (currentTab === nextTab ? currentTab : nextTab));
+    if (tabParam !== null && tabParam !== 'review') {
+      const next = new URLSearchParams(searchParams);
+      next.delete('tab');
+      setSearchParams(next, { replace: true });
     }
-  }, [searchParams, tab]);
+  }, [searchParams, setSearchParams]);
 
   const handleTabChange = (nextTab) => {
     setTab(nextTab);

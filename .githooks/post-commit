@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# Refresh the local graph after each commit without blocking the commit on errors.
+if ! command -v code-review-graph >/dev/null 2>&1; then
+    exit 0
+fi
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -z "$repo_root" ]; then
+    exit 0
+fi
+
+if [ -f "$repo_root/.code-review-graph/graph.db" ]; then
+    code-review-graph update --repo "$repo_root" --skip-flows || true
+else
+    code-review-graph build --repo "$repo_root" --skip-flows || true
+fi
+
+exit 0

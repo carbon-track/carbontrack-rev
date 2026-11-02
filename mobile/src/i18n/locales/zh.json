@@ -98,6 +98,17 @@
     "title": "记录低碳行动",
     "subtitle": "选择活动类型、上传凭证并提交审核。",
     "newRecord": "新增记录",
+    "smartFill": {
+      "title": "AI 智能填充",
+      "subtitle": "描述你的低碳行动，AI 会自动匹配活动类型、数量、日期和说明。",
+      "placeholder": "例如：今天坐公交上学 5 公里，少开了一次车",
+      "button": "智能填充",
+      "analyzing": "分析中",
+      "applied": "已填充活动信息，请检查后上传凭证。",
+      "notFound": "没有匹配到可用活动类型，请换一种说法或手动选择。",
+      "failedTitle": "智能填充失败",
+      "failedMessage": "暂时无法分析这条活动，请稍后重试。"
+    },
     "activityType": "活动类型",
     "loadingFactors": "加载活动因子中...",
     "activityPlaceholder": "请选择活动类型",

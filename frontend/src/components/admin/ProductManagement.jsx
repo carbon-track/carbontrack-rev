@@ -804,12 +804,12 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => (!open ? onClose() : null)}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{product ? t('admin.products.editProduct') : t('admin.products.addProduct')}</DialogTitle>
           <DialogDescription>{t('admin.products.formModal.description')}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="product-management-form" onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
               <label htmlFor="product-name" className="block text-sm font-medium text-foreground">
@@ -946,17 +946,16 @@ function ProductFormModal({ isOpen, onClose, onSubmit, product, categories, isSu
               onChange={handleImageUpload}
             />
           </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting || uploading}>
-              {t('common.cancel')}
-            </Button>
-            <Button type="submit" disabled={isSubmitting || uploading}>
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isSubmitting ? t('common.saving') : t('common.save')}
-            </Button>
-          </DialogFooter>
         </form>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting || uploading}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" form="product-management-form" disabled={isSubmitting || uploading}>
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isSubmitting ? t('common.saving') : t('common.save')}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

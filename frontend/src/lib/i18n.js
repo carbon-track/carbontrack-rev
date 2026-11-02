@@ -67,9 +67,9 @@ const backendOptions = {
   // 允许跨域
   crossDomain: false,
   
-  // 请求超时时间
+  // 开发环境每次获取最新语言包，避免本地预览使用旧文案
   requestOptions: {
-    cache: 'force-cache'
+    cache: import.meta.env.DEV ? 'no-store' : 'force-cache'
   }
 };
 

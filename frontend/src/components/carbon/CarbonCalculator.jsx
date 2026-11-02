@@ -207,7 +207,7 @@ export function CarbonCalculator() {
   };
 
   return (
-    <div className="relative min-h-full">
+    <div className="relative min-h-full overflow-x-hidden">
       {/* Ambient Glow */}
       <div className="absolute top-0 left-1/2 -z-10 h-[500px] w-[800px] -translate-x-1/2 blur-[120px] bg-gradient-to-tr from-green-50/50 via-emerald-100/30 to-transparent opacity-50 dark:from-green-900/20 dark:via-emerald-900/10 dark:opacity-30 pointer-events-none" />
 

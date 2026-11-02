@@ -299,6 +299,7 @@ export function GlassPressable({
   effect = 'clear',
   fallbackStyle,
   onPress,
+  preserveGlassWhenDisabled = false,
   style,
   tintColor,
   wrapperStyle,
@@ -312,7 +313,7 @@ export function GlassPressable({
         styles.pressableWrapper,
         wrapperStyle,
         pressed ? { opacity: 0.78 } : null,
-        disabled ? { opacity: 0.55 } : null,
+        disabled && !preserveGlassWhenDisabled ? { opacity: 0.55 } : null,
       ]}
     >
       <GlassLayer
