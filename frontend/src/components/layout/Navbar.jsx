@@ -37,6 +37,7 @@ export function Navbar() {
   const userMenuButtonRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isUserMenuHoverSuppressed, setIsUserMenuHoverSuppressed] = useState(false);
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showSecondaryControls, setShowSecondaryControls] = useState(false);
@@ -292,7 +293,12 @@ export function Navbar() {
     event.preventDefault();
     event.stopPropagation();
     setIsUserMenuOpen(false);
+    setIsUserMenuHoverSuppressed(event.currentTarget.matches?.(':hover') === true);
     userMenuButtonRef.current?.focus();
+  };
+
+  const handleUserMenuPointerLeave = () => {
+    setIsUserMenuHoverSuppressed(false);
   };
 
   const handleUserMenuBlur = (event) => {
@@ -847,6 +853,7 @@ export function Navbar() {
                   data-user-menu-root
                   onKeyDown={handleUserMenuKeyDown}
                   onBlur={handleUserMenuBlur}
+                  onPointerLeave={handleUserMenuPointerLeave}
                 >
                   <Button
                     ref={userMenuButtonRef}
@@ -866,7 +873,8 @@ export function Navbar() {
                     'absolute right-0 top-full w-48 pt-2 transition-all duration-200',
                     isUserMenuOpen
                       ? 'visible pointer-events-auto opacity-100'
-                      : 'invisible pointer-events-none opacity-0 group-hover:visible group-hover:pointer-events-auto group-hover:opacity-100'
+                      : 'invisible pointer-events-none opacity-0',
+                    !isUserMenuOpen && !isUserMenuHoverSuppressed && 'group-hover:visible group-hover:pointer-events-auto group-hover:opacity-100'
                   )}>
                     <div className="rounded-md border border-border bg-card text-card-foreground shadow-lg shadow-black/10">
                       <div className="py-1">
