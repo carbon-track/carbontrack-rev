@@ -105,8 +105,8 @@ const AboutUsPage = () => {
           className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
         />
         <div className="absolute inset-0 -z-10 bg-[#102d2b]/25" />
-        <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center font-serif text-[#e0ffe5]">
-          <h1 className="text-6xl font-bold leading-none tracking-[0.015em] drop-shadow-[0_3px_20px_rgba(0,0,0,0.3)] sm:text-7xl lg:text-8xl">
+        <div className="mx-auto flex w-full min-w-0 max-w-4xl flex-col items-center text-center font-serif text-[#e0ffe5]">
+          <h1 className="w-full max-w-full break-words text-[clamp(2.25rem,11vw,3.75rem)] font-bold leading-none tracking-[0.015em] drop-shadow-[0_3px_20px_rgba(0,0,0,0.3)] sm:text-7xl lg:text-8xl">
             {hero.displayTitle || hero.title || 'People'}
           </h1>
           {hero.subtitle ? (
