@@ -33,7 +33,7 @@ const PrivacyPolicyPage = () => {
 
       <LegalSection title={t('legal.privacy.sections.collection.title')} icon={Database}>
         <p><Trans ns="legal" i18nKey="legal.privacy.sections.collection.intro" components={{ strong: <strong /> }} /></p>
-        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+        <ul className="list-disc space-y-2 pl-5 marker:text-emerald-600">
           {Array.isArray(collectionItems) && collectionItems.map((item, index) => (
             <li key={toItemKey(`collection-${index}`, item)}>
               <Trans defaults={item} components={{ strong: <strong /> }} />
@@ -44,7 +44,7 @@ const PrivacyPolicyPage = () => {
 
       <LegalSection title={t('legal.privacy.sections.usage.title')} icon={Eye}>
         <p><Trans ns="legal" i18nKey="legal.privacy.sections.usage.intro" components={{ strong: <strong /> }} /></p>
-        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+        <ul className="list-disc space-y-2 pl-5 marker:text-emerald-600">
           {Array.isArray(usageItems) && usageItems.map((item, index) => (
             <li key={toItemKey(`usage-${index}`, item)}>
               <Trans defaults={item} components={{ strong: <strong /> }} />
@@ -63,7 +63,7 @@ const PrivacyPolicyPage = () => {
         <p>
           <Trans ns="legal" i18nKey="legal.privacy.sections.storage.content2" components={{ strong: <strong /> }} />
         </p>
-        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+        <ul className="list-disc space-y-2 pl-5 marker:text-emerald-600">
           {Array.isArray(storageItems) && storageItems.map((item, index) => (
             <li key={toItemKey(`storage-${index}`, item)}>{item}</li>
           ))}
@@ -72,20 +72,20 @@ const PrivacyPolicyPage = () => {
 
       <LegalSection title={t('legal.privacy.sections.rights.title')} icon={Shield}>
         <p><Trans ns="legal" i18nKey="legal.privacy.sections.rights.intro" components={{ strong: <strong /> }} /></p>
-        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+        <ul className="list-disc space-y-2 pl-5 marker:text-emerald-600">
           {Array.isArray(rightsItems) && rightsItems.map((item, index) => (
             <li key={toItemKey(`rights-${index}`, item)}>
               <Trans defaults={item} components={{ strong: <strong /> }} />
             </li>
           ))}
         </ul>
-        <p className="border-l-2 border-[#267b2f] bg-[#e9ede3] px-5 py-4 text-sm leading-6">
+        <p className="border-l-2 border-emerald-500 bg-emerald-50/70 px-5 py-4 text-sm leading-6 dark:bg-emerald-500/10">
           <Trans
             ns="legal"
             i18nKey="legal.privacy.sections.rights.contact"
             values={{ email: import.meta.env.VITE_PRIVACY_EMAIL }}
             components={{
-              a: <a href={toMailtoLink(import.meta.env.VITE_PRIVACY_EMAIL)} className="font-medium text-[#267b2f] underline underline-offset-4" />,
+              a: <a href={toMailtoLink(import.meta.env.VITE_PRIVACY_EMAIL)} className="font-medium text-emerald-600 underline underline-offset-4 dark:text-emerald-300" />,
             }}
           />
         </p>
@@ -107,7 +107,7 @@ const PrivacyPolicyPage = () => {
             values={{ email: import.meta.env.VITE_PRIVACY_EMAIL }}
             components={{
               strong: <strong />,
-              a: <a href={toMailtoLink(import.meta.env.VITE_PRIVACY_EMAIL)} className="font-medium text-[#267b2f] underline underline-offset-4" />,
+              a: <a href={toMailtoLink(import.meta.env.VITE_PRIVACY_EMAIL)} className="font-medium text-emerald-600 underline underline-offset-4 dark:text-emerald-300" />,
               br: <br />,
             }}
           />

@@ -27,7 +27,7 @@ const TermsOfServicePage = () => {
 
       <LegalSection title={t('legal.terms.sections.responsibility.title')} icon={UserCheck}>
         <p>{t('legal.terms.sections.responsibility.intro')}</p>
-        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+        <ul className="list-disc space-y-2 pl-5 marker:text-emerald-600">
           {Array.isArray(responsibilityItems) && responsibilityItems.map((item, index) => (
             <li key={index}>
               <Trans defaults={item} components={{ strong: <strong /> }} />
@@ -62,7 +62,7 @@ const TermsOfServicePage = () => {
             i18nKey="legal.terms.sections.contact.content"
             values={{ email: import.meta.env.VITE_LEGAL_EMAIL }}
             components={{
-              a: <a className="font-medium text-[#267b2f] underline underline-offset-4" />,
+              a: <a className="font-medium text-emerald-600 underline underline-offset-4 dark:text-emerald-300" />,
             }}
           />
         </p>

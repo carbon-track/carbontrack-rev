@@ -24,25 +24,25 @@ const CookiePolicyPage = () => {
 
       <LegalSection title={t('legal.cookies.sections.how.title')} icon={Cookie}>
         <p>{t('legal.cookies.sections.how.intro')}</p>
-        <div className="space-y-4 border-l-2 border-[#267b2f] pl-5">
-          <div className="border-t border-[#304735]/15 pt-4 first:border-t-0 first:pt-0">
-            <h3 className="font-serif text-xl font-bold text-[#304735]">
+        <div className="space-y-4 border-l-2 border-emerald-500 pl-5">
+          <div className="border-t border-border/70 pt-4 first:border-t-0 first:pt-0">
+            <h3 className="text-lg font-semibold text-foreground">
               {t('legal.cookies.sections.how.types.essential.title')}
             </h3>
             <p className="mt-2 text-sm leading-6">
               {t('legal.cookies.sections.how.types.essential.desc')}
             </p>
           </div>
-          <div className="border-t border-[#304735]/15 pt-4">
-            <h3 className="font-serif text-xl font-bold text-[#304735]">
+          <div className="border-t border-border/70 pt-4">
+            <h3 className="text-lg font-semibold text-foreground">
               {t('legal.cookies.sections.how.types.performance.title')}
             </h3>
             <p className="mt-2 text-sm leading-6">
               {t('legal.cookies.sections.how.types.performance.desc')}
             </p>
           </div>
-          <div className="border-t border-[#304735]/15 pt-4">
-            <h3 className="font-serif text-xl font-bold text-[#304735]">
+          <div className="border-t border-border/70 pt-4">
+            <h3 className="text-lg font-semibold text-foreground">
               {t('legal.cookies.sections.how.types.functionality.title')}
             </h3>
             <p className="mt-2 text-sm leading-6">
@@ -54,7 +54,7 @@ const CookiePolicyPage = () => {
 
       <LegalSection title={t('legal.cookies.sections.thirdParty.title')} icon={Eye}>
         <p>{t('legal.cookies.sections.thirdParty.intro')}</p>
-        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+        <ul className="list-disc space-y-2 pl-5 marker:text-emerald-600">
           {Array.isArray(thirdPartyItems) && thirdPartyItems.map((item, index) => (
             <li key={toItemKey(`third-party-${index}`, item)}>
               <Trans defaults={item} components={{ strong: <strong /> }} />

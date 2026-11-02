@@ -25,7 +25,7 @@ const SecurityPage = () => {
 
       <LegalSection title={t('legal.security.sections.infrastructure.title')} icon={Server}>
         <p>{t('legal.security.sections.infrastructure.intro')}</p>
-        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+        <ul className="list-disc space-y-2 pl-5 marker:text-emerald-600">
           {Array.isArray(infraItems) && infraItems.map((item, index) => (
             <li key={toItemKey(`infra-${index}`, item)}>
               <Trans defaults={item} components={{ strong: <strong /> }} />
@@ -35,7 +35,7 @@ const SecurityPage = () => {
       </LegalSection>
 
       <LegalSection title={t('legal.security.sections.app.title')} icon={Lock}>
-        <ul className="list-disc space-y-2 pl-5 marker:text-[#267b2f]">
+        <ul className="list-disc space-y-2 pl-5 marker:text-emerald-600">
           {Array.isArray(appItems) && appItems.map((item, index) => (
             <li key={toItemKey(`app-${index}`, item)}>
               <Trans defaults={item} components={{ strong: <strong /> }} />
@@ -46,8 +46,8 @@ const SecurityPage = () => {
 
       <LegalSection title={t('legal.security.sections.vuln.title')} icon={Bug}>
         <p>{t('legal.security.sections.vuln.intro')}</p>
-        <div className="mt-6 border-l-2 border-[#267b2f] bg-[#e9ede3] px-5 py-4">
-          <h3 className="font-serif text-xl font-bold text-[#304735]">
+        <div className="mt-6 border-l-2 border-emerald-500 bg-emerald-50/70 px-5 py-4 dark:bg-emerald-500/10">
+          <h3 className="text-lg font-semibold text-foreground">
             {t('legal.security.sections.vuln.policyTitle')}
           </h3>
           <p className="mt-2 text-sm leading-6">
@@ -56,11 +56,11 @@ const SecurityPage = () => {
               i18nKey="legal.security.sections.vuln.contact"
               values={{ email: import.meta.env.VITE_SECURITY_EMAIL }}
               components={{
-                a: <a href={toMailtoLink(import.meta.env.VITE_SECURITY_EMAIL)} className="font-medium text-[#267b2f] underline underline-offset-4" />,
+                a: <a href={toMailtoLink(import.meta.env.VITE_SECURITY_EMAIL)} className="font-medium text-emerald-600 underline underline-offset-4 dark:text-emerald-300" />,
               }}
             />
           </p>
-          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 marker:text-[#267b2f]">
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 marker:text-emerald-600">
             {Array.isArray(vulnItems) && vulnItems.map((item, index) => (
               <li key={toItemKey(`vuln-${index}`, item)}>{item}</li>
             ))}
