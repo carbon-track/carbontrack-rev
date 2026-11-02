@@ -7,7 +7,7 @@ const ACCENT_CLASSES = ['text-green-600', 'text-blue-600', 'text-purple-600', 't
 
 // Homepage values stay fixed; only the update timestamp comes from the live API.
 const FIXED_DISPLAY_STATS = {
-  total_users: 183,
+  total_users: 224,
   new_users_30d: 4,
   total_records: 415,
   total_carbon_saved: 81.9,
