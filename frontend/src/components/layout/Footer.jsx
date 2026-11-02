@@ -2,8 +2,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Github, Instagram } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
-import { useQuery } from 'react-query';
-import { statsAPI } from '../../lib/api';
+import { FIXED_DISPLAY_STATS } from '../../lib/fixedDisplayStats';
 
 const numberFormatter = new Intl.NumberFormat();
 const carbonFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
@@ -17,21 +16,8 @@ const formatCarbon = (value, t) => {
   return `${carbonFormatter.format(numericValue)} ${t('units.kg')}`;
 };
 
-export function Footer({ summaryData = null, enableLiveSummary = true }) {
+export function Footer() {
   const { t } = useTranslation(['footer', 'units']);
-  const { data: liveSummaryData } = useQuery(
-    ['public-stats-summary'],
-    async () => {
-      const response = await statsAPI.getPublicSummary();
-      return response.data?.data ?? null;
-    },
-    {
-      enabled: enableLiveSummary && summaryData == null,
-      staleTime: 60_000,
-      refetchOnWindowFocus: false,
-    }
-  );
-  const effectiveSummaryData = summaryData ?? liveSummaryData ?? null;
 
   const currentYear = new Date().getFullYear();
   const appVersion = useMemo(() => {
@@ -184,19 +170,19 @@ export function Footer({ summaryData = null, enableLiveSummary = true }) {
             <div className="flex items-center gap-6 text-sm text-gray-300">
               <div className="text-center">
                 <div className="font-semibold text-white">
-                  {effectiveSummaryData ? formatNumber(effectiveSummaryData.total_users ?? 0) : '...'}
+                  {formatNumber(FIXED_DISPLAY_STATS.total_users)}
                 </div>
                 <div>{t('footer.users')}</div>
               </div>
               <div className="text-center">
                 <div className="font-semibold text-white">
-                  {effectiveSummaryData ? formatNumber(effectiveSummaryData.total_records ?? 0) : '...'}
+                  {formatNumber(FIXED_DISPLAY_STATS.total_records)}
                 </div>
                 <div>{t('footer.activities')}</div>
               </div>
               <div className="text-center">
                 <div className="font-semibold text-white">
-                  {effectiveSummaryData ? formatCarbon(effectiveSummaryData.total_carbon_saved ?? 0, t) : '...'}
+                  {formatCarbon(FIXED_DISPLAY_STATS.total_carbon_saved, t)}
                 </div>
                 <div>{t('footer.carbonSaved')}</div>
               </div>

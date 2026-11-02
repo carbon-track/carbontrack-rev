@@ -2,19 +2,9 @@ import React, { useMemo } from 'react';
 import { useQuery } from 'react-query';
 import { useTranslation } from '../hooks/useTranslation';
 import { statsAPI } from '../lib/api';
+import { FIXED_DISPLAY_STATS } from '../lib/fixedDisplayStats';
 
 const ACCENT_CLASSES = ['text-green-600', 'text-blue-600', 'text-purple-600', 'text-orange-600'];
-
-// Homepage values stay fixed; only the update timestamp comes from the live API.
-const FIXED_DISPLAY_STATS = {
-  total_users: 224,
-  new_users_30d: 4,
-  total_records: 415,
-  total_carbon_saved: 81.9,
-  carbon_last7: 0,
-  total_points_awarded: 819,
-  transactions_last7: 15,
-};
 
 export default function StatsSection() {
   const { t, currentLanguage } = useTranslation(['home', 'units']);
