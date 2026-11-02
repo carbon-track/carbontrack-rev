@@ -74,7 +74,7 @@ export function ActivityChart({
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent className="flex-1">
+      <CardContent className="min-w-0 flex-1 overflow-hidden">
         {data.length === 0 ? (
           <div className="flex h-full min-h-[24rem] items-center justify-center text-muted-foreground">
             <div className="text-center">
@@ -84,7 +84,7 @@ export function ActivityChart({
             </div>
           </div>
         ) : (
-          <div className="h-full min-h-[24rem]">
+          <div className="h-full min-h-[24rem] min-w-0 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               {type === 'line' ? (
                 <LineChart data={data}>

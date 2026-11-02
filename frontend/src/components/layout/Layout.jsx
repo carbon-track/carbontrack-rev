@@ -64,7 +64,7 @@ export function Layout({ showFooter = true }) {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Navbar />
       
-      <main className="flex-1">
+      <main className="min-w-0 w-full flex-1">
         <RouteErrorBoundary t={t}>
           <Outlet />
         </RouteErrorBoundary>
@@ -91,10 +91,10 @@ export function SimpleLayout() {
 // 认证页面布局
 export function AuthLayout() {
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen min-w-0 bg-background text-foreground flex flex-col">
       <Navbar />
-      <main className="flex-1">
-        <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <main className="flex min-w-0 w-full flex-1 items-center justify-center px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+        <div className="w-full">
           <Outlet />
         </div>
       </main>

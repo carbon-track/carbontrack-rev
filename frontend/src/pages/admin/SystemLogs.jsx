@@ -757,7 +757,7 @@ export default function SystemLogsPage() {
       )}
 
       <Dialog open={Boolean(selectedSystemId)} onOpenChange={(open) => !open && setSelectedSystemId(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent scrollable={false} className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               {selectedSystemId
@@ -774,7 +774,7 @@ export default function SystemLogsPage() {
             <div className="py-4 text-sm text-muted-foreground">{t('admin.systemLogs.dialog.loading')}</div>
           )}
           {detailData?.data && (
-            <ScrollArea className="max-h-[70vh] pr-2">
+            <ScrollArea className="min-h-0 flex-1 pr-2">
               <div className="space-y-6 text-sm">
                 <div className="grid gap-3 md:grid-cols-2">
                   <KeyVal label={t('admin.systemLogs.columns.request_id')} value={detailData.data.request_id} />

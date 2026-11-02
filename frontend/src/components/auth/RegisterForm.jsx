@@ -119,8 +119,8 @@ export function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="w-full text-foreground">
+      <div className="mx-auto w-full max-w-md space-y-6 sm:space-y-8">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-green-100">
             <UserPlus className="h-6 w-6 text-green-600" />
@@ -140,13 +140,13 @@ export function RegisterForm() {
         </div>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <CardTitle>{t('auth.signUp')}</CardTitle>
             <CardDescription>
               {t('auth.fillInformation')}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {error && (
                 <Alert variant="destructive">
@@ -265,26 +265,31 @@ export function RegisterForm() {
                   <label htmlFor="password" className="block text-sm font-medium text-foreground">
                     {t('auth.password')}
                   </label>
-                  <div className="mt-1 relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      placeholder={t('auth.passwordPlaceholder')}
-                      error={errors.password}
-                      {...register('password', validationRules.password)}
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </button>
+                  <div className="mt-1">
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        placeholder={t('auth.passwordPlaceholder')}
+                        error={errors.password}
+                        className="pr-10"
+                        {...register('password', validationRules.password)}
+                      />
+                      <button
+                        type="button"
+                        aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
+                        aria-pressed={showPassword}
+                        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </div>
                     {errors.password && (
                       <p className="mt-1 text-sm text-red-600">
                         {errors.password.message}
@@ -298,29 +303,34 @@ export function RegisterForm() {
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground">
                     {t('auth.confirmPassword')}
                   </label>
-                  <div className="mt-1 relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      placeholder={t('auth.confirmPasswordPlaceholder')}
-                      error={errors.confirmPassword}
-                      {...register('confirmPassword', {
-                        required: t('auth.confirmPasswordRequired'),
-                        validate: value => value === password || t('auth.passwordMismatch')
-                      })}
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </button>
+                  <div className="mt-1">
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        placeholder={t('auth.confirmPasswordPlaceholder')}
+                        error={errors.confirmPassword}
+                        className="pr-10"
+                        {...register('confirmPassword', {
+                          required: t('auth.confirmPasswordRequired'),
+                          validate: value => value === password || t('auth.passwordMismatch')
+                        })}
+                      />
+                      <button
+                        type="button"
+                        aria-label={t(showConfirmPassword ? 'auth.hidePassword' : 'auth.showPassword')}
+                        aria-pressed={showConfirmPassword}
+                        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </div>
                     {errors.confirmPassword && (
                       <p className="mt-1 text-sm text-red-600">
                         {errors.confirmPassword.message}
@@ -335,6 +345,7 @@ export function RegisterForm() {
                 <Turnstile
                   ref={turnstileRef}
                   className="mt-2"
+                  size="flexible"
                   require
                   onVerify={(tk) => setTurnstileToken(tk)}
                   onExpire={() => setTurnstileToken('')}

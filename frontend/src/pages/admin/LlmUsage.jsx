@@ -882,7 +882,7 @@ export default function AdminLlmUsagePage() {
               <CardTitle>{t('admin.llmUsage.users.title')}</CardTitle>
               <CardDescription>{t('admin.llmUsage.users.subtitle')}</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full items-center gap-2 sm:w-auto">
               <Input
                 value={search}
                 onChange={(event) => {
@@ -890,7 +890,7 @@ export default function AdminLlmUsagePage() {
                   setPage(1);
                 }}
                 placeholder={t('admin.llmUsage.users.searchPlaceholder')}
-                className="h-9 w-64"
+                className="h-9 w-full sm:w-64"
               />
             </div>
           </div>
@@ -981,24 +981,24 @@ export default function AdminLlmUsagePage() {
               <CardTitle>{t('admin.llmUsage.logs.title')}</CardTitle>
               <CardDescription>{t('admin.llmUsage.logs.subtitle')}</CardDescription>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
               <Input
                 value={logQuery}
                 onChange={(event) => setLogQuery(event.target.value)}
                 placeholder={t('admin.llmUsage.logs.searchPlaceholder')}
-                className="h-9 w-64"
+                className="h-9 w-full sm:w-64"
               />
               <Input
                 value={logConversationId}
                 onChange={(event) => setLogConversationId(event.target.value)}
                 placeholder={t('admin.llmUsage.logs.filters.conversationId', { defaultValue: 'Conversation ID' })}
-                className="h-9 w-52 font-mono"
+                className="h-9 w-full font-mono sm:w-52"
               />
               <Input
                 value={logTurnNo}
                 onChange={(event) => setLogTurnNo(event.target.value)}
                 placeholder={t('admin.llmUsage.logs.filters.turnNo', { defaultValue: 'Turn No.' })}
-                className="h-9 w-28 font-mono"
+                className="h-9 w-full font-mono sm:w-28"
               />
             </div>
           </div>
@@ -1093,7 +1093,7 @@ export default function AdminLlmUsagePage() {
       </Card>
 
       <Dialog open={Boolean(selectedConversationId)} onOpenChange={(open) => !open && setSelectedConversationId(null)}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent scrollable={false} className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>{t('admin.llmUsage.sessions.detailTitle')}</DialogTitle>
           </DialogHeader>
@@ -1104,7 +1104,7 @@ export default function AdminLlmUsagePage() {
             </div>
           )}
           {conversationDetailQuery.data && (
-            <ScrollArea className="max-h-[70vh] pr-2">
+            <ScrollArea className="min-h-0 flex-1 pr-2">
               <div className="space-y-4 text-xs">
                 <div className="grid gap-3 md:grid-cols-2">
                   <DetailItem label={t('admin.llmUsage.sessions.conversationId', { defaultValue: 'Conversation ID' })} value={conversationDetailQuery.data.conversation_id} />
@@ -1154,7 +1154,7 @@ export default function AdminLlmUsagePage() {
       </Dialog>
 
       <Dialog open={Boolean(selectedLogId)} onOpenChange={(open) => !open && setSelectedLogId(null)}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent scrollable={false} className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>{t('admin.llmUsage.logs.detailTitle', { id: selectedLogId })}</DialogTitle>
           </DialogHeader>
@@ -1165,7 +1165,7 @@ export default function AdminLlmUsagePage() {
             </div>
           )}
           {logDetailQuery.data && (
-            <ScrollArea className="max-h-[70vh] pr-2">
+            <ScrollArea className="min-h-0 flex-1 pr-2">
               <div className="space-y-4 text-xs">
                 <div className="grid gap-3 md:grid-cols-2">
                   <DetailItem label={t('admin.llmUsage.logs.columns.conversationId', { defaultValue: 'Conversation' })} value={logDetailQuery.data.conversation_id || '-'} />

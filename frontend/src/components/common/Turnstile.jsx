@@ -148,7 +148,7 @@ const Turnstile = forwardRef(function Turnstile(
 
 	if (siteKeyMissing) {
 		return (
-			<div className={`w-full ${className}`}>
+			<div className={`w-full min-w-0 ${className}`}>
 				<div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
 					未配置 Turnstile 站点密钥（VITE_TURNSTILE_SITE_KEY）。请先配置站点密钥后再继续。
 				</div>
@@ -156,9 +156,13 @@ const Turnstile = forwardRef(function Turnstile(
 		);
 	}
 
+	const containerClassName = size === 'flexible'
+		? 'w-full min-w-0 max-w-full'
+		: 'inline-block max-w-full';
+
 	return (
-		<div className={`${size === 'flexible' ? 'w-full max-w-full' : 'inline-block max-w-full'} ${className}`.trim()}>
-			<div ref={containerRef} className={size === 'flexible' ? 'w-full max-w-full' : 'inline-block max-w-full'} />
+		<div className={`${containerClassName} ${className}`.trim()}>
+			<div ref={containerRef} className={containerClassName} />
 			{/* 可选：在 require 模式下无 token 时提示 */}
 			{require && !token && loaded && (
 				<p className="mt-2 text-xs text-muted-foreground">请先完成验证码验证</p>

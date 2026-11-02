@@ -79,15 +79,15 @@ export function QuickActions({ userStats = {}, onActionClick }) {
 
   return (
     <Card className="flex h-full flex-col border-border/80 bg-card/95">
-      <CardHeader>
+      <CardHeader className="p-4 sm:p-6">
         <CardTitle>{t('dashboard.quickActions.title')}</CardTitle>
         <CardDescription>
           {t('dashboard.quickActions.description')}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col">
-        <div className="grid auto-rows-fr grid-cols-2 gap-4">
+      <CardContent className="flex flex-1 flex-col px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
+        <div className="grid auto-rows-fr grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4">
           {actions.map((action) => {
             const Icon = action.icon;
 
@@ -95,17 +95,17 @@ export function QuickActions({ userStats = {}, onActionClick }) {
               <Button
                 key={action.id}
                 variant={action.primary ? "default" : "outline"}
-                className={`relative flex h-full min-h-[9.5rem] w-full min-w-0 overflow-hidden flex-col items-start justify-start gap-3 p-4 text-left whitespace-normal ${action.primary ? action.color : 'border-border bg-background/40 hover:bg-muted/60'
+                className={`relative flex h-full min-h-[7.5rem] w-full min-w-0 overflow-hidden flex-col items-start justify-start gap-3 p-4 text-left whitespace-normal min-[420px]:min-h-[9.5rem] ${action.primary ? action.color : 'border-border bg-background/40 hover:bg-muted/60'
                   }`}
                 onClick={() => handleActionClick(action)}
               >
                 {action.badge && (
-                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center">
+                  <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                     {action.badge > 99 ? t('dashboard.quickActions.badgeOverflow', { count: 99 }) : action.badge}
                   </div>
                 )}
 
-                <div className="flex w-full min-w-0 items-start gap-3">
+                <div className={`flex w-full min-w-0 items-start gap-3 ${action.badge ? 'pr-8' : ''}`}>
                   <Icon className={`mt-1 h-6 w-6 flex-shrink-0 ${action.primary ? 'text-white' : 'text-foreground/80'}`} />
                   <span className={`block min-w-0 flex-1 break-words text-base font-semibold leading-snug [overflow-wrap:anywhere] sm:text-lg ${action.primary ? 'text-white' : 'text-foreground'}`}>
                     {action.title}

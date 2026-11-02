@@ -1,15 +1,19 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -136,23 +140,52 @@ function MessageList({ messages, onDelete, onMarkRead, onOpen }) {
 function MessageDetailModal({ message, onClose }) {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { height: viewportHeight } = useWindowDimensions();
+  const visible = Boolean(message);
+  const sheetTranslateY = useRef(new Animated.Value(viewportHeight)).current;
+
+  useLayoutEffect(() => {
+    if (!visible) {
+      return undefined;
+    }
+
+    sheetTranslateY.stopAnimation();
+    sheetTranslateY.setValue(viewportHeight);
+    const animation = Animated.timing(sheetTranslateY, {
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+      toValue: 0,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [sheetTranslateY, viewportHeight, visible]);
+
   return (
-    <Modal animationType="fade" onRequestClose={onClose} transparent visible={Boolean(message)}>
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
       <View style={styles.modalBackdrop}>
-        <GlassSurface style={[styles.modalSheet, styles.messageDetailSheet]} contentStyle={[styles.modalContent, styles.messageDetailContent]}>
-          <View style={styles.modalHeader}>
-            <View style={styles.modalTitleBox}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>{message?.title || t('messages.detailTitle')}</Text>
-              <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{displayDateTime(message?.createdAt)}</Text>
+        <Pressable
+          accessibilityLabel={t('messages.close')}
+          accessibilityRole="button"
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        />
+        <Animated.View style={[styles.messageDetailAnimatedSheet, { transform: [{ translateY: sheetTranslateY }] }]}>
+          <GlassSurface style={[styles.modalSheet, styles.messageDetailSheet]} contentStyle={[styles.modalContent, styles.messageDetailContent]}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalTitleBox}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>{message?.title || t('messages.detailTitle')}</Text>
+                <Text style={[styles.rowMeta, { color: colors.textMuted }]}>{displayDateTime(message?.createdAt)}</Text>
+              </View>
+              <GlassButtonSurface accessibilityLabel={t('messages.close')} contentStyle={styles.iconButtonContent} onPress={onClose} style={styles.iconButton}>
+                <Ionicons color={colors.text} name="close" size={20} />
+              </GlassButtonSurface>
             </View>
-            <GlassButtonSurface accessibilityLabel={t('messages.close')} contentStyle={styles.iconButtonContent} onPress={onClose} style={styles.iconButton}>
-              <Ionicons color={colors.text} name="close" size={20} />
-            </GlassButtonSurface>
-          </View>
-          <ScrollView contentContainerStyle={styles.messageDetailScrollContent} style={styles.messageDetailScroll}>
-            <Text style={[styles.bodyText, { color: colors.text }]}>{message?.content || t('messages.noContent')}</Text>
-          </ScrollView>
-        </GlassSurface>
+            <ScrollView contentContainerStyle={styles.messageDetailScrollContent} style={styles.messageDetailScroll}>
+              <Text style={[styles.bodyText, { color: colors.text }]}>{message?.content || t('messages.noContent')}</Text>
+            </ScrollView>
+          </GlassSurface>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -283,6 +316,12 @@ function TicketEditorModal({ loading, onClose, onSubmit, visible }) {
     <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalKeyboard}>
         <View style={styles.modalBackdrop}>
+          <Pressable
+            accessibilityLabel={t('messages.close')}
+            accessibilityRole="button"
+            onPress={onClose}
+            style={StyleSheet.absoluteFill}
+          />
           <View
             style={[
               styles.modalSheet,
@@ -548,6 +587,12 @@ function TicketDetailModal({ ticketId, onClose }) {
     <Modal animationType="fade" onRequestClose={onClose} transparent visible={Boolean(ticketId)}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalKeyboard}>
         <View style={styles.modalBackdrop}>
+          <Pressable
+            accessibilityLabel={t('messages.close')}
+            accessibilityRole="button"
+            onPress={onClose}
+            style={StyleSheet.absoluteFill}
+          />
           <View
             style={[
               styles.modalSheet,
@@ -560,7 +605,14 @@ function TicketDetailModal({ ticketId, onClose }) {
               makeShadow(colors, colors.dark ? 0.32 : 0.16, 14),
             ]}
           >
-            <View style={[styles.modalHeader, styles.ticketModalHeader]}>
+            <View
+              style={[
+                styles.modalHeader,
+                styles.ticketModalHeader,
+                styles.ticketDetailModalHeader,
+                { borderBottomColor: colors.borderStrong },
+              ]}
+            >
               <View style={styles.modalTitleBox}>
                 <Text style={[styles.modalTitle, { color: colors.text }]}>{ticket?.subject || t('support.ticketDetail')}</Text>
               </View>
@@ -945,6 +997,9 @@ const styles = StyleSheet.create({
   messageDetailContent: {
     maxHeight: '100%',
   },
+  messageDetailAnimatedSheet: {
+    width: '100%',
+  },
   messageDetailScroll: {
     flexGrow: 0,
     maxHeight: 520,
@@ -1170,6 +1225,11 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 18,
     paddingBottom: 2,
+  },
+  ticketDetailModalHeader: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: 14,
+    paddingBottom: 12,
   },
   ticketDetailScroll: {
     flexGrow: 0,

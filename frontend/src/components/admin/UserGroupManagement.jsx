@@ -237,7 +237,7 @@ export function UserGroupManagement() {
                             {editingGroup?.id ? t('admin.groups.edit') : t('admin.groups.create')}
                         </DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form id="user-group-management-form" onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <Label>{t('admin.groups.name')}</Label>
                             <Input
@@ -308,12 +308,16 @@ export function UserGroupManagement() {
                                 onChange={e => setEditingGroup({ ...editingGroup, notes: e.target.value })}
                             />
                         </div>
-                        <DialogFooter>
-                            <Button type="submit" disabled={createmutation.isLoading || updateMutation.isLoading}>
-                                {t('common.save')}
-                            </Button>
-                        </DialogFooter>
                     </form>
+                    <DialogFooter>
+                        <Button
+                            type="submit"
+                            form="user-group-management-form"
+                            disabled={createmutation.isLoading || updateMutation.isLoading}
+                        >
+                            {t('common.save')}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 

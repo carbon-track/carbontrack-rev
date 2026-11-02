@@ -9,6 +9,8 @@
 /.tmp_backup/
 .openclaw/
 .agent/
+.playwright-mcp/
+.pnpm-store/
 .wrangler/
 /.worktrees/
 /.cursor/hooks/state/continual-learning.json

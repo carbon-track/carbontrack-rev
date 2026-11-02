@@ -1,0 +1,62 @@
+{
+  "partnership": {
+    "hero": {
+      "eyebrow": "Partner with CarbonTrack",
+      "title": "Good ideas grow\nthrough collaboration.",
+      "description": "We welcome schools, student groups, businesses, and community partners who want to make low-carbon living more accessible. Let's explore what we can build together.",
+      "primaryAction": "Start a conversation",
+      "secondaryAction": "Meet our team"
+    },
+    "purpose": {
+      "eyebrow": "Our shared goal",
+      "title": "Turn climate awareness into everyday action.",
+      "description": "CarbonTrack brings together carbon-footprint tools, community participation, and climate storytelling. Through collaboration, we hope to help more people understand their impact and take practical steps toward a lower-carbon future."
+    },
+    "areas": {
+      "title": "Ways to work together",
+      "description": "These are starting points for a conversation. We are also happy to hear ideas that connect your strengths with our environmental mission.",
+      "items": {
+        "community": {
+          "title": "Campus & community",
+          "description": "Explore low-carbon challenges, environmental workshops, and community activities that help people turn everyday choices into action."
+        },
+        "technology": {
+          "title": "Product & technology",
+          "description": "Collaborate on development, testing, and user experience across carbon-footprint tools, our website, mobile app, and browser extension."
+        },
+        "creative": {
+          "title": "Content & creative projects",
+          "description": "Create climate explainers, visual stories, and interactive exhibitions that make environmental issues easier to understand and experience."
+        },
+        "support": {
+          "title": "Resources & long-term support",
+          "description": "Discuss support through venues, expertise, outreach, or funding to help CarbonTrack develop a sustainable operating model."
+        }
+      }
+    },
+    "process": {
+      "title": "From an idea to a shared project",
+      "steps": [
+        {
+          "title": "Share your idea",
+          "description": "Tell us about yourself or your organization, your proposed collaboration, who it could reach, and your timeline."
+        },
+        {
+          "title": "Find common ground",
+          "description": "Together, we can discuss available resources, responsibilities, and what a useful outcome would look like."
+        },
+        {
+          "title": "Start small, learn together",
+          "description": "Begin with a clearly scoped project, review the feedback, and decide together what comes next."
+        }
+      ]
+    },
+    "contact": {
+      "title": "Let's start with an idea.",
+      "description": "Your proposal does not need to be fully formed. Send us a short introduction and the kind of collaboration you have in mind.",
+      "emailAction": "Email about a partnership",
+      "subject": "Partnership with CarbonTrack",
+      "otherQuestions": "Other questions? View our contact information."
+    }
+  }
+}

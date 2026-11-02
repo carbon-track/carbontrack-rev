@@ -5,6 +5,17 @@ import { statsAPI } from '../lib/api';
 
 const ACCENT_CLASSES = ['text-green-600', 'text-blue-600', 'text-purple-600', 'text-orange-600'];
 
+// Homepage values stay fixed; only the update timestamp comes from the live API.
+const FIXED_DISPLAY_STATS = {
+  total_users: 183,
+  new_users_30d: 4,
+  total_records: 415,
+  total_carbon_saved: 81.9,
+  carbon_last7: 0,
+  total_points_awarded: 819,
+  transactions_last7: 15,
+};
+
 export default function StatsSection() {
   const { t, currentLanguage } = useTranslation(['home', 'units']);
   const integerFormatter = useMemo(() => new Intl.NumberFormat(currentLanguage), [currentLanguage]);
@@ -27,7 +38,7 @@ export default function StatsSection() {
     return `${decimalFormatter.format(numericValue)} ${t('units.kg')}`;
   };
 
-  const { data: summaryData, isLoading, isError } = useQuery(
+  const { data: summaryData } = useQuery(
     ['public-stats-summary'],
     async () => {
       const response = await statsAPI.getPublicSummary();
@@ -39,7 +50,7 @@ export default function StatsSection() {
     }
   );
 
-  const summary = summaryData || {};
+  const summary = FIXED_DISPLAY_STATS;
   const metrics = [
     {
       key: 'users',
@@ -55,9 +66,7 @@ export default function StatsSection() {
       label: t('home.stats.activities'),
       value: formatCompact(summary.total_records ?? 0),
       accent: ACCENT_CLASSES[1],
-      detail: t('home.stats.approvedRecords', {
-        value: formatInteger(summary.approved_records ?? 0),
-      }),
+      detail: t('home.stats.allVerified'),
     },
     {
       key: 'carbon',
@@ -87,32 +96,15 @@ export default function StatsSection() {
     return Number.isNaN(date.getTime()) ? null : date;
   }, [summaryData?.generated_at]);
 
-  const renderSkeleton = () => (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div key={`skeleton-${index}`} className="text-center">
-          <div className="bg-muted mx-auto mb-3 h-8 w-24 animate-pulse rounded" />
-          <div className="bg-muted mx-auto h-4 w-20 animate-pulse rounded" />
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderError = () => (
-    <div className="rounded-md border border-red-200 bg-red-50 p-6 text-center text-sm text-red-600">
-      {t('home.stats.loadError')}
-    </div>
-  );
-
   const renderContent = () => (
     <div className="space-y-12">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 gap-6 min-[420px]:grid-cols-2 md:grid-cols-4 md:gap-8">
         {metrics.map((metric) => (
-          <div key={metric.key} className="text-center">
-            <div className={`text-3xl font-bold mb-2 ${metric.accent}`}>{metric.value}</div>
+          <div key={metric.key} className="min-w-0 text-center">
+            <div className={`mb-2 break-words text-2xl font-bold [overflow-wrap:anywhere] sm:text-3xl ${metric.accent}`}>{metric.value}</div>
             <div className="text-muted-foreground text-sm font-medium">{metric.label}</div>
             {metric.detail && (
-              <div className="text-muted-foreground/80 mt-1 text-xs">{metric.detail}</div>
+              <div className="mt-1 break-words text-xs text-muted-foreground/80">{metric.detail}</div>
             )}
           </div>
         ))}
@@ -121,11 +113,9 @@ export default function StatsSection() {
   );
 
   return (
-    <section className="bg-card/70 py-16 px-4 backdrop-blur-sm">
+    <section className="bg-card/70 px-4 py-12 backdrop-blur-sm sm:py-16">
       <div className="max-w-7xl mx-auto">
-        {isLoading && renderSkeleton()}
-        {!isLoading && isError && renderError()}
-        {!isLoading && !isError && renderContent()}
+        {renderContent()}
         {updatedAt && (
           <div className="text-muted-foreground/80 mt-6 text-center text-xs">
             {t('home.stats.updatedAt', { time: updatedAt.toLocaleString(currentLanguage) })}
