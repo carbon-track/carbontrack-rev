@@ -34,6 +34,7 @@ export function Navbar() {
   const hasRefreshedUserRef = useRef(false);
   const mobilePanelRef = useRef(null);
   const mobileToggleRef = useRef(null);
+  const userMenuButtonRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
@@ -282,6 +283,37 @@ export function Navbar() {
 
   const mobilePanelId = 'navbar-mobile-panel';
   const canAccessSupportPortal = hasSupportPortalAccess(user);
+
+  const handleUserMenuKeyDown = (event) => {
+    if (event.key !== 'Escape' || !isUserMenuOpen) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    setIsUserMenuOpen(false);
+    userMenuButtonRef.current?.focus();
+  };
+
+  const handleUserMenuBlur = (event) => {
+    if (!isUserMenuOpen) {
+      return;
+    }
+
+    const root = event.currentTarget;
+    const nextTarget = event.relatedTarget;
+    if (nextTarget && root.contains(nextTarget)) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      if (!root.isConnected || root.contains(document.activeElement)) {
+        return;
+      }
+
+      setIsUserMenuOpen(false);
+    }, 0);
+  };
 
   const handleLogout = async () => {
     try {
@@ -810,8 +842,14 @@ export function Navbar() {
                   )}
                 </Button>
                 {/* 用户菜单 */}
-                <div className="relative group" data-user-menu-root>
+                <div
+                  className="relative group"
+                  data-user-menu-root
+                  onKeyDown={handleUserMenuKeyDown}
+                  onBlur={handleUserMenuBlur}
+                >
                   <Button
+                    ref={userMenuButtonRef}
                     type="button"
                     variant="ghost"
                     aria-haspopup="menu"
@@ -825,73 +863,75 @@ export function Navbar() {
                   
                   {/* 下拉菜单 */}
                   <div className={clsx(
-                    'absolute right-0 mt-2 w-48 rounded-md border border-border bg-card text-card-foreground shadow-lg shadow-black/10 transition-all duration-200',
+                    'absolute right-0 top-full w-48 pt-2 transition-all duration-200',
                     isUserMenuOpen
                       ? 'visible pointer-events-auto opacity-100'
                       : 'invisible pointer-events-none opacity-0 group-hover:visible group-hover:pointer-events-auto group-hover:opacity-100'
                   )}>
-                    <div className="py-1">
-                      <Link
-                        to="/profile"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-                      >
-                        <Settings className="h-4 w-4" />
-                        {t('nav.profile')}
-                      </Link>
-
-                      <Link
-                        to="/settings/notifications"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-                      >
-                        <Bell className="h-4 w-4" />
-                        {t('nav.notifications')}
-                      </Link>
-
-                      <Link
-                        to="/help"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-                      >
-                        <Headset className="h-4 w-4" />
-                        {t('footer.help')}
-                      </Link>
-
-                      {canAccessSupportPortal && (
+                    <div className="rounded-md border border-border bg-card text-card-foreground shadow-lg shadow-black/10">
+                      <div className="py-1">
                         <Link
-                          to="/support/"
-                          onClick={() => setIsUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-                        >
-                          <Headset className="h-4 w-4" />
-                          {t('nav.support')}
-                        </Link>
-                      )}
-                      
-                      {user?.is_admin && (
-                        <Link
-                          to="/admin"
+                          to="/profile"
                           onClick={() => setIsUserMenuOpen(false)}
                           className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                         >
                           <Settings className="h-4 w-4" />
-                          {t('nav.admin')}
+                          {t('nav.profile')}
                         </Link>
-                      )}
+
+                        <Link
+                          to="/settings/notifications"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          <Bell className="h-4 w-4" />
+                          {t('nav.notifications')}
+                        </Link>
+
+                        <Link
+                          to="/help"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          <Headset className="h-4 w-4" />
+                          {t('footer.help')}
+                        </Link>
+
+                        {canAccessSupportPortal && (
+                          <Link
+                            to="/support/"
+                            onClick={() => setIsUserMenuOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            <Headset className="h-4 w-4" />
+                            {t('nav.support')}
+                          </Link>
+                        )}
                       
-                      <hr className="my-1 border-border" />
+                        {user?.is_admin && (
+                          <Link
+                            to="/admin"
+                            onClick={() => setIsUserMenuOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            <Settings className="h-4 w-4" />
+                            {t('nav.admin')}
+                          </Link>
+                        )}
                       
-                      <button
-                        onClick={() => {
-                          setIsUserMenuOpen(false);
-                          handleLogout();
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        {t('nav.logout')}
-                      </button>
+                        <hr className="my-1 border-border" />
+                      
+                        <button
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            handleLogout();
+                          }}
+                          className="flex w-full items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          {t('nav.logout')}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
