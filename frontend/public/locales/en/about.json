@@ -182,6 +182,16 @@
           ]
         },
         {
+          "name": "Michael Jiang",
+          "avatar": "/images/about/avatars/micheal-notion-avatar.jpg",
+          "role": "Frontend Engineer",
+          "bio": "Michael develops new user interface patterns and features. He cares deeply about accessible, joyful interaction design for climate products.",
+          "categories": [
+            "engineering",
+            "design"
+          ]
+        },
+        {
           "name": "Smiley Ni",
           "role": "Creative Lead",
           "bio": "Smiley drives our creative direction, from campaign visuals to community storytelling. A passionate dancer and artist, she wants CarbonTrack to spread joy along with climate awareness.",
@@ -216,15 +226,6 @@
           "bio": "Tony helps deliver new features, performance improvements, and smooth interactions that make CarbonTrack both powerful and approachable.",
           "categories": [
             "engineering"
-          ]
-        },
-        {
-          "name": "Michael Jiang",
-          "role": "Frontend Engineer",
-          "bio": "Michael develops new user interface patterns and features. He cares deeply about accessible, joyful interaction design for climate products.",
-          "categories": [
-            "engineering",
-            "design"
           ]
         },
         {
