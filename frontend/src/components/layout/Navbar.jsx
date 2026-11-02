@@ -35,6 +35,7 @@ export function Navbar() {
   const mobilePanelRef = useRef(null);
   const mobileToggleRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showSecondaryControls, setShowSecondaryControls] = useState(false);
@@ -227,7 +228,19 @@ export function Navbar() {
 
   useEffect(() => {
     setIsOpen(false);
+    setIsUserMenuOpen(false);
   }, [location.hash, location.pathname, location.search]);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!event.target.closest?.('[data-user-menu-root]')) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, []);
 
   useEffect(() => {
     if (showSecondaryControls) {
@@ -625,7 +638,14 @@ export function Navbar() {
                 {isAuthenticated ? (
                   <div className="rounded-lg border border-border bg-card/95 p-4 shadow-sm shadow-black/5">
                     <div className="flex items-center gap-3">
-                      {renderUserAvatar('h-12 w-12')}
+                      <Link
+                        to="/profile"
+                        onClick={closeMobile}
+                        aria-label={t('nav.profile')}
+                        className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                      >
+                        {renderUserAvatar('h-12 w-12')}
+                      </Link>
                       <div>
                         <p className="text-base font-semibold text-foreground">
                           {user?.username}
@@ -790,17 +810,30 @@ export function Navbar() {
                   )}
                 </Button>
                 {/* 用户菜单 */}
-                <div className="relative group">
-                  <Button variant="ghost" className="flex items-center gap-3 whitespace-nowrap rounded-lg px-2 text-foreground hover:bg-muted">
+                <div className="relative group" data-user-menu-root>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-haspopup="menu"
+                    aria-expanded={isUserMenuOpen}
+                    onClick={() => setIsUserMenuOpen((open) => !open)}
+                    className="flex items-center gap-3 whitespace-nowrap rounded-lg px-2 text-foreground hover:bg-muted"
+                  >
                     {renderUserAvatar('h-8 w-8')}
                     <span className="hidden lg:inline">{user?.username}</span>
                   </Button>
                   
                   {/* 下拉菜单 */}
-                  <div className="absolute right-0 mt-2 w-48 rounded-md border border-border bg-card text-card-foreground shadow-lg shadow-black/10 opacity-0 invisible transition-all duration-200 group-hover:opacity-100 group-hover:visible">
+                  <div className={clsx(
+                    'absolute right-0 mt-2 w-48 rounded-md border border-border bg-card text-card-foreground shadow-lg shadow-black/10 transition-all duration-200',
+                    isUserMenuOpen
+                      ? 'visible pointer-events-auto opacity-100'
+                      : 'invisible pointer-events-none opacity-0 group-hover:visible group-hover:pointer-events-auto group-hover:opacity-100'
+                  )}>
                     <div className="py-1">
                       <Link
                         to="/profile"
+                        onClick={() => setIsUserMenuOpen(false)}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                       >
                         <Settings className="h-4 w-4" />
@@ -809,6 +842,7 @@ export function Navbar() {
 
                       <Link
                         to="/settings/notifications"
+                        onClick={() => setIsUserMenuOpen(false)}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                       >
                         <Bell className="h-4 w-4" />
@@ -817,6 +851,7 @@ export function Navbar() {
 
                       <Link
                         to="/help"
+                        onClick={() => setIsUserMenuOpen(false)}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                       >
                         <Headset className="h-4 w-4" />
@@ -826,6 +861,7 @@ export function Navbar() {
                       {canAccessSupportPortal && (
                         <Link
                           to="/support/"
+                          onClick={() => setIsUserMenuOpen(false)}
                           className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                         >
                           <Headset className="h-4 w-4" />
@@ -836,6 +872,7 @@ export function Navbar() {
                       {user?.is_admin && (
                         <Link
                           to="/admin"
+                          onClick={() => setIsUserMenuOpen(false)}
                           className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                         >
                           <Settings className="h-4 w-4" />
@@ -846,7 +883,10 @@ export function Navbar() {
                       <hr className="my-1 border-border" />
                       
                       <button
-                        onClick={handleLogout}
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          handleLogout();
+                        }}
                         className="flex w-full items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                       >
                         <LogOut className="h-4 w-4" />
