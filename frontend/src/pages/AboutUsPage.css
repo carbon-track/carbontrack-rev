@@ -13,11 +13,26 @@
   transform-origin: 50% 72%;
 }
 
+.dark .about-team-avatar-portrait {
+  /* Multiply against a near-black surface crushes the line art. Screen the inverted ink instead. */
+  mix-blend-mode: screen;
+}
+
 .about-team-speech-tail {
   display: block;
   overflow: visible;
   /* Join the tail's fill across the bubble border without a dividing line. */
   transform: translateY(-2px);
+}
+
+.about-team-speech-tail path {
+  fill: var(--color-emerald-50);
+  stroke: var(--color-emerald-500);
+}
+
+.dark .about-team-speech-tail path {
+  fill: color-mix(in oklab, var(--color-emerald-500) 10%, transparent);
+  stroke: color-mix(in oklab, var(--color-emerald-400) 40%, transparent);
 }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {

@@ -64,7 +64,7 @@ const TeamAvatarButton = ({ member, index, label, onSelect, speech, onSpeechDism
                 aria-hidden="true"
                 loading="lazy"
                 decoding="async"
-                className="h-full w-full scale-[1.15] object-contain"
+                className="h-full w-full scale-[1.15] object-contain dark:invert"
               />
             </span>
           </span>
@@ -84,8 +84,6 @@ const TeamAvatarButton = ({ member, index, label, onSelect, speech, onSpeechDism
           >
             <path
               d="M1 0 L14 17 L27 0"
-              fill="#ecfdf5"
-              stroke="#10b981"
               strokeWidth="2"
               strokeLinejoin="round"
             />
@@ -131,7 +129,7 @@ const TeamMemberCard = React.memo(({ member, index, photoPlaceholderLabel, portr
             alt={portraitAlt}
             loading="lazy"
             decoding="async"
-            className="absolute inset-0 h-full w-full scale-[1.15] object-contain mix-blend-multiply"
+            className="absolute inset-0 h-full w-full scale-[1.15] object-contain mix-blend-multiply dark:mix-blend-screen dark:invert"
           />
         </div>
       ) : (
@@ -270,7 +268,7 @@ const AboutUsPage = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+    <div className="relative min-h-screen overflow-clip bg-background text-foreground">
       <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[500px] w-[800px] -translate-x-1/2 bg-gradient-to-tr from-blue-50/50 via-gray-100/50 to-transparent opacity-50 blur-[100px] dark:from-primary/20 dark:via-primary/10 dark:opacity-20" />
       <header className="relative mx-4 overflow-hidden rounded-lg border border-border/60 bg-gradient-to-br from-card via-card to-secondary/35 px-6 py-16 shadow-sm sm:mx-6 sm:px-10 sm:py-20 lg:mx-auto lg:max-w-7xl">
         <img
