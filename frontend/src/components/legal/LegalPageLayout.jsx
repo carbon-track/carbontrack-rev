@@ -21,9 +21,9 @@ export function LegalPageLayout({ title, lastUpdated, intro, children }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-12 sm:px-8 lg:py-16">
+      <div className="mx-auto max-w-5xl px-6 py-12 sm:px-8 lg:py-16">
         <article>{children}</article>
-      </main>
+      </div>
     </div>
   );
 }
