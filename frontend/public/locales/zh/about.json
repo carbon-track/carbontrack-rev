@@ -182,6 +182,30 @@
           ]
         },
         {
+          "name": "Micheal Jiang",
+          "avatar": "/images/about/avatars/micheal-notion-avatar.jpg",
+          "role": "前端工程师",
+          "bio": "Micheal 专注于用户界面与功能开发，关注可访问性与愉悦的交互体验。",
+          "categories": [
+            "engineering",
+            "design"
+          ]
+        },
+        {
+          "name": "Sissi Zhang",
+          "avatar": "/images/about/avatars/sissi-notion-avatar.png"
+        },
+        {
+          "name": "David",
+          "avatar": "/images/about/avatars/david-notion-avatar.png",
+          "role": "概念艺术与视觉设计",
+          "bio": "David 负责 CarbonTrack 内容团队的概念艺术与视觉设计，通过插画、图像与视觉叙事，将森林、野生动物与自然生态之美转化为更具感染力的内容体验。他希望借助 CarbonTrack，让更多人看见并理解自然环境的珍贵，从而激发对森林保护和野生动物保护的关注与行动。作为一名自然保护的积极倡导者，David 相信，富有感染力的视觉表达能够拉近公众与自然之间的距离，让环保理念以更直观、更持久的方式被感知和传播。在闲暇时间，他喜欢水彩、摄影和电影。",
+          "categories": [
+            "design",
+            "community"
+          ]
+        },
+        {
           "name": "Smiley Ni",
           "role": "创意负责人",
           "bio": "Smiley 主导品牌视觉与内容创作，热爱舞蹈与艺术，希望让 CarbonTrack 在传播环保理念的同时带来快乐。",
@@ -216,15 +240,6 @@
           "bio": "Tony 负责新功能开发、性能优化与交互体验迭代，让 CarbonTrack 更高效、更易用。",
           "categories": [
             "engineering"
-          ]
-        },
-        {
-          "name": "Michael Jiang",
-          "role": "前端工程师",
-          "bio": "Michael 专注于用户界面与功能开发，关注可访问性与愉悦的交互体验。",
-          "categories": [
-            "engineering",
-            "design"
           ]
         },
         {

@@ -171,9 +171,11 @@ const TeamMemberCard = React.memo(({ member, index, photoPlaceholderLabel, portr
           </p>
         ) : null}
 
-        <p className="mt-5 text-[0.82rem] font-semibold leading-[1.35] text-white/90">
-          {member.bio}
-        </p>
+        {member.bio ? (
+          <p className="mt-5 text-[0.82rem] font-semibold leading-[1.35] text-white/90">
+            {member.bio}
+          </p>
+        ) : null}
       </div>
     </article>
   );
