@@ -35,6 +35,7 @@ Section.propTypes = {
 };
 
 const PrivacyPolicyPage = () => {
+    // Hand this t to Trans so privacy strings resolve in the legal namespace.
     const { t } = useTranslation(['contact', 'legal']);
     const currentDate = new Date().toLocaleDateString();
 
@@ -58,7 +59,7 @@ const PrivacyPolicyPage = () => {
                             {t('legal.lastUpdated', { date: currentDate })}
                         </p>
                         <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-                            <Trans i18nKey="legal.privacy.intro" components={{ strong: <strong /> }} />
+                            <Trans t={t} i18nKey="legal.privacy.intro" components={{ strong: <strong /> }} />
                         </p>
                     </Motion.div>
 
@@ -66,44 +67,44 @@ const PrivacyPolicyPage = () => {
                         <CardContent className="p-8 md:p-12">
                             <Section title={t('legal.privacy.sections.identity.title')} icon={Globe}>
                                 <p>
-                                    <Trans i18nKey="legal.privacy.sections.identity.content1" components={{ strong: <strong /> }} />
+                                    <Trans t={t} i18nKey="legal.privacy.sections.identity.content1" components={{ strong: <strong /> }} />
                                 </p>
                                 <p>
-                                    <Trans i18nKey="legal.privacy.sections.identity.content2" components={{ strong: <strong /> }} />
+                                    <Trans t={t} i18nKey="legal.privacy.sections.identity.content2" components={{ strong: <strong /> }} />
                                 </p>
                             </Section>
 
                             <Section title={t('legal.privacy.sections.collection.title')} icon={Database}>
-                                <p><Trans i18nKey="legal.privacy.sections.collection.intro" components={{ strong: <strong /> }} /></p>
+                                <p><Trans t={t} i18nKey="legal.privacy.sections.collection.intro" components={{ strong: <strong /> }} /></p>
                                 <ul className="list-disc pl-5 space-y-2">
                                     {Array.isArray(collectionItems) && collectionItems.map((item, index) => (
                                         <li key={toItemKey(`collection-${index}`, item)}>
-                                            <Trans defaults={item} components={{ strong: <strong /> }} />
+                                            <Trans t={t} defaults={item} components={{ strong: <strong /> }} />
                                         </li>
                                     ))}
                                 </ul>
                             </Section>
 
                             <Section title={t('legal.privacy.sections.usage.title')} icon={Eye}>
-                                <p><Trans i18nKey="legal.privacy.sections.usage.intro" components={{ strong: <strong /> }} /></p>
+                                <p><Trans t={t} i18nKey="legal.privacy.sections.usage.intro" components={{ strong: <strong /> }} /></p>
                                 <ul className="list-disc pl-5 space-y-2">
                                     {Array.isArray(usageItems) && usageItems.map((item, index) => (
                                         <li key={toItemKey(`usage-${index}`, item)}>
-                                            <Trans defaults={item} components={{ strong: <strong /> }} />
+                                            <Trans t={t} defaults={item} components={{ strong: <strong /> }} />
                                         </li>
                                     ))}
                                 </ul>
                                 <p>
-                                    <Trans i18nKey="legal.privacy.sections.usage.marketing" components={{ strong: <strong /> }} />
+                                    <Trans t={t} i18nKey="legal.privacy.sections.usage.marketing" components={{ strong: <strong /> }} />
                                 </p>
                             </Section>
 
                             <Section title={t('legal.privacy.sections.storage.title')} icon={Server}>
                                 <p>
-                                    <Trans i18nKey="legal.privacy.sections.storage.content1" components={{ strong: <strong /> }} />
+                                    <Trans t={t} i18nKey="legal.privacy.sections.storage.content1" components={{ strong: <strong /> }} />
                                 </p>
                                 <p>
-                                    <Trans i18nKey="legal.privacy.sections.storage.content2" components={{ strong: <strong /> }} />
+                                    <Trans t={t} i18nKey="legal.privacy.sections.storage.content2" components={{ strong: <strong /> }} />
                                 </p>
                                 <ul className="list-disc pl-5 mt-2">
                                     {Array.isArray(storageItems) && storageItems.map((item, index) => (
@@ -113,16 +114,16 @@ const PrivacyPolicyPage = () => {
                             </Section>
 
                             <Section title={t('legal.privacy.sections.rights.title')} icon={Shield}>
-                                <p><Trans i18nKey="legal.privacy.sections.rights.intro" components={{ strong: <strong /> }} /></p>
+                                <p><Trans t={t} i18nKey="legal.privacy.sections.rights.intro" components={{ strong: <strong /> }} /></p>
                                 <ul className="list-disc pl-5 space-y-2">
                                     {Array.isArray(rightsItems) && rightsItems.map((item, index) => (
                                         <li key={toItemKey(`rights-${index}`, item)}>
-                                            <Trans defaults={item} components={{ strong: <strong /> }} />
+                                            <Trans t={t} defaults={item} components={{ strong: <strong /> }} />
                                         </li>
                                     ))}
                                 </ul>
                                 <p className="mt-4 rounded-lg bg-muted/60 p-4 text-sm">
-                                    <Trans
+                                    <Trans t={t}
                                         i18nKey="legal.privacy.sections.rights.contact"
                                         values={{ email: import.meta.env.VITE_PRIVACY_EMAIL }}
                                         components={{ a: <a href={toMailtoLink(import.meta.env.VITE_PRIVACY_EMAIL)} className="text-blue-600 hover:underline dark:text-blue-400" /> }}
@@ -135,7 +136,7 @@ const PrivacyPolicyPage = () => {
                                     {t('legal.privacy.sections.retention.content1')}
                                 </p>
                                 <p>
-                                    <Trans i18nKey="legal.privacy.sections.retention.content2" components={{ strong: <strong /> }} />
+                                    <Trans t={t} i18nKey="legal.privacy.sections.retention.content2" components={{ strong: <strong /> }} />
                                 </p>
                             </Section>
 
@@ -144,7 +145,7 @@ const PrivacyPolicyPage = () => {
                                     {t('legal.privacy.sections.contact.intro')}
                                 </p>
                                 <div className="mt-2">
-                                    <Trans
+                                    <Trans t={t}
                                         i18nKey="legal.privacy.sections.contact.details"
                                         values={{ email: import.meta.env.VITE_PRIVACY_EMAIL }}
                                         components={{ strong: <strong />, a: <a href={toMailtoLink(import.meta.env.VITE_PRIVACY_EMAIL)} className="text-blue-600 hover:underline dark:text-blue-400" />, br: <br /> }}
