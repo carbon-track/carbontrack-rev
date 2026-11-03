@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { motion as Motion } from 'framer-motion';
 import { ArrowRight, AtSign, Building2, MapPin, Phone } from 'lucide-react';
 
+import { buttonVariants } from '../components/ui/button-variants';
 import { useTranslation } from '../hooks/useTranslation';
 
 const supportEmail = import.meta.env?.VITE_SUPPORT_EMAIL || 'support@carbontrack.org';
@@ -44,106 +44,113 @@ export default function ContactPage() {
   ];
 
   return (
-    <div className="bg-background text-foreground">
-      <section className="border-b border-border bg-muted/30">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)] lg:px-8 lg:py-18">
-          <Motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
-          >
+    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[500px] w-[800px] -translate-x-1/2 bg-gradient-to-tr from-blue-50/50 via-gray-100/50 to-transparent opacity-50 blur-[100px] dark:from-primary/20 dark:via-primary/10 dark:opacity-20" />
+
+      <section className="relative px-4 py-12 sm:py-20">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-300">
               {t('contact.hero.eyebrow')}
             </p>
-            <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
+            <h1 className="mt-4 max-w-3xl bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-4xl font-bold leading-tight tracking-tight text-transparent dark:from-white dark:to-white/60 sm:text-5xl">
               {t('contact.hero.title')}
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground sm:text-xl">
               {t('contact.hero.subtitle')}
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
                 href={`mailto:${supportEmail}`}
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-500"
+                className={buttonVariants({
+                  size: 'lg',
+                  className: 'w-full rounded-full shadow-sm transition-all duration-300 hover:scale-105 sm:w-auto',
+                })}
               >
-                <AtSign className="h-4 w-4" />
+                <AtSign aria-hidden="true" className="mr-2 h-4 w-4" />
                 {t('contact.hero.primaryAction')}
               </a>
               <Link
                 to="/help"
-                className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-medium text-foreground transition hover:bg-muted"
+                className={buttonVariants({
+                  variant: 'outline',
+                  size: 'lg',
+                  className: 'w-full rounded-full bg-white/5 backdrop-blur-md transition-all duration-300 hover:scale-105 sm:w-auto dark:border-white/10',
+                })}
               >
                 {t('contact.hero.secondaryAction')}
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
               </Link>
             </div>
-          </Motion.div>
+          </div>
 
-          <Motion.div
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut', delay: 0.05 }}
-            className="rounded-[2rem] border border-border bg-card p-6 shadow-sm"
-          >
-            <div className="flex items-center gap-3 text-emerald-700 dark:text-emerald-300">
-              <Building2 className="h-5 w-5" />
-              <span className="text-sm font-medium">{t('contact.panel.title')}</span>
+          <aside aria-labelledby="contact-panel-title" className="rounded-lg border border-border/60 bg-gradient-to-br from-card via-card to-secondary/35 p-6 shadow-sm sm:p-8">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-blue-100 text-emerald-600 dark:from-emerald-500/10 dark:to-blue-500/10 dark:text-emerald-300">
+              <Building2 aria-hidden="true" className="h-6 w-6" />
             </div>
-            <p className="mt-4 text-lg font-medium">{t('contact.panel.body')}</p>
-          </Motion.div>
+            <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">
+              {t('contact.panel.title')}
+            </p>
+            <p id="contact-panel-title" className="mt-3 text-xl font-semibold leading-8 text-foreground sm:text-2xl">
+              {t('contact.panel.body')}
+            </p>
+          </aside>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid gap-4">
-          {contactCards.map((card) => {
-            const Icon = card.icon;
-            const content = (
-              <div className="group flex items-start justify-between gap-4 rounded-[1.75rem] border border-border bg-card/70 px-5 py-5 shadow-sm transition duration-200 hover:border-emerald-300 hover:bg-card">
-                <div className="flex items-start gap-4">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-muted-foreground">
-                      {card.eyebrow}
-                    </p>
-                    <p className="mt-2 text-lg font-medium text-foreground">{card.title}</p>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{card.description}</p>
+      <section className="bg-card/70 px-4 py-12 backdrop-blur-sm sm:py-16">
+        <div className="mx-auto max-w-7xl">
+          <h2 className="text-center text-3xl font-bold text-foreground">{t('contact.hero.eyebrow')}</h2>
+          <ul className="mt-10 grid gap-6 md:grid-cols-3">
+            {contactCards.map((card) => {
+              const Icon = card.icon;
+              const content = (
+                <>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-blue-100 text-emerald-600 dark:from-emerald-500/10 dark:to-blue-500/10 dark:text-emerald-300">
+                    <Icon aria-hidden="true" className="h-6 w-6" />
                   </div>
-                </div>
-                {card.href ? <ArrowRight className="mt-1 h-4 w-4 text-muted-foreground transition group-hover:text-emerald-600" /> : null}
-              </div>
-            );
+                  <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">{card.eyebrow}</p>
+                  <p className="mt-3 break-words text-lg font-semibold text-foreground">{card.title}</p>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{card.description}</p>
+                  {card.href ? <ArrowRight aria-hidden="true" className="mt-5 h-5 w-5 text-emerald-600 transition-transform group-hover:translate-x-1 dark:text-emerald-300" /> : null}
+                </>
+              );
 
-            return card.href ? (
-              <a key={card.eyebrow} href={card.href} className="block">
-                {content}
-              </a>
-            ) : (
-              <div key={card.eyebrow}>{content}</div>
-            );
-          })}
+              return card.href ? (
+                <li key={card.eyebrow} className="group rounded-2xl border border-black/5 bg-card p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:border-white/10 dark:bg-white/5 dark:shadow-none dark:hover:bg-white/10">
+                  <a href={card.href} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2">
+                    {content}
+                  </a>
+                </li>
+              ) : (
+                <li key={card.eyebrow} className="rounded-2xl border border-black/5 bg-card p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 dark:shadow-none">{content}</li>
+              );
+            })}
+          </ul>
         </div>
+      </section>
 
-        <div className="mt-8 rounded-[1.8rem] border border-border/80 bg-card/70 p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-muted-foreground">
+      <section className="relative overflow-hidden px-4 py-16 sm:py-24">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent to-primary/5 dark:to-primary/10" />
+        <div className="mx-auto max-w-4xl rounded-lg border border-black/5 bg-card p-6 text-center shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none dark:backdrop-blur-md sm:p-12">
+          <h2 className="mb-4 bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-2xl font-bold tracking-tight text-transparent dark:from-white dark:to-white/60 sm:text-3xl">
             {t('contact.linksTitle')}
-          </p>
-          <div className="mt-4 grid gap-3">
+          </h2>
+          <ul className="mx-auto grid max-w-2xl gap-3 text-left sm:grid-cols-2">
             {contactLinks.map((link, index) => (
-              <a
-                key={`${link.type}-${index}`}
-                href={link.href}
-                target={link.external ? '_blank' : undefined}
-                rel={link.external ? 'noopener noreferrer' : undefined}
-                className="flex items-center justify-between gap-3 rounded-[1.3rem] border border-transparent bg-background px-4 py-3 text-sm font-medium text-foreground transition hover:border-emerald-300"
-              >
-                <span>{link.label}</span>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </a>
+              <li key={`${link.type}-${index}`}>
+                <a
+                  href={link.href}
+                  target={link.external ? '_blank' : undefined}
+                  rel={link.external ? 'noopener noreferrer' : undefined}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-black/5 bg-background/50 px-4 py-3 text-sm font-medium text-foreground transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-sm dark:border-white/10 dark:bg-white/5"
+                >
+                  <span>{link.label}</span>
+                  <ArrowRight aria-hidden="true" className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
     </div>
