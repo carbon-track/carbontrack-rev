@@ -182,6 +182,30 @@
           ]
         },
         {
+          "name": "Micheal Jiang",
+          "avatar": "/images/about/avatars/micheal-notion-avatar.jpg",
+          "role": "Frontend Engineer",
+          "bio": "Micheal develops new user interface patterns and features. He cares deeply about accessible, joyful interaction design for climate products.",
+          "categories": [
+            "engineering",
+            "design"
+          ]
+        },
+        {
+          "name": "Sissi Zhang",
+          "avatar": "/images/about/avatars/sissi-notion-avatar.png"
+        },
+        {
+          "name": "David",
+          "avatar": "/images/about/avatars/david-notion-avatar.png",
+          "role": "Concept Artist & Graphical Designer",
+          "bio": "David is a concept artist and a graphical designer of the content team. As a passionate advocate of forest and wildlife preservation, he firmly believes that the sacred beauties of nature can be shared and appreciated by a wider audience through CarbonTrack, motivating more people to protect it. In his free time, he enjoys watercolor, photography, and films.",
+          "categories": [
+            "design",
+            "community"
+          ]
+        },
+        {
           "name": "Smiley Ni",
           "role": "Creative Lead",
           "bio": "Smiley drives our creative direction, from campaign visuals to community storytelling. A passionate dancer and artist, she wants CarbonTrack to spread joy along with climate awareness.",
@@ -216,15 +240,6 @@
           "bio": "Tony helps deliver new features, performance improvements, and smooth interactions that make CarbonTrack both powerful and approachable.",
           "categories": [
             "engineering"
-          ]
-        },
-        {
-          "name": "Michael Jiang",
-          "role": "Frontend Engineer",
-          "bio": "Michael develops new user interface patterns and features. He cares deeply about accessible, joyful interaction design for climate products.",
-          "categories": [
-            "engineering",
-            "design"
           ]
         },
         {
