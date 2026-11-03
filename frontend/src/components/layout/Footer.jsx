@@ -2,36 +2,9 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Github, Instagram } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
-import { useQuery } from 'react-query';
-import { statsAPI } from '../../lib/api';
 
-const numberFormatter = new Intl.NumberFormat();
-const carbonFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
-
-const formatNumber = (value) => numberFormatter.format(Math.max(0, Math.round(value || 0)));
-const formatCarbon = (value, t) => {
-  const numericValue = Number(value || 0);
-  if (numericValue >= 1000) {
-    return `${carbonFormatter.format(numericValue / 1000)} ${t('units.t')}`;
-  }
-  return `${carbonFormatter.format(numericValue)} ${t('units.kg')}`;
-};
-
-export function Footer({ summaryData = null, enableLiveSummary = true }) {
-  const { t } = useTranslation(['footer', 'units']);
-  const { data: liveSummaryData } = useQuery(
-    ['public-stats-summary'],
-    async () => {
-      const response = await statsAPI.getPublicSummary();
-      return response.data?.data ?? null;
-    },
-    {
-      enabled: enableLiveSummary && summaryData == null,
-      staleTime: 60_000,
-      refetchOnWindowFocus: false,
-    }
-  );
-  const effectiveSummaryData = summaryData ?? liveSummaryData ?? null;
+export function Footer() {
+  const { t } = useTranslation(['footer']);
 
   const currentYear = new Date().getFullYear();
   const appVersion = useMemo(() => {
@@ -155,51 +128,26 @@ export function Footer({ summaryData = null, enableLiveSummary = true }) {
           </div>
         </div>
 
-        {/* 社交媒体和统计信息 */}
+        {/* 社交媒体链接 */}
         <div className="mt-12 pt-8 border-t border-gray-800">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            {/* 社交媒体链接 */}
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-300">{t('footer.followUs')}:</span>
-              <div className="flex gap-3">
-                {socialLinks.map((social) => {
-                  const Icon = social.icon;
-                  return (
-                    <a
-                      key={social.label}
-                      href={social.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-gray-400 hover:text-white transition-colors"
-                      aria-label={social.label}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 平台统计 */}
-            <div className="flex items-center gap-6 text-sm text-gray-300">
-              <div className="text-center">
-                <div className="font-semibold text-white">
-                  {effectiveSummaryData ? formatNumber(effectiveSummaryData.total_users ?? 0) : '...'}
-                </div>
-                <div>{t('footer.users')}</div>
-              </div>
-              <div className="text-center">
-                <div className="font-semibold text-white">
-                  {effectiveSummaryData ? formatNumber(effectiveSummaryData.total_records ?? 0) : '...'}
-                </div>
-                <div>{t('footer.activities')}</div>
-              </div>
-              <div className="text-center">
-                <div className="font-semibold text-white">
-                  {effectiveSummaryData ? formatCarbon(effectiveSummaryData.total_carbon_saved ?? 0, t) : '...'}
-                </div>
-                <div>{t('footer.carbonSaved')}</div>
-              </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-300">{t('footer.followUs')}:</span>
+            <div className="flex gap-3">
+              {socialLinks.map((social) => {
+                const Icon = social.icon;
+                return (
+                  <a
+                    key={social.label}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-400 hover:text-white transition-colors"
+                    aria-label={social.label}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </a>
+                );
+              })}
             </div>
           </div>
         </div>
