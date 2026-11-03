@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import RouteErrorBoundary from '../common/RouteErrorBoundary';
 import PropTypes from 'prop-types';
@@ -8,8 +8,6 @@ import i18n from '../../lib/i18n';
 const Footer = React.lazy(() => import('./Footer').then((module) => ({ default: module.Footer })));
 
 export function Layout({ showFooter = true }) {
-  const location = useLocation();
-  const isHomeRoute = location.pathname === '/';
   const [showDeferredFooter, setShowDeferredFooter] = React.useState(false);
 
   const t = React.useCallback((key) => {
@@ -72,7 +70,7 @@ export function Layout({ showFooter = true }) {
       
       {showFooter && showDeferredFooter ? (
         <React.Suspense fallback={null}>
-          <Footer enableLiveSummary={!isHomeRoute} />
+          <Footer />
         </React.Suspense>
       ) : null}
     </div>
