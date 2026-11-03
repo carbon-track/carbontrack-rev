@@ -196,6 +196,16 @@
           "avatar": "/images/about/avatars/sissi-notion-avatar.png"
         },
         {
+          "name": "David",
+          "avatar": "/images/about/avatars/david-notion-avatar.png",
+          "role": "Concept Artist & Graphical Designer",
+          "bio": "David is a concept artist and a graphical designer of the content team. As a passionate advocate of forest and wildlife preservation, he firmly believes that the sacred beauties of nature can be shared and appreciated by a wider audience through CarbonTrack, motivating more people to protect it. In his free time, he enjoys watercolor, photography, and films.",
+          "categories": [
+            "design",
+            "community"
+          ]
+        },
+        {
           "name": "Smiley Ni",
           "role": "Creative Lead",
           "bio": "Smiley drives our creative direction, from campaign visuals to community storytelling. A passionate dancer and artist, she wants CarbonTrack to spread joy along with climate awareness.",
