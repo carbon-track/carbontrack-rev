@@ -120,7 +120,7 @@ const TeamMemberCard = React.memo(({ member, index, photoPlaceholderLabel, portr
     <article
       ref={cardRef}
       id={getMemberAnchor(index)}
-      className="flex h-full min-w-0 scroll-mt-24 flex-col overflow-hidden rounded-2xl border border-black/5 bg-card text-card-foreground shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:border-white/10 dark:bg-white/5 dark:shadow-none"
+      className="flex h-full min-w-0 scroll-mt-24 flex-col overflow-hidden rounded-2xl border border-black/5 bg-card text-card-foreground shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 dark:shadow-none"
     >
       {member.avatar ? (
         <div className="relative isolate aspect-[215/229] overflow-hidden bg-muted">
