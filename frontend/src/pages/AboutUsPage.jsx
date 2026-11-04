@@ -294,8 +294,8 @@ const AboutUsPage = () => {
       </header>
 
       <main className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="h-fit rounded-2xl border border-black/5 bg-card p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 dark:shadow-none lg:sticky lg:top-24">
-          <div className="lg:sticky lg:top-28 lg:max-h-[calc(100svh-8rem)] lg:overflow-y-auto">
+        <aside className="h-fit rounded-2xl border border-black/5 bg-card p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 dark:shadow-none lg:sticky lg:top-24">
+          <div className="about-team-sidebar-scroll lg:sticky lg:top-28 lg:max-h-[calc(100svh-8rem)] lg:overflow-x-hidden lg:overflow-y-auto">
             <h2 className="max-w-sm whitespace-pre-line bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-3xl font-bold leading-tight tracking-tight text-transparent dark:from-white dark:to-white/60 sm:text-4xl">
               {team.displayTitle || team.title || 'Our Team'}
             </h2>
@@ -322,7 +322,7 @@ const AboutUsPage = () => {
                 <h3 id="team-avatar-nav-title" className="text-lg font-semibold text-foreground">
                   {t('about.team.avatarNavigation.title')}
                 </h3>
-                <ul className="mt-15 grid grid-cols-5 gap-2">
+                <ul className="mt-4 grid grid-cols-5 gap-2">
                   {avatarMembers.map(({ member, index }) => (
                     <li key={member.name} className="min-w-0">
                       <TeamAvatarButton
@@ -386,10 +386,9 @@ const AboutUsPage = () => {
               </p>
             </div>
 
-            <div role="group" aria-labelledby="team-filter-label" aria-describedby="team-filter-hint">
+            <div role="group" aria-labelledby="team-filter-label">
               <p className="mb-3 text-sm font-semibold text-muted-foreground">
-                <span id="team-filter-label">{t('about.team.directory.filterLabel')}</span>{' '}
-                <span id="team-filter-hint" className="ml-2 font-normal">{t('about.team.directory.filterHint')}</span>
+                <span id="team-filter-label">{t('about.team.directory.filterLabel')}</span>
               </p>
               <div className="flex flex-wrap gap-2">
                 {TEAM_CATEGORIES.map((category) => (
