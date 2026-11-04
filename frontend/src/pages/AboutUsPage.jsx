@@ -56,7 +56,7 @@ const TeamAvatarButton = ({ member, index, label, onSelect, speech, onSpeechDism
           data-speaking={Boolean(speech)}
           className="about-team-avatar-button relative block aspect-square min-h-11 min-w-11 w-full rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-700"
         >
-          <span className="relative isolate block h-full w-full overflow-hidden bg-[#f5f5f1]">
+          <span className="relative isolate block h-full w-full overflow-hidden bg-background">
             <span className="about-team-avatar-portrait absolute inset-0 block">
               <img
                 src={member.avatar}
@@ -64,7 +64,7 @@ const TeamAvatarButton = ({ member, index, label, onSelect, speech, onSpeechDism
                 aria-hidden="true"
                 loading="lazy"
                 decoding="async"
-                className="h-full w-full scale-[1.15] object-contain"
+                className="h-full w-full scale-[1.15] object-contain dark:invert"
               />
             </span>
           </span>
@@ -84,8 +84,6 @@ const TeamAvatarButton = ({ member, index, label, onSelect, speech, onSpeechDism
           >
             <path
               d="M1 0 L14 17 L27 0"
-              fill="#f7efd9"
-              stroke="#304735"
               strokeWidth="2"
               strokeLinejoin="round"
             />
@@ -96,8 +94,8 @@ const TeamAvatarButton = ({ member, index, label, onSelect, speech, onSpeechDism
           onSpeechDismiss();
         }}
         className={speech
-          ? 'about-team-speech-bubble max-w-56 rounded-2xl border-2 border-[#304735] bg-[#f7efd9] px-4 py-1.5 font-mono text-sm font-semibold text-[#304735] shadow-[0_4px_0_rgba(48,71,53,0.12)]'
-          : 'bg-[#304735] font-serif text-sm font-semibold text-[#eff7e9] [&_svg]:bg-[#304735] [&_svg]:fill-[#304735]'}
+          ? 'about-team-speech-bubble max-w-56 rounded-2xl border-2 border-emerald-500 bg-emerald-50 px-4 py-1.5 font-mono text-sm font-semibold text-emerald-700 shadow-sm dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+          : 'bg-card text-sm font-semibold text-foreground shadow-sm [&_svg]:bg-card [&_svg]:fill-card'}
       >
         {speech?.quote ?? member.name}
       </TooltipContent>
@@ -122,16 +120,16 @@ const TeamMemberCard = React.memo(({ member, index, photoPlaceholderLabel, portr
     <article
       ref={cardRef}
       id={getMemberAnchor(index)}
-      className="flex h-full min-w-0 scroll-mt-24 flex-col bg-[#304735] px-5 py-3 text-[#eff7e9] shadow-[0_18px_45px_rgba(35,58,41,0.12)]"
+      className="flex h-full min-w-0 scroll-mt-24 flex-col overflow-hidden rounded-2xl border border-black/5 bg-card text-card-foreground shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:border-white/10 dark:bg-white/5 dark:shadow-none"
     >
       {member.avatar ? (
-        <div className="relative isolate aspect-[215/229] overflow-hidden bg-[#f3f2ec]">
+        <div className="relative isolate aspect-[215/229] overflow-hidden bg-muted">
           <img
             src={member.avatar}
             alt={portraitAlt}
             loading="lazy"
             decoding="async"
-            className="absolute inset-0 h-full w-full scale-[1.15] object-contain mix-blend-multiply"
+            className="absolute inset-0 h-full w-full scale-[1.15] object-contain mix-blend-multiply dark:mix-blend-screen dark:invert"
           />
         </div>
       ) : (
@@ -141,22 +139,22 @@ const TeamMemberCard = React.memo(({ member, index, photoPlaceholderLabel, portr
           className={`relative flex aspect-[215/229] items-center justify-center overflow-hidden bg-gradient-to-br ${PORTRAIT_PLACEHOLDERS[index % PORTRAIT_PLACEHOLDERS.length]}`}
         >
           <div className="absolute -left-10 top-5 h-36 w-36 rounded-full bg-white/20 blur-2xl" />
-          <div className="absolute -bottom-14 right-0 h-40 w-40 rounded-full bg-[#1f3928]/35 blur-2xl" />
-          <UserRound aria-hidden="true" className="relative h-20 w-20 text-[#f0f5e8]/55" strokeWidth={1.1} />
-          <span className="absolute bottom-4 right-4 font-serif text-xl font-bold tracking-[0.12em] text-white/80">
+          <div className="absolute -bottom-14 right-0 h-40 w-40 rounded-full bg-blue-900/20 blur-2xl" />
+          <UserRound aria-hidden="true" className="relative h-20 w-20 text-white/60" strokeWidth={1.1} />
+          <span className="absolute bottom-4 right-4 text-xl font-bold tracking-[0.12em] text-white/80">
             {getMemberInitials(member.name)}
           </span>
         </div>
       )}
 
-      <div className="flex flex-1 flex-col px-1 pb-2 pt-4 font-serif">
-        <h2 tabIndex={-1} className="text-[1.55rem] font-bold leading-none tracking-[0.01em] text-[#e7f9df] outline-none">
+      <div className="flex flex-1 flex-col p-5">
+        <h2 tabIndex={-1} className="text-xl font-semibold leading-tight text-foreground outline-none">
           {member.link ? (
             <a
               href={member.link}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-start gap-1 underline decoration-1 underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e7f9df]/70"
+              className="inline-flex items-start gap-1 underline decoration-1 underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
               {nameContent}
             </a>
@@ -166,14 +164,16 @@ const TeamMemberCard = React.memo(({ member, index, photoPlaceholderLabel, portr
         </h2>
 
         {member.role ? (
-          <p className="mt-2 text-[1.05rem] font-bold leading-[1.2] text-white">
+          <p className="mt-2 text-sm font-semibold leading-6 text-emerald-600 dark:text-emerald-300">
             {member.role}
           </p>
         ) : null}
 
-        <p className="mt-5 text-[0.82rem] font-semibold leading-[1.35] text-white/90">
-          {member.bio}
-        </p>
+        {member.bio ? (
+          <p className="mt-4 text-sm leading-6 text-muted-foreground">
+            {member.bio}
+          </p>
+        ) : null}
       </div>
     </article>
   );
@@ -270,36 +270,37 @@ const AboutUsPage = () => {
   };
 
   return (
-    <div className="bg-[#f5f5f1] text-[#3b585d]">
-      <header className="relative isolate flex min-h-[calc(100svh-4rem)] items-start justify-center overflow-hidden px-6 py-20 sm:items-center sm:py-24">
+    <div className="relative min-h-screen overflow-clip bg-background text-foreground">
+      <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[500px] w-[800px] -translate-x-1/2 bg-gradient-to-tr from-blue-50/50 via-gray-100/50 to-transparent opacity-50 blur-[100px] dark:from-primary/20 dark:via-primary/10 dark:opacity-20" />
+      <header className="relative mx-4 overflow-hidden rounded-lg border border-border/60 bg-gradient-to-br from-card via-card to-secondary/35 px-6 py-16 shadow-sm sm:mx-6 sm:px-10 sm:py-20 lg:mx-auto lg:max-w-7xl">
         <img
           src="/images/about/people-hero.png"
           alt=""
           fetchPriority="high"
           decoding="async"
-          className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+          className="absolute inset-y-0 right-0 -z-10 h-full w-3/5 object-cover object-center opacity-25"
         />
-        <div className="absolute inset-0 -z-10 bg-[#102d2b]/25" />
-        <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center font-serif text-[#e0ffe5]">
-          <h1 className="text-6xl font-bold leading-none tracking-[0.015em] drop-shadow-[0_3px_20px_rgba(0,0,0,0.3)] sm:text-7xl lg:text-8xl">
+        <div className="absolute inset-0 bg-gradient-to-r from-card via-card/90 to-transparent" />
+        <div className="relative max-w-3xl text-center sm:text-left">
+          <h1 className="bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-4xl font-bold leading-tight tracking-tight text-transparent dark:from-white dark:to-white/60 sm:text-5xl">
             {hero.displayTitle || hero.title || 'People'}
           </h1>
           {hero.subtitle ? (
-            <p className="mt-28 max-w-2xl text-xl font-bold leading-[1.15] tracking-[0.02em] drop-shadow-[0_2px_14px_rgba(0,0,0,0.45)] sm:mt-32 sm:text-2xl">
+            <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-xl">
               {hero.subtitle}
             </p>
           ) : null}
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-[1600px] lg:grid-cols-[35%_65%] xl:grid-cols-[29%_71%]">
-        <aside className="border-b border-[#2f7b3a]/70 px-6 py-14 sm:px-8 lg:border-b-0 lg:border-r lg:px-9 lg:py-12">
+      <main className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="h-fit rounded-2xl border border-black/5 bg-card p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 dark:shadow-none lg:sticky lg:top-24">
           <div className="lg:sticky lg:top-28 lg:max-h-[calc(100svh-8rem)] lg:overflow-y-auto">
-            <h2 className="max-w-sm whitespace-pre-line font-serif text-5xl font-bold leading-[1.02] tracking-[0.01em] text-[#267b2f] sm:text-6xl lg:text-[3.25rem]">
+            <h2 className="max-w-sm whitespace-pre-line bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-3xl font-bold leading-tight tracking-tight text-transparent dark:from-white dark:to-white/60 sm:text-4xl">
               {team.displayTitle || team.title || 'Our Team'}
             </h2>
 
-            <nav aria-label={team.contactNavigationLabel || team.title} className="mt-10 sm:mt-12">
+            <nav aria-label={team.contactNavigationLabel || team.title} className="mt-8">
               <ul className="flex flex-wrap gap-x-7 gap-y-4 lg:flex-col lg:items-start lg:gap-3">
                 {contactLinks.map((item) => (
                   <li key={`${item.type}-${item.href}`}>
@@ -307,7 +308,7 @@ const AboutUsPage = () => {
                       href={item.href}
                       target={item.external ? '_blank' : undefined}
                       rel={item.external ? 'noreferrer' : undefined}
-                      className="font-serif text-xl font-bold text-[#3b585d] underline decoration-1 underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#267b2f]/40"
+                      className="text-sm font-medium text-foreground underline decoration-1 underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                     >
                       {item.label}
                     </a>
@@ -317,8 +318,8 @@ const AboutUsPage = () => {
             </nav>
 
             {avatarMembers.length > 0 ? (
-              <nav ref={navigationRef} aria-labelledby="team-avatar-nav-title" className="mt-4 max-w-sm font-serif">
-                <h3 id="team-avatar-nav-title" className="text-2xl font-bold text-[#304735]">
+              <nav ref={navigationRef} aria-labelledby="team-avatar-nav-title" className="mt-8 max-w-sm">
+                <h3 id="team-avatar-nav-title" className="text-lg font-semibold text-foreground">
                   {t('about.team.avatarNavigation.title')}
                 </h3>
                 <ul className="mt-15 grid grid-cols-5 gap-2">
@@ -335,7 +336,7 @@ const AboutUsPage = () => {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-3 text-sm leading-relaxed text-[#3b585d]">
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                   {t('about.team.avatarNavigation.hint')}
                 </p>
               </nav>
@@ -343,20 +344,20 @@ const AboutUsPage = () => {
           </div>
         </aside>
 
-        <section className="min-w-0 px-6 py-12 sm:px-10 lg:px-16 lg:py-10 2xl:px-20">
+        <section className="min-w-0">
           {team.intro ? (
-            <p className="max-w-3xl font-serif text-[1.75rem] font-bold leading-[1.08] tracking-[0.015em] text-[#3b585d] sm:text-4xl sm:leading-[1.02] lg:text-[2.35rem]">
+            <p className="max-w-3xl bg-gradient-to-r from-blue-600 via-emerald-500 to-teal-500 bg-clip-text text-3xl font-bold leading-tight text-transparent sm:text-4xl">
               {team.intro}
             </p>
           ) : null}
 
-          <div className="mt-10 space-y-5 border-b border-[#304735]/20 pb-5 font-serif">
+          <div className="mt-8 space-y-5 rounded-2xl border border-black/5 bg-card p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-white/10 dark:bg-white/5 dark:shadow-none">
             <div role="search" aria-label={t('about.team.directory.searchLabel')}>
               <label htmlFor="team-search" className="sr-only">
                 {t('about.team.directory.searchLabel')}
               </label>
               <div className="relative">
-                <Search aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-[#304735]/70" />
+                <Search aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   ref={searchInputRef}
                   id="team-search"
@@ -367,14 +368,14 @@ const AboutUsPage = () => {
                   autoComplete="off"
                   aria-describedby="team-search-hint"
                   aria-controls="team-results"
-                  className="h-12 appearance-none rounded-none border-[#304735]/35 bg-[#f3f2ec] pl-12 pr-12 text-base text-[#304735] placeholder:text-[#304735]/60 focus-visible:ring-[#304735]/45 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
+                  className="h-12 appearance-none rounded-full border-input bg-background pl-12 pr-12 text-base text-foreground placeholder:text-muted-foreground focus-visible:ring-emerald-500 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
                 />
                 {searchQuery ? (
                   <button
                     type="button"
                     onClick={clearSearch}
                     aria-label={t('about.team.directory.clearSearch')}
-                    className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-[#304735] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#304735]/60"
+                    className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500"
                   >
                     <X aria-hidden="true" className="h-5 w-5" />
                   </button>
@@ -386,7 +387,7 @@ const AboutUsPage = () => {
             </div>
 
             <div role="group" aria-labelledby="team-filter-label" aria-describedby="team-filter-hint">
-              <p className="mb-3 text-sm font-semibold text-[#304735]/80">
+              <p className="mb-3 text-sm font-semibold text-muted-foreground">
                 <span id="team-filter-label">{t('about.team.directory.filterLabel')}</span>{' '}
                 <span id="team-filter-hint" className="ml-2 font-normal">{t('about.team.directory.filterHint')}</span>
               </p>
@@ -398,10 +399,10 @@ const AboutUsPage = () => {
                     aria-pressed={activeCategory === category}
                     aria-controls="team-results"
                     onClick={() => setActiveCategory(category)}
-                    className={`inline-flex min-h-11 items-center gap-2 border px-3 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#304735]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f5f5f1] ${
+                    className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                       activeCategory === category
-                        ? 'border-[#304735] bg-[#304735] text-[#eff7e9]'
-                        : 'border-[#304735]/30 bg-transparent text-[#304735]'
+                        ? 'border-emerald-600 bg-emerald-600 text-white'
+                        : 'border-border bg-background text-foreground hover:border-emerald-300'
                     }`}
                   >
                     <span>{t(`about.team.directory.categories.${category}`)}</span>
@@ -411,7 +412,7 @@ const AboutUsPage = () => {
               </div>
             </div>
 
-            <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm text-[#304735]">
+            <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm text-muted-foreground">
               <p role="status" aria-live="polite" aria-atomic="true">
                 {t('about.team.directory.results', { shown: filteredMembers.length, total: members.length })}
               </p>
@@ -419,7 +420,7 @@ const AboutUsPage = () => {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="min-h-11 px-1 font-semibold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#304735]/60"
+                  className="min-h-11 px-1 font-semibold text-emerald-600 underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-emerald-300"
                 >
                   {t('about.team.directory.clearFilters')}
                 </button>
@@ -442,14 +443,14 @@ const AboutUsPage = () => {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center border border-dashed border-[#304735]/30 px-6 py-16 text-center font-serif text-[#304735]">
+              <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-card px-6 py-16 text-center text-foreground shadow-sm">
                 <SearchX aria-hidden="true" className="mb-4 h-9 w-9 opacity-60" strokeWidth={1.5} />
                 <h3 className="text-2xl font-bold">{t('about.team.directory.emptyTitle')}</h3>
                 <p className="mt-3 max-w-sm text-base">{t('about.team.directory.emptyDescription')}</p>
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="mt-6 min-h-11 border border-[#304735] bg-[#304735] px-5 py-2 font-semibold text-[#eff7e9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#304735]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f5f5f1]"
+                  className="mt-6 min-h-11 rounded-full bg-primary px-5 py-2 font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   {t('about.team.directory.resetButton')}
                 </button>
