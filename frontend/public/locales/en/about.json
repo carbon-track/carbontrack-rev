@@ -48,7 +48,6 @@
         "searchHint": "Search names, nicknames, roles and profile keywords. Use spaces to combine keywords.",
         "clearSearch": "Clear search",
         "filterLabel": "Filter by contribution",
-        "filterHint": "Members may contribute across teams.",
         "categories": {
           "all": "All",
           "engineering": "Engineering",
