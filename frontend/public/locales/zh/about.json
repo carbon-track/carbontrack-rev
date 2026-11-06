@@ -48,6 +48,7 @@
         "searchHint": "可搜索姓名、英文昵称、分工及简介关键词，多个关键词可用空格分隔。",
         "clearSearch": "清空搜索",
         "filterLabel": "按分工筛选",
+        "filterHint": "成员可同时参与多个方向。",
         "categories": {
           "all": "全部",
           "engineering": "技术开发",
