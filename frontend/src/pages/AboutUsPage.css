@@ -7,48 +7,10 @@
   86% { transform: rotate(-2deg); }
 }
 
-.about-team-sidebar-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(16 185 129 / 0.45) transparent;
-}
-
-.about-team-sidebar-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.about-team-sidebar-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.about-team-sidebar-scroll::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background-clip: padding-box;
-  background-color: rgb(16 185 129 / 0.45);
-}
-
-.about-team-sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(16 185 129 / 0.7);
-}
-
-.dark .about-team-sidebar-scroll {
-  scrollbar-color: rgb(52 211 153 / 0.45) transparent;
-}
-
-.dark .about-team-sidebar-scroll::-webkit-scrollbar-thumb {
-  background-color: rgb(52 211 153 / 0.45);
-}
-
 .about-team-avatar-portrait {
   /* Blend the entire moving layer against the fixed page background. */
   mix-blend-mode: multiply;
   transform-origin: 50% 72%;
-}
-
-.dark .about-team-avatar-portrait {
-  /* Multiply against a near-black surface crushes the line art. Screen the inverted ink instead. */
-  mix-blend-mode: screen;
 }
 
 .about-team-speech-tail {
@@ -56,16 +18,6 @@
   overflow: visible;
   /* Join the tail's fill across the bubble border without a dividing line. */
   transform: translateY(-2px);
-}
-
-.about-team-speech-tail path {
-  fill: var(--color-emerald-50);
-  stroke: var(--color-emerald-500);
-}
-
-.dark .about-team-speech-tail path {
-  fill: color-mix(in oklab, var(--color-emerald-500) 10%, transparent);
-  stroke: color-mix(in oklab, var(--color-emerald-400) 40%, transparent);
 }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
