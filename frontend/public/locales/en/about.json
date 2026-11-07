@@ -205,6 +205,18 @@
           ]
         },
         {
+          "name": "Thomas Lu",
+          "avatar": "/images/about/avatars/thomas-notion-avatar.png",
+          "role": "Quality Engineer",
+          "bio": "Thomas tests new features, finds edge cases, and helps us ship with confidence. He believes that \"Attention is all you need\" and champions thoughtful iteration.",
+          "link": "https://www.thomas-hub.com/",
+          "linkLabel": "Portfolio",
+          "categories": [
+            "engineering",
+            "design"
+          ]
+        },
+        {
           "name": "Smiley Ni",
           "role": "Creative Lead",
           "bio": "Smiley drives our creative direction, from campaign visuals to community storytelling. A passionate dancer and artist, she wants CarbonTrack to spread joy along with climate awareness.",
@@ -265,17 +277,6 @@
           "categories": [
             "research",
             "community"
-          ]
-        },
-        {
-          "name": "Thomas Lu",
-          "role": "Quality Engineer",
-          "bio": "Thomas tests new features, finds edge cases, and helps us ship with confidence. He believes that \"Attention is all you need\" and champions thoughtful iteration.",
-          "link": "https://www.thomas-hub.com/",
-          "linkLabel": "Portfolio",
-          "categories": [
-            "engineering",
-            "design"
           ]
         },
         {

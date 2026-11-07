@@ -205,6 +205,18 @@
           ]
         },
         {
+          "name": "Thomas Lu",
+          "avatar": "/images/about/avatars/thomas-notion-avatar.png",
+          "role": "质量工程师",
+          "bio": "Thomas 专注功能测试与用户体验优化，相信\"Attention is all you need\"，坚持细致迭代。",
+          "link": "https://www.thomas-hub.com/",
+          "linkLabel": "个人主页",
+          "categories": [
+            "engineering",
+            "design"
+          ]
+        },
+        {
           "name": "Smiley Ni",
           "role": "创意负责人",
           "bio": "Smiley 主导品牌视觉与内容创作，热爱舞蹈与艺术，希望让 CarbonTrack 在传播环保理念的同时带来快乐。",
@@ -265,17 +277,6 @@
           "categories": [
             "research",
             "community"
-          ]
-        },
-        {
-          "name": "Thomas Lu",
-          "role": "质量工程师",
-          "bio": "Thomas 专注功能测试与用户体验优化，相信\"Attention is all you need\"，坚持细致迭代。",
-          "link": "https://www.thomas-hub.com/",
-          "linkLabel": "个人主页",
-          "categories": [
-            "engineering",
-            "design"
           ]
         },
         {
