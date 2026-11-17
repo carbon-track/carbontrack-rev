@@ -9,6 +9,7 @@ use CarbonTrack\Services\AuditLogService;
 use CarbonTrack\Services\ErrorLogService;
 use CarbonTrack\Services\SupportAutomationService;
 use CarbonTrack\Services\SupportRoutingEngineService;
+use CarbonTrack\Services\SupportOperationException;
 use CarbonTrack\Services\SupportTicketService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -44,7 +45,8 @@ class AdminSupportController
                 return $this->json($response, ['success' => false, 'message' => 'Support assignee not found', 'code' => 'ASSIGNEE_NOT_FOUND'], 404);
             }
             return $this->json($response, ['success' => true, 'data' => $detail]);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to load support assignee detail');
@@ -65,7 +67,8 @@ class AdminSupportController
         try {
             $actor = $this->currentUser($request);
             return $this->json($response, ['success' => true, 'data' => $this->supportAutomationService->saveRoutingSettings($actor, $this->body($request))]);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to save support routing settings');
@@ -80,7 +83,8 @@ class AdminSupportController
                 return $this->json($response, ['success' => false, 'message' => 'Support assignee not found', 'code' => 'ASSIGNEE_NOT_FOUND'], 404);
             }
             return $this->json($response, ['success' => true, 'data' => $profile]);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to load support assignee routing profile');
@@ -89,15 +93,17 @@ class AdminSupportController
 
     public function updateAssigneeRoutingProfile(Request $request, Response $response, array $args): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $actor = $this->currentUser($request);
             return $this->json($response, [
                 'success' => true,
                 'data' => $this->supportAutomationService->saveAssigneeRoutingProfile($actor, $this->numericId($args, 'id'), $this->body($request)),
             ]);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'ASSIGNEE_NOT_FOUND'], 404);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to save support assignee routing profile');
@@ -122,7 +128,8 @@ class AdminSupportController
     {
         try {
             return $this->saveTag($request, $response, $this->numericId($args, 'id'), 200);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         }
     }
@@ -145,7 +152,8 @@ class AdminSupportController
     {
         try {
             return $this->saveRule($request, $response, $this->numericId($args, 'id'), 200);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         }
     }
@@ -154,7 +162,8 @@ class AdminSupportController
     {
         try {
             return $this->json($response, ['success' => true, 'data' => $this->supportAutomationService->getReports($request->getQueryParams())]);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to load support reports');
@@ -178,7 +187,8 @@ class AdminSupportController
                 'success' => true,
                 'data' => $result,
             ]);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             $this->auditLogService->logAdminOperation('admin_support_tickets_list_failed', $this->actorId($this->currentUser($request)), 'admin_support', [
                 'table' => 'support_tickets',
                 'request_data' => $request->getQueryParams(),
@@ -201,7 +211,7 @@ class AdminSupportController
 
     public function getTicketDetail(Request $request, Response $response, array $args): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $ticketId = $this->numericId($args, 'id');
             $actor = $this->currentUser($request);
             $detail = $this->supportTicketService->getTicketDetailForSupport($actor, $ticketId);
@@ -215,7 +225,8 @@ class AdminSupportController
                 'status' => 'success',
             ]);
             return $this->json($response, ['success' => true, 'data' => $detail]);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             $this->auditLogService->logAdminOperation('admin_support_ticket_detail_failed', $this->actorId($this->currentUser($request)), 'admin_support', [
                 'table' => 'support_tickets',
                 'record_id' => isset($args['id']) && is_numeric($args['id']) ? (int) $args['id'] : null,
@@ -224,7 +235,8 @@ class AdminSupportController
                 'data' => ['error' => $e->getMessage()],
             ]);
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'TICKET_NOT_FOUND'], 404);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             $this->auditLogService->logAdminOperation('admin_support_ticket_detail_failed', $this->actorId($this->currentUser($request)), 'admin_support', [
                 'table' => 'support_tickets',
                 'record_id' => isset($args['id']) && is_numeric($args['id']) ? (int) $args['id'] : null,
@@ -265,7 +277,7 @@ class AdminSupportController
         } catch (\DomainException $e) {
             $this->logTicketUpdateFailure($request, $actor, $ticketId, $requestData, $e);
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'FORBIDDEN'], 403);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) {
             $this->logTicketUpdateFailure($request, $actor, $ticketId, $requestData, $e);
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'TICKET_NOT_FOUND'], 404);
         } catch (\InvalidArgumentException $e) {
@@ -294,7 +306,8 @@ class AdminSupportController
                 'ticket_id' => $ticketId,
                 'request_data' => $requestData,
             ]);
-        } catch (\Throwable $loggingError) {
+        } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Use the application logger if ErrorLogService itself fails.
             $this->logger->error('Admin support ticket update failure logging failed', [
                 'error' => $loggingError->getMessage(),
                 'ticket_id' => $ticketId,
@@ -304,12 +317,14 @@ class AdminSupportController
 
     private function saveTag(Request $request, Response $response, ?int $tagId, int $status): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $actor = $this->currentUser($request);
             return $this->json($response, ['success' => true, 'data' => $this->supportAutomationService->saveTag($actor, $this->body($request), $tagId)], $status);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'TAG_NOT_FOUND'], 404);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to save support tag');
@@ -318,12 +333,14 @@ class AdminSupportController
 
     private function saveRule(Request $request, Response $response, ?int $ruleId, int $status): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $actor = $this->currentUser($request);
             return $this->json($response, ['success' => true, 'data' => $this->supportAutomationService->saveRule($actor, $this->body($request), $ruleId)], $status);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'RULE_NOT_FOUND'], 404);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to save support automation rule');
@@ -356,7 +373,8 @@ class AdminSupportController
         $this->logger->error($message, ['error' => $e->getMessage()]);
         try {
             $this->errorLogService->logException($e, $request, ['context_message' => $message]);
-        } catch (\Throwable $loggingError) {
+        } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Use the application logger if ErrorLogService itself fails.
             $this->logger->error('Admin support logging failed', ['error' => $loggingError->getMessage()]);
         }
         return $this->json($response, ['success' => false, 'message' => $message, 'code' => 'INTERNAL_ERROR'], 500);

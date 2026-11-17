@@ -11,6 +11,7 @@ use CarbonTrack\Services\CronSchedulerService;
 use CarbonTrack\Services\ErrorLogService;
 use CarbonTrack\Services\ProofOfWorkService;
 use CarbonTrack\Services\SupportRoutingEngineService;
+use CarbonTrack\Services\SupportOperationException;
 use CarbonTrack\Services\SupportTicketService;
 use CarbonTrack\Services\TurnstileService;
 use PHPUnit\Framework\TestCase;
@@ -280,7 +281,7 @@ class SupportTicketControllerTest extends TestCase
         $service->expects($this->once())
             ->method('getTicketDetailForSupport')
             ->with(['id' => 1, 'role' => 'support', 'is_support' => true], 42)
-            ->willThrowException(new \RuntimeException('Ticket not found'));
+            ->willThrowException(new SupportOperationException('Ticket not found'));
 
         $controller = $this->makeController($service, $auth);
         $response = $controller->getSupportTicket(

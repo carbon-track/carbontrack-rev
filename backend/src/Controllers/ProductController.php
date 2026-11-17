@@ -430,7 +430,8 @@ class ProductController
                     'message' => 'Product exchanged successfully'
                 ]);
 
-            } catch (\Exception $e) {
+            } catch (\Exception $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Roll back before the outer handler records the product exchange failure.
                 $this->db->rollBack();
                 throw $e;
             }
@@ -1099,7 +1100,8 @@ class ProductController
                 ]);
 
                 return $this->json($response, ['success' => true, 'id' => $newId, 'message' => 'Product created successfully'], 201);
-            } catch (\Throwable $txError) {
+            } catch (\Throwable $txError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Roll back before the outer handler records the product creation failure.
                 try { $this->db->rollBack(); } catch (\Throwable $ignore) {}
                 throw $txError;
             }
@@ -1204,7 +1206,8 @@ class ProductController
                 ]);
 
                 return $this->json($response, ['success' => true, 'message' => 'Product updated successfully']);
-            } catch (\Throwable $txError) {
+            } catch (\Throwable $txError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Roll back before the outer handler records the product update failure.
                 try { $this->db->rollBack(); } catch (\Throwable $ignore) {}
                 throw $txError;
             }
@@ -1455,7 +1458,8 @@ class ProductController
                 $extra = $contextMessage !== '' ? ['context_message' => $contextMessage] : [];
                 $this->errorLogService->logException($exception, $request, $extra);
                 return;
-            } catch (\Throwable $loggingError) {
+            } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Use the emergency log if ErrorLogService itself fails.
                 error_log(self::ERRLOG_PREFIX . $loggingError->getMessage());
             }
         }
@@ -1670,7 +1674,8 @@ class ProductController
                     'name' => $name,
                     'slug' => $normalizedSlug,
                 ];
-            } catch (PDOException $e) {
+            } catch (PDOException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Recover an existing category or retry on a constraint conflict. Propagate other database failures.
                 if ($e->getCode() !== '23000') {
                     throw $e;
                 }
@@ -2010,7 +2015,8 @@ class ProductController
                     'name' => $name,
                     'slug' => $slug,
                 ];
-            } catch (PDOException $e) {
+            } catch (PDOException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Recover an existing tag or retry on a constraint conflict. Propagate other database failures.
                 if ($e->getCode() !== '23000') {
                     throw $e;
                 }

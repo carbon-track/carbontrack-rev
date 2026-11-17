@@ -430,7 +430,8 @@ class CarbonTrackController
                     $this->db->commit();
                     $recordCommitted = true;
                 }
-            } catch (\Throwable $e) {
+            } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Clean up the transaction and uploaded files before propagating the failure.
                 if ($isMakeup && $this->db->inTransaction()) {
                     $this->db->rollBack();
                 }
@@ -1464,7 +1465,8 @@ class CarbonTrackController
             if ($startedTransaction) {
                 $this->db->commit();
             }
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Roll back the transaction before propagating the failure to the caller.
             if ($startedTransaction) {
                 try {
                     if ($this->db->inTransaction()) {
@@ -1892,7 +1894,8 @@ class CarbonTrackController
                 $extra = $contextMessage !== '' ? ['context_message' => $contextMessage] : [];
                 $this->errorLogService->logException($exception, $request, $extra);
                 return;
-            } catch (\Throwable $loggingError) {
+            } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Use the emergency log if ErrorLogService itself fails.
                 error_log(self::ERRLOG_PREFIX . $loggingError->getMessage());
             }
         }

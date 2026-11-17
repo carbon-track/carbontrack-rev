@@ -43,7 +43,7 @@ class AdminCronController
 
     public function updateTask(Request $request, Response $response, array $args): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $actor = $this->currentUser($request);
             $taskKey = $this->taskKey($args);
             $result = $this->cronSchedulerService->updateTask($taskKey, $this->body($request));
@@ -63,7 +63,8 @@ class AdminCronController
                 return $this->json($request, $response, ['success' => false, 'message' => $exception->getMessage(), 'code' => 'CRON_TASK_NOT_FOUND'], 404);
             }
             return $this->error($request, $response, $exception, 'Failed to update cron task');
-        } catch (\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($request, $response, ['success' => false, 'message' => $exception->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $exception) {
             return $this->error($request, $response, $exception, 'Failed to update cron task');
@@ -72,7 +73,7 @@ class AdminCronController
 
     public function listRuns(Request $request, Response $response): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $actor = $this->currentUser($request);
             $result = $this->cronSchedulerService->listRuns($request->getQueryParams());
 
@@ -85,7 +86,8 @@ class AdminCronController
             ]);
 
             return $this->json($request, $response, ['success' => true, 'data' => $result]);
-        } catch (\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($request, $response, ['success' => false, 'message' => $exception->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $exception) {
             return $this->error($request, $response, $exception, 'Failed to load cron runs');
@@ -94,7 +96,7 @@ class AdminCronController
 
     public function runTask(Request $request, Response $response, array $args): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $actor = $this->currentUser($request);
             $taskKey = $this->taskKey($args);
             $result = $this->cronSchedulerService->runTaskNow($taskKey, 'admin_manual', [
@@ -127,7 +129,8 @@ class AdminCronController
                 return $this->json($request, $response, ['success' => false, 'message' => $exception->getMessage(), 'code' => 'CRON_TASK_NOT_FOUND'], 404);
             }
             return $this->error($request, $response, $exception, 'Failed to trigger cron task');
-        } catch (\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($request, $response, ['success' => false, 'message' => $exception->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $exception) {
             return $this->error($request, $response, $exception, 'Failed to trigger cron task');
@@ -170,7 +173,8 @@ class AdminCronController
         $this->logger->error($message, ['error' => $exception->getMessage()]);
         try {
             $this->errorLogService->logException($exception, $request, ['context_message' => $message]);
-        } catch (\Throwable $loggingError) {
+        } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Use the application logger if ErrorLogService itself fails.
             $this->logger->error('Admin cron logging failed', ['error' => $loggingError->getMessage()]);
         }
 
@@ -198,7 +202,8 @@ class AdminCronController
                     'context_message' => 'Failed to encode admin cron JSON response',
                     'status' => $status,
                 ]);
-            } catch (\Throwable $loggingError) {
+            } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Use the application logger if ErrorLogService itself fails.
                 $this->logger->error('Admin cron JSON encoding error logging failed', [
                     'error' => $loggingError->getMessage(),
                 ]);
@@ -220,7 +225,7 @@ class AdminCronController
                     $fallbackPayload,
                     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
                 );
-            } catch (\JsonException) {
+            } catch (\JsonException $ignore) {
                 $json = '{"success":false,"message":"Failed to encode JSON response","code":"JSON_ENCODE_ERROR"}';
             }
         }

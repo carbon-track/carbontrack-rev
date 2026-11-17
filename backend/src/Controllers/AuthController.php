@@ -107,7 +107,8 @@ class AuthController
 
             try {
                 $challenge = $this->proofOfWorkService->createChallenge($scope, $this->getClientIP($request));
-            } catch (\RuntimeException $rateLimitError) {
+            } catch (\RuntimeException $rateLimitError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Return 429 for rate limits and propagate other failures to the outer handler.
                 if (strpos($rateLimitError->getMessage(), 'rate limit') !== false) {
                     return $this->jsonResponse($response, [
                         'success' => false,
@@ -129,7 +130,8 @@ class AuthController
                 if ($this->errorLogService) {
                     $this->errorLogService->logException($e, $request);
                 }
-            } catch (\Throwable $loggingError) {
+            } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Use the application logger if ErrorLogService itself fails.
                 $this->logger->warning('ErrorLogService failed while logging proof-of-work challenge error', [
                     'error' => $loggingError->getMessage(),
                     'original_error' => $e->getMessage(),
@@ -257,11 +259,17 @@ class AuthController
                     'region_code' => $regionCode
                 ]
             ]);
-            try { $this->emailService->sendWelcomeEmail((string)$data['email'], (string)$data['username']); } catch (\Throwable $e) { $this->logger->warning('Failed to send welcome email', ['error' => $e->getMessage()]); }
+            try {
+                $this->emailService->sendWelcomeEmail((string)$data['email'], (string)$data['username']);
+            } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // A welcome email failure leaves the completed registration valid.
+                $this->logger->warning('Failed to send welcome email', ['error' => $e->getMessage()]);
+            }
             $verificationMeta = null;
             try {
                 $verificationMeta = $this->dispatchEmailVerification($userId, (string)$data['email'], (string)$data['username'], 1);
-            } catch (\Throwable $e) {
+            } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // A verification dispatch failure leaves the registered account available for resend.
                 $this->logger->warning('Failed to dispatch verification email', ['error' => $e->getMessage()]);
             }
             // 发送站内欢迎消息暂时跳过（测试最小 schema 可能缺少完整列 / 触发 Eloquent timestamps 逻辑），以保持测试稳定
@@ -362,7 +370,8 @@ class AuthController
                         'code' => 'ACCOUNT_LOCKED',
                     ], 429);
                 }
-            } catch (\Throwable $lockCheckError) {
+            } catch (\Throwable $lockCheckError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // The legacy login flow continues to credential validation when the lockout probe fails.
                 // Infrastructure failures in the lockout check should not block all logins.
                 $this->logger->warning('Login lockout check failed', [
                     'error' => $lockCheckError->getMessage(),
@@ -392,7 +401,8 @@ class AuthController
             if (!$user || !$passwordField || !password_verify((string)$data['password'], (string)$user[$passwordField])) {
                 try {
                     $this->authService->recordLoginAttempt((string) $identifier, (string) $clientIp, false);
-                } catch (\Throwable $recordError) {
+                } catch (\Throwable $recordError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    // Failure to write the login-attempt record leaves the authentication denial intact.
                     $this->logger->warning('Login attempt record failed (failed branch)', [
                         'error' => $recordError->getMessage(),
                     ]);
@@ -410,7 +420,8 @@ class AuthController
             }
             try {
                 $this->authService->recordLoginAttempt((string) $identifier, (string) $clientIp, true);
-            } catch (\Throwable $recordError) {
+            } catch (\Throwable $recordError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Failure to write the login-attempt record leaves the authentication result intact.
                 $this->logger->warning('Login attempt record failed (success branch)', [
                     'error' => $recordError->getMessage(),
                 ]);
@@ -429,7 +440,8 @@ class AuthController
             if ($this->checkinService) {
                 try {
                     $this->checkinService->syncUserCheckinsFromRecords((int) $user['id']);
-                } catch (\Throwable $e) {
+                } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    // Check-in synchronization runs as an optional post-login step.
                     $this->logger->debug('Failed to sync user checkins on login', [
                         'error' => $e->getMessage(),
                         'user_id' => $user['id'],
@@ -551,11 +563,10 @@ class AuthController
                 ], 401);
             }
 
-            // Invalid or expired tokens are 401 client errors, already audit-logged.
-            // nosemgrep
-            try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            try {
                 $payload = $this->authService->validateToken($token);
-            } catch (\Throwable $e) {
+            } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // The invalid or expired token response is audited as a 401.
                 $this->logTokenRefreshFailure($request, null, 'INVALID_TOKEN');
                 return $this->jsonResponse($response, [
                     'success' => false,
@@ -940,7 +951,8 @@ class AuthController
                 $upd->execute([$resetToken, $expiresAt, $user['id']]);
                 try {
                     $this->emailService->sendPasswordResetEmail((string)$user['email'], (string)$user['username'], $resetToken);
-                } catch (\Throwable $e) {
+                } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    // The password-reset endpoint keeps its uniform response when email delivery fails.
                     $this->logger->warning('Failed to send password reset email', ['error' => $e->getMessage()]);
                 }
                 $this->auditLogService->logAuthOperation('password_reset_request', $user['id'], true, [
@@ -1012,7 +1024,8 @@ class AuthController
             try {
                 $this->authService->incrementTokenVersion((int) $user['id']);
                 $this->mobileDeviceSessionService->revokeAllForUser((int) $user['id'], 'password_reset');
-            } catch (\Throwable $bumpError) {
+            } catch (\Throwable $bumpError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // The password reset has already committed when revocation fails.
                 $this->logger->warning('Failed to revoke credentials after password reset', [
                     'user_id' => $user['id'] ?? null,
                     'error' => $bumpError->getMessage(),
@@ -1099,7 +1112,8 @@ class AuthController
             try {
                 $this->authService->incrementTokenVersion((int) $user['id']);
                 $this->mobileDeviceSessionService->revokeAllForUser((int) $user['id'], 'password_change');
-            } catch (\Throwable $bumpError) {
+            } catch (\Throwable $bumpError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // The password change has already committed when revocation fails.
                 $this->logger->warning('Failed to revoke credentials after password change', [
                     'user_id' => $user['id'] ?? null,
                     'error' => $bumpError->getMessage(),
@@ -1351,7 +1365,8 @@ class AuthController
                     'context' => $asyncContext ? 'async' : 'sync'
                 ]);
             }
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // The verification email helper records the failed delivery in its audit path.
             $this->logger->error('Verification email send failed', [
                 'user_id' => $userId,
                 'email' => $email,
@@ -1369,7 +1384,8 @@ class AuthController
                     'strategy' => $asyncContext ? 'async' : 'sync'
                 ])
             );
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // The verification email result is available even when its audit write fails.
             $this->logger->debug('Failed to record verification email audit log', [
                 'error' => $e->getMessage(),
                 'strategy' => $asyncContext ? 'async' : 'sync'
@@ -1413,12 +1429,14 @@ class AuthController
                 $this->auditLogService->logAuthOperation('email_verification_code_schedule', $userId, true, array_merge($context, [
                     'strategy' => $result ? 'async' : 'sync'
                 ]));
-            } catch (\Throwable $e) {
+            } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // An audit write failure leaves the queued verification email intact.
                 $this->logger->debug('Failed to record verification email schedule log', ['error' => $e->getMessage()]);
             }
 
             return $result;
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // The verification dispatch falls back to its failure audit and synchronous delivery path.
             $this->logger->error('Failed to queue verification email', [
                 'user_id' => $userId,
                 'email' => $email,
@@ -1430,7 +1448,8 @@ class AuthController
                     'strategy' => 'async',
                     'error' => $e->getMessage()
                 ]));
-            } catch (\Throwable $logError) {
+            } catch (\Throwable $logError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // The application logger records a secondary scheduling audit failure.
                 $this->logger->debug('Failed to record verification email schedule failure', [
                     'error' => $logError->getMessage()
                 ]);
@@ -1607,7 +1626,8 @@ class AuthController
                     'user_agent' => $request->getHeaderLine('User-Agent'),
                 ],
             ]);
-        } catch (\Throwable $auditError) {
+        } catch (\Throwable $auditError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // The application logger records a secondary challenge audit failure.
             $this->logger->warning('AuditLogService failed while logging challenge rejection', [
                 'action' => $action,
                 'scope' => $scope,
@@ -1769,7 +1789,8 @@ class AuthController
                     'user_agent' => $request->getHeaderLine('User-Agent')
                 ]
             ]);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // The application logger records a secondary token-refresh audit failure.
             $this->logger->debug('Failed to record token refresh failure audit log', [
                 'error' => $e->getMessage(),
                 'code' => $code

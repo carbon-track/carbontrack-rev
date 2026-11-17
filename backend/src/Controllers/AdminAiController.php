@@ -34,7 +34,7 @@ class AdminAiController
 
     public function chat(Request $request, Response $response): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $user = $this->authService->getCurrentUser($request);
             if (!$user || !$this->authService->isAdminUser($user)) {
                 return $this->json($response, [
@@ -89,7 +89,8 @@ class AdminAiController
             ]);
 
             return $this->json($response, $result);
-        } catch (\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             $this->logAdminAudit('admin_ai_chat_failed', $user ?? null, $request, [
                 'conversation_id' => $conversationId ?? null,
                 'data' => [
@@ -149,7 +150,7 @@ class AdminAiController
 
     public function chatStream(Request $request, Response $response): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $user = $this->authService->getCurrentUser($request);
             if (!$user || !$this->authService->isAdminUser($user)) {
                 return $this->json($response, [
@@ -220,7 +221,7 @@ class AdminAiController
                         flush();
                     };
 
-                    try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    try {
                         $result = $this->agentService->streamChat($conversationId, $message, $context, $decision, [
                             'request_id' => $request->getAttribute('request_id'),
                             'actor_type' => 'admin',
@@ -236,7 +237,8 @@ class AdminAiController
                                 'source' => $source ?? $request->getUri()->getPath(),
                             ],
                         ]);
-                    } catch (\InvalidArgumentException $exception) {
+                    } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                        // Report a request validation failure to the caller.
                         $this->logAdminAudit('admin_ai_chat_stream_failed', $user, $request, [
                             'conversation_id' => $conversationId,
                             'data' => [
@@ -317,7 +319,8 @@ class AdminAiController
             );
 
             return $streamResponse;
-        } catch (\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             $this->logAdminAudit('admin_ai_chat_stream_failed', $user ?? null, $request, [
                 'conversation_id' => $conversationId ?? null,
                 'data' => [
@@ -483,7 +486,7 @@ class AdminAiController
 
     public function conversationDetail(Request $request, Response $response, array $args): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $user = $this->authService->getCurrentUser($request);
             if (!$user || !$this->authService->isAdminUser($user)) {
                 return $this->json($response, [
@@ -519,7 +522,8 @@ class AdminAiController
                 'success' => true,
                 'data' => $detail,
             ]);
-        } catch (\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, [
                 'success' => false,
                 'error' => $exception->getMessage(),
@@ -885,7 +889,8 @@ class AdminAiController
                 try {
                     $this->read(8192);
                     return (string) ob_get_clean();
-                } catch (\Throwable $throwable) {
+                } catch (\Throwable $throwable) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    // Release the output buffer and propagate the failure to the stream handler.
                     ob_end_clean();
                     throw $throwable;
                 }
@@ -1261,7 +1266,8 @@ class AdminAiController
             try {
                 $this->errorLogService->logException($exception, $request, ['context' => $context]);
                 return;
-            } catch (\Throwable $loggingError) {
+            } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Use the application logger if ErrorLogService itself fails.
                 // fall back to logger below
                 if ($this->logger) {
                     $this->logger->error('Failed to log admin AI exception via ErrorLogService', [

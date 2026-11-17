@@ -955,6 +955,7 @@ $auditPayload = [
                 }
             } catch (\Throwable $e) {
                 $this->logBroadcastError($request, 'Failed to count broadcast history', [
+                    'action' => 'getBroadcastHistory',
                     'exception' => get_class($e),
                     'error' => $e->getMessage(),
                 ]);
@@ -972,6 +973,7 @@ $auditPayload = [
                 }
             } catch (\Throwable $e) {
                 $this->logBroadcastError($request, 'Failed to load broadcast history', [
+                    'action' => 'getBroadcastHistory',
                     'exception' => get_class($e),
                     'error' => $e->getMessage(),
                 ]);

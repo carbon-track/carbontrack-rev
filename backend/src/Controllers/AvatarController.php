@@ -64,7 +64,8 @@ class AvatarController
             try {
                 $user = $this->authService->getCurrentUser($request);
                 $isAdmin = $user && !empty($user['is_admin']);
-            } catch (\Throwable $authEx) {
+            } catch (\Throwable $authEx) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Avatar listing supports anonymous visitors.
                 // 记日志但不影响公开接口返回
                 if (isset($this->logger)) {
                     $this->logger->debug('Anonymous avatar listing (auth not resolved)', [
@@ -188,7 +189,7 @@ class AvatarController
      */
     public function createAvatar(Request $request, Response $response): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $user = $this->authService->getCurrentUser($request);
             if (!$user || !$user['is_admin']) {
                 return $this->jsonResponse($response, [
@@ -271,7 +272,8 @@ class AvatarController
                 'data' => $createdAvatar
             ], 201);
 
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->jsonResponse($response, [
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -297,7 +299,7 @@ class AvatarController
      */
     public function updateAvatar(Request $request, Response $response, array $args): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             $user = $this->authService->getCurrentUser($request);
             if (!$user || !$user['is_admin']) {
                 return $this->jsonResponse($response, [
@@ -368,9 +370,7 @@ class AvatarController
             $affectedUsers = [];
 
             if ($isDeactivation) {
-                // No default avatar is a 409 client error, not a server failure.
-                // nosemgrep
-                try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                try {
                     $reassignment = $this->avatarModel->updateAvatarAndReassignUsers(
                         $avatarId,
                         $updateData,
@@ -378,7 +378,8 @@ class AvatarController
                     );
                     $affectedUsers = $reassignment['users'] ?? [];
                     $fallbackAvatar = $reassignment['fallback_avatar'] ?? null;
-                } catch (AvatarFallbackUnavailableException $e) {
+                } catch (AvatarFallbackUnavailableException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    // Report the missing default avatar as a 409 conflict.
                     return $this->jsonResponse($response, [
                         'success' => false,
                         'message' => $e->getMessage(),
@@ -464,7 +465,8 @@ class AvatarController
                 'data' => $updatedAvatar
             ]);
 
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->jsonResponse($response, [
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -942,7 +944,8 @@ class AvatarController
             if ($this->r2Service) {
                 try {
                     $avatar['icon_url'] = $this->r2Service->getPublicUrl($normalizedPath);
-                } catch (\Throwable $e) {
+                } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    // The avatar response can omit the optional public icon URL.
                     if ($this->logger) {
                         $this->logger->warning('Failed to build avatar icon public URL', [
                             'error' => $e->getMessage(),
@@ -952,7 +955,8 @@ class AvatarController
                 }
                 try {
                     $avatar['icon_presigned_url'] = $this->r2Service->generatePresignedUrl($normalizedPath, 600);
-                } catch (\Throwable $e) {
+                } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    // The avatar response can omit the optional signed icon URL.
                     if ($this->logger) {
                         $this->logger->warning('Failed to build avatar icon presigned URL', [
                             'error' => $e->getMessage(),
@@ -975,7 +979,8 @@ class AvatarController
             if ($this->r2Service) {
                 try {
                     $avatar['thumbnail_url'] = $this->r2Service->getPublicUrl($normalizedThumb);
-                } catch (\Throwable $e) {
+                } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    // The avatar response can omit the optional thumbnail URL.
                     if ($this->logger) {
                         $this->logger->warning('Failed to build avatar thumbnail URL', [
                             'error' => $e->getMessage(),
