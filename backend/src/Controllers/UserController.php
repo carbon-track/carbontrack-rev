@@ -29,6 +29,8 @@ use PDO;
 
 class UserController
 {
+    use LogsClientExceptions;
+
     private const SECURITY_ACTIVITY_ACTIONS = [
         'login',
         'passkey_login',
@@ -799,7 +801,7 @@ class UserController
                     ], 400);
                 }
             } elseif ($normalizedNewSchool !== null) {
-                $newSchoolId = $this->findOrCreateSchoolId($normalizedNewSchool);
+                $newSchoolId = $this->findOrCreateSchoolId($normalizedNewSchool, $request, $user);
                 if (!$newSchoolId) {
                     return $this->jsonResponse($response, [
                         'success' => false,
@@ -1911,10 +1913,7 @@ class UserController
         return $statusMap[$status] ?? $status;
     }
 
-    /**
-     * 返回JSON响应
-     */
-    private function findOrCreateSchoolId(string $name): ?int
+    private function findOrCreateSchoolId(string $name, Request $request, array $user): ?int
     {
         $normalized = trim(mb_substr($name, 0, 255));
         if ($normalized === '') {
@@ -1935,33 +1934,11 @@ class UserController
 
             $newId = (int)$this->db->lastInsertId();
             return $newId > 0 ? $newId : null;
-        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // The school-name lookup can return an empty result to profile handling.
+        } catch (\Throwable $e) {
+            $this->logClientException($e, $request, 400, __METHOD__, $user, 'user_management');
             $this->logger->error('Failed to resolve school name for profile update', [
                 'error' => $e->getMessage(),
                 'school_name' => $normalized
-            ]);
-            return null;
-        }
-    }
-
-    private function findSchoolNameById(int $schoolId): ?string
-    {
-        if ($schoolId <= 0) {
-            return null;
-        }
-
-        try {
-            $stmt = $this->db->prepare('SELECT name FROM schools WHERE id = ? AND deleted_at IS NULL LIMIT 1');
-            $stmt->execute([$schoolId]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            $name = isset($row['name']) ? trim((string) $row['name']) : '';
-            return $name !== '' ? $name : null;
-        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // The school-ID lookup can return an empty result to profile handling.
-            $this->logger->error('Failed to fetch school name by id during profile update', [
-                'error' => $e->getMessage(),
-                'school_id' => $schoolId,
             ]);
             return null;
         }

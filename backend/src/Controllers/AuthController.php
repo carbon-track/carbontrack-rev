@@ -263,16 +263,14 @@ class AuthController
             ]);
             try {
                 $this->emailService->sendWelcomeEmail((string)$data['email'], (string)$data['username']);
-            } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                // A welcome email failure leaves the completed registration valid.
-                $this->logger->warning('Failed to send welcome email', ['error' => $e->getMessage()]);
+            } catch (\Throwable $e) {
+                $this->logException($e, $request, 'Failed to send welcome email', ['user_id' => $userId]);
             }
             $verificationMeta = null;
             try {
-                $verificationMeta = $this->dispatchEmailVerification($userId, (string)$data['email'], (string)$data['username'], 1);
-            } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                // A verification dispatch failure leaves the registered account available for resend.
-                $this->logger->warning('Failed to dispatch verification email', ['error' => $e->getMessage()]);
+                $verificationMeta = $this->dispatchEmailVerification($request, $userId, (string)$data['email'], (string)$data['username'], 1);
+            } catch (\Throwable $e) {
+                $this->logException($e, $request, 'Failed to dispatch verification email', ['user_id' => $userId]);
             }
             // 发送站内欢迎消息暂时跳过（测试最小 schema 可能缺少完整列 / 触发 Eloquent timestamps 逻辑），以保持测试稳定
             // 生成登录 token 以符合测试对返回结构的期望
@@ -372,12 +370,9 @@ class AuthController
                         'code' => 'ACCOUNT_LOCKED',
                     ], 429);
                 }
-            } catch (\Throwable $lockCheckError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                // The legacy login flow continues to credential validation when the lockout probe fails.
+            } catch (\Throwable $lockCheckError) {
                 // Infrastructure failures in the lockout check should not block all logins.
-                $this->logger->warning('Login lockout check failed', [
-                    'error' => $lockCheckError->getMessage(),
-                ]);
+                $this->logException($lockCheckError, $request, 'Login lockout check failed', []);
             }
             $challenge = $this->verifyClientChallenge($request, $data, 'auth.login');
             if (!$challenge['success']) {
@@ -403,11 +398,8 @@ class AuthController
             if (!$user || !$passwordField || !password_verify((string)$data['password'], (string)$user[$passwordField])) {
                 try {
                     $this->authService->recordLoginAttempt((string) $identifier, (string) $clientIp, false);
-                } catch (\Throwable $recordError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                    // Failure to write the login-attempt record leaves the authentication denial intact.
-                    $this->logger->warning('Login attempt record failed (failed branch)', [
-                        'error' => $recordError->getMessage(),
-                    ]);
+                } catch (\Throwable $recordError) {
+                    $this->logException($recordError, $request, 'Login attempt record failed', ['login_succeeded' => false]);
                 }
                 $this->auditLogService->logAuthOperation('login', null, false, [
                     'identifier' => $identifier,
@@ -422,10 +414,10 @@ class AuthController
             }
             try {
                 $this->authService->recordLoginAttempt((string) $identifier, (string) $clientIp, true);
-            } catch (\Throwable $recordError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                // Failure to write the login-attempt record leaves the authentication result intact.
-                $this->logger->warning('Login attempt record failed (success branch)', [
-                    'error' => $recordError->getMessage(),
+            } catch (\Throwable $recordError) {
+                $this->logException($recordError, $request, 'Login attempt record failed', [
+                    'user_id' => $user['id'],
+                    'login_succeeded' => true,
                 ]);
             }
             try {
@@ -442,10 +434,8 @@ class AuthController
             if ($this->checkinService) {
                 try {
                     $this->checkinService->syncUserCheckinsFromRecords((int) $user['id']);
-                } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                    // Check-in synchronization runs as an optional post-login step.
-                    $this->logger->debug('Failed to sync user checkins on login', [
-                        'error' => $e->getMessage(),
+                } catch (\Throwable $e) {
+                    $this->logException($e, $request, 'Failed to sync user checkins on login', [
                         'user_id' => $user['id'],
                     ]);
                 }
@@ -466,7 +456,7 @@ class AuthController
             $userInfo = $this->formatUserPayload($user);
             $verificationMeta = null;
             if (empty($user['email_verified_at'])) {
-                $verificationMeta = $this->handlePendingEmailVerification($user);
+                $verificationMeta = $this->handlePendingEmailVerification($request, $user);
             }
 
             $responsePayload = [
@@ -707,6 +697,7 @@ class AuthController
             }
 
             $challenge = $this->dispatchEmailVerification(
+                $request,
                 (int)$user['id'],
                 (string)$user['email'],
                 (string)($user['username'] ?? ''),
@@ -953,9 +944,8 @@ class AuthController
                 $upd->execute([$resetToken, $expiresAt, $user['id']]);
                 try {
                     $this->emailService->sendPasswordResetEmail((string)$user['email'], (string)$user['username'], $resetToken);
-                } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                    // The password-reset endpoint keeps its uniform response when email delivery fails.
-                    $this->logger->warning('Failed to send password reset email', ['error' => $e->getMessage()]);
+                } catch (\Throwable $e) {
+                    $this->logException($e, $request, 'Failed to send password reset email', ['user_id' => $user['id']]);
                 }
                 $this->auditLogService->logAuthOperation('password_reset_request', $user['id'], true, [
                     'ip_address' => $this->getClientIP($request),
@@ -1140,7 +1130,7 @@ class AuthController
         }
     }
 
-    private function handlePendingEmailVerification(array $user): ?array
+    private function handlePendingEmailVerification(Request $request, array $user): ?array
     {
         $email = $user['email'] ?? null;
         if (!$email) {
@@ -1186,6 +1176,7 @@ class AuthController
             }
 
             $challenge = $this->dispatchEmailVerification(
+                $request,
                 (int)$user['id'],
                 (string)$email,
                 (string)($user['username'] ?? ''),
@@ -1253,8 +1244,14 @@ class AuthController
         ];
     }
 
-    private function dispatchEmailVerification(int $userId, string $email, string $username, int $sendCount, ?string $retryAfter = null): array
-    {
+    private function dispatchEmailVerification(
+        Request $request,
+        int $userId,
+        string $email,
+        string $username,
+        int $sendCount,
+        ?string $retryAfter = null
+    ): array {
         $challenge = $this->createVerificationChallenge($userId, $email, $username, $sendCount);
         $challenge['resend_available_at'] = $retryAfter;
 
@@ -1266,6 +1263,7 @@ class AuthController
         ];
 
         $dispatched = $this->sendVerificationEmailWithStrategy(
+            $request,
             $userId,
             $email,
             $challenge['recipient_name'],
@@ -1288,6 +1286,7 @@ class AuthController
     }
 
     private function sendVerificationEmailWithStrategy(
+        Request $request,
         int $userId,
         string $email,
         string $recipientName,
@@ -1301,6 +1300,7 @@ class AuthController
 
         if ($isCli) {
             return $this->sendVerificationEmailNow(
+                $request,
                 $userId,
                 $email,
                 $recipientName,
@@ -1313,6 +1313,7 @@ class AuthController
         }
 
         $queued = $this->queueVerificationEmail(
+            $request,
             $userId,
             $email,
             $recipientName,
@@ -1324,6 +1325,7 @@ class AuthController
 
         if (!$queued) {
             return $this->sendVerificationEmailNow(
+                $request,
                 $userId,
                 $email,
                 $recipientName,
@@ -1339,6 +1341,7 @@ class AuthController
     }
 
     private function sendVerificationEmailNow(
+        Request $request,
         int $userId,
         string $email,
         string $recipientName,
@@ -1365,13 +1368,10 @@ class AuthController
                     'context' => $asyncContext ? 'async' : 'sync'
                 ]);
             }
-        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // The verification email helper records the failed delivery in its audit path.
-            $this->logger->error('Verification email send failed', [
+        } catch (\Throwable $e) {
+            $this->logException($e, $request, 'Verification email send failed', [
                 'user_id' => $userId,
-                'email' => $email,
-                'error' => $e->getMessage(),
-                'context' => $asyncContext ? 'async' : 'sync'
+                'strategy' => $asyncContext ? 'async' : 'sync',
             ]);
         }
 
@@ -1396,6 +1396,7 @@ class AuthController
     }
 
     private function queueVerificationEmail(
+        Request $request,
         int $userId,
         string $email,
         string $recipientName,
@@ -1406,8 +1407,9 @@ class AuthController
     ): bool {
         try {
             $result = $this->emailService->dispatchAsyncEmail(
-                function (bool $async) use ($userId, $email, $recipientName, $code, $ttlMinutes, $link, $context) {
+                function (bool $async) use ($request, $userId, $email, $recipientName, $code, $ttlMinutes, $link, $context) {
                     return $this->sendVerificationEmailNow(
+                        $request,
                         $userId,
                         $email,
                         $recipientName,
@@ -1435,12 +1437,10 @@ class AuthController
             }
 
             return $result;
-        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // The verification dispatch falls back to its failure audit and synchronous delivery path.
-            $this->logger->error('Failed to queue verification email', [
+        } catch (\Throwable $e) {
+            $this->logException($e, $request, 'Failed to queue verification email', [
                 'user_id' => $userId,
-                'email' => $email,
-                'error' => $e->getMessage()
+                'strategy' => 'async',
             ]);
 
             try {
