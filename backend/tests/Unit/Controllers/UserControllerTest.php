@@ -1258,7 +1258,8 @@ class UserControllerTest extends TestCase
         $this->assertSame('Eco Bottle', $json['data']['preview']['sample']['product']);
     }
 
-    public function testSendNotificationTestEmailMarksGeneratedSampleWhenMissingData(): void
+    /** @dataProvider emailSampleQueryOutcomes */
+    public function testSendNotificationTestEmailUsesGeneratedSample(bool $queryFails): void
     {
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn([
@@ -1314,14 +1315,26 @@ class UserControllerTest extends TestCase
             'activity' => ['label' => 'Activity reviews', 'locked' => false],
         ]);
 
+        $request = makeRequest('POST', '/users/me/notification-preferences/test-email', ['category' => 'activity']);
+        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
         $stmt = $this->createMock(\PDOStatement::class);
-        $stmt->expects($this->once())->method('execute')->with(['uid' => 8])->willReturn(true);
-        $stmt->method('fetch')->willReturn(false);
+        $execute = $stmt->expects($this->once())->method('execute')->with(['uid' => 8]);
+        if ($queryFails) {
+            $failure = new \PDOException('Activity sample lookup failed');
+            $execute->willThrowException($failure);
+            $errorLog->expects($this->once())->method('logException')->with($failure, $request, [
+                'context_message' => 'Failed to fetch latest carbon record for test email',
+                'user_id' => 8,
+            ]);
+        } else {
+            $execute->willReturn(true);
+            $stmt->method('fetch')->willReturn(false);
+            $errorLog->expects($this->never())->method('logException');
+        }
 
         $pdo = $this->createMock(\PDO::class);
         $pdo->method('prepare')->willReturn($stmt);
 
-        $errorLog = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
         $turnstile = $this->mockTurnstile();
         $region = $this->createMock(\CarbonTrack\Services\RegionService::class);
 
@@ -1340,7 +1353,6 @@ class UserControllerTest extends TestCase
             $region
         );
 
-        $request = makeRequest('POST', '/users/me/notification-preferences/test-email', ['category' => 'activity']);
         $response = new \Slim\Psr7\Response();
 
         $resp = $controller->sendNotificationTestEmail($request, $response);
@@ -1352,6 +1364,14 @@ class UserControllerTest extends TestCase
         $this->assertSame('activity', $json['data']['category']);
         $this->assertStringContainsString('generated preview', $json['message']);
         $this->assertTrue($json['data']['preview']['sample']['generated']);
+    }
+
+    public static function emailSampleQueryOutcomes(): array
+    {
+        return [
+            'no matching record' => [false],
+            'query fails' => [true],
+        ];
     }
 
     public function testSendNotificationTestEmailRejectsInvalidCategory(): void

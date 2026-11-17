@@ -60,20 +60,25 @@ class AvatarController
             $includeInactive = !empty($queryParams['include_inactive'])
                 && filter_var($queryParams['include_inactive'], FILTER_VALIDATE_BOOLEAN);
 
-            // 检查是否为管理员（容错：AuthService 可能在匿名请求时抛出异常）
+            // 检查是否为管理员。身份查询失败时仍可返回公开头像。
             $user = null;
             $isAdmin = false;
             try {
                 $user = $this->authService->getCurrentUser($request);
                 $isAdmin = $user && !empty($user['is_admin']);
-            } catch (\Throwable $authEx) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                // Avatar listing supports anonymous visitors.
-                // 记日志但不影响公开接口返回
-                if (isset($this->logger)) {
-                    $this->logger->debug('Anonymous avatar listing (auth not resolved)', [
-                        'error' => $authEx->getMessage()
+            } catch (\Throwable $authEx) {
+                try {
+                    $this->errorLogService?->logException($authEx, $request, [
+                        'context_message' => 'Avatar listing authentication lookup failed',
+                    ]);
+                } catch (\Throwable $ignore) {
+                    $this->logger?->warning('Could not persist the avatar listing authentication error', [
+                        'error' => $ignore->getMessage(),
                     ]);
                 }
+                $this->logger?->debug('Anonymous avatar listing (auth not resolved)', [
+                    'error' => $authEx->getMessage(),
+                ]);
             }
 
             if ($includeInactive && !$isAdmin) {

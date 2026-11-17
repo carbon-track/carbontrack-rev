@@ -234,6 +234,7 @@ class FileUploadController
             try {
                 $this->r2Service->validateDirectUploadObject($storagePath, $originalName, $info);
             } catch (\InvalidArgumentException $e) {
+                $this->logClientException($e, $request, 400, __METHOD__);
                 $canDeleteFailedObject = $this->canDeleteFailedDirectUploadObject(
                     $filePath,
                     $storagePath,
@@ -999,6 +1000,7 @@ class FileUploadController
                 $fileInfoData['metadata'] = array_replace($metadata, ['original_name' => $originalName]);
                 $this->r2Service->validateDirectUploadObject($filePath, $originalName, $fileInfoData);
             } catch (\InvalidArgumentException $e) {
+                $this->logClientException($e, $request, 400, __METHOD__);
                 try {
                     $this->r2Service->deleteFile($filePath, (int) $user['id']);
                 } catch (\Throwable $cleanupError) {
@@ -1147,6 +1149,7 @@ class FileUploadController
         } catch (FileOwnershipConflictException $e) {
             $this->logClientException($e, $request, 409, __METHOD__);
             $multipartTrackingCleared = $this->clearCompletedMultipartTrackingIfNeeded(
+                $request,
                 $completedMultipartObject,
                 $multipartTrackingCleared,
                 $uploadId
@@ -1163,6 +1166,7 @@ class FileUploadController
                     'upload_id' => $uploadId !== '' ? $uploadId : null,
                     'error' => $e->getMessage(),
                     'error_code' => 'FILE_OWNERSHIP_CONFLICT',
+                    'tracking_cleared' => $multipartTrackingCleared,
                 ],
             ]);
             return $this->jsonResponse($response, [
@@ -1172,6 +1176,7 @@ class FileUploadController
             ], 409);
         } catch (\Exception $e) {
             $multipartTrackingCleared = $this->clearCompletedMultipartTrackingIfNeeded(
+                $request,
                 $completedMultipartObject,
                 $multipartTrackingCleared,
                 $uploadId
@@ -1187,6 +1192,7 @@ class FileUploadController
                     'file_path' => $filePath !== '' ? $filePath : null,
                     'upload_id' => $uploadId !== '' ? $uploadId : null,
                     'error' => $e->getMessage(),
+                    'tracking_cleared' => $multipartTrackingCleared,
                 ],
             ]);
             try { $this->errorLogService->logException($e, $request); } catch (\Throwable $ignore) { $this->logger->error('ErrorLogService failed: ' . $ignore->getMessage()); }
@@ -1195,6 +1201,7 @@ class FileUploadController
     }
 
     private function clearCompletedMultipartTrackingIfNeeded(
+        Request $request,
         bool $completedMultipartObject,
         bool $multipartTrackingCleared,
         string $uploadId
@@ -1203,12 +1210,19 @@ class FileUploadController
             try {
                 $this->multipartUploadService->clearUpload($uploadId);
                 return true;
-            } catch (\Throwable $cleanupError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                // Multipart tracking cleanup runs after successful upload completion.
+            } catch (\Throwable $cleanupError) {
                 $this->logger->error('Failed to clear multipart upload tracking after completion', [
                     'upload_id' => $uploadId,
                     'error' => $cleanupError->getMessage(),
                 ]);
+                try {
+                    $this->errorLogService->logException($cleanupError, $request, [
+                        'context' => 'multipart_upload_tracking_cleanup_failed',
+                        'upload_id' => $uploadId,
+                    ]);
+                } catch (\Throwable $ignore) {
+                    $this->logger->error('ErrorLogService failed: ' . $ignore->getMessage());
+                }
             }
         }
 
