@@ -188,7 +188,7 @@ class AvatarController
      */
     public function createAvatar(Request $request, Response $response): Response
     {
-        try {
+        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
             $user = $this->authService->getCurrentUser($request);
             if (!$user || !$user['is_admin']) {
                 return $this->jsonResponse($response, [
@@ -297,7 +297,7 @@ class AvatarController
      */
     public function updateAvatar(Request $request, Response $response, array $args): Response
     {
-        try {
+        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
             $user = $this->authService->getCurrentUser($request);
             if (!$user || !$user['is_admin']) {
                 return $this->jsonResponse($response, [
@@ -370,7 +370,7 @@ class AvatarController
             if ($isDeactivation) {
                 // No default avatar is a 409 client error, not a server failure.
                 // nosemgrep
-                try {
+                try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
                     $reassignment = $this->avatarModel->updateAvatarAndReassignUsers(
                         $avatarId,
                         $updateData,

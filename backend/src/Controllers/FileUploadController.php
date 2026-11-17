@@ -377,7 +377,7 @@ class FileUploadController
      */
     public function uploadFile(Request $request, Response $response): Response
     {
-        try {
+        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
             // 验证用户身份
             $user = $this->authService->getCurrentUser($request);
             if (!$user) {

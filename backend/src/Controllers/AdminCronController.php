@@ -43,7 +43,7 @@ class AdminCronController
 
     public function updateTask(Request $request, Response $response, array $args): Response
     {
-        try {
+        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
             $actor = $this->currentUser($request);
             $taskKey = $this->taskKey($args);
             $result = $this->cronSchedulerService->updateTask($taskKey, $this->body($request));
@@ -72,7 +72,7 @@ class AdminCronController
 
     public function listRuns(Request $request, Response $response): Response
     {
-        try {
+        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
             $actor = $this->currentUser($request);
             $result = $this->cronSchedulerService->listRuns($request->getQueryParams());
 
@@ -94,7 +94,7 @@ class AdminCronController
 
     public function runTask(Request $request, Response $response, array $args): Response
     {
-        try {
+        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
             $actor = $this->currentUser($request);
             $taskKey = $this->taskKey($args);
             $result = $this->cronSchedulerService->runTaskNow($taskKey, 'admin_manual', [

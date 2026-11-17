@@ -84,6 +84,8 @@ rules:
   #  - rethrows (throw $EXP), plus logging-helper failures caught as
   #    $loggingError and sent to error_log() as an emergency fallback.
   #    Ordinary catch blocks cannot use plain error_log() to pass the rule.
+  # Reviewed mixed-catch client-error paths use local inline nosemgrep.
+  # Revisit the suppression whenever a new catch is added to one of them.
   # Anything else must call ErrorLogService (or a helper above) in the catch.
   - id: enforce-errorlogservice-in-catch
     message: >

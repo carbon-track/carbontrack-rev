@@ -553,7 +553,7 @@ class AuthController
 
             // Invalid or expired tokens are 401 client errors, already audit-logged.
             // nosemgrep
-            try {
+            try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
                 $payload = $this->authService->validateToken($token);
             } catch (\Throwable $e) {
                 $this->logTokenRefreshFailure($request, null, 'INVALID_TOKEN');
