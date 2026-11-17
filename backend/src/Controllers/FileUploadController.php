@@ -18,6 +18,8 @@ use CarbonTrack\Models\File;
 
 class FileUploadController
 {
+    use LogsClientExceptions;
+
     private const ADMIN_ONLY_UPLOAD_ROOTS = ['products', 'badges'];
 
     private CloudflareR2Service $r2Service;
@@ -348,8 +350,8 @@ class FileUploadController
                 'message' => 'Upload confirmed',
                 'data' => $payload
             ]);
-        } catch (FileOwnershipConflictException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report an upload ownership conflict to the caller.
+        } catch (FileOwnershipConflictException $e) {
+            $this->logClientException($e, $request, 409, __METHOD__);
             $this->auditLogService->log([
                 'user_id' => isset($user['id']) ? (int) $user['id'] : null,
                 'action' => 'direct_upload_confirmed',
@@ -439,8 +441,8 @@ class FileUploadController
                 'data' => $result
             ]);
 
-        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report a request validation failure to the caller.
+        } catch (\InvalidArgumentException $e) {
+            $this->logClientException($e, $request, 400, __METHOD__, $user ?? null, 'file_management');
             return $this->jsonResponse($response, [
                 'success' => false,
                 'message' => $e->getMessage()
@@ -1142,8 +1144,8 @@ class FileUploadController
             $result['ownership_persisted'] = $ownershipPersisted;
 
             return $this->jsonResponse($response, ['success' => true, 'data' => $result]);
-        } catch (FileOwnershipConflictException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report an upload ownership conflict to the caller.
+        } catch (FileOwnershipConflictException $e) {
+            $this->logClientException($e, $request, 409, __METHOD__);
             $multipartTrackingCleared = $this->clearCompletedMultipartTrackingIfNeeded(
                 $completedMultipartObject,
                 $multipartTrackingCleared,

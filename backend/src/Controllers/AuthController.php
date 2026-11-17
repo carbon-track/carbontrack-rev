@@ -26,6 +26,8 @@ use PDO;
 
 class AuthController
 {
+    use LogsClientExceptions;
+
     private AuthService $authService;
     private EmailService $emailService;
     private TurnstileService $turnstileService;
@@ -107,9 +109,9 @@ class AuthController
 
             try {
                 $challenge = $this->proofOfWorkService->createChallenge($scope, $this->getClientIP($request));
-            } catch (\RuntimeException $rateLimitError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                // Return 429 for rate limits and propagate other failures to the outer handler.
+            } catch (\RuntimeException $rateLimitError) {
                 if (strpos($rateLimitError->getMessage(), 'rate limit') !== false) {
+                    $this->logClientException($rateLimitError, $request, 429, __METHOD__, auditCategory: 'authentication');
                     return $this->jsonResponse($response, [
                         'success' => false,
                         'message' => 'Too many proof-of-work challenges from this client',
@@ -565,8 +567,8 @@ class AuthController
 
             try {
                 $payload = $this->authService->validateToken($token);
-            } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                // The invalid or expired token response is audited as a 401.
+            } catch (\Throwable $e) {
+                $this->logClientException($e, $request, 401, __METHOD__);
                 $this->logTokenRefreshFailure($request, null, 'INVALID_TOKEN');
                 return $this->jsonResponse($response, [
                     'success' => false,

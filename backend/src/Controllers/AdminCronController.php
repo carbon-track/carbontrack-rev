@@ -14,6 +14,8 @@ use Psr\Log\LoggerInterface;
 
 class AdminCronController
 {
+    use LogsClientExceptions;
+
     public function __construct(
         private CronSchedulerService $cronSchedulerService,
         private AuthService $authService,
@@ -60,11 +62,12 @@ class AdminCronController
             return $this->json($request, $response, ['success' => true, 'data' => $result]);
         } catch (\RuntimeException $exception) {
             if ($this->isTaskNotFoundException($exception)) {
+                $this->logClientException($exception, $request, 404, __METHOD__, $actor ?? null, 'admin_cron');
                 return $this->json($request, $response, ['success' => false, 'message' => $exception->getMessage(), 'code' => 'CRON_TASK_NOT_FOUND'], 404);
             }
             return $this->error($request, $response, $exception, 'Failed to update cron task');
-        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report a request validation failure to the caller.
+        } catch (\InvalidArgumentException $exception) {
+            $this->logClientException($exception, $request, 422, __METHOD__, $actor ?? null, 'admin_cron');
             return $this->json($request, $response, ['success' => false, 'message' => $exception->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $exception) {
             return $this->error($request, $response, $exception, 'Failed to update cron task');
@@ -86,8 +89,8 @@ class AdminCronController
             ]);
 
             return $this->json($request, $response, ['success' => true, 'data' => $result]);
-        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report a request validation failure to the caller.
+        } catch (\InvalidArgumentException $exception) {
+            $this->logClientException($exception, $request, 422, __METHOD__, $actor ?? null, 'admin_cron');
             return $this->json($request, $response, ['success' => false, 'message' => $exception->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $exception) {
             return $this->error($request, $response, $exception, 'Failed to load cron runs');
@@ -126,11 +129,12 @@ class AdminCronController
             return $this->json($request, $response, ['success' => true, 'data' => $result]);
         } catch (\RuntimeException $exception) {
             if ($this->isTaskNotFoundException($exception)) {
+                $this->logClientException($exception, $request, 404, __METHOD__, $actor ?? null, 'admin_cron');
                 return $this->json($request, $response, ['success' => false, 'message' => $exception->getMessage(), 'code' => 'CRON_TASK_NOT_FOUND'], 404);
             }
             return $this->error($request, $response, $exception, 'Failed to trigger cron task');
-        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report a request validation failure to the caller.
+        } catch (\InvalidArgumentException $exception) {
+            $this->logClientException($exception, $request, 422, __METHOD__, $actor ?? null, 'admin_cron');
             return $this->json($request, $response, ['success' => false, 'message' => $exception->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $exception) {
             return $this->error($request, $response, $exception, 'Failed to trigger cron task');
