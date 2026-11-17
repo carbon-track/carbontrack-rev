@@ -351,6 +351,59 @@ class UserControllerTest extends TestCase
         }
     }
 
+    public function testUpdateProfileLogsSchoolLookupFailureAndReturns400(): void
+    {
+        $request = makeRequest('PUT', '/users/me/profile', [
+            'new_school_name' => 'Climate Academy',
+            'cf_turnstile_response' => 'token-123',
+        ])->withAttribute('request_id', 'school-lookup-failure');
+        $failure = new \PDOException('School lookup failed');
+
+        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth->method('getCurrentUser')->willReturn(['id' => 12]);
+        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit->expects($this->once())->method('log')->with($this->callback(static function (array $entry): bool {
+            return $entry['operation_category'] === 'user_management'
+                && $entry['user_id'] === 12
+                && $entry['status'] === 'failed'
+                && $entry['response_code'] === 400
+                && $entry['request_id'] === 'school-lookup-failure';
+        }));
+        $errors = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errors->expects($this->once())->method('logException')->with($failure, $request, [
+            'context_message' => UserController::class . '::findOrCreateSchoolId',
+            'response_code' => 400,
+        ]);
+
+        $user = $this->createMock(\PDOStatement::class);
+        $user->method('execute')->willReturn(true);
+        $user->method('fetch')->willReturn(['id' => 12, 'school_id' => null]);
+        $school = $this->createMock(\PDOStatement::class);
+        $school->expects($this->once())->method('execute')->with(['Climate Academy'])->willThrowException($failure);
+        $db = $this->createMock(\PDO::class);
+        $db->expects($this->exactly(2))->method('prepare')->willReturnOnConsecutiveCalls($user, $school);
+
+        $controller = new UserController(
+            $auth,
+            $audit,
+            $this->createMock(\CarbonTrack\Services\MessageService::class),
+            $this->createMock(\CarbonTrack\Models\Avatar::class),
+            $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class),
+            $this->mockTurnstile(true),
+            null,
+            $this->createMock(\Monolog\Logger::class),
+            $db,
+            $errors,
+            null,
+            $this->createMock(\CarbonTrack\Services\RegionService::class)
+        );
+
+        $response = $controller->updateProfile($request, new \Slim\Psr7\Response());
+
+        $this->assertSame(400, $response->getStatusCode());
+        $this->assertSame('INVALID_SCHOOL', json_decode((string)$response->getBody(), true)['code']);
+    }
+
     public function testSelectAvatarInvalidReturns400(): void
     {
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
