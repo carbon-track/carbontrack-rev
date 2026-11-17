@@ -180,7 +180,7 @@ pnpm validate
 
 ### 后端 (Backend)
 - **Framework**: Slim 4 (Micro-framework)
-- **数据访问**：主要使用原生 PDO，商品、认证和积分等链路直接执行 SQL。部分控制器和服务使用 Eloquent，例如学校、工单自动化和定时任务。新增数据访问时沿用所在模块的方式。
+- **数据访问**：HTTP、定时任务和命令行服务通过 `DatabaseService` 共用 Illuminate 数据库连接。模型和关联用 Eloquent，常规查询用 Query Builder，复杂 SQL 通过同一连接绑定参数执行。业务入口统一管理事务。
 - **Container**: PHP-DI
 - **Auth**: JWT (Firebase JWT)
 - **Validation**: Respect Validation

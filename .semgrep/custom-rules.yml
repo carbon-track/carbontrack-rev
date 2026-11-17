@@ -113,3 +113,12 @@ rules:
       include:
         - "/backend/src/Controllers/*.php"
         - "/backend/src/Jobs/*.php"
+
+  - id: forbid-native-db-access
+    message: Use the shared Illuminate connection for database queries and transactions.
+    severity: ERROR
+    languages: [php]
+    pattern-regex: '(?i)(?<![A-Za-z0-9_])PDO(?:Statement|Exception)?\b|(?:->|::)\s*(?i:(?:get|set)(?:Raw)?(?:Read)?Pdo)\s*\('
+    paths:
+      include:
+        - "/backend/**/*.php"

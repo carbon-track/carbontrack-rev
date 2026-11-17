@@ -30,7 +30,7 @@
 ## 技术架构概览
 
 - **Frontend**: React + Vite + Tailwind + shadcn/ui
-- **Backend**: PHP + Slim 4，主要使用 PDO，部分控制器和服务使用 Eloquent
+- **Backend**: PHP + Slim 4，使用 Illuminate Database（Eloquent、Query Builder 和参数化 SQL）
 - **Mobile**: Expo + React Native
 - **Miniprogram**: WeChat Mini Program
 - **Data & API**: MySQL + RESTful API（`/api/v1`）
