@@ -119,15 +119,20 @@ class UserController
         $this->userProfileViewService = $userProfileViewService ?? new UserProfileViewService($regionService);
     }
 
-    private function buildNotificationTestEmailJob(array $user, string $category, string $email, string $displayName): ?array
-    {
+    private function buildNotificationTestEmailJob(
+        Request $request,
+        array $user,
+        string $category,
+        string $email,
+        string $displayName
+    ): ?array {
         $baseContext = [
             'category' => $category,
         ];
 
         switch ($category) {
             case NotificationPreferenceService::CATEGORY_ACTIVITY: {
-                $sample = $this->fetchLatestActivitySample((int)$user['id']);
+                $sample = $this->fetchLatestActivitySample($request, (int)$user['id']);
                 $activityName = $sample['name'];
                 if ($sample['generated']) {
                     $activityName .= ' (Test sample)';
@@ -149,7 +154,7 @@ class UserController
             }
 
             case NotificationPreferenceService::CATEGORY_TRANSACTION: {
-                $sample = $this->fetchLatestExchangeSample((int)$user['id']);
+                $sample = $this->fetchLatestExchangeSample($request, (int)$user['id']);
                 $productName = $sample['product'];
                 if ($sample['generated']) {
                     $productName .= ' (Test sample)';
@@ -271,7 +276,7 @@ class UserController
             }
 
             case NotificationPreferenceService::CATEGORY_MESSAGE: {
-                $sample = $this->fetchLatestMessageSample((int)$user['id']);
+                $sample = $this->fetchLatestMessageSample($request, (int)$user['id']);
                 $subject = $sample['title'];
                 $body = $sample['content'];
 
@@ -320,7 +325,7 @@ class UserController
         return null;
     }
 
-    private function fetchLatestActivitySample(int $userId): array
+    private function fetchLatestActivitySample(Request $request, int $userId): array
     {
         try {
             $stmt = $this->db->prepare("
@@ -350,12 +355,8 @@ class UserController
                     'generated' => false,
                 ];
             }
-        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // The test email can use sample data when the latest carbon record is unavailable.
-            $this->logger->debug('Failed to fetch latest carbon record for test email', [
-                'error' => $e->getMessage(),
-                'user_id' => $userId,
-            ]);
+        } catch (\Throwable $e) {
+            $this->logException($e, $request, 'Failed to fetch latest carbon record for test email', $userId);
         }
 
         return [
@@ -367,7 +368,7 @@ class UserController
         ];
     }
 
-    private function fetchLatestExchangeSample(int $userId): array
+    private function fetchLatestExchangeSample(Request $request, int $userId): array
     {
         try {
             $stmt = $this->db->prepare("
@@ -398,12 +399,8 @@ class UserController
                     'generated' => false,
                 ];
             }
-        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // The test email can use sample data when the latest exchange is unavailable.
-            $this->logger->debug('Failed to fetch latest exchange for test email', [
-                'error' => $e->getMessage(),
-                'user_id' => $userId,
-            ]);
+        } catch (\Throwable $e) {
+            $this->logException($e, $request, 'Failed to fetch latest exchange for test email', $userId);
         }
 
         return [
@@ -415,7 +412,7 @@ class UserController
         ];
     }
 
-    private function fetchLatestMessageSample(int $userId): array
+    private function fetchLatestMessageSample(Request $request, int $userId): array
     {
         try {
             $stmt = $this->db->prepare("
@@ -436,12 +433,8 @@ class UserController
                     'generated' => false,
                 ];
             }
-        } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // The test email can use sample data when the latest message is unavailable.
-            $this->logger->debug('Failed to fetch latest direct message for test email', [
-                'error' => $e->getMessage(),
-                'user_id' => $userId,
-            ]);
+        } catch (\Throwable $e) {
+            $this->logException($e, $request, 'Failed to fetch latest direct message for test email', $userId);
         }
 
         return [
@@ -1068,7 +1061,7 @@ class UserController
             }
 
             $displayName = (string)($user['username'] ?? $email);
-            $job = $this->buildNotificationTestEmailJob($user, $category, $email, $displayName);
+            $job = $this->buildNotificationTestEmailJob($request, $user, $category, $email, $displayName);
 
             if ($job === null) {
                 $appName = $this->emailService->getAppName();
@@ -1558,9 +1551,8 @@ class UserController
                         'min_exchange_points' => $minExchangePoints,
                     ];
                 }
-            } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                // Store quick stats are optional in the overview response.
-                $this->logger->debug('Failed to load store quick stats', ['error' => $e->getMessage()]);
+            } catch (\Throwable $e) {
+                $this->logException($e, $request, 'Failed to load store quick stats', (int)$user['id']);
             }
 
             // 额外：碳记录聚合（不影响 prepare 次序）
@@ -1648,9 +1640,8 @@ class UserController
                         $schoolBucket = $snapshot['schools'][$schoolId] ?? null;
                         $leaderboards['school']['entries'] = $this->normalizeLeaderboardEntries(array_slice($schoolBucket['entries'] ?? [], 0, 5));
                     }
-                } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                    // Cached leaderboards are optional in the overview response.
-                    $this->logger->debug('Failed to load cached leaderboards', ['error' => $e->getMessage()]);
+                } catch (\Throwable $e) {
+                    $this->logException($e, $request, 'Failed to load cached leaderboards', (int)$user['id']);
                 }
             }
             $leaderboard = $leaderboards['global']['entries'];
@@ -1691,9 +1682,8 @@ class UserController
             if ($this->checkinService) {
                 try {
                     $streakStats = array_merge($streakStats, $this->checkinService->getUserStreakStats((int) $user['id']));
-                } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                    // Streak stats are optional in the overview response.
-                    $this->logger->debug('Failed to load streak stats', ['error' => $e->getMessage()]);
+                } catch (\Throwable $e) {
+                    $this->logException($e, $request, 'Failed to load streak stats', (int)$user['id']);
                 }
             }
 
@@ -1717,9 +1707,8 @@ class UserController
                         $streakRanks['school'] = $snapshot['ranks']['schools'][$schoolId][$user['id']] ?? null;
                     }
                     $streakRanks['global'] = $snapshot['ranks']['global'][$user['id']] ?? null;
-                } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                    // Cached streak leaderboards are optional in the overview response.
-                    $this->logger->debug('Failed to load cached streak leaderboards', ['error' => $e->getMessage()]);
+                } catch (\Throwable $e) {
+                    $this->logException($e, $request, 'Failed to load cached streak leaderboards', (int)$user['id']);
                 }
             }
 
@@ -1911,6 +1900,21 @@ class UserController
         ];
 
         return $statusMap[$status] ?? $status;
+    }
+
+    private function logException(\Throwable $exception, Request $request, string $message, int $userId): void
+    {
+        try {
+            $this->errorLogService?->logException($exception, $request, [
+                'context_message' => $message,
+                'user_id' => $userId,
+            ]);
+        } catch (\Throwable $ignore) {
+            $this->logger->warning('Could not persist a handled user request exception', [
+                'error' => $ignore->getMessage(),
+            ]);
+        }
+        $this->logger->debug($message, ['error' => $exception->getMessage(), 'user_id' => $userId]);
     }
 
     private function findOrCreateSchoolId(string $name, Request $request, array $user): ?int
