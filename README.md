@@ -30,7 +30,7 @@
 ## 技术架构概览
 
 - **Frontend**: React + Vite + Tailwind + shadcn/ui
-- **Backend**: PHP + Slim + Eloquent ORM
+- **Backend**: PHP + Slim + 原生 PDO（为主），Eloquent ORM 仅少量使用（3 个控制器、20 处查询）
 - **Mobile**: Expo + React Native
 - **Miniprogram**: WeChat Mini Program
 - **Data & API**: MySQL + RESTful API（`/api/v1`）
@@ -44,6 +44,8 @@
 - 更明确的版本化 API 约定
 - 更稳定的前后端协作与发布链路
 - 面向持续迭代的模块化扩展能力
+
+注意：`V3.0+` 是产品/文档版本号，API 版本号是独立的 `1.0.0`，唯一前缀是 `/api/v1`；产品版本号和 API 版本号没有对应关系。
 
 ## 快速入口
 
