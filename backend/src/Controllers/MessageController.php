@@ -1588,7 +1588,7 @@ $auditPayload = [
         }
     }
 
-    private function resolveExplicitRecipients(array $ids, Request $request): array
+    private function resolveExplicitRecipients(array $ids, ?Request $request = null): array
     {
         $result = [
             'error' => null,
@@ -1652,10 +1652,12 @@ $auditPayload = [
             $result['user_ids'] = array_values($collectedIds);
             $result['invalid_ids'] = array_values(array_diff($sanitized, $result['user_ids']));
         } catch (\Throwable $e) {
-            $this->logBroadcastError($request, 'Failed to resolve target users', [
-                'exception' => get_class($e),
-                'error' => $e->getMessage(),
-            ]);
+            if ($request !== null) {
+                $this->logBroadcastError($request, 'Failed to resolve target users', [
+                    'exception' => get_class($e),
+                    'error' => $e->getMessage(),
+                ]);
+            }
             $result['error'] = 'Failed to resolve target users';
             $result['status'] = 500;
         }
@@ -1694,7 +1696,7 @@ $auditPayload = [
         return $aggregated;
     }
 
-    private function resolveAllRecipients(Request $request): array
+    private function resolveAllRecipients(?Request $request = null): array
     {
         $result = [
             'user_ids' => [],
@@ -1717,10 +1719,12 @@ $auditPayload = [
                 $result['records'][$id] = $this->normalizeUserRow($row);
             }
         } catch (\Throwable $e) {
-            $this->logBroadcastError($request, 'Failed to load all broadcast recipients', [
-                'exception' => get_class($e),
-                'error' => $e->getMessage(),
-            ]);
+            if ($request !== null) {
+                $this->logBroadcastError($request, 'Failed to load all broadcast recipients', [
+                    'exception' => get_class($e),
+                    'error' => $e->getMessage(),
+                ]);
+            }
             // Return the recipients loaded before this failure.
         }
 
