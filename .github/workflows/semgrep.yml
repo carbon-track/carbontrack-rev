@@ -142,6 +142,15 @@ jobs:
                       if not isinstance(results, list):
                           raise ValueError("SARIF run results is not an array")
                       finding_count += len(results)
+                      if label == "custom":
+                          for finding in results:
+                              locations = finding.get("locations", []) if isinstance(finding, dict) else []
+                              physical = locations[0].get("physicalLocation", {}) if locations else {}
+                              artifact = physical.get("artifactLocation", {}).get("uri", "unknown")
+                              line = physical.get("region", {}).get("startLine", "?")
+                              rule_id = finding.get("ruleId", "unknown") if isinstance(finding, dict) else "unknown"
+                              message = finding.get("message", {}).get("text", "") if isinstance(finding, dict) else ""
+                              print(f"Custom Semgrep: {artifact}:{line} {rule_id} {message}")
 
                   normalized_path.write_text(
                       json.dumps(document, separators=(",", ":")),
