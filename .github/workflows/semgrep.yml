@@ -141,16 +141,43 @@ jobs:
                       results = run.get("results", [])
                       if not isinstance(results, list):
                           raise ValueError("SARIF run results is not an array")
-                      finding_count += len(results)
                       if label == "custom":
+                          active = []
+                          suppressed = 0
                           for finding in results:
                               locations = finding.get("locations", []) if isinstance(finding, dict) else []
                               physical = locations[0].get("physicalLocation", {}) if locations else {}
                               artifact = physical.get("artifactLocation", {}).get("uri", "unknown")
                               line = physical.get("region", {}).get("startLine", "?")
                               rule_id = finding.get("ruleId", "unknown") if isinstance(finding, dict) else "unknown"
+
+                              # Semgrep Pro emits ignored matches into custom SARIF.
+                              # Only honor the exact, reviewed marker on the matched
+                              # try line. All other findings remain blocking.
+                              if (
+                                  rule_id == "semgrep.enforce-errorlogservice-in-catch"
+                                  and isinstance(artifact, str)
+                                  and artifact.startswith("backend/src/Controllers/")
+                                  and artifact.endswith(".php")
+                                  and ".." not in Path(artifact).parts
+                                  and type(line) is int
+                              ):
+                                  source = Path(artifact)
+                                  if source.is_file():
+                                      source_lines = source.read_text(encoding="utf-8").splitlines()
+                                      if 1 <= line <= len(source_lines) and source_lines[line - 1].strip() == "try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch":
+                                          print(f"Reviewed Semgrep suppression: {artifact}:{line} {rule_id}")
+                                          suppressed += 1
+                                          continue
                               message = finding.get("message", {}).get("text", "") if isinstance(finding, dict) else ""
                               print(f"Custom Semgrep: {artifact}:{line} {rule_id} {message}")
+                              active.append(finding)
+
+                          run["results"] = active
+                          results = active
+                          print(f"Custom Semgrep: {suppressed} reviewed suppressions; {len(active)} active findings")
+
+                      finding_count += len(results)
 
                   normalized_path.write_text(
                       json.dumps(document, separators=(",", ":")),
