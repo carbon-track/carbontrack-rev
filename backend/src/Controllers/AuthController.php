@@ -1024,11 +1024,10 @@ class AuthController
             try {
                 $this->authService->incrementTokenVersion((int) $user['id']);
                 $this->mobileDeviceSessionService->revokeAllForUser((int) $user['id'], 'password_reset');
-            } catch (\Throwable $bumpError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                // The password reset has already committed when revocation fails.
-                $this->logger->warning('Failed to revoke credentials after password reset', [
-                    'user_id' => $user['id'] ?? null,
-                    'error' => $bumpError->getMessage(),
+            } catch (\Throwable $bumpError) {
+                $this->logException($bumpError, $request, 'Failed to revoke credentials after password reset', [
+                    'user_id' => (int) $user['id'],
+                    'action' => 'password_reset',
                 ]);
             }
             $this->auditLogService->logAuthOperation('password_reset', $user['id'], true, [
@@ -1112,11 +1111,10 @@ class AuthController
             try {
                 $this->authService->incrementTokenVersion((int) $user['id']);
                 $this->mobileDeviceSessionService->revokeAllForUser((int) $user['id'], 'password_change');
-            } catch (\Throwable $bumpError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                // The password change has already committed when revocation fails.
-                $this->logger->warning('Failed to revoke credentials after password change', [
-                    'user_id' => $user['id'] ?? null,
-                    'error' => $bumpError->getMessage(),
+            } catch (\Throwable $bumpError) {
+                $this->logException($bumpError, $request, 'Failed to revoke credentials after password change', [
+                    'user_id' => (int) $user['id'],
+                    'action' => 'password_change',
                 ]);
             }
             $this->auditLogService->logAuthOperation('password_change', $user['id'], true, [
@@ -1777,6 +1775,18 @@ class AuthController
             'avatar_path' => $originalPath,
             'avatar_url' => $url,
         ];
+    }
+
+    private function logException(\Throwable $exception, Request $request, string $message, array $context): void
+    {
+        try {
+            $this->errorLogService?->logException($exception, $request, $context + ['context_message' => $message]);
+        } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Include the persistence failure in the application warning below.
+            $context['logging_error'] = $loggingError->getMessage();
+        }
+
+        $this->logger->warning($message, $context + ['error' => $exception->getMessage()]);
     }
 
     private function logTokenRefreshFailure(Request $request, ?int $userId, string $code): void

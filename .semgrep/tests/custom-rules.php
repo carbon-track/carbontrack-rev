@@ -79,4 +79,14 @@ class ExceptionLoggingRuleFixture
             return null;
         }
     }
+
+    public function allowsOptionalFallbackWithIgnoredVariable()
+    {
+        try {
+            return loadOptionalMetadata();
+        // ok: enforce-errorlogservice-in-catch
+        } catch (\Throwable $ignored) {
+            return null;
+        }
+    }
 }
