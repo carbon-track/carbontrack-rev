@@ -81,7 +81,7 @@ rules:
               - pattern: try { ... } catch ($TYPE $EXP) { ... }
               - metavariable-regex:
                   metavariable: $EXP
-                  regex: '^(?!\$ignore(?:d)?$).*'
+                  regex: '^(?![$]ignore(?:d)?$).*'
           - patterns:
               - pattern: try { ... } catch ($TYPE $EXP) { ... return $RESPONSE; ... }
               - metavariable-pattern:
