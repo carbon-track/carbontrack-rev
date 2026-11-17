@@ -320,7 +320,7 @@ class ProductController
                 $sql = "SELECT * FROM products WHERE id = :id AND deleted_at IS NULL";
                 try {
                     $driver = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
-                } catch (\Throwable $driverError) {
+                } catch (\Throwable $ignore) {
                     $driver = null;
                 }
                 if ($driver !== 'sqlite') {
@@ -1976,7 +1976,7 @@ class ProductController
             }
 
             return $result;
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             return [];
         }
     }
@@ -2202,7 +2202,7 @@ class ProductController
                     $hasColumn = (bool) $stmt->fetch(PDO::FETCH_ASSOC);
                 }
             }
-        } catch (\Throwable $exception) {
+        } catch (\Throwable $ignore) {
             $hasColumn = false;
         }
 
@@ -2546,7 +2546,7 @@ class ProductController
                     }
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             // ignore and fall back to default detected value
         }
 
@@ -2597,7 +2597,7 @@ class ProductController
                     }
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             // ignore and fall back to detected value
         }
 

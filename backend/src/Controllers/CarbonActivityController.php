@@ -551,7 +551,7 @@ class CarbonActivityController
                             'new_sort_order' => $activity->sort_order
                         ];
                     }
-                } catch (\Throwable $e) {
+                } catch (\Throwable $ignore) {
                     // Skip update errors to allow partial updates in test environment without DB
                     continue;
                 }

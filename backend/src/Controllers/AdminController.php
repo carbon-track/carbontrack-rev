@@ -1012,7 +1012,7 @@ $sql = "
             try {
                 $badge['icon_url'] = $this->r2Service->getPublicUrl($badge['icon_path']);
                 $badge['icon_presigned_url'] = $this->r2Service->generatePresignedUrl($badge['icon_path'], 600);
-            } catch (\Throwable $e) {
+            } catch (\Throwable $ignore) {
                 // ignore formatting failures for optional assets
             }
         }
@@ -1305,7 +1305,7 @@ $sql = "
             $created = new DateTimeImmutable((string) $timestamp, $timezone);
             $now = new DateTimeImmutable('now', $timezone);
             return max(0, (int) $created->diff($now)->format('%a'));
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             return 0;
         }
     }
@@ -1340,7 +1340,7 @@ $sql = "
     {
         try {
             $driver = (string) $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             $driver = null;
         }
 
@@ -1361,7 +1361,7 @@ $sql = "
             if ($stmt && $stmt->execute([$column])) {
                 return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
             }
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             // ignore detection errors
         }
 

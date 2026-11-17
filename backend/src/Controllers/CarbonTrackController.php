@@ -249,6 +249,7 @@ class CarbonTrackController
             try {
                 $calc = $this->carbonCalculator->calculateCarbonSavings($data['activity_id'], $amountValue, $activity);
             } catch (\Throwable $e) {
+                $this->logControllerException($e, $request, 'CarbonTrackController::submitRecord carbon calculation failed: ' . $e->getMessage());
                 return $this->json($response, ['error' => 'calc_failed', 'message' => $e->getMessage()], 500);
             }
             $carbonSaved = $calc['carbon_savings'] ?? 0;
@@ -484,7 +485,7 @@ class CarbonTrackController
                     $streakData = $this->checkinService->getUserStreakStats((int) $user['id']);
                     $checkinStats['current_streak'] = (int)($streakData['current_streak_days'] ?? 0);
                     $checkinStats['longest_streak'] = (int)($streakData['longest_streak_days'] ?? 0);
-                } catch (\Throwable $e) {
+                } catch (\Throwable $ignore) {
                      // 忽略错误，以免影响主要返回
                 }
             }
@@ -524,7 +525,7 @@ class CarbonTrackController
                     'current_month' => $currentMonth
                 ]);
                 $monthlyAchievements = $achievementsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            } catch (\Throwable $e) {
+            } catch (\Throwable $ignore) {
                 // ignore achievement errors in non-MySQL test environments
             }
 
@@ -559,6 +560,7 @@ class CarbonTrackController
             ]);
 
         } catch (\Exception $e) {
+            $this->logControllerException($e, $request, 'CarbonTrackController::submitRecord failed: ' . $e->getMessage());
             return $this->json($response, ['error' => self::ERR_INTERNAL, 'exception' => $e->getMessage(), 'trace' => $e->getFile().':'.$e->getLine()], 500);
         }
     }

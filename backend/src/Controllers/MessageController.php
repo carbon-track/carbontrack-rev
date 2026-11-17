@@ -99,7 +99,7 @@ class MessageController
                 if ($colStmt && $colStmt->fetch()) {
                     $hasPriority = true;
                 }
-            } catch (\Throwable $_) {
+            } catch (\Throwable $ignore) {
                 // ignore - absence of column will be handled
                 $hasPriority = false;
             }
@@ -953,7 +953,7 @@ $auditPayload = [
                 if ($countStmt !== false) {
                     $total = (int) $countStmt->fetchColumn();
                 }
-            } catch (\Throwable $countError) {
+            } catch (\Throwable $ignore) {
                 $total = 0;
             }
 
@@ -966,7 +966,7 @@ $auditPayload = [
                     $listStmt->execute();
                     $rows = $listStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
                 }
-            } catch (\Throwable $listError) {
+            } catch (\Throwable $ignore) {
                 $rows = [];
             }
 
@@ -1353,7 +1353,7 @@ $auditPayload = [
                 'action' => 'sendSystemMessage',
             ], $context);
             return $this->errorLogService->logError('broadcast_error', $message, $request, $payload);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             return null;
         }
     }
@@ -1385,7 +1385,7 @@ $auditPayload = [
         try {
             $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             return $encoded === false ? null : $encoded;
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             return null;
         }
     }
@@ -1506,7 +1506,7 @@ $auditPayload = [
                         if (hash('sha256', $title . '||' . $contentValue) === $contentHash) {
                             $filtered[] = $row;
                         }
-                    } catch (\Throwable $e) {
+                    } catch (\Throwable $ignore) {
                         $filtered = $rows;
                         break;
                     }
@@ -1517,7 +1517,7 @@ $auditPayload = [
             }
 
             return $rows;
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             return [];
         }
     }
@@ -1643,7 +1643,7 @@ $auditPayload = [
 
             $result['user_ids'] = array_values($collectedIds);
             $result['invalid_ids'] = array_values(array_diff($sanitized, $result['user_ids']));
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             $result['error'] = 'Failed to resolve target users';
             $result['status'] = 500;
         }
@@ -1704,7 +1704,7 @@ $auditPayload = [
                 $result['user_ids'][] = $id;
                 $result['records'][$id] = $this->normalizeUserRow($row);
             }
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             // Swallow exception and return what we have
         }
 
@@ -1863,7 +1863,7 @@ $auditPayload = [
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             return [];
         }
     }
@@ -2310,7 +2310,7 @@ $auditPayload = [
                 $result[$uid] = $username;
             }
             return $result;
-        } catch (\Throwable $e) {
+        } catch (\Throwable $ignore) {
             return [];
         }
     }
