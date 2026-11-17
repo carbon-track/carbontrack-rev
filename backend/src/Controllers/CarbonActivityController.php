@@ -551,8 +551,14 @@ class CarbonActivityController
                             'new_sort_order' => $activity->sort_order
                         ];
                     }
-                } catch (\Throwable $ignore) {
-                    // Skip update errors to allow partial updates in test environment without DB
+                } catch (\Throwable $e) {
+                    $this->logExceptionWithFallback(
+                        $e,
+                        $request,
+                        'CarbonActivityController::updateSortOrders failed for activity '
+                            . (string) $item['id'] . ': ' . $e->getMessage()
+                    );
+                    // Continue updating other activities when one update fails.
                     continue;
                 }
             }

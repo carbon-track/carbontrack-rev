@@ -71,17 +71,11 @@ jobs:
             exit 0
           fi
 
-          BASELINE_ARG=""
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ -n "${{ github.event.pull_request.base.sha }}" ]; then
-            BASELINE_ARG="--baseline-commit=${{ github.event.pull_request.base.sha }}"
-          elif [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ]; then
-            BASELINE_ARG="--baseline-commit=${{ github.event.before }}"
-          fi
-
+          # Scan all backend files on every event, including pull requests.
+          # Baseline rescans can exit 2 before returning a valid SARIF result.
           set +e
           semgrep scan --pro backend \
             --config=".semgrep/custom-rules.yml" \
-            $BASELINE_ARG \
             --error \
             --sarif \
             --output=semgrep-custom.sarif
