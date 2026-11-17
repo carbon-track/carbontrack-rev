@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Controllers;
 
+use CarbonTrack\Services\DatabaseService;
+use CarbonTrack\Support\DatabaseRows;
+use Illuminate\Database\Connection;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use CarbonTrack\Services\AuthService;
@@ -22,7 +25,6 @@ use CarbonTrack\Support\ClientIpResolver;
 use CarbonTrack\Support\Environment;
 use CarbonTrack\Support\Uuid;
 use Monolog\Logger;
-use PDO;
 
 class AuthController
 {
@@ -37,7 +39,7 @@ class AuthController
     private MessageService $messageService;
    private ?CloudflareR2Service $r2Service;
    private Logger $logger;
-   private PDO $db;
+   private Connection $db;
    private RegionService $regionService;
     private ?CheckinService $checkinService;
     private UserProfileViewService $userProfileViewService;
@@ -55,7 +57,7 @@ class AuthController
         MessageService $messageService,
         ?CloudflareR2Service $r2Service,
         Logger $logger,
-        PDO $db,
+        Connection $db,
         ?ErrorLogService $errorLogService,
         RegionService $regionService,
         ?CheckinService $checkinService = null,
@@ -176,18 +178,16 @@ class AuthController
                     'code' => $challenge['code']
                 ], 400);
             }
-            $stmt = $this->db->prepare('SELECT id FROM users WHERE username = ? AND deleted_at IS NULL');
-            $stmt->execute([$data['username']]);
-            if ($stmt->fetch()) {
+            $queryRow = $this->db->selectOne('SELECT id FROM users WHERE username = ? AND deleted_at IS NULL', [$data['username']]);
+            if (DatabaseRows::one($queryRow)) {
                 return $this->jsonResponse($response, [
                     'success' => false,
                     'message' => 'Username already exists',
                     'code' => 'USERNAME_EXISTS'
                 ], 409);
             }
-            $stmt = $this->db->prepare('SELECT id FROM users WHERE email = ? AND deleted_at IS NULL');
-            $stmt->execute([$data['email']]);
-            if ($stmt->fetch()) {
+            $queryRow = $this->db->selectOne('SELECT id FROM users WHERE email = ? AND deleted_at IS NULL', [$data['email']]);
+            if (DatabaseRows::one($queryRow)) {
                 return $this->jsonResponse($response, [
                     'success' => false,
                     'message' => 'Email already exists',
@@ -211,22 +211,17 @@ class AuthController
                 $name = trim((string)$data['new_school_name']);
                 if ($name !== '') {
                     // 先尝试查重（忽略大小写）
-                    $stmt = $this->db->prepare('SELECT id FROM schools WHERE LOWER(name) = LOWER(?) AND deleted_at IS NULL LIMIT 1');
-                    $stmt->execute([$name]);
-                    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $row = DatabaseRows::one($this->db->selectOne('SELECT id FROM schools WHERE LOWER(name) = LOWER(?) AND deleted_at IS NULL LIMIT 1', [$name]));
                     if ($row) {
                         $schoolId = (int)$row['id'];
                     } else {
-                        $ins = $this->db->prepare('INSERT INTO schools (name, created_at, updated_at) VALUES (?, ?, ?)');
                         $now = date('Y-m-d H:i:s');
-                        $ins->execute([$name, $now, $now]);
-                        $schoolId = (int)$this->db->lastInsertId();
+                        $schoolId = DatabaseService::insertGetId($this->db, 'INSERT INTO schools (name, created_at, updated_at) VALUES (?, ?, ?)', [$name, $now, $now]);
                     }
                 }
             } elseif (!empty($schoolId)) {
-                $stmt = $this->db->prepare('SELECT id FROM schools WHERE id = ? AND deleted_at IS NULL');
-                $stmt->execute([$schoolId]);
-                if (!$stmt->fetch()) {
+                $queryRow = $this->db->selectOne('SELECT id FROM schools WHERE id = ? AND deleted_at IS NULL', [$schoolId]);
+                if (!DatabaseRows::one($queryRow)) {
                     return $this->jsonResponse($response, [
                         'success' => false,
                         'message' => 'Invalid school ID',
@@ -239,8 +234,7 @@ class AuthController
             // 不再接受/存储 real_name 或 class_name，保持向后兼容：如果客户端仍发送则忽略
             $userUuid = Uuid::generateV4();
             $now = date('Y-m-d H:i:s');
-            $stmt = $this->db->prepare('INSERT INTO users (uuid, username, email, password, school_id, region_code, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $stmt->execute([
+            $userId = DatabaseService::insertGetId($this->db, 'INSERT INTO users (uuid, username, email, password, school_id, region_code, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [
                 $userUuid,
                 $data['username'],
                 $data['email'],
@@ -251,7 +245,6 @@ class AuthController
                 $now,
                 $now
             ]);
-            $userId = (int)$this->db->lastInsertId();
             $this->auditLogService->logAuthOperation('register', $userId, true, [
                 'request_data' => [
                     'username' => $data['username'],
@@ -384,9 +377,7 @@ class AuthController
             }
             $isEmail = filter_var($identifier, FILTER_VALIDATE_EMAIL) !== false;
             $field = $isEmail ? 'u.email' : 'u.username';
-            $stmt = $this->db->prepare("SELECT u.*, s.name as school_name, a.file_path as avatar_path FROM users u LEFT JOIN schools s ON u.school_id = s.id LEFT JOIN avatars a ON u.avatar_id = a.id WHERE {$field} = ? AND u.deleted_at IS NULL");
-            $stmt->execute([$identifier]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            $user = DatabaseRows::one($this->db->selectOne("SELECT u.*, s.name as school_name, a.file_path as avatar_path FROM users u LEFT JOIN schools s ON u.school_id = s.id LEFT JOIN avatars a ON u.avatar_id = a.id WHERE {$field} = ? AND u.deleted_at IS NULL", [$identifier])) ?: null;
             $passwordField = null;
             if ($user) {
                 if (!empty($user['password_hash'])) {
@@ -421,14 +412,12 @@ class AuthController
                 ]);
             }
             try {
-                $upd = $this->db->prepare('UPDATE users SET lastlgn = NOW() WHERE id = ?');
-                $upd->execute([$user['id']]);
+                $this->db->statement('UPDATE users SET lastlgn = CURRENT_TIMESTAMP WHERE id = ?', [$user['id']]);
             } catch (\Throwable $exception) {
                 // Older schemas use last_login_at instead of lastlgn.
                 $this->logException($exception, $request, 'Retrying last login update with legacy column', ['user_id' => $user['id']]);
                 try {
-                    $upd = $this->db->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?');
-                    $upd->execute([$user['id']]);
+                    $this->db->statement('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?', [$user['id']]);
                 } catch (\Throwable $exception) {
                     $this->logException($exception, $request, 'Failed to update last login time', ['user_id' => $user['id']]);
                 }
@@ -667,9 +656,7 @@ class AuthController
                 ], 400);
             }
 
-            $stmt = $this->db->prepare('SELECT id, username, email, email_verified_at, verification_last_sent_at, verification_send_count FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
-            $stmt->execute([$emailRaw]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            $user = DatabaseRows::one($this->db->selectOne('SELECT id, username, email, email_verified_at, verification_last_sent_at, verification_send_count FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1', [$emailRaw])) ?: null;
 
             if (!$user) {
                 return $this->jsonResponse($response, [
@@ -751,8 +738,7 @@ class AuthController
             }
 
             if ($mode === 'token') {
-                $stmt = $this->db->prepare('SELECT id, username, email, email_verified_at, verification_code_expires_at FROM users WHERE verification_token = ? AND deleted_at IS NULL LIMIT 1');
-                $stmt->execute([$token]);
+                $queryRow = $this->db->selectOne('SELECT id, username, email, email_verified_at, verification_code_expires_at FROM users WHERE verification_token = ? AND deleted_at IS NULL LIMIT 1', [$token]);
             } else {
                 $challenge = $this->verifyClientChallenge($request, $data, 'auth.verify_email');
                 if (!$challenge['success']) {
@@ -763,11 +749,10 @@ class AuthController
                     ], 400);
                 }
 
-                $stmt = $this->db->prepare('SELECT id, username, email, email_verified_at, verification_code, verification_code_expires_at, verification_attempts FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
-                $stmt->execute([$emailInput]);
+                $queryRow = $this->db->selectOne('SELECT id, username, email, email_verified_at, verification_code, verification_code_expires_at, verification_attempts FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1', [$emailInput]);
             }
 
-            $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            $user = DatabaseRows::one($queryRow) ?: null;
             if (!$user) {
                 return $this->jsonResponse($response, [
                     'success' => false,
@@ -888,9 +873,7 @@ class AuthController
                     'code' => 'UNAUTHORIZED'
                 ], 401);
             }
-            $stmt = $this->db->prepare('SELECT u.*, s.name as school_name, a.file_path as avatar_path FROM users u LEFT JOIN schools s ON u.school_id = s.id LEFT JOIN avatars a ON u.avatar_id = a.id WHERE u.id = ? AND u.deleted_at IS NULL');
-            $stmt->execute([$user['id']]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $row = DatabaseRows::one($this->db->selectOne('SELECT u.*, s.name as school_name, a.file_path as avatar_path FROM users u LEFT JOIN schools s ON u.school_id = s.id LEFT JOIN avatars a ON u.avatar_id = a.id WHERE u.id = ? AND u.deleted_at IS NULL', [$user['id']]));
             if (!$row) {
                 return $this->jsonResponse($response, [
                     'success' => false,
@@ -899,9 +882,7 @@ class AuthController
                 ], 404);
             }
             // Align with messages schema: receiver_id holds the recipient user ID
-            $stmt = $this->db->prepare('SELECT COUNT(*) FROM messages WHERE receiver_id = ? AND is_read = 0 AND deleted_at IS NULL');
-            $stmt->execute([$user['id']]);
-            $unread = (int)$stmt->fetchColumn();
+            $unread = (int)DatabaseRows::scalar($this->db->selectOne('SELECT COUNT(*) FROM messages WHERE receiver_id = ? AND is_read = 0 AND deleted_at IS NULL', [$user['id']]));
             $userData = $this->formatUserPayload($row);
             $userData['unread_messages'] = $unread;
             return $this->jsonResponse($response, [
@@ -937,14 +918,11 @@ class AuthController
                     'code' => $challenge['code']
                 ], 400);
             }
-            $stmt = $this->db->prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL');
-            $stmt->execute([$data['email']]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            $user = DatabaseRows::one($this->db->selectOne('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL', [$data['email']])) ?: null;
             if ($user) {
                 $resetToken = bin2hex(random_bytes(32));
                 $expiresAt = date('Y-m-d H:i:s', time() + 3600);
-                $upd = $this->db->prepare('UPDATE users SET reset_token = ?, reset_token_expires_at = ?, updated_at = NOW() WHERE id = ?');
-                $upd->execute([$resetToken, $expiresAt, $user['id']]);
+                $this->db->statement('UPDATE users SET reset_token = ?, reset_token_expires_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [$resetToken, $expiresAt, $user['id']]);
                 try {
                     $this->emailService->sendPasswordResetEmail((string)$user['email'], (string)$user['username'], $resetToken);
                 } catch (\Throwable $e) {
@@ -990,9 +968,7 @@ class AuthController
                     'code' => 'PASSWORD_MISMATCH'
                 ], 400);
             }
-            $stmt = $this->db->prepare('SELECT * FROM users WHERE reset_token = ? AND reset_token_expires_at > NOW() AND deleted_at IS NULL');
-            $stmt->execute([$data['token']]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            $user = DatabaseRows::one($this->db->selectOne('SELECT * FROM users WHERE reset_token = ? AND reset_token_expires_at > CURRENT_TIMESTAMP AND deleted_at IS NULL', [$data['token']])) ?: null;
             if (!$user) {
                 return $this->jsonResponse($response, [
                     'success' => false,
@@ -1002,17 +978,14 @@ class AuthController
             }
             $hashed = password_hash((string)$data['password'], PASSWORD_DEFAULT);
             try {
-                $upd = $this->db->prepare('UPDATE users SET password_hash = ?, password = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW() WHERE id = ?');
-                $upd->execute([$hashed, $hashed, $user['id']]);
+                $this->db->statement('UPDATE users SET password_hash = ?, password = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [$hashed, $hashed, $user['id']]);
             } catch (\Throwable $exception) {
                 $this->logException($exception, $request, 'Retrying password reset with password_hash column', ['user_id' => $user['id']]);
                 try {
-                    $upd = $this->db->prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW() WHERE id = ?');
-                    $upd->execute([$hashed, $user['id']]);
+                    $this->db->statement('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [$hashed, $user['id']]);
                 } catch (\Throwable $exception) {
                     $this->logException($exception, $request, 'Retrying password reset with password column', ['user_id' => $user['id']]);
-                    $upd = $this->db->prepare('UPDATE users SET password = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW() WHERE id = ?');
-                    $upd->execute([$hashed, $user['id']]);
+                    $this->db->statement('UPDATE users SET password = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [$hashed, $user['id']]);
                 }
             }
             // W-201: invalidate every previously issued JWT for this account
@@ -1074,9 +1047,7 @@ class AuthController
                     'code' => 'PASSWORD_MISMATCH'
                 ], 400);
             }
-            $stmt = $this->db->prepare('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL');
-            $stmt->execute([$user['id']]);
-            $current = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            $current = DatabaseRows::one($this->db->selectOne('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL', [$user['id']])) ?: null;
             if (!$current) {
                 return $this->jsonResponse($response, [
                     'success' => false,
@@ -1094,17 +1065,14 @@ class AuthController
             }
             $hashed = password_hash((string)$data['new_password'], PASSWORD_DEFAULT);
             try {
-                $upd = $this->db->prepare('UPDATE users SET password_hash = ?, password = ?, updated_at = NOW() WHERE id = ?');
-                $upd->execute([$hashed, $hashed, $user['id']]);
+                $this->db->statement('UPDATE users SET password_hash = ?, password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [$hashed, $hashed, $user['id']]);
             } catch (\Throwable $exception) {
                 $this->logException($exception, $request, 'Retrying password change with password_hash column', ['user_id' => $user['id']]);
                 try {
-                    $upd = $this->db->prepare('UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?');
-                    $upd->execute([$hashed, $user['id']]);
+                    $this->db->statement('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [$hashed, $user['id']]);
                 } catch (\Throwable $exception) {
                     $this->logException($exception, $request, 'Retrying password change with password column', ['user_id' => $user['id']]);
-                    $upd = $this->db->prepare('UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?');
-                    $upd->execute([$hashed, $user['id']]);
+                    $this->db->statement('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [$hashed, $user['id']]);
                 }
             }
             try {
@@ -1480,8 +1448,7 @@ class AuthController
         $now = date('Y-m-d H:i:s');
         $expiresAt = (new \DateTimeImmutable($now))->modify('+' . $ttlMinutes . ' minutes')->format('Y-m-d H:i:s');
 
-        $stmt = $this->db->prepare('UPDATE users SET verification_code = ?, verification_token = ?, verification_code_expires_at = ?, verification_attempts = 0, verification_send_count = ?, verification_last_sent_at = ?, updated_at = ? WHERE id = ?');
-        $stmt->execute([
+        $this->db->statement('UPDATE users SET verification_code = ?, verification_token = ?, verification_code_expires_at = ?, verification_attempts = 0, verification_send_count = ?, verification_last_sent_at = ?, updated_at = ? WHERE id = ?', [
             $code,
             $token,
             $expiresAt,
@@ -1522,8 +1489,7 @@ class AuthController
     private function markEmailVerified(int $userId): void
     {
         $now = date('Y-m-d H:i:s');
-        $stmt = $this->db->prepare('UPDATE users SET email_verified_at = ?, verification_code = NULL, verification_token = NULL, verification_code_expires_at = NULL, verification_attempts = 0, verification_send_count = 0, verification_last_sent_at = NULL, updated_at = ? WHERE id = ?');
-        $stmt->execute([$now, $now, $userId]);
+        $this->db->statement('UPDATE users SET email_verified_at = ?, verification_code = NULL, verification_token = NULL, verification_code_expires_at = NULL, verification_attempts = 0, verification_send_count = 0, verification_last_sent_at = NULL, updated_at = ? WHERE id = ?', [$now, $now, $userId]);
     }
 
     private function isTurnstileVerificationSuccessful($token): bool
@@ -1649,22 +1615,19 @@ class AuthController
 
     private function updateVerificationAttempts(int $userId, int $attempts): void
     {
-        $stmt = $this->db->prepare('UPDATE users SET verification_attempts = ?, updated_at = ? WHERE id = ?');
-        $stmt->execute([$attempts, date('Y-m-d H:i:s'), $userId]);
+        $this->db->statement('UPDATE users SET verification_attempts = ?, updated_at = ? WHERE id = ?', [$attempts, date('Y-m-d H:i:s'), $userId]);
     }
 
     private function findUserDetailed(int $userId): ?array
     {
-        $stmt = $this->db->prepare("
+        $row = DatabaseRows::one($this->db->selectOne("
             SELECT u.*, s.name AS school_name, a.file_path AS avatar_path
             FROM users u
             LEFT JOIN schools s ON u.school_id = s.id
             LEFT JOIN avatars a ON u.avatar_id = a.id
             WHERE u.id = ? AND u.deleted_at IS NULL
             LIMIT 1
-        ");
-        $stmt->execute([$userId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        ", [$userId]));
         if (!$row) {
             return null;
         }
@@ -1674,16 +1637,14 @@ class AuthController
 
     private function findUserDetailedByUuid(string $userUuid): ?array
     {
-        $stmt = $this->db->prepare("
+        $row = DatabaseRows::one($this->db->selectOne("
             SELECT u.*, s.name AS school_name, a.file_path AS avatar_path
             FROM users u
             LEFT JOIN schools s ON u.school_id = s.id
             LEFT JOIN avatars a ON u.avatar_id = a.id
             WHERE u.uuid = ? AND u.deleted_at IS NULL
             LIMIT 1
-        ");
-        $stmt->execute([$userUuid]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        ", [$userUuid]));
         if (!$row) {
             return null;
         }

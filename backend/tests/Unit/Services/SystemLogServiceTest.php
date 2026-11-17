@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Tests\Unit\Services;
 
+use CarbonTrack\Tests\Support\DatabaseQueryResponse;
+use CarbonTrack\Tests\Support\DatabaseConnectionStub;
+use CarbonTrack\Tests\Support\DatabaseFixture;
 use CarbonTrack\Services\SystemLogService;
 use Monolog\Logger;
-use PDO;
 use PHPUnit\Framework\TestCase;
 
 class SystemLogServiceTest extends TestCase
@@ -121,10 +123,10 @@ class SystemLogServiceTest extends TestCase
         $_ENV['DISABLE_SYSTEM_LOG_WRITES'] = 'true';
         $_SERVER['DISABLE_SYSTEM_LOG_WRITES'] = 'true';
 
-        $pdo = $this->createMock(PDO::class);
-        $pdo->expects($this->never())->method('prepare');
+        $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
+        $connection->expects($this->never())->method('responseFor');
 
-        $service = new SystemLogService($pdo, new Logger('test'));
+        $service = new SystemLogService($connection, new Logger('test'));
 
         $result = $service->log([
             'request_id' => 'req-1',
@@ -142,13 +144,13 @@ class SystemLogServiceTest extends TestCase
         $_ENV['DISABLE_SYSTEM_LOG_WRITES'] = 'true';
         $_SERVER['DISABLE_SYSTEM_LOG_WRITES'] = 'true';
 
-        $pdo = $this->createMock(PDO::class);
-        $stmt = $this->createMock(\PDOStatement::class);
-        $stmt->method('execute')->willReturn(true);
-        $pdo->expects($this->once())->method('prepare')->willReturn($stmt);
-        $pdo->method('lastInsertId')->willReturn('1');
+        $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['generatedKey', 'responseFor'])->getMock();
+        $stmt = $this->createMock(DatabaseQueryResponse::class);
+        $stmt->method('bindings')->willReturn(true);
+        $connection->expects($this->once())->method('responseFor')->willReturn($stmt);
+        $connection->method('generatedKey')->willReturn('1');
 
-        $service = new SystemLogService($pdo, new Logger('test'));
+        $service = new SystemLogService($connection, new Logger('test'));
 
         $result = $service->log([
             'request_id' => 'req-1',
@@ -161,9 +163,9 @@ class SystemLogServiceTest extends TestCase
 
     private function makeService(): SystemLogService
     {
-        $pdo = new PDO('sqlite::memory:');
+        $connection = DatabaseFixture::sqlite();
         $logger = new Logger('test');
-        return new SystemLogService($pdo, $logger);
+        return new SystemLogService($connection, $logger);
     }
 
     private function invokeBuildServerMeta(SystemLogService $service, array $server, array $context): string

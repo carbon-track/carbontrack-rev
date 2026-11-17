@@ -9,7 +9,6 @@ use CarbonTrack\Models\UserBadge;
 use CarbonTrack\Models\User;
 use CarbonTrack\Support\SyntheticRequestFactory;
 use Illuminate\Database\ConnectionInterface;
-use PDO;
 use DateTimeImmutable;
 use DateTimeZone;
 use CarbonTrack\Services\CheckinService;
@@ -340,7 +339,7 @@ class BadgeService
 
         $daysFromSql = null;
         try {
-            $diffRows = $this->connection->select("SELECT TIMESTAMPDIFF(DAY, created_at, NOW()) AS diff_days FROM users WHERE id = :user_id LIMIT 1", ['user_id' => $userId]);
+            $diffRows = $this->connection->select("SELECT TIMESTAMPDIFF(DAY, created_at, CURRENT_TIMESTAMP) AS diff_days FROM users WHERE id = :user_id LIMIT 1", ['user_id' => $userId]);
             if (!empty($diffRows)) {
                 $diffRow = (array) $diffRows[0];
                 $rawDays = $diffRow['diff_days'] ?? ($diffRow['days'] ?? ($diffRow['DIFF_DAYS'] ?? null));

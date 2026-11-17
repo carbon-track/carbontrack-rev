@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Tests\Unit\Services;
 
+use Illuminate\Database\Connection;
+use CarbonTrack\Services\DatabaseService;
+use CarbonTrack\Support\DatabaseRows;
+use CarbonTrack\Tests\Support\DatabaseFixture;
 use CarbonTrack\Models\UserPasskey;
 use CarbonTrack\Models\WebauthnChallenge;
 use CarbonTrack\Services\AuditLogService;
@@ -17,12 +21,11 @@ use CarbonTrack\Services\Webauthn\Base64Url;
 use CarbonTrack\Services\WebauthnProviderInterface;
 use CarbonTrack\Tests\Integration\TestSchemaBuilder;
 use Monolog\Logger;
-use PDO;
 use PHPUnit\Framework\TestCase;
 
 class PasskeyServiceTest extends TestCase
 {
-    private PDO $pdo;
+    private Connection $connection;
     private PasskeyConfig $config;
     private PasskeyService $service;
     private AuditLogService $auditLogService;
@@ -32,10 +35,8 @@ class PasskeyServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        TestSchemaBuilder::init($this->pdo);
+        $this->connection = DatabaseFixture::sqlite();
+        TestSchemaBuilder::init($this->connection);
 
         $this->config = new PasskeyConfig([
             'PASSKEYS_ENABLED' => 'true',
@@ -77,9 +78,7 @@ class PasskeyServiceTest extends TestCase
         $this->assertTrue($result['integration']['available']);
         $this->assertSame('native', $result['integration']['implementation']);
 
-        $challengeStmt = $this->pdo->prepare('SELECT * FROM webauthn_challenges WHERE challenge_id = :challenge_id');
-        $challengeStmt->execute(['challenge_id' => $result['challenge_id']]);
-        $stored = $challengeStmt->fetch(PDO::FETCH_ASSOC);
+        $stored = DatabaseRows::one($this->connection->selectOne('SELECT * FROM webauthn_challenges WHERE challenge_id = :challenge_id', ['challenge_id' => $result['challenge_id']]));
 
         $this->assertNotFalse($stored);
         $this->assertSame('registration', $stored['flow_type']);
@@ -111,7 +110,7 @@ class PasskeyServiceTest extends TestCase
         $this->assertSame($expectedCredentialId, $result['credential_id']);
         $this->assertSame(0, $result['sign_count']);
 
-        $stored = $this->pdo->query('SELECT * FROM user_passkeys WHERE credential_id = "' . $expectedCredentialId . '"')->fetch(PDO::FETCH_ASSOC);
+        $stored = DatabaseRows::one($this->connection->selectOne('SELECT * FROM user_passkeys WHERE credential_id = "' . $expectedCredentialId . '"'));
         $this->assertIsArray($stored);
         $publicKey = json_decode((string) $stored['public_key'], true);
         $this->assertSame('EC2', $publicKey['kty']);
@@ -144,7 +143,7 @@ class PasskeyServiceTest extends TestCase
         $expectedCredentialId = $this->base64UrlEncode($credentialIdBytes);
         $this->assertSame($expectedCredentialId, $result['credential_id']);
 
-        $stored = $this->pdo->query('SELECT public_key FROM user_passkeys WHERE credential_id = "' . $expectedCredentialId . '"')->fetch(PDO::FETCH_ASSOC);
+        $stored = DatabaseRows::one($this->connection->selectOne('SELECT public_key FROM user_passkeys WHERE credential_id = "' . $expectedCredentialId . '"'));
         $this->assertIsArray($stored);
         $publicKey = json_decode((string) $stored['public_key'], true);
         $this->assertSame('EC2', $publicKey['kty']);
@@ -174,7 +173,7 @@ class PasskeyServiceTest extends TestCase
             ),
         ]);
 
-        $stored = $this->pdo->query('SELECT public_key FROM user_passkeys WHERE credential_id = "' . $result['credential_id'] . '"')->fetch(PDO::FETCH_ASSOC);
+        $stored = DatabaseRows::one($this->connection->selectOne('SELECT public_key FROM user_passkeys WHERE credential_id = "' . $result['credential_id'] . '"'));
         $this->assertIsArray($stored);
         $publicKey = json_decode((string) $stored['public_key'], true);
         $this->assertSame($x, Base64Url::decode((string) $publicKey['x']));
@@ -231,7 +230,7 @@ class PasskeyServiceTest extends TestCase
         $this->assertSame(2, $result['passkey']['sign_count']);
         $this->assertNotEmpty($result['passkey']['last_used_at']);
 
-        $stored = $this->pdo->query('SELECT sign_count, last_used_at FROM user_passkeys WHERE credential_id = "' . $credentialId . '"')->fetch(PDO::FETCH_ASSOC);
+        $stored = DatabaseRows::one($this->connection->selectOne('SELECT sign_count, last_used_at FROM user_passkeys WHERE credential_id = "' . $credentialId . '"'));
         $this->assertSame('2', (string) $stored['sign_count']);
         $this->assertNotEmpty($stored['last_used_at']);
     }
@@ -402,9 +401,7 @@ class PasskeyServiceTest extends TestCase
     public function testUpdateLabelForUserTrimsValueAndWritesAuditEvent(): void
     {
         $this->insertExistingPasskey();
-        $passkeyId = (int) $this->pdo
-            ->query("SELECT id FROM user_passkeys WHERE credential_id = 'existing-credential'")
-            ->fetchColumn();
+        $passkeyId = (int) DatabaseRows::scalar($this->connection->selectOne("SELECT id FROM user_passkeys WHERE credential_id = 'existing-credential'"));
 
         $expectedLabel = str_repeat('A', 100);
         $this->auditLogService->expects($this->once())
@@ -422,30 +419,22 @@ class PasskeyServiceTest extends TestCase
         $updated = $this->service->updateLabelForUser($this->userFixture(), $passkeyId, str_repeat('A', 120));
 
         $this->assertSame($expectedLabel, $updated['label']);
-        $storedLabel = $this->pdo
-            ->query("SELECT label FROM user_passkeys WHERE id = {$passkeyId}")
-            ->fetchColumn();
+        $storedLabel = DatabaseRows::scalar($this->connection->selectOne("SELECT label FROM user_passkeys WHERE id = {$passkeyId}"));
         $this->assertSame($expectedLabel, $storedLabel);
     }
 
     public function testUpdateLabelForUserSkipsNoOpUpdates(): void
     {
         $this->insertExistingPasskey();
-        $passkeyId = (int) $this->pdo
-            ->query("SELECT id FROM user_passkeys WHERE credential_id = 'existing-credential'")
-            ->fetchColumn();
-        $originalUpdatedAt = (string) $this->pdo
-            ->query("SELECT updated_at FROM user_passkeys WHERE id = {$passkeyId}")
-            ->fetchColumn();
+        $passkeyId = (int) DatabaseRows::scalar($this->connection->selectOne("SELECT id FROM user_passkeys WHERE credential_id = 'existing-credential'"));
+        $originalUpdatedAt = (string) DatabaseRows::scalar($this->connection->selectOne("SELECT updated_at FROM user_passkeys WHERE id = {$passkeyId}"));
 
         $this->auditLogService->expects($this->never())->method('log');
 
         $updated = $this->service->updateLabelForUser($this->userFixture(), $passkeyId, '  Existing laptop  ');
 
         $this->assertSame('Existing laptop', $updated['label']);
-        $storedUpdatedAt = (string) $this->pdo
-            ->query("SELECT updated_at FROM user_passkeys WHERE id = {$passkeyId}")
-            ->fetchColumn();
+        $storedUpdatedAt = (string) DatabaseRows::scalar($this->connection->selectOne("SELECT updated_at FROM user_passkeys WHERE id = {$passkeyId}"));
         $this->assertSame($originalUpdatedAt, $storedUpdatedAt);
     }
 
@@ -453,11 +442,8 @@ class PasskeyServiceTest extends TestCase
     {
         $this->insertPasskeyForUser(1, 'admin-credential', 'Admin Laptop', 2, '2026-03-10 08:00:00');
 
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO users (username, email, password, school_id, status, points, is_admin, uuid)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        );
-        $stmt->execute([
+        $bobId = DatabaseService::insertGetId($this->connection, "INSERT INTO users (username, email, password, school_id, status, points, is_admin, uuid)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
             'bob',
             'bob@example.com',
             password_hash('password123', PASSWORD_BCRYPT),
@@ -467,7 +453,6 @@ class PasskeyServiceTest extends TestCase
             0,
             '550e8400-e29b-41d4-a716-4466554400bb',
         ]);
-        $bobId = (int) $this->pdo->lastInsertId();
         $this->insertPasskeyForUser($bobId, 'bob-credential', 'Bob Phone', 9, '2026-03-10 09:00:00', true);
 
         $result = $this->service->listForAdmin(1, [
@@ -491,11 +476,8 @@ class PasskeyServiceTest extends TestCase
         $this->insertPasskeyForUser(1, 'admin-credential', 'Admin Laptop', 2, gmdate('Y-m-d H:i:s', strtotime('-2 days')));
         $this->insertPasskeyForUser(1, 'admin-credential-2', 'Admin Phone', 4, gmdate('Y-m-d H:i:s', strtotime('-18 days')));
 
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO users (username, email, password, school_id, status, points, is_admin, uuid)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        );
-        $stmt->execute([
+        $deletedUserId = DatabaseService::insertGetId($this->connection, "INSERT INTO users (username, email, password, school_id, status, points, is_admin, uuid)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
             'retired-user',
             'retired@example.com',
             password_hash('password123', PASSWORD_BCRYPT),
@@ -505,18 +487,14 @@ class PasskeyServiceTest extends TestCase
             0,
             '550e8400-e29b-41d4-a716-4466554400bc',
         ]);
-        $deletedUserId = (int) $this->pdo->lastInsertId();
-        $this->pdo->prepare('UPDATE users SET deleted_at = ? WHERE id = ?')
-            ->execute([gmdate('Y-m-d H:i:s', strtotime('-1 day')), $deletedUserId]);
+        $this->connection->statement('UPDATE users SET deleted_at = ? WHERE id = ?', [gmdate('Y-m-d H:i:s', strtotime('-1 day')), $deletedUserId]);
         $this->insertPasskeyForUser($deletedUserId, 'deleted-user-credential', 'Old Device', 8, gmdate('Y-m-d H:i:s', strtotime('-3 days')));
 
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO audit_logs (user_id, actor_type, action, status, operation_category, created_at)
-             VALUES (?, ?, ?, ?, ?, ?)"
-        );
-        $stmt->execute([1, 'user', 'passkey_login', 'success', 'authentication', gmdate('Y-m-d H:i:s', strtotime('-2 days'))]);
-        $stmt->execute([1, 'user', 'passkey_login', 'success', 'authentication', gmdate('Y-m-d H:i:s', strtotime('-10 days'))]);
-        $stmt->execute([1, 'user', 'passkey_login', 'success', 'authentication', gmdate('Y-m-d H:i:s', strtotime('-40 days'))]);
+        $querySql = "INSERT INTO audit_logs (user_id, actor_type, action, status, operation_category, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)";
+        $this->connection->statement($querySql, [1, 'user', 'passkey_login', 'success', 'authentication', gmdate('Y-m-d H:i:s', strtotime('-2 days'))]);
+        $this->connection->statement($querySql, [1, 'user', 'passkey_login', 'success', 'authentication', gmdate('Y-m-d H:i:s', strtotime('-10 days'))]);
+        $this->connection->statement($querySql, [1, 'user', 'passkey_login', 'success', 'authentication', gmdate('Y-m-d H:i:s', strtotime('-40 days'))]);
 
         $stats = $this->service->getAdminStats(1);
 
@@ -543,11 +521,11 @@ class PasskeyServiceTest extends TestCase
     {
         return new PasskeyService(
             $this->config,
-            new UserPasskey($this->pdo),
-            new WebauthnChallenge($this->pdo),
+            new UserPasskey($this->connection),
+            new WebauthnChallenge($this->connection),
             $webauthnProvider,
             $this->auditLogService,
-            $this->pdo,
+            $this->connection,
             $this->regionService,
             null,
             null,
@@ -569,8 +547,8 @@ class PasskeyServiceTest extends TestCase
         ?string $createdAt = null,
         bool $backupState = false
     ): void {
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO user_passkeys (
+        $timestamp = $createdAt ?? gmdate('Y-m-d H:i:s');
+        $this->connection->statement('INSERT INTO user_passkeys (
                 user_uuid, credential_id, credential_id_hash, credential_type, label, public_key, rp_id, user_handle,
                 transports, aaguid, sign_count, attestation_format, backup_eligible, backup_state, meta_json,
                 last_used_at, attested_at, created_at, updated_at
@@ -578,10 +556,7 @@ class PasskeyServiceTest extends TestCase
                 :user_uuid, :credential_id, :credential_id_hash, :credential_type, :label, :public_key, :rp_id, :user_handle,
                 :transports, :aaguid, :sign_count, :attestation_format, :backup_eligible, :backup_state, :meta_json,
                 :last_used_at, :attested_at, :created_at, :updated_at
-            )'
-        );
-        $timestamp = $createdAt ?? gmdate('Y-m-d H:i:s');
-        $stmt->execute([
+            )', [
             'user_uuid' => $this->userUuidForId($userId),
             'credential_id' => $credentialId,
             'credential_id_hash' => hash('sha256', $credentialId),
@@ -606,9 +581,7 @@ class PasskeyServiceTest extends TestCase
 
     private function userUuidForId(int $userId): string
     {
-        $stmt = $this->pdo->prepare('SELECT uuid FROM users WHERE id = ? LIMIT 1');
-        $stmt->execute([$userId]);
-        $uuid = $stmt->fetchColumn();
+        $uuid = DatabaseRows::scalar($this->connection->selectOne('SELECT uuid FROM users WHERE id = ? LIMIT 1', [$userId]));
         $this->assertNotFalse($uuid);
 
         return strtolower((string) $uuid);

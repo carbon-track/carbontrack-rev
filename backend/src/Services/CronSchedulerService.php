@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Services;
 
+use Illuminate\Database\Connection;
 use CarbonTrack\Models\CronRun;
 use CarbonTrack\Models\CronTask;
 use CarbonTrack\Support\SyntheticRequestFactory;
 use DateTimeImmutable;
 use DateTimeZone;
-use PDO;
 use Psr\Log\LoggerInterface;
 
 class CronSchedulerService
@@ -43,7 +43,7 @@ class CronSchedulerService
     ];
 
     public function __construct(
-        private PDO $db,
+        private Connection $db,
         private LoggerInterface $logger,
         private AuditLogService $auditLogService,
         private ErrorLogService $errorLogService,
@@ -552,10 +552,8 @@ class CronSchedulerService
             ];
         }
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
 
-        return $stmt->rowCount() > 0;
+        return $this->db->affectingStatement($sql, $params) > 0;
     }
 
     private function completeTaskRun(string $taskKey, string $lockToken, array $fields): bool
@@ -572,10 +570,8 @@ class CronSchedulerService
         }
 
         $sql = 'UPDATE cron_tasks SET ' . implode(', ', $set) . ' WHERE task_key = :task_key AND lock_token = :lock_token_match';
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
 
-        return $stmt->rowCount() > 0;
+        return $this->db->affectingStatement($sql, $params) > 0;
     }
 
     private function finalizeTaskRun(

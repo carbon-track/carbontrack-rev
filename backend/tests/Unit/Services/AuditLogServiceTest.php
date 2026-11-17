@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Tests\Unit\Services;
 
+use CarbonTrack\Support\DatabaseRows;
+use CarbonTrack\Tests\Support\DatabaseQueryResponse;
+use CarbonTrack\Tests\Support\DatabaseConnectionStub;
+use CarbonTrack\Tests\Support\DatabaseFixture;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
 use CarbonTrack\Services\AuditLogService;
@@ -61,30 +65,31 @@ class AuditLogServiceTest extends TestCase
 
     public function testLogUserActionInsertsAndLogs(): void
     {
-        $pdo = $this->createMock(\PDO::class);
+        $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
         $logger = $this->createMock(\Monolog\Logger::class);
-        $stmt = $this->createMock(\PDOStatement::class);
-        $stmt->method('execute')->willReturn(true);
-        $pdo->method('prepare')->willReturn($stmt);
+        $stmt = $this->createMock(DatabaseQueryResponse::class);
+        $stmt->method('bindings')->willReturn(true);
+        $connection->method('responseFor')->willReturn($stmt);
         $logger->expects($this->once())->method('info');
 
-        $svc = new AuditLogService($pdo, $logger);
+        $svc = new AuditLogService($connection, $logger);
         $svc->logUserAction(1, 'login', ['ip'=>'127.0.0.1'], '127.0.0.1');
         $this->assertTrue(true);
     }
 
     public function testGetUserLogsReturnsArray(): void
     {
-        $pdo = $this->createMock(\PDO::class);
+        $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
         $logger = $this->createMock(\Monolog\Logger::class);
-        $stmt = $this->createMock(\PDOStatement::class);
-        $stmt->method('execute')->willReturn(true);
-        $stmt->method('fetchAll')->willReturn([
+        $stmt = $this->createMock(DatabaseQueryResponse::class);
+        $stmt->shape = 'rows';
+        $stmt->method('bindings')->willReturn(true);
+        $stmt->method('rows')->willReturn([
             ['id'=>1,'user_id'=>1,'action'=>'login']
         ]);
-        $pdo->method('prepare')->willReturn($stmt);
+        $connection->method('responseFor')->willReturn($stmt);
 
-        $svc = new AuditLogService($pdo, $logger);
+        $svc = new AuditLogService($connection, $logger);
         $logs = $svc->getUserLogs(1, 10);
         $this->assertCount(1, $logs);
         $this->assertEquals('login', $logs[0]['action']);
@@ -92,9 +97,8 @@ class AuditLogServiceTest extends TestCase
 
     public function testLogSystemEventPersistsNullUserIdForSystemActor(): void
     {
-        $pdo = new \PDO('sqlite::memory:');
-        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-        $pdo->exec(
+        $connection = DatabaseFixture::sqlite();
+        $connection->unprepared(
             "CREATE TABLE audit_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NULL,
@@ -123,7 +127,7 @@ class AuditLogServiceTest extends TestCase
             )"
         );
 
-        $service = new AuditLogService($pdo, new Logger('test'));
+        $service = new AuditLogService($connection, new Logger('test'));
 
         $this->assertTrue($service->logSystemEvent('statistics_public_computed', 'statistics_service', [
             'status' => 'success',
@@ -132,8 +136,7 @@ class AuditLogServiceTest extends TestCase
             'request_data' => ['force_refresh' => false],
         ]));
 
-        $row = $pdo->query('SELECT user_id, actor_type, action, operation_category FROM audit_logs LIMIT 1')
-            ?->fetch(\PDO::FETCH_ASSOC);
+        $row = DatabaseRows::one($connection->selectOne('SELECT user_id, actor_type, action, operation_category FROM audit_logs LIMIT 1'));
 
         $this->assertIsArray($row);
         $this->assertNull($row['user_id']);
@@ -147,10 +150,10 @@ class AuditLogServiceTest extends TestCase
         $_ENV['DISABLE_AUDIT_LOG_WRITES'] = 'true';
         $_SERVER['DISABLE_AUDIT_LOG_WRITES'] = 'true';
 
-        $pdo = $this->createMock(\PDO::class);
-        $pdo->expects($this->never())->method('prepare');
+        $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
+        $connection->expects($this->never())->method('responseFor');
 
-        $service = new AuditLogService($pdo, $this->createMock(\Monolog\Logger::class));
+        $service = new AuditLogService($connection, $this->createMock(\Monolog\Logger::class));
 
         $this->assertFalse($service->log([
             'action' => 'register',
@@ -165,13 +168,13 @@ class AuditLogServiceTest extends TestCase
         $_ENV['DISABLE_AUDIT_LOG_WRITES'] = 'true';
         $_SERVER['DISABLE_AUDIT_LOG_WRITES'] = 'true';
 
-        $pdo = $this->createMock(\PDO::class);
-        $stmt = $this->createMock(\PDOStatement::class);
-        $stmt->method('execute')->willReturn(true);
-        $pdo->expects($this->once())->method('prepare')->willReturn($stmt);
-        $pdo->method('lastInsertId')->willReturn('1');
+        $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['generatedKey', 'responseFor'])->getMock();
+        $stmt = $this->createMock(DatabaseQueryResponse::class);
+        $stmt->method('bindings')->willReturn(true);
+        $connection->expects($this->once())->method('responseFor')->willReturn($stmt);
+        $connection->method('generatedKey')->willReturn('1');
 
-        $service = new AuditLogService($pdo, $this->createMock(\Monolog\Logger::class));
+        $service = new AuditLogService($connection, $this->createMock(\Monolog\Logger::class));
 
         $this->assertTrue($service->log([
             'action' => 'register',

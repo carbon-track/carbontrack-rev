@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Controllers;
 
+use CarbonTrack\Support\DatabaseRows;
+use Illuminate\Database\Connection;
 use CarbonTrack\Services\AuditLogService;
 use CarbonTrack\Services\AuthService;
 use CarbonTrack\Services\ErrorLogService;
-use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 class AdminLlmUsageController
 {
     public function __construct(
-        private PDO $db,
+        private Connection $db,
         private AuthService $authService,
         private AuditLogService $auditLogService,
         private ?ErrorLogService $errorLogService = null
@@ -79,14 +80,13 @@ class AdminLlmUsageController
                     ORDER BY {$orderBy}
                     LIMIT :limit OFFSET :offset";
 
-            $stmt = $this->db->prepare($sql);
+            $queryBindings = [];
             foreach ($params as $key => $value) {
-                $stmt->bindValue(':' . $key, $value);
+                $queryBindings[':' . $key] = $value;
             }
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-            $stmt->execute();
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $queryBindings[':limit'] = (int) $limit;
+            $queryBindings[':offset'] = (int) $offset;
+            $rows = DatabaseRows::all($this->db->select($sql, $queryBindings)) ?: [];
 
             $users = [];
             foreach ($rows as $row) {
@@ -119,12 +119,11 @@ class AdminLlmUsageController
             }
 
             $countSql = "SELECT COUNT(*) FROM users u WHERE {$whereClause}";
-            $countStmt = $this->db->prepare($countSql);
+            $countBindings = [];
             foreach ($params as $key => $value) {
-                $countStmt->bindValue(':' . $key, $value);
+                $countBindings[':' . $key] = $value;
             }
-            $countStmt->execute();
-            $total = (int) $countStmt->fetchColumn();
+            $total = (int) DatabaseRows::scalar($this->db->selectOne($countSql, $countBindings));
 
             $summary = $this->fetchSummary();
 
@@ -233,10 +232,7 @@ class AdminLlmUsageController
                 return $this->json($response, ['error' => 'Invalid id'], 400);
             }
 
-            $stmt = $this->db->prepare('SELECT * FROM llm_logs WHERE id = :id');
-            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-            $stmt->execute();
-            $log = $stmt->fetch(PDO::FETCH_ASSOC);
+            $log = DatabaseRows::one($this->db->selectOne('SELECT * FROM llm_logs WHERE id = :id', [':id' => (int) $id]));
 
             if (!$log) {
                 return $this->json($response, ['error' => 'Not found'], 404);
@@ -312,16 +308,7 @@ class AdminLlmUsageController
                     MAX(created_at) AS last_call_at
                 FROM llm_logs";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':since1d', $since1d);
-        $stmt->bindValue(':since7d', $since7d);
-        $stmt->bindValue(':since30d_calls', $since30d);
-        $stmt->bindValue(':since30d_admin', $since30d);
-        $stmt->bindValue(':since30d_user', $since30d);
-        $stmt->bindValue(':since30d_tokens', $since30d);
-        $stmt->bindValue(':since30d_failed', $since30d);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $row = DatabaseRows::one($this->db->selectOne($sql, [':since1d' => $since1d, ':since7d' => $since7d, ':since30d_calls' => $since30d, ':since30d_admin' => $since30d, ':since30d_user' => $since30d, ':since30d_tokens' => $since30d, ':since30d_failed' => $since30d])) ?: [];
 
         return [
             'total_calls' => (int) ($row['total_calls'] ?? 0),
@@ -353,10 +340,7 @@ class AdminLlmUsageController
                 GROUP BY DATE(created_at)
                 ORDER BY log_date ASC";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':since', $since);
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $rows = DatabaseRows::all($this->db->select($sql, [':since' => $since])) ?: [];
 
         $indexed = [];
         foreach ($rows as $row) {
@@ -409,11 +393,7 @@ class AdminLlmUsageController
                 ORDER BY calls DESC
                 LIMIT :limit";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':since', $since);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $rows = DatabaseRows::all($this->db->select($sql, [':since' => $since, ':limit' => (int) $limit])) ?: [];
 
         $items = [];
         foreach ($rows as $row) {
@@ -450,10 +430,7 @@ class AdminLlmUsageController
                 FROM llm_logs
                 WHERE created_at >= :since";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':since', $since);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $row = DatabaseRows::one($this->db->selectOne($sql, [':since' => $since])) ?: [];
 
         $p95Latency = $this->computeLatencyPercentile($since, 0.95, 2000);
 
@@ -470,11 +447,7 @@ class AdminLlmUsageController
 
     private function computeLatencyPercentile(string $since, float $percentile, int $limit): ?float
     {
-        $stmt = $this->db->prepare("SELECT latency_ms FROM llm_logs WHERE created_at >= :since AND latency_ms IS NOT NULL ORDER BY latency_ms ASC LIMIT :limit");
-        $stmt->bindValue(':since', $since);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $rows = DatabaseRows::all($this->db->select("SELECT latency_ms FROM llm_logs WHERE created_at >= :since AND latency_ms IS NOT NULL ORDER BY latency_ms ASC LIMIT :limit", [':since' => $since, ':limit' => (int) $limit])) ?: [];
         if (!$rows) {
             return null;
         }
@@ -584,10 +557,7 @@ class AdminLlmUsageController
                 ORDER BY l.id DESC
                 LIMIT :limit";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $rows = DatabaseRows::all($this->db->select($sql, [':limit' => (int) $limit])) ?: [];
 
         $requestIds = [];
         foreach ($rows as $row) {
@@ -657,17 +627,16 @@ class AdminLlmUsageController
         }
 
         $placeholders = $this->buildPositionalPlaceholders(count($requestIds));
-        $stmt = $this->db->prepare("SELECT request_id, COUNT(*) AS total
-            FROM {$tableName}
-            WHERE request_id IN ({$placeholders})
-            GROUP BY request_id");
+        $queryBindings = [];
 
         foreach ($requestIds as $index => $requestId) {
-            $stmt->bindValue($index + 1, $requestId);
+            $queryBindings[$index] = $requestId;
         }
 
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $rows = DatabaseRows::all($this->db->select("SELECT request_id, COUNT(*) AS total
+            FROM {$tableName}
+            WHERE request_id IN ({$placeholders})
+            GROUP BY request_id", $queryBindings)) ?: [];
 
         $counts = [];
         foreach ($rows as $row) {
@@ -701,13 +670,12 @@ class AdminLlmUsageController
                     GROUP BY request_id
                 ) latest ON latest.latest_id = s.id";
 
-        $stmt = $this->db->prepare($sql);
+        $queryBindings = [];
         foreach ($requestIds as $index => $requestId) {
-            $stmt->bindValue($index + 1, $requestId);
+            $queryBindings[$index] = $requestId;
         }
 
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $rows = DatabaseRows::all($this->db->select($sql, $queryBindings)) ?: [];
 
         $items = [];
         foreach ($rows as $row) {

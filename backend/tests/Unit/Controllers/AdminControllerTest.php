@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Tests\Unit\Controllers;
 
+use Illuminate\Database\Connection;
+use CarbonTrack\Support\DatabaseRows;
+use CarbonTrack\Tests\Support\DatabaseQueryResponse;
+use CarbonTrack\Tests\Support\DatabaseConnectionStub;
+use CarbonTrack\Tests\Support\DatabaseFixture;
 use CarbonTrack\Tests\Integration\TestSchemaBuilder;
 use PHPUnit\Framework\TestCase;
 use CarbonTrack\Controllers\AdminController;
@@ -22,7 +27,7 @@ class AdminControllerTest extends TestCase
     }
 
     private function makeController(
-        \PDO $pdo,
+        Connection $connection,
         \CarbonTrack\Services\AuthService $auth,
         \CarbonTrack\Services\AuditLogService $audit,
         BadgeService $badgeService,
@@ -31,7 +36,7 @@ class AdminControllerTest extends TestCase
         QuotaConfigService $quotaConfigService
     ): AdminController {
         return new AdminController(
-            $pdo,
+            $connection,
             $auth,
             $audit,
             $badgeService,
@@ -51,7 +56,7 @@ class AdminControllerTest extends TestCase
 
     public function testGetUsersRequiresAdmin(): void
     {
-        $pdo = $this->createMock(\PDO::class);
+        $connection = new DatabaseConnectionStub();
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
         $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
@@ -62,7 +67,7 @@ class AdminControllerTest extends TestCase
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 0]);
         $auth->method('isAdminUser')->willReturn(false);
 
-        $controller = $this->makeController($pdo, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
+        $controller = $this->makeController($connection, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
         $prop = (new \ReflectionClass($controller))->getProperty('lastLoginColumn');
         $prop->setAccessible(true);
         $prop->setValue($controller, 'lastlgn');
@@ -74,7 +79,7 @@ class AdminControllerTest extends TestCase
 
     public function testGetUsersSuccessWithFilters(): void
     {
-        $pdo = $this->createMock(\PDO::class);
+        $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
         $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
@@ -87,15 +92,17 @@ class AdminControllerTest extends TestCase
 
         $capturedParams = [];
 
-        $listStmt = $this->createMock(\PDOStatement::class);
+        $listStmt = $this->createMock(DatabaseQueryResponse::class);
+        $listStmt->shape = 'rows';
+        $listStmt->checkParameters = true;
         $listStmt->expects($this->atLeastOnce())
-            ->method('bindValue')
+            ->method('parameter')
             ->willReturnCallback(function ($param, $value) use (&$capturedParams) {
                 $capturedParams[$param] = $value;
                 return true;
             });
-        $listStmt->method('execute')->willReturn(true);
-        $listStmt->method('fetchAll')->willReturn([
+        $listStmt->method('bindings')->willReturn(true);
+        $listStmt->method('rows')->willReturn([
             [
                 'id'=>1,
                 'username'=>'u1',
@@ -108,13 +115,15 @@ class AdminControllerTest extends TestCase
             ]
         ]);
 
-        $countStmt = $this->createMock(\PDOStatement::class);
-        $countStmt->method('bindValue')->willReturn(true);
-        $countStmt->method('execute')->willReturn(true);
-        $countStmt->method('fetchColumn')->willReturn(1);
+        $countStmt = $this->createMock(DatabaseQueryResponse::class);
+        $countStmt->shape = 'value';
+        $countStmt->checkParameters = true;
+        $countStmt->method('parameter')->willReturn(true);
+        $countStmt->method('bindings')->willReturn(true);
+        $countStmt->method('value')->willReturn(1);
 
-        $pdo->expects($this->exactly(2))
-            ->method('prepare')
+        $connection->expects($this->exactly(2))
+            ->method('responseFor')
             ->withConsecutive(
                 [
                     $this->callback(function ($sql) {
@@ -129,7 +138,7 @@ class AdminControllerTest extends TestCase
             )
             ->willReturnOnConsecutiveCalls($listStmt, $countStmt);
 
-        $controller = $this->makeController($pdo, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
+        $controller = $this->makeController($connection, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
         $prop = (new \ReflectionClass($controller))->getProperty('lastLoginColumn');
         $prop->setAccessible(true);
         $prop->setValue($controller, 'lastlgn');
@@ -153,7 +162,7 @@ class AdminControllerTest extends TestCase
 
     public function testLoadUserRowUsesCanonicalSchoolName(): void
     {
-        $pdo = $this->createMock(\PDO::class);
+        $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
         $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
@@ -161,9 +170,10 @@ class AdminControllerTest extends TestCase
         $checkinService = $this->createMock(CheckinService::class);
         $quotaConfigService = new QuotaConfigService();
 
-        $stmt = $this->createMock(\PDOStatement::class);
-        $stmt->method('execute')->willReturn(true);
-        $stmt->method('fetch')->willReturn([
+        $stmt = $this->createMock(DatabaseQueryResponse::class);
+        $stmt->shape = 'row';
+        $stmt->method('bindings')->willReturn(true);
+        $stmt->method('row')->willReturn([
             'id' => 2,
             'username' => 'legacy',
             'email' => 'legacy@example.com',
@@ -176,9 +186,9 @@ class AdminControllerTest extends TestCase
             'school_name' => 'Canonical Academy',
             'lastlgn' => null,
         ]);
-        $pdo->method('prepare')->willReturn($stmt);
+        $connection->method('responseFor')->willReturn($stmt);
 
-        $controller = $this->makeController($pdo, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
+        $controller = $this->makeController($connection, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
         $prop = (new \ReflectionClass($controller))->getProperty('lastLoginColumn');
         $prop->setAccessible(true);
         $prop->setValue($controller, 'lastlgn');
@@ -193,7 +203,7 @@ class AdminControllerTest extends TestCase
 
     public function testSanitizeSupportRoutingOverrideRejectsFractionalIntegerFields(): void
     {
-        $pdo = $this->createMock(\PDO::class);
+        $connection = new DatabaseConnectionStub();
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
         $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
         $badgeService = $this->createMock(BadgeService::class);
@@ -201,7 +211,7 @@ class AdminControllerTest extends TestCase
         $checkinService = $this->createMock(CheckinService::class);
         $quotaConfigService = new QuotaConfigService();
 
-        $controller = $this->makeController($pdo, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
+        $controller = $this->makeController($connection, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
         $method = new \ReflectionMethod($controller, 'sanitizeSupportRoutingOverride');
         $method->setAccessible(true);
 
@@ -218,12 +228,10 @@ class AdminControllerTest extends TestCase
 
     public function testGetUserOverviewIncludesPasskeySummaryAndRecentSecurityActivity(): void
     {
-        $pdo = new \PDO('sqlite::memory:');
-        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-        $pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
-        TestSchemaBuilder::init($pdo);
+        $connection = DatabaseFixture::sqlite();
+        TestSchemaBuilder::init($connection);
 
-        $pdo->exec("
+        $connection->unprepared("
             INSERT INTO user_passkeys (
                 user_uuid, credential_id, credential_id_hash, credential_type, label, public_key, rp_id, user_handle,
                 transports, sign_count, backup_eligible, backup_state, last_used_at, attested_at, created_at, updated_at
@@ -236,12 +244,10 @@ class AdminControllerTest extends TestCase
                 '" . gmdate('Y-m-d H:i:s', strtotime('-1 day')) . "'
             )
         ");
-        $stmt = $pdo->prepare(
-            'INSERT INTO audit_logs (user_id, user_uuid, actor_type, action, status, data, operation_category, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        );
-        $stmt->execute([1, null, 'user', 'login', 'success', json_encode(['ip_address' => '2.2.2.2']), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-3 hours'))]);
-        $stmt->execute([null, '550e8400-e29b-41d4-a716-4466554400aa', 'user', 'passkey_registered', 'success', json_encode(['passkey_id' => 1, 'label' => 'Admin Laptop']), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-2 hours'))]);
+        $querySql = 'INSERT INTO audit_logs (user_id, user_uuid, actor_type, action, status, data, operation_category, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+        $connection->statement($querySql, [1, null, 'user', 'login', 'success', json_encode(['ip_address' => '2.2.2.2']), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-3 hours'))]);
+        $connection->statement($querySql, [null, '550e8400-e29b-41d4-a716-4466554400aa', 'user', 'passkey_registered', 'success', json_encode(['passkey_id' => 1, 'label' => 'Admin Laptop']), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-2 hours'))]);
 
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
@@ -268,7 +274,7 @@ class AdminControllerTest extends TestCase
         ]);
         $quotaConfigService = new QuotaConfigService();
 
-        $controller = $this->makeController($pdo, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
+        $controller = $this->makeController($connection, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
         $prop = (new \ReflectionClass($controller))->getProperty('lastLoginColumn');
         $prop->setAccessible(true);
         $prop->setValue($controller, 'lastlgn');
@@ -288,10 +294,8 @@ class AdminControllerTest extends TestCase
 
     public function testGetUserOverviewByUuidResolvesSameUser(): void
     {
-        $pdo = new \PDO('sqlite::memory:');
-        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-        $pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
-        TestSchemaBuilder::init($pdo);
+        $connection = DatabaseFixture::sqlite();
+        TestSchemaBuilder::init($connection);
 
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => 1]);
@@ -306,7 +310,7 @@ class AdminControllerTest extends TestCase
         $checkinService->method('getUserStreakStats')->willReturn([]);
         $quotaConfigService = new QuotaConfigService();
 
-        $controller = $this->makeController($pdo, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
+        $controller = $this->makeController($connection, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
         $prop = (new \ReflectionClass($controller))->getProperty('lastLoginColumn');
         $prop->setAccessible(true);
         $prop->setValue($controller, 'lastlgn');
@@ -323,19 +327,15 @@ class AdminControllerTest extends TestCase
 
     public function testGetUserSecurityActivityAppliesFiltersAndPagination(): void
     {
-        $pdo = new \PDO('sqlite::memory:');
-        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-        $pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
-        TestSchemaBuilder::init($pdo);
+        $connection = DatabaseFixture::sqlite();
+        TestSchemaBuilder::init($connection);
 
-        $insert = $pdo->prepare(
-            'INSERT INTO audit_logs (user_id, user_uuid, actor_type, action, status, data, operation_category, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        );
+        $insertSql = 'INSERT INTO audit_logs (user_id, user_uuid, actor_type, action, status, data, operation_category, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
         $userUuid = '550e8400-e29b-41d4-a716-4466554400aa';
-        $insert->execute([1, $userUuid, 'user', 'passkey_registered', 'success', json_encode(['label' => 'Laptop']), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-2 days'))]);
-        $insert->execute([1, null, 'user', 'login', 'success', json_encode(['ip_address' => '1.1.1.1']), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-1 days'))]);
-        $insert->execute([1, null, 'user', 'logout', 'success', json_encode([]), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-120 days'))]);
+        $connection->statement($insertSql, [1, $userUuid, 'user', 'passkey_registered', 'success', json_encode(['label' => 'Laptop']), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-2 days'))]);
+        $connection->statement($insertSql, [1, null, 'user', 'login', 'success', json_encode(['ip_address' => '1.1.1.1']), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-1 days'))]);
+        $connection->statement($insertSql, [1, null, 'user', 'logout', 'success', json_encode([]), 'authentication', gmdate('Y-m-d H:i:s', strtotime('-120 days'))]);
 
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 9, 'is_admin' => 1]);
@@ -360,7 +360,7 @@ class AdminControllerTest extends TestCase
         $checkinService = $this->createMock(CheckinService::class);
         $quotaConfigService = new QuotaConfigService();
 
-        $controller = $this->makeController($pdo, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
+        $controller = $this->makeController($connection, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
         $prop = (new \ReflectionClass($controller))->getProperty('lastLoginColumn');
         $prop->setAccessible(true);
         $prop->setValue($controller, 'lastlgn');
@@ -387,12 +387,10 @@ class AdminControllerTest extends TestCase
 
     public function testGetUsersCanFilterSupportRole(): void
     {
-        $pdo = new \PDO('sqlite::memory:');
-        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-        $pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
-        TestSchemaBuilder::init($pdo);
+        $connection = DatabaseFixture::sqlite();
+        TestSchemaBuilder::init($connection);
 
-        $pdo->exec("INSERT INTO users (id, uuid, username, email, status, is_admin, role, created_at, updated_at) VALUES
+        $connection->unprepared("INSERT INTO users (id, uuid, username, email, status, is_admin, role, created_at, updated_at) VALUES
             (21, '11111111-1111-4111-8111-111111111111', 'supporter', 'support@example.com', 'active', 0, 'support', '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
             (22, '22222222-2222-4222-8222-222222222222', 'regular', 'user@example.com', 'active', 0, 'user', '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
             (23, '33333333-3333-4333-8333-333333333333', 'adminish', 'admin@example.com', 'active', 1, 'admin', '2026-01-01 00:00:00', '2026-01-01 00:00:00')
@@ -408,7 +406,7 @@ class AdminControllerTest extends TestCase
         $checkinService = $this->createMock(CheckinService::class);
         $quotaConfigService = new QuotaConfigService();
 
-        $controller = $this->makeController($pdo, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
+        $controller = $this->makeController($connection, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
         $prop = (new \ReflectionClass($controller))->getProperty('lastLoginColumn');
         $prop->setAccessible(true);
         $prop->setValue($controller, 'lastlgn');
@@ -427,12 +425,10 @@ class AdminControllerTest extends TestCase
 
     public function testUpdateUserCanSwitchExplicitRole(): void
     {
-        $pdo = new \PDO('sqlite::memory:');
-        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-        $pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
-        TestSchemaBuilder::init($pdo);
+        $connection = DatabaseFixture::sqlite();
+        TestSchemaBuilder::init($connection);
 
-        $pdo->exec("INSERT INTO users (id, uuid, username, email, status, is_admin, role, created_at, updated_at) VALUES
+        $connection->unprepared("INSERT INTO users (id, uuid, username, email, status, is_admin, role, created_at, updated_at) VALUES
             (31, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'target-user', 'target@example.com', 'active', 0, 'user', '2026-01-01 00:00:00', '2026-01-01 00:00:00')
         ");
 
@@ -459,7 +455,7 @@ class AdminControllerTest extends TestCase
         $checkinService = $this->createMock(CheckinService::class);
         $quotaConfigService = new QuotaConfigService();
 
-        $controller = $this->makeController($pdo, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
+        $controller = $this->makeController($connection, $auth, $audit, $badgeService, $statsService, $checkinService, $quotaConfigService);
         $prop = (new \ReflectionClass($controller))->getProperty('lastLoginColumn');
         $prop->setAccessible(true);
         $prop->setValue($controller, 'lastlgn');
@@ -469,7 +465,7 @@ class AdminControllerTest extends TestCase
         $resp = $controller->updateUser($request, $response, ['id' => 31]);
 
         $this->assertSame(200, $resp->getStatusCode());
-        $row = $pdo->query("SELECT role, is_admin FROM users WHERE id = 31")->fetch();
+        $row = DatabaseRows::one($connection->selectOne("SELECT role, is_admin FROM users WHERE id = 31"));
         $this->assertSame('support', $row['role']);
         $this->assertSame(0, (int) $row['is_admin']);
     }
