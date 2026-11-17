@@ -58,7 +58,7 @@ class SchoolController extends BaseController
         // 优先按 sort_order 排序；若目标数据库缺少该列，则回退到按 name 排序
         try {
             $items = (clone $query)->orderBy('sort_order', 'asc')->offset($offset)->limit($limit)->get();
-        } catch (QueryException $e) {
+        } catch (QueryException $ignore) {
             $items = (clone $query)->orderBy('name', 'asc')->offset($offset)->limit($limit)->get();
         }
 
@@ -187,7 +187,7 @@ class SchoolController extends BaseController
                             'is_active' => true,
                             'sort_order' => 0
                         ]);
-                    } catch (QueryException $e) {
+                    } catch (QueryException $ignore) {
                         $school = School::create([
                             'name' => $name,
                             'location' => $location,

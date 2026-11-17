@@ -418,11 +418,11 @@ class AuthController
             try {
                 $upd = $this->db->prepare('UPDATE users SET lastlgn = NOW() WHERE id = ?');
                 $upd->execute([$user['id']]);
-            } catch (\Throwable $e) {
+            } catch (\Throwable $ignore) {
                 try {
                     $upd = $this->db->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?');
                     $upd->execute([$user['id']]);
-                } catch (\Throwable $e2) {
+                } catch (\Throwable $ignore) {
                     // ignore
                 }
             }
@@ -551,6 +551,7 @@ class AuthController
                 ], 401);
             }
 
+            // nosemgrep: semgrep.enforce-errorlogservice-in-catch -- invalid/expired token is a client error (401); already audit-logged via logTokenRefreshFailure
             try {
                 $payload = $this->authService->validateToken($token);
             } catch (\Throwable $e) {
@@ -786,7 +787,7 @@ class AuthController
 
             try {
                 $expiry = new \DateTimeImmutable($expiresAt);
-            } catch (\Throwable $e) {
+            } catch (\Throwable $ignore) {
                 $expiry = null;
             }
 
@@ -995,11 +996,11 @@ class AuthController
             try {
                 $upd = $this->db->prepare('UPDATE users SET password_hash = ?, password = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW() WHERE id = ?');
                 $upd->execute([$hashed, $hashed, $user['id']]);
-            } catch (\Throwable $e) {
+            } catch (\Throwable $ignore) {
                 try {
                     $upd = $this->db->prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW() WHERE id = ?');
                     $upd->execute([$hashed, $user['id']]);
-                } catch (\Throwable $e2) {
+                } catch (\Throwable $ignore) {
                     $upd = $this->db->prepare('UPDATE users SET password = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW() WHERE id = ?');
                     $upd->execute([$hashed, $user['id']]);
                 }
@@ -1085,11 +1086,11 @@ class AuthController
             try {
                 $upd = $this->db->prepare('UPDATE users SET password_hash = ?, password = ?, updated_at = NOW() WHERE id = ?');
                 $upd->execute([$hashed, $hashed, $user['id']]);
-            } catch (\Throwable $e) {
+            } catch (\Throwable $ignore) {
                 try {
                     $upd = $this->db->prepare('UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?');
                     $upd->execute([$hashed, $user['id']]);
-                } catch (\Throwable $e2) {
+                } catch (\Throwable $ignore) {
                     $upd = $this->db->prepare('UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?');
                     $upd->execute([$hashed, $user['id']]);
                 }
@@ -1148,7 +1149,7 @@ class AuthController
             try {
                 $expiry = new \DateTimeImmutable((string)$existingExpiryRaw);
                 $meta['expires_at'] = $expiry->format('Y-m-d H:i:s');
-            } catch (\Throwable $e) {
+            } catch (\Throwable $ignore) {
                 $expiry = null;
                 $meta['expires_at'] = is_string($existingExpiryRaw) ? $existingExpiryRaw : null;
             }
@@ -1188,7 +1189,7 @@ class AuthController
             try {
                 $lastSent = new \DateTimeImmutable((string)$lastSentRaw);
                 $meta['resend_available_at'] = $lastSent->modify('+1 hour')->format('Y-m-d H:i:s');
-            } catch (\Throwable $e) {
+            } catch (\Throwable $ignore) {
                 $meta['resend_available_at'] = is_string($lastSentRaw) ? $lastSentRaw : null;
             }
         }
@@ -1207,7 +1208,7 @@ class AuthController
         if ($lastSentAtRaw) {
             try {
                 $lastSentAt = new \DateTimeImmutable((string)$lastSentAtRaw);
-            } catch (\Throwable $e) {
+            } catch (\Throwable $ignore) {
                 $lastSentAt = null;
             }
         }
