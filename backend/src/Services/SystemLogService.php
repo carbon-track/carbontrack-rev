@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Services;
 
+use CarbonTrack\Support\DatabaseRows;
+use Illuminate\Database\Connection;
 use CarbonTrack\Support\ClientIpResolver;
 use CarbonTrack\Support\SensitiveDataRedactor;
-use PDO;
 use Monolog\Logger;
 
 /**
@@ -15,7 +16,7 @@ use Monolog\Logger;
  */
 class SystemLogService
 {
-    private PDO $db;
+    private Connection $db;
     private Logger $logger;
     /** @var array<int, string|null> */
     private array $userUuidCache = [];
@@ -23,7 +24,7 @@ class SystemLogService
     // 截断阈值，防止巨大请求/响应撑爆日志表
     private int $maxBodyLength = 8000; // characters
 
-    public function __construct(PDO $db, Logger $logger)
+    public function __construct(Connection $db, Logger $logger)
     {
         $this->db = $db;
         $this->logger = $logger;
@@ -53,11 +54,10 @@ class SystemLogService
             $userUuid = $this->resolveUserUuid($data);
 
             // 为了兼容 MySQL 和 SQLite，采用字符串形式写 created_at，使用默认的 CURRENT_TIMESTAMP 进行处理
-            $stmt = $this->db->prepare("INSERT INTO system_logs (
-                request_id, method, path, status_code, user_id, user_uuid, ip_address, user_agent, duration_ms, request_body, response_body, server_meta
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
 
-            $stmt->execute([
+            $id = DatabaseService::insertGetId($this->db, "INSERT INTO system_logs (
+                request_id, method, path, status_code, user_id, user_uuid, ip_address, user_agent, duration_ms, request_body, response_body, server_meta
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", [
                 $requestId,
                 $data['method'] ?? null,
                 $data['path'] ?? null,
@@ -71,7 +71,6 @@ class SystemLogService
                 $responseBody,
                 $serverMeta
             ]);
-            $id = (int) $this->db->lastInsertId();
             return $id > 0 ? $id : null;
         } catch (\Throwable $e) {
             // 记录系统日志插入失败的警告，不影响主流程
@@ -213,12 +212,7 @@ class SystemLogService
         }
 
         try {
-            $stmt = $this->db->prepare('SELECT uuid FROM users WHERE id = :id LIMIT 1');
-            if (!$stmt) {
-                return null;
-            }
-            $stmt->execute(['id' => $userId]);
-            $uuid = $stmt->fetchColumn();
+            $uuid = DatabaseRows::scalar($this->db->selectOne('SELECT uuid FROM users WHERE id = :id LIMIT 1', ['id' => $userId]));
             $normalized = is_string($uuid) && trim($uuid) !== '' ? strtolower(trim($uuid)) : null;
             $this->userUuidCache[$userId] = $normalized;
             return $normalized;

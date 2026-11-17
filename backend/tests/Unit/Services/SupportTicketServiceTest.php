@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Tests\Unit\Services;
 
+use CarbonTrack\Tests\Support\DatabaseQueryResponse;
+use CarbonTrack\Tests\Support\DatabaseConnectionStub;
 use CarbonTrack\Models\File;
 use CarbonTrack\Models\User;
 use CarbonTrack\Services\AuditLogService;
@@ -182,7 +184,7 @@ class SupportTicketServiceTest extends TestCase
 
     public function testListSupportTicketsUsesDistinctSearchBindings(): void
     {
-        $pdo = $this->createMock(\PDO::class);
+        $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
         $logger = $this->createMock(LoggerInterface::class);
         $audit = $this->createMock(AuditLogService::class);
         $errorLog = $this->createMock(ErrorLogService::class);
@@ -191,26 +193,28 @@ class SupportTicketServiceTest extends TestCase
         $listExecuteParams = null;
         $countExecuteParams = null;
 
-        $listStmt = $this->createMock(\PDOStatement::class);
+        $listStmt = $this->createMock(DatabaseQueryResponse::class);
+        $listStmt->shape = 'rows';
         $listStmt->expects($this->once())
-            ->method('execute')
+            ->method('bindings')
             ->willReturnCallback(function (array $params) use (&$listExecuteParams) {
                 $listExecuteParams = $params;
                 return true;
             });
-        $listStmt->expects($this->once())->method('fetchAll')->willReturn([]);
+        $listStmt->expects($this->once())->method('rows')->willReturn([]);
 
-        $countStmt = $this->createMock(\PDOStatement::class);
+        $countStmt = $this->createMock(DatabaseQueryResponse::class);
+        $countStmt->shape = 'value';
         $countStmt->expects($this->once())
-            ->method('execute')
+            ->method('bindings')
             ->willReturnCallback(function (array $params) use (&$countExecuteParams) {
                 $countExecuteParams = $params;
                 return true;
             });
-        $countStmt->expects($this->once())->method('fetchColumn')->willReturn(0);
+        $countStmt->expects($this->once())->method('value')->willReturn(0);
 
-        $pdo->expects($this->exactly(2))
-            ->method('prepare')
+        $connection->expects($this->exactly(2))
+            ->method('responseFor')
             ->willReturnCallback(function (string $sql) use ($listStmt, $countStmt) {
                 static $prepareCalls = 0;
                 $prepareCalls++;
@@ -220,7 +224,7 @@ class SupportTicketServiceTest extends TestCase
                 return $prepareCalls === 1 ? $listStmt : $countStmt;
             });
 
-        $service = new SupportTicketService($pdo, $logger, $audit, $errorLog, $fileMetadata);
+        $service = new SupportTicketService($connection, $logger, $audit, $errorLog, $fileMetadata);
         $result = $service->listSupportTickets(['id' => 7, 'is_admin' => true], ['q' => 'billing']);
 
         $this->assertSame([], $result['items']);
@@ -280,7 +284,7 @@ class SupportTicketServiceTest extends TestCase
             ->willReturn($foreignFile);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -371,7 +375,7 @@ class SupportTicketServiceTest extends TestCase
             ->willReturn($reusedFile);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -430,7 +434,7 @@ class SupportTicketServiceTest extends TestCase
         ]);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $this->createMock(AuditLogService::class),
             $this->createMock(ErrorLogService::class),
@@ -519,7 +523,7 @@ class SupportTicketServiceTest extends TestCase
         $audit->method('log')->willReturn(true);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $audit,
             $this->createMock(ErrorLogService::class),
@@ -611,7 +615,7 @@ class SupportTicketServiceTest extends TestCase
         $audit->method('log')->willReturn(true);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $audit,
             $this->createMock(ErrorLogService::class),
@@ -711,7 +715,7 @@ class SupportTicketServiceTest extends TestCase
             ->willReturn(true);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -791,7 +795,7 @@ class SupportTicketServiceTest extends TestCase
         $automation->method('getTagsForTicketIds')->willReturn([]);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -881,7 +885,7 @@ class SupportTicketServiceTest extends TestCase
         $automation->method('getTagsForTicketIds')->willReturn([]);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -945,7 +949,7 @@ class SupportTicketServiceTest extends TestCase
         $audit->method('log')->willReturn(true);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -1013,7 +1017,7 @@ class SupportTicketServiceTest extends TestCase
         $audit->method('log')->willReturn(true);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -1080,7 +1084,7 @@ class SupportTicketServiceTest extends TestCase
             ->willReturn('https://cdn.example.com/avatars/default/requester.png');
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $this->createMock(AuditLogService::class),
             $this->createMock(ErrorLogService::class),
@@ -1166,7 +1170,7 @@ class SupportTicketServiceTest extends TestCase
         $automation->method('getTagsForTicketIds')->willReturn([]);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -1259,7 +1263,7 @@ class SupportTicketServiceTest extends TestCase
         $automation->method('getTagsForTicketIds')->willReturn([]);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -1346,7 +1350,7 @@ class SupportTicketServiceTest extends TestCase
             );
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -1417,7 +1421,7 @@ class SupportTicketServiceTest extends TestCase
         ]);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $this->createMock(AuditLogService::class),
             $this->createMock(ErrorLogService::class),
@@ -1478,7 +1482,7 @@ class SupportTicketServiceTest extends TestCase
         $audit->method('log')->willReturn(true);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -1527,7 +1531,7 @@ class SupportTicketServiceTest extends TestCase
             );
 
         $reviewService = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -1602,7 +1606,7 @@ class SupportTicketServiceTest extends TestCase
         $audit->method('log')->willReturn(true);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -1678,7 +1682,7 @@ class SupportTicketServiceTest extends TestCase
         $audit->method('log')->willReturn(true);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -1731,7 +1735,7 @@ class SupportTicketServiceTest extends TestCase
         ]);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $this->createMock(AuditLogService::class),
             $this->createMock(ErrorLogService::class),
@@ -1790,7 +1794,7 @@ class SupportTicketServiceTest extends TestCase
         $audit->method('log')->willReturn(true);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -1908,7 +1912,7 @@ class SupportTicketServiceTest extends TestCase
             );
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -2006,7 +2010,7 @@ class SupportTicketServiceTest extends TestCase
             );
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $logger,
             $audit,
             $errorLog,
@@ -2060,7 +2064,7 @@ class SupportTicketServiceTest extends TestCase
         ]);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $this->createMock(AuditLogService::class),
             $this->createMock(ErrorLogService::class),
@@ -2116,7 +2120,7 @@ class SupportTicketServiceTest extends TestCase
         ]);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $this->createMock(AuditLogService::class),
             $this->createMock(ErrorLogService::class),
@@ -2180,7 +2184,7 @@ class SupportTicketServiceTest extends TestCase
         ]);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $this->createMock(AuditLogService::class),
             $this->createMock(ErrorLogService::class),
@@ -2237,7 +2241,7 @@ class SupportTicketServiceTest extends TestCase
         ]);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $this->createMock(AuditLogService::class),
             $this->createMock(ErrorLogService::class),
@@ -2277,7 +2281,7 @@ class SupportTicketServiceTest extends TestCase
         $emailService->method('sendMessageNotification')->willThrowException(new \RuntimeException('email failed'));
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $audit,
             $this->createMock(ErrorLogService::class),
@@ -2332,7 +2336,7 @@ class SupportTicketServiceTest extends TestCase
             ->willReturn(false);
 
         $service = new SupportTicketService(
-            self::$capsule->getConnection()->getPdo(),
+            self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $audit,
             $this->createMock(ErrorLogService::class),

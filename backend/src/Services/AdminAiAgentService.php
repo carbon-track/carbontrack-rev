@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Services;
 
+use CarbonTrack\Support\DatabaseRows;
+use Illuminate\Database\Connection;
 use CarbonTrack\Services\Ai\LlmClientInterface;
 use CarbonTrack\Services\Ai\StreamCapableLlmClientInterface;
 use CarbonTrack\Support\SyntheticRequestFactory;
-use PDO;
 use Psr\Log\LoggerInterface;
 
 class AdminAiAgentService
@@ -56,7 +57,7 @@ class AdminAiAgentService
     private AdminAiRollbackService $rollbackService;
 
     public function __construct(
-        private PDO $db,
+        private Connection $db,
         private ?LlmClientInterface $client,
         private LoggerInterface $logger,
         array $config = [],
@@ -2065,9 +2066,7 @@ class AdminAiAgentService
         }
 
         try {
-            $stmt = $this->db->prepare('SELECT context_json FROM llm_logs WHERE id = :id LIMIT 1');
-            $stmt->execute([':id' => $llmLogId]);
-            $existing = $this->decodeJson($stmt->fetchColumn() ?: null);
+            $existing = $this->decodeJson(DatabaseRows::scalar($this->db->selectOne('SELECT context_json FROM llm_logs WHERE id = :id LIMIT 1', [':id' => $llmLogId])) ?: null);
             $existing['conversation_context'] = $context;
             $existing['conversation_snapshot'] = array_filter([
                 'user_message' => $userMessage !== '' ? $userMessage : null,
@@ -2081,8 +2080,7 @@ class AdminAiAgentService
                 'metadata' => isset($outcome['metadata']) && is_array($outcome['metadata']) ? $outcome['metadata'] : null,
             ], static fn ($value) => $value !== null && $value !== '');
 
-            $update = $this->db->prepare('UPDATE llm_logs SET context_json = :context_json WHERE id = :id');
-            $update->execute([
+            $this->db->statement('UPDATE llm_logs SET context_json = :context_json WHERE id = :id', [
                 ':context_json' => json_encode($existing, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ':id' => $llmLogId,
             ]);
