@@ -560,7 +560,7 @@ class MessageController
                 if (!is_array($filterGroupsRaw)) {
                     return $this->json($response, ['error' => 'target_filters must be an array'], 400);
                 }
-                $filterResult = $this->resolveFilteredRecipients($filterGroupsRaw);
+                $filterResult = $this->resolveFilteredRecipients($request, $filterGroupsRaw);
                 $targetUserIds = array_values(array_unique(array_merge($targetUserIds, $filterResult['user_ids'])));
                 foreach ($filterResult['records'] as $id => $record) {
                     if (!isset($targetUserRecords[$id])) {
@@ -986,7 +986,7 @@ $auditPayload = [
                     $actorIds[] = (int) $row['created_by'];
                 }
             }
-            $actorMap = !empty($actorIds) ? $this->loadUsernames($actorIds) : [];
+            $actorMap = !empty($actorIds) ? $this->loadUsernames($request, $actorIds) : [];
 
             $items = [];
             foreach ($rows as $row) {
@@ -1024,7 +1024,16 @@ $auditPayload = [
                     $startTime = $createdAtRaw->format('Y-m-d H:i:s');
                 }
                 $endTime = date('Y-m-d H:i:s', strtotime($startTime . ' +60 minutes'));
-                $recipients = $this->loadBroadcastRecipients($title, $startTime, $endTime, $messageIds, $row['content_hash'] ?? null, true);
+                $recipients = $this->loadBroadcastRecipients(
+                    $request,
+                    'getBroadcastHistory',
+                    $title,
+                    $startTime,
+                    $endTime,
+                    $messageIds,
+                    $row['content_hash'] ?? null,
+                    true
+                );
 
                 $readUsers = [];
                 $unreadUsers = [];
@@ -1191,6 +1200,8 @@ $auditPayload = [
                 $messageIds = $this->decodeIdList($row['message_ids_snapshot'] ?? []);
                 $contentHash = isset($row['content_hash']) && is_string($row['content_hash']) ? $row['content_hash'] : null;
                 $recipients = $this->loadBroadcastRecipients(
+                    $request,
+                    'flushBroadcastEmailQueue',
                     (string)($row['title'] ?? ''),
                     $startTime,
                     $endTime,
@@ -1368,6 +1379,19 @@ $auditPayload = [
         }
     }
 
+    private function logException(\Throwable $exception, Request $request, string $action, string $message): void
+    {
+        try {
+            $this->errorLogService?->logException($exception, $request, [
+                'controller' => 'MessageController',
+                'action' => $action,
+                'context_message' => $message,
+            ]);
+        } catch (\Throwable $ignore) {
+            error_log($message . ': ' . $exception->getMessage() . '. Error log failed: ' . $ignore->getMessage());
+        }
+    }
+
     private function lookupSystemLogId(?string $requestId): ?int
     {
         if ($requestId === null || $requestId === '') {
@@ -1457,6 +1481,8 @@ $auditPayload = [
     }
 
     private function loadBroadcastRecipients(
+        Request $request,
+        string $action,
         string $title,
         string $start,
         string $end,
@@ -1516,7 +1542,8 @@ $auditPayload = [
                         if (hash('sha256', $title . '||' . $contentValue) === $contentHash) {
                             $filtered[] = $row;
                         }
-                    } catch (\Throwable $ignore) {
+                    } catch (\Throwable $exception) {
+                        $this->logException($exception, $request, $action, 'Failed to verify broadcast recipient content');
                         $filtered = $rows;
                         break;
                     }
@@ -1527,7 +1554,8 @@ $auditPayload = [
             }
 
             return $rows;
-        } catch (\Throwable $ignore) {
+        } catch (\Throwable $exception) {
+            $this->logException($exception, $request, $action, 'Failed to load broadcast recipients');
             return [];
         }
     }
@@ -1556,7 +1584,7 @@ $auditPayload = [
                 $criteria['exclude_ids'] = $this->sanitizeIdList(is_array($params['exclude_ids']) ? $params['exclude_ids'] : explode(',', (string)$params['exclude_ids']));
             }
 
-            $rows = $this->performUserSearch($criteria, $limit + 1, $offset);
+            $rows = $this->performUserSearch($request, 'searchBroadcastRecipients', $criteria, $limit + 1, $offset);
             $hasMore = count($rows) > $limit;
             if ($hasMore) {
                 $rows = array_slice($rows, 0, $limit);
@@ -1667,7 +1695,7 @@ $auditPayload = [
         return $result;
     }
 
-    private function resolveFilteredRecipients(array $filterGroups): array
+    private function resolveFilteredRecipients(Request $request, array $filterGroups): array
     {
         $aggregated = [
             'user_ids' => [],
@@ -1682,7 +1710,7 @@ $auditPayload = [
             $limit = max(10, min(500, $limit));
             $offset = max(0, (int)($filterGroup['offset'] ?? 0));
 
-            $searchResult = $this->performUserSearch($filterGroup, $limit, $offset);
+            $searchResult = $this->performUserSearch($request, 'sendSystemMessage', $filterGroup, $limit, $offset);
             foreach ($searchResult as $row) {
                 $id = isset($row['id']) ? (int)$row['id'] : 0;
                 if ($id <= 0) {
@@ -1733,8 +1761,13 @@ $auditPayload = [
         return $result;
     }
 
-    private function performUserSearch(array $criteria, int $limit, int $offset = 0): array
-    {
+    private function performUserSearch(
+        Request $request,
+        string $action,
+        array $criteria,
+        int $limit,
+        int $offset
+    ): array {
         $where = ['u.deleted_at IS NULL'];
         $params = [];
 
@@ -1885,7 +1918,8 @@ $auditPayload = [
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        } catch (\Throwable $ignore) {
+        } catch (\Throwable $exception) {
+            $this->logException($exception, $request, $action, 'Failed to search for broadcast recipients');
             return [];
         }
     }
@@ -2289,7 +2323,7 @@ $auditPayload = [
         return in_array($priority, [Message::PRIORITY_HIGH, Message::PRIORITY_URGENT], true);
     }
 
-    private function loadUsernames(array $ids): array
+    private function loadUsernames(Request $request, array $ids): array
     {
         $cleanIds = [];
         foreach ($ids as $id) {
@@ -2332,7 +2366,8 @@ $auditPayload = [
                 $result[$uid] = $username;
             }
             return $result;
-        } catch (\Throwable $ignore) {
+        } catch (\Throwable $exception) {
+            $this->logException($exception, $request, 'getBroadcastHistory', 'Failed to load broadcast actors');
             return [];
         }
     }

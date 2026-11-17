@@ -486,8 +486,8 @@ class CarbonTrackController
                     $streakData = $this->checkinService->getUserStreakStats((int) $user['id']);
                     $checkinStats['current_streak'] = (int)($streakData['current_streak_days'] ?? 0);
                     $checkinStats['longest_streak'] = (int)($streakData['longest_streak_days'] ?? 0);
-                } catch (\Throwable $ignore) {
-                     // 忽略错误，以免影响主要返回
+                } catch (\Throwable $exception) {
+                    $this->logControllerException($exception, $request, 'Failed to load check-in streak after submission');
                 }
             }
 
@@ -526,8 +526,8 @@ class CarbonTrackController
                     'current_month' => $currentMonth
                 ]);
                 $monthlyAchievements = $achievementsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            } catch (\Throwable $ignore) {
-                // ignore achievement errors in non-MySQL test environments
+            } catch (\Throwable $exception) {
+                $this->logControllerException($exception, $request, 'Failed to load monthly achievements after submission');
             }
 
             // 规范化返回的 images（public_url -> url）

@@ -98,7 +98,7 @@ class ProductController
                     $categorySlug = $this->normalizeSlug($rawCategory);
                     $categoryNames = [];
                     if ($categorySlug !== '') {
-                        $resolvedCategories = $this->fetchCategoriesBySlugs([$categorySlug]);
+                        $resolvedCategories = $this->fetchCategoriesBySlugs($request, [$categorySlug]);
                         if (isset($resolvedCategories[$categorySlug])) {
                             $categoryNames[] = $resolvedCategories[$categorySlug]['name'];
                         }
@@ -1043,7 +1043,7 @@ class ProductController
             }
             $tagPayload = $data['tags'] ?? [];
             $rawCategory = $data['category'] ?? null;
-            $categoryRecord = $this->resolveCategoryFromPayload($rawCategory);
+            $categoryRecord = $this->resolveCategoryFromPayload($request, $rawCategory);
             $imagePath = $this->extractPrimaryImagePath($data);
             $imagesPayload = isset($data['images']) ? (is_string($data['images']) ? $data['images'] : json_encode($data['images'])) : null;
             $statusInput = $data['status'] ?? 'active';
@@ -1146,7 +1146,7 @@ class ProductController
             $categorySlug = null;
             $hasCategoryPayload = array_key_exists('category', $data);
             if ($hasCategoryPayload) {
-                $categoryRecord = $this->resolveCategoryFromPayload($data['category']);
+                $categoryRecord = $this->resolveCategoryFromPayload($request, $data['category']);
                 $categoryName = $categoryRecord['name'] ?? (is_string($data['category']) ? trim((string)$data['category']) : null);
                 if ($categoryName === '') {
                     $categoryName = null;
@@ -1524,7 +1524,7 @@ class ProductController
         return null;
     }
 
-    private function resolveCategoryFromPayload($rawCategory): ?array
+    private function resolveCategoryFromPayload(Request $request, $rawCategory): ?array
     {
         if ($rawCategory === null || $rawCategory === '') {
             return null;
@@ -1543,7 +1543,7 @@ class ProductController
         }
 
         if ($candidate['slug'] !== '') {
-            $bySlug = $this->fetchCategoriesBySlugs([$candidate['slug']]);
+            $bySlug = $this->fetchCategoriesBySlugs($request, [$candidate['slug']]);
             if (isset($bySlug[$candidate['slug']])) {
                 return $bySlug[$candidate['slug']];
             }
@@ -1559,7 +1559,7 @@ class ProductController
 
         $slug = $candidate['slug'] !== '' ? $candidate['slug'] : $this->slugifyCategoryName($name);
 
-        return $this->createProductCategory($name, $slug);
+        return $this->createProductCategory($request, $name, $slug);
     }
 
     private function normalizeCategoryCandidate($category): ?array
@@ -1653,7 +1653,7 @@ class ProductController
         return $result;
     }
 
-    private function createProductCategory(string $name, string $slug): array
+    private function createProductCategory(Request $request, string $name, string $slug): array
     {
         $name = trim($name) !== '' ? trim($name) : $slug;
         $normalizedSlug = $this->slugifyCategoryName($slug ?: $name);
@@ -1680,7 +1680,7 @@ class ProductController
                     throw $e;
                 }
 
-                $existing = $this->fetchCategoriesBySlugs([$normalizedSlug]);
+                $existing = $this->fetchCategoriesBySlugs($request, [$normalizedSlug]);
                 if (isset($existing[$normalizedSlug])) {
                     return $existing[$normalizedSlug];
                 }
@@ -1949,7 +1949,7 @@ class ProductController
         return $result;
     }
 
-    private function fetchCategoriesBySlugs(array $slugs): array
+    private function fetchCategoriesBySlugs(Request $request, array $slugs): array
     {
         $slugs = array_values(array_unique(array_filter($slugs, static fn($slug) => is_string($slug) && $slug !== '')));
         if (empty($slugs)) {
@@ -1981,7 +1981,8 @@ class ProductController
             }
 
             return $result;
-        } catch (\Throwable $ignore) {
+        } catch (\Throwable $exception) {
+            $this->logControllerException($exception, $request, 'Failed to load product categories by slug');
             return [];
         }
     }

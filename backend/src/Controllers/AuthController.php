@@ -424,11 +424,12 @@ class AuthController
                 $upd = $this->db->prepare('UPDATE users SET lastlgn = NOW() WHERE id = ?');
                 $upd->execute([$user['id']]);
             } catch (\Throwable $ignore) {
+                // Older schemas use last_login_at instead of lastlgn.
                 try {
                     $upd = $this->db->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?');
                     $upd->execute([$user['id']]);
-                } catch (\Throwable $ignore) {
-                    // ignore
+                } catch (\Throwable $exception) {
+                    $this->logException($exception, $request, 'Failed to update last login time', ['user_id' => $user['id']]);
                 }
             }
             if ($this->checkinService) {
