@@ -1410,7 +1410,7 @@ $sql = "
             if ($rule['type'] === 'int') {
                 try {
                     $number = InputValueNormalizer::integer($value, $key);
-                } catch (\InvalidArgumentException) {
+                } catch (\InvalidArgumentException $ignore) {
                     continue;
                 }
             } else {
@@ -1442,7 +1442,8 @@ $sql = "
                 $extra = $contextMessage !== '' ? ['context_message' => $contextMessage] : [];
                 $this->errorLogService->logException($exception, $request, $extra);
                 return;
-            } catch (\Throwable $loggingError) {
+            } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Use the emergency log if ErrorLogService itself fails.
                 error_log('ErrorLogService failed: ' . $loggingError->getMessage());
             }
         }

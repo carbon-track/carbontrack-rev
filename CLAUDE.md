@@ -35,7 +35,7 @@ The backend is a lean API service. Avoid adding redundant database structure che
 ### Core Concepts
 - **Dependency Injection**: Services are managed by a PHP-DI container configured in `backend/src/dependencies.php`. When adding new services, register them here.
 - **Routing**: Routes are defined in `backend/src/routes.php`. Each route is mapped to a method in a controller class located in `backend/src/Controllers/`.
-- **Data access**: Raw PDO is the primary data-access path (about 393 `prepare()` calls in `backend/src/`; core flows such as products, auth, and points use hand-written SQL). Eloquent models exist in `backend/src/Models/` (27 classes) but are used in only 3 controllers (School, Checkin, CarbonActivity, 20 queries). Match the surrounding code: use PDO in core flows, Eloquent only where it is already used.
+- **Data access**: The backend uses PDO for core flows such as products, authentication, and points. Selected controllers and services use Eloquent models from `backend/src/Models/`, including schools, support automation, and scheduling. Follow the surrounding module's data-access style.
 - **Middleware**: Cross-cutting concerns like authentication, logging, and CORS are handled by middleware found in `backend/src/Middleware/`. See `AuthMiddleware.php` for the JWT-based authentication flow.
 - **Validation**: Input validation is handled using `respect/validation`.
 

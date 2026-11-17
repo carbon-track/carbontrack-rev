@@ -10,6 +10,7 @@ use CarbonTrack\Services\AuthService;
 use CarbonTrack\Services\MessageService;
 use CarbonTrack\Services\AuditLogService;
 use CarbonTrack\Services\EmailService;
+use CarbonTrack\Services\ErrorLogService;
 use CarbonTrack\Services\RegionService;
 use CarbonTrack\Services\UserProfileViewService;
 use CarbonTrack\Models\Message;
@@ -27,7 +28,8 @@ class MessageControllerTest extends TestCase
         AuditLogService $audit,
         AuthService $auth,
         ?EmailService $emailService = null,
-        ?UserProfileViewService $userProfileViewService = null
+        ?UserProfileViewService $userProfileViewService = null,
+        ?ErrorLogService $errorLogService = null
     ): MessageController {
         return new MessageController(
             $pdo,
@@ -36,7 +38,7 @@ class MessageControllerTest extends TestCase
             $auth,
             $userProfileViewService ?? $this->makeUserProfileViewService(),
             $emailService,
-            null
+            $errorLogService
         );
     }
 
@@ -978,6 +980,39 @@ class MessageControllerTest extends TestCase
         $this->assertNull($result['error']);
         $this->assertSame('Canonical Green', $result['records'][10]['school']);
         $this->assertSame('US-UM-81', $result['records'][10]['location']);
+    }
+
+    public function testBroadcastHistoryReportsQueryFailuresWithHistoryAction(): void
+    {
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->expects($this->once())->method('query')->willThrowException(new \PDOException('count failed'));
+        $pdo->expects($this->once())->method('prepare')->willThrowException(new \PDOException('list failed'));
+        $auth = $this->createMock(AuthService::class);
+        $auth->method('getCurrentUser')->willReturn(['id' => 1, 'is_admin' => true]);
+        $auth->method('isAdminUser')->willReturn(true);
+        $request = makeRequest('GET', '/api/v1/admin/messages/broadcasts');
+        $entries = [];
+        $log = $this->createMock(ErrorLogService::class);
+        $log->method('logError')->willReturnCallback(
+            static function (string $type, string $message, $request, array $context) use (&$entries): int {
+                $entries[] = [$type, $message, $context['action'], $context['error']];
+                return 1;
+            }
+        );
+        $controller = $this->makeController(
+            $pdo,
+            $this->createMock(MessageService::class),
+            $this->createMock(AuditLogService::class),
+            $auth,
+            errorLogService: $log
+        );
+        $response = $controller->getBroadcastHistory($request, new \Slim\Psr7\Response());
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame([
+            ['broadcast_error', 'Failed to count broadcast history', 'getBroadcastHistory', 'count failed'],
+            ['broadcast_error', 'Failed to load broadcast history', 'getBroadcastHistory', 'list failed'],
+        ], $entries);
     }
 
     public function testGetBroadcastHistoryReturnsAggregatedData(): void

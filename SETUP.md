@@ -105,7 +105,7 @@ FRONTEND_URL=http://localhost:5173
 1. **创建数据库**：在 MySQL 中创建名为 `carbontrack` 的数据库。
 2. **导入基础结构**：执行 `database/localhost.sql` 以建立初始表结构和基础数据。
 
-    > 注意：表结构以 `localhost.sql` 为准，不是模板里的字符集配置。连接字符集由代码写死为 utf8mb4（见 `backend/src/dependencies.php`），但表级存储字符集由建表语句决定：45 张表是 InnoDB + utf8mb4，另有 6 张是 MyISAM，其中 `users`、`products`、`transactions`、`points_transactions`、`spec_points_transactions` 这 5 张核心表是 MyISAM + utf8（`schools` 是 MyISAM + utf8mb4）。两层后果：4 字节字符（如 emoji）存不进这 5 张表；MyISAM 不支持事务，积分兑换“先扣积分再扣库存”这两步无法原子回滚。改表引擎/字符集属于数据迁移，不在本文档范围内，动之前先评估。
+    > 注意：表结构以 `localhost.sql` 为准，不是模板里的字符集配置。连接字符集由代码写死为 utf8mb4（见 `backend/src/dependencies.php`），但表级存储字符集由建表语句决定：45 张表使用 InnoDB，其中 44 张的默认字符集为 utf8mb4，error_logs 的默认字符集为 utf8。另有 6 张表使用 MyISAM，其中 `users`、`products`、`transactions`、`points_transactions`、`spec_points_transactions` 这 5 张核心表是 MyISAM + utf8（`schools` 是 MyISAM + utf8mb4）。两层后果：4 字节字符（如 emoji）存不进这 5 张表；MyISAM 不支持事务，积分兑换“先扣积分再扣库存”这两步无法原子回滚。改表引擎/字符集属于数据迁移，不在本文档范围内，动之前先评估。
 
 ### 4. 运行后端预览
 ```bash
@@ -159,8 +159,6 @@ pnpm validate
 
 ## 启动运行
 
-### 方式 A：手动启动（推荐开发时使用）
-
 1. **启动后端**（端口 8080）：
    ```bash
    cd backend
@@ -176,17 +174,13 @@ pnpm validate
 3. **打开微信小程序**：
    使用微信开发者工具打开 `miniprogram/`。
 
-### 方式 B：VS Code 任务
-
-本仓库没有预配置 VS Code 任务（无 `.vscode/` 目录），`Ctrl+Shift+B` 跑不起来；同时运行前后端请按方式 A 在两个终端分别启动。
-
 ---
 
 ## 技术栈概览
 
 ### 后端 (Backend)
 - **Framework**: Slim 4 (Micro-framework)
-- **数据访问**：原生 PDO 为主（`backend/src/` 约 393 处 `prepare()` 调用，商品、认证、积分等核心链路全是手写 SQL）；Eloquent 仅用于 3 个控制器（School、Checkin、CarbonActivity）的 20 处查询，`Models/` 下 27 个类继承 Eloquent 模型。新代码按所在链路的既有方式写，不要默认全走 Eloquent。
+- **数据访问**：主要使用原生 PDO，商品、认证和积分等链路直接执行 SQL。部分控制器和服务使用 Eloquent，例如学校、工单自动化和定时任务。新增数据访问时沿用所在模块的方式。
 - **Container**: PHP-DI
 - **Auth**: JWT (Firebase JWT)
 - **Validation**: Respect Validation

@@ -65,237 +65,49 @@ rules:
         - "/backend/src/Middleware/*.php"
         - "/backend/src/dependencies.php"
 
-  # Policy for enforce-errorlogservice-in-catch (see also the pattern-nots below):
-  # A catch counts as "persisted" when it logs through ErrorLogService directly
-  # ($this->errorLogService->logException) or through one of the helpers that
-  # does so internally: $this->error(), $this->logError(),
-  # $this->logControllerException(), $this->handleException(),
-  # $this->logBroadcastError(), $this->logTicketUpdateFailure(),
-  # self::logError(), or $this->logExceptionWithFallback().
-  # Logging to Monolog ($this->logger / $logger, any level) also counts: the
-  # failure is recorded, just not in the error_logs table (used for
-  # best-effort side effects such as sending email or building asset URLs).
-  # The following are deliberately NOT server errors and are excluded:
-  #  - client-input exceptions (\InvalidArgumentException, \JsonException):
-  #    match only the caught $TYPE with metavariable-regex. An unrelated
-  #    unlogged server-error catch in the same try must still be reported.
-  #  - intentional best-effort catches named $ignore / $ignored; reserve
-  #    these for failures that are safe to ignore, not database 500s.
-  #  - rethrows (throw $EXP), plus logging-helper failures caught as
-  #    $loggingError and sent to error_log() as an emergency fallback.
-  #    Ordinary catch blocks cannot use plain error_log() to pass the rule.
-  # Reviewed mixed-catch client-error paths use local inline nosemgrep.
-  # Revisit the suppression whenever a new catch is added to one of them.
-  # Anything else must call ErrorLogService (or a helper above) in the catch.
+  # Match each catch independently and locate the finding on its exception type.
+  # Document a reviewed 4xx or best-effort fallback on the affected catch only.
   - id: enforce-errorlogservice-in-catch
-    message: >
-      Error handling blocks (catch) must persist exceptions/errors 
-      through ErrorLogService, not just swallow them.
+    message: >-
+      Persist unexpected exceptions through ErrorLogService or a controller helper
+      that uses it. Document intentional fallback handlers on the catch itself.
     severity: WARNING
-    languages:
-      - php
+    languages: [php]
     patterns:
-      - pattern: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->error(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->log(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->logException(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $this->errorLogService->logException(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->logExceptionWithFallback(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $this->logExceptionWithFallback(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->logError(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->logControllerException(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            self::logError(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->logger->error(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            throw $EXP;
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $ignore) {
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $ignored) {
-            ...
-          }
-      # Only error-log-service fallback handlers may use plain error_log().
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $loggingError) {
-            ...
-            error_log(...);
-            ...
-          }
-      # Reviewed inline nosemgrep markers are verified against source lines
-      # during SARIF normalization; Semgrep Pro still emits ignored matches.
-      # The filter is bound to the caught type, not the entire try statement.
-      - metavariable-regex:
-          metavariable: $TYPE
-          regex: '^(?!\\(?:InvalidArgumentException|JsonException)$).*'
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->handleException(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->logBroadcastError(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->logTicketUpdateFailure(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->logger->warning(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->logger->info(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->logger->debug(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->logger->critical(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->warning(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->info(...);
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch ($TYPE $EXP) {
-            ...
-            $X->debug(...);
-            ...
-          }
+      # Existing named fallbacks are intentional. A direct server-error return
+      # still needs a persistent log, regardless of the catch variable's name.
+      - pattern-either:
+          - patterns:
+              - pattern: try { ... } catch ($TYPE $EXP) { ... }
+              - metavariable-regex:
+                  metavariable: $EXP
+                  regex: '^(?!\$ignore(?:d)?$).*'
+          - patterns:
+              - pattern: try { ... } catch ($TYPE $EXP) { ... return $RESPONSE; ... }
+              - metavariable-pattern:
+                  metavariable: $RESPONSE
+                  patterns:
+                    - pattern-either:
+                        - pattern: $STATUS
+                        - pattern: $HANDLER->$METHOD(..., $STATUS)
+                        - pattern: $RESPONSE_OBJECT->withStatus($STATUS, ...)
+                    - metavariable-regex:
+                        metavariable: $STATUS
+                        regex: '^5[0-9]{2}$'
+      - pattern-not: try { ... } catch ($TYPE $EXP) { throw $EXP; }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->logException(...); ... }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->errorLogService->logException(...); ... }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->errorLogService->logError(...); ... }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->error(...); ... }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->logError(...); ... }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->logControllerException(...); ... }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->handleException(...); ... }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->logExceptionWithFallback(...); ... }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->logBroadcastError(...); ... }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->logTicketUpdateFailure(...); ... }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... self::logError(...); ... }
+
+      - focus-metavariable: $TYPE
     paths:
       include:
         - "/backend/src/Controllers/*.php"

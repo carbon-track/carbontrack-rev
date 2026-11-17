@@ -120,7 +120,8 @@ class SchoolController extends BaseController
 
         try {
             $data = $this->sanitizeSchoolPayload($payload);
-        } catch (\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->response($response, [
                 'success' => false,
                 'message' => $exception->getMessage(),
@@ -260,7 +261,8 @@ class SchoolController extends BaseController
 
         try {
             $data = $this->sanitizeSchoolPayload($payload);
-        } catch (\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->response($response, [
                 'success' => false,
                 'message' => $exception->getMessage(),
@@ -528,7 +530,8 @@ class SchoolController extends BaseController
                 $extra = $contextMessage !== '' ? ['context_message' => $contextMessage] : [];
                 $this->errorLogService->logException($exception, $request, $extra);
                 return;
-            } catch (\Throwable $loggingError) {
+            } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Use the emergency log if ErrorLogService itself fails.
                 error_log('ErrorLogService logging failed: ' . $loggingError->getMessage());
             }
         }
@@ -567,7 +570,8 @@ class SchoolController extends BaseController
     {
         try {
             return School::create($data);
-        } catch (QueryException $exception) {
+        } catch (QueryException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Retry on a legacy schema without sort_order and propagate other query errors.
             if (!$this->shouldRetryWithoutSortOrder($data, $exception)) {
                 throw $exception;
             }
@@ -587,7 +591,8 @@ class SchoolController extends BaseController
 
         try {
             $school->update($data);
-        } catch (QueryException $exception) {
+        } catch (QueryException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Retry on a legacy schema without sort_order and propagate other query errors.
             if (!$this->shouldRetryWithoutSortOrder($data, $exception)) {
                 throw $exception;
             }

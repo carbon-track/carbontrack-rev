@@ -122,7 +122,8 @@ class BadgeController
             try {
                 $badge['icon_url'] = $this->r2Service->getPublicUrl($badge['icon_path']);
                 $badge['icon_presigned_url'] = $this->r2Service->generatePresignedUrl($badge['icon_path'], 600);
-            } catch (\Throwable $e) {
+            } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // An optional badge icon falls back to its stored path.
                 if ($this->logger) {
                     $this->logger->warning('Failed to build badge icon URLs', ['error' => $e->getMessage(), 'icon_path' => $badge['icon_path']]);
                 }

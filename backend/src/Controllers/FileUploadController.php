@@ -298,7 +298,8 @@ class FileUploadController
                             'error_code' => 'FILE_CONTENT_VALIDATION_ERROR',
                         ],
                     ]);
-                } catch (\Throwable $auditError) {
+                } catch (\Throwable $auditError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    // The original upload validation response is preserved when its audit write fails.
                     $this->logger->error('AuditLogService failed for direct upload validation error', [
                         'file_path' => $filePath,
                         'storage_path' => $storagePath,
@@ -347,7 +348,8 @@ class FileUploadController
                 'message' => 'Upload confirmed',
                 'data' => $payload
             ]);
-        } catch (FileOwnershipConflictException $e) {
+        } catch (FileOwnershipConflictException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report an upload ownership conflict to the caller.
             $this->auditLogService->log([
                 'user_id' => isset($user['id']) ? (int) $user['id'] : null,
                 'action' => 'direct_upload_confirmed',
@@ -377,7 +379,7 @@ class FileUploadController
      */
     public function uploadFile(Request $request, Response $response): Response
     {
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             // 验证用户身份
             $user = $this->authService->getCurrentUser($request);
             if (!$user) {
@@ -437,7 +439,8 @@ class FileUploadController
                 'data' => $result
             ]);
 
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->jsonResponse($response, [
                 'success' => false,
                 'message' => $e->getMessage()
@@ -1031,7 +1034,8 @@ class FileUploadController
                             'error_code' => 'INVALID_FILE_CONTENT',
                         ],
                     ]);
-                } catch (\Throwable $auditError) {
+                } catch (\Throwable $auditError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    // The original invalid-object response is preserved when its audit write fails.
                     $this->logger->error('AuditLogService failed for invalid multipart upload object', [
                         'file_path' => $filePath,
                         'upload_id' => $uploadId,
@@ -1080,7 +1084,8 @@ class FileUploadController
                             'error_code' => 'FILE_CONTENT_VALIDATION_ERROR',
                         ],
                     ]);
-                } catch (\Throwable $auditError) {
+                } catch (\Throwable $auditError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                    // The original upload validation response is preserved when its audit write fails.
                     $this->logger->error('AuditLogService failed for multipart upload validation error', [
                         'file_path' => $filePath,
                         'upload_id' => $uploadId,
@@ -1137,7 +1142,8 @@ class FileUploadController
             $result['ownership_persisted'] = $ownershipPersisted;
 
             return $this->jsonResponse($response, ['success' => true, 'data' => $result]);
-        } catch (FileOwnershipConflictException $e) {
+        } catch (FileOwnershipConflictException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report an upload ownership conflict to the caller.
             $multipartTrackingCleared = $this->clearCompletedMultipartTrackingIfNeeded(
                 $completedMultipartObject,
                 $multipartTrackingCleared,
@@ -1195,7 +1201,8 @@ class FileUploadController
             try {
                 $this->multipartUploadService->clearUpload($uploadId);
                 return true;
-            } catch (\Throwable $cleanupError) {
+            } catch (\Throwable $cleanupError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // Multipart tracking cleanup runs after successful upload completion.
                 $this->logger->error('Failed to clear multipart upload tracking after completion', [
                     'upload_id' => $uploadId,
                     'error' => $cleanupError->getMessage(),

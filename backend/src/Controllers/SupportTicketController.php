@@ -9,6 +9,7 @@ use CarbonTrack\Services\AuditLogService;
 use CarbonTrack\Services\CronSchedulerService;
 use CarbonTrack\Services\ErrorLogService;
 use CarbonTrack\Services\SupportRoutingEngineService;
+use CarbonTrack\Services\SupportOperationException;
 use CarbonTrack\Services\SupportTicketService;
 use CarbonTrack\Services\TurnstileService;
 use CarbonTrack\Services\ProofOfWorkService;
@@ -148,7 +149,8 @@ class SupportTicketController
 
         try {
             return $this->json($response, ['success' => true, 'data' => $this->supportTicketService->createTicket($actor, $payload)], 201);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to create support ticket');
@@ -164,7 +166,8 @@ class SupportTicketController
 
         try {
             return $this->json($response, ['success' => true, 'data' => $this->supportTicketService->listUserTickets((int) $actor['id'], $request->getQueryParams())]);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to list support tickets');
@@ -178,11 +181,13 @@ class SupportTicketController
             return $this->json($response, ['success' => false, 'message' => 'Unauthorized', 'code' => 'UNAUTHORIZED'], 401);
         }
 
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             return $this->json($response, ['success' => true, 'data' => $this->supportTicketService->getTicketDetailForUser((int) $actor['id'], $this->ticketId($args))]);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             return $this->json($response, ['success' => false, 'message' => 'Ticket not found', 'code' => 'TICKET_NOT_FOUND'], 404);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to load support ticket');
@@ -203,13 +208,15 @@ class SupportTicketController
         }
         $payload = $this->stripChallengeFields($payload);
 
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             return $this->json($response, ['success' => true, 'data' => $this->supportTicketService->addUserMessage($actor, $this->ticketId($args), $payload)], 201);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             $status = $e->getMessage() === 'Ticket not found' ? 404 : 422;
             $code = $status === 404 ? 'TICKET_NOT_FOUND' : 'INVALID_TICKET_STATE';
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => $code], $status);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to add support reply');
@@ -223,13 +230,15 @@ class SupportTicketController
             return $this->json($response, ['success' => false, 'message' => 'Unauthorized', 'code' => 'UNAUTHORIZED'], 401);
         }
 
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             return $this->json($response, ['success' => true, 'data' => $this->supportTicketService->submitTicketFeedback($actor, $this->ticketId($args), $this->body($request))]);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             $status = $e->getMessage() === 'Ticket not found' ? 404 : 422;
             $code = $status === 404 ? 'TICKET_NOT_FOUND' : 'INVALID_TICKET_STATE';
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => $code], $status);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to submit support ticket feedback');
@@ -245,7 +254,8 @@ class SupportTicketController
 
         try {
             return $this->json($response, ['success' => true, 'data' => $this->supportTicketService->listSupportTickets($actor, $request->getQueryParams())]);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to list support queue');
@@ -273,11 +283,13 @@ class SupportTicketController
             return $this->json($response, ['success' => false, 'message' => 'Unauthorized', 'code' => 'UNAUTHORIZED'], 401);
         }
 
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             return $this->json($response, ['success' => true, 'data' => $this->supportTicketService->getTicketDetailForSupport($actor, $this->ticketId($args))]);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             return $this->json($response, ['success' => false, 'message' => 'Ticket not found', 'code' => 'TICKET_NOT_FOUND'], 404);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to load support queue ticket');
@@ -291,13 +303,15 @@ class SupportTicketController
             return $this->json($response, ['success' => false, 'message' => 'Unauthorized', 'code' => 'UNAUTHORIZED'], 401);
         }
 
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             return $this->json($response, ['success' => true, 'data' => $this->supportTicketService->addSupportMessage($actor, $this->ticketId($args), $this->body($request))], 201);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             $status = $e->getMessage() === 'Ticket not found' ? 404 : 422;
             $code = $status === 404 ? 'TICKET_NOT_FOUND' : 'INVALID_TICKET_STATE';
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => $code], $status);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to add support staff reply');
@@ -311,15 +325,18 @@ class SupportTicketController
             return $this->json($response, ['success' => false, 'message' => 'Unauthorized', 'code' => 'UNAUTHORIZED'], 401);
         }
 
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             return $this->json($response, ['success' => true, 'data' => $this->supportTicketService->updateTicketFromSupport($actor, $this->ticketId($args), $this->body($request))]);
-        } catch (\DomainException $e) {
+        } catch (\DomainException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report an expected support permission denial.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'FORBIDDEN'], 403);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             $status = $e->getMessage() === 'Ticket not found' ? 404 : 422;
             $code = $status === 404 ? 'TICKET_NOT_FOUND' : 'INVALID_TICKET_STATE';
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => $code], $status);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to update support ticket');
@@ -333,13 +350,16 @@ class SupportTicketController
             return $this->json($response, ['success' => false, 'message' => 'Unauthorized', 'code' => 'UNAUTHORIZED'], 401);
         }
 
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             return $this->json($response, ['success' => true, 'data' => $this->supportTicketService->createTransferRequest($actor, $this->ticketId($args), $this->body($request))], 201);
-        } catch (\DomainException $e) {
+        } catch (\DomainException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report an expected support permission denial.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'FORBIDDEN'], 403);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'TICKET_NOT_FOUND'], 404);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to create support transfer request');
@@ -358,13 +378,16 @@ class SupportTicketController
             return $this->json($response, ['success' => false, 'message' => 'Invalid request id', 'code' => 'VALIDATION_ERROR'], 422);
         }
 
-        try { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+        try {
             return $this->json($response, ['success' => true, 'data' => $this->supportTicketService->reviewTransferRequest($actor, $requestId, $this->body($request))]);
-        } catch (\DomainException $e) {
+        } catch (\DomainException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report an expected support permission denial.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'FORBIDDEN'], 403);
-        } catch (\RuntimeException $e) {
+        } catch (SupportOperationException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Map an expected support workflow error to the documented client response.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'TRANSFER_REQUEST_NOT_FOUND'], 404);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Report a request validation failure to the caller.
             return $this->json($response, ['success' => false, 'message' => $e->getMessage(), 'code' => 'VALIDATION_ERROR'], 422);
         } catch (\Throwable $e) {
             return $this->error($request, $response, $e, 'Failed to review support transfer request');
@@ -468,7 +491,8 @@ class SupportTicketController
         $this->logger->error($message, ['error' => $e->getMessage()]);
         try {
             $this->errorLogService->logException($e, $request, ['context_message' => $message]);
-        } catch (\Throwable $loggingError) {
+        } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+            // Use the application logger if ErrorLogService itself fails.
             $this->logger->error('Support ticket error logging failed', ['error' => $loggingError->getMessage()]);
         }
         return $this->json($response, ['success' => false, 'message' => $message, 'code' => 'INTERNAL_ERROR'], 500);
