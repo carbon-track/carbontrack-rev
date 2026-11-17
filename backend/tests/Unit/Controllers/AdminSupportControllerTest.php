@@ -82,9 +82,10 @@ class AdminSupportControllerTest extends TestCase
         $request = makeRequest('PUT', '/api/v1/admin/support/' . $resource . '/42', ['name' => 'Test']);
         $args = ['id' => '42'];
         $databaseFailure = new \PDOException('database unavailable');
+        $missingResource = new SupportOperationException('Resource not found');
         $service = $this->createMock(SupportAutomationService::class);
         $service->expects($this->exactly(2))->method($serviceMethod)->willReturnOnConsecutiveCalls(
-            $this->throwException(new SupportOperationException('Resource not found')),
+            $this->throwException($missingResource),
             $this->throwException($databaseFailure)
         );
         $loggedExceptions = [];
@@ -104,7 +105,7 @@ class AdminSupportControllerTest extends TestCase
         $failure = $controller->$handler($request, new \Slim\Psr7\Response(), $args);
         $this->assertSame(500, $failure->getStatusCode());
         $this->assertSame('INTERNAL_ERROR', json_decode((string) $failure->getBody(), true)['code']);
-        $this->assertSame([$databaseFailure], $loggedExceptions);
+        $this->assertSame([$missingResource, $databaseFailure], $loggedExceptions);
     }
 
     public static function supportResourceUpdates(): array
