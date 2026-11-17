@@ -77,24 +77,22 @@ APP_ENV=development
 APP_DEBUG=true
 
 # 数据库配置
-DB_DRIVER=mysql
+# DB_CONNECTION 是唯一决定驱动的变量：mysql 或 sqlite（DB_DRIVER / DB_CHARSET / DB_COLLATION 不会被代码读取）
+DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=carbontrack
 DB_USERNAME=root
 DB_PASSWORD=your_password
-DB_CHARSET=utf8mb4
-DB_COLLATION=utf8mb4_unicode_ci
 
 # JWT 配置
 JWT_SECRET=your_super_secret_key
 JWT_ALGORITHM=HS256
 
-# OpenAI 配置 (可选，用于 AI 功能)
-OPENAI_API_KEY=your_openai_api_key
-
-# 调试 Token (用于测试环境中绕过某些安全策略)
-DEBUG_TOKEN=your_debug_token
+# AI 配置（可选，用于 AI 功能；走 OpenAI 兼容接口，见 backend/.env.example 的 LLM_API_*）
+LLM_API_KEY=your_llm_api_key
+LLM_API_BASE_URL=https://api.openai.com/v1
+LLM_API_MODEL=gpt-4o-mini
 
 # 邮件与应用标识
 APP_NAME="CarbonTrack"
@@ -107,11 +105,13 @@ FRONTEND_URL=http://localhost:5173
 1. **创建数据库**：在 MySQL 中创建名为 `carbontrack` 的数据库。
 2. **导入基础结构**：执行 `database/localhost.sql` 以建立初始表结构和基础数据。
 
+    > 注意：表结构以 `localhost.sql` 为准，不是模板里的字符集配置。连接字符集由代码写死为 utf8mb4（见 `backend/src/dependencies.php`），但表级存储字符集由建表语句决定：45 张表是 InnoDB + utf8mb4，另有 6 张是 MyISAM，其中 `users`、`products`、`transactions`、`points_transactions`、`spec_points_transactions` 这 5 张核心表是 MyISAM + utf8（`schools` 是 MyISAM + utf8mb4）。两层后果：4 字节字符（如 emoji）存不进这 5 张表；MyISAM 不支持事务，积分兑换“先扣积分再扣库存”这两步无法原子回滚。改表引擎/字符集属于数据迁移，不在本文档范围内，动之前先评估。
+
 ### 4. 运行后端预览
 ```bash
 composer start
 ```
-此时后端 API 将在 `http://localhost:8080` 运行。您可以访问 `http://localhost:8080/api/v1/health` 或类似端点确认。
+此时后端 API 将在 `http://localhost:8080` 运行。您可以访问 `http://localhost:8080/`（健康检查在根路径，返回 `version: 1.0.0`）确认；注意不存在 `/api/v1/health` 这个端点。
 
 ---
 
@@ -177,7 +177,8 @@ pnpm validate
    使用微信开发者工具打开 `miniprogram/`。
 
 ### 方式 B：VS Code 任务
-本项目已预配置 VS Code 任务，你可以通过 `Ctrl+Shift+B` 或 `Terminal -> Run Build Task` 同时运行前后端。
+
+本仓库没有预配置 VS Code 任务（无 `.vscode/` 目录），`Ctrl+Shift+B` 跑不起来；同时运行前后端请按方式 A 在两个终端分别启动。
 
 ---
 
@@ -185,7 +186,7 @@ pnpm validate
 
 ### 后端 (Backend)
 - **Framework**: Slim 4 (Micro-framework)
-- **ORM**: Laravel Eloquent
+- **数据访问**：原生 PDO 为主（`backend/src/` 约 393 处 `prepare()` 调用，商品、认证、积分等核心链路全是手写 SQL）；Eloquent 仅用于 3 个控制器（School、Checkin、CarbonActivity）的 20 处查询，`Models/` 下 27 个类继承 Eloquent 模型。新代码按所在链路的既有方式写，不要默认全走 Eloquent。
 - **Container**: PHP-DI
 - **Auth**: JWT (Firebase JWT)
 - **Validation**: Respect Validation
