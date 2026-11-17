@@ -210,6 +210,11 @@ rules:
             error_log(...);
             ...
           }
+      # The ignore marker is deliberately restricted to the reviewed try
+      # statement itself. Semgrep Pro's SARIF scan still reports these
+      # matches despite inline nosemgrep, so explicitly filter that marker.
+      # Unlike a catch-type search, it does not exempt other try statements.
+      - pattern-not-regex: 'try\\s*\\{\\s*// nosemgrep: semgrep\\.enforce-errorlogservice-in-catch'
       # The filter is bound to the caught type, not the entire try statement.
       - metavariable-regex:
           metavariable: $TYPE
