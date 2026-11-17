@@ -423,8 +423,9 @@ class AuthController
             try {
                 $upd = $this->db->prepare('UPDATE users SET lastlgn = NOW() WHERE id = ?');
                 $upd->execute([$user['id']]);
-            } catch (\Throwable $ignore) {
+            } catch (\Throwable $exception) {
                 // Older schemas use last_login_at instead of lastlgn.
+                $this->logException($exception, $request, 'Retrying last login update with legacy column', ['user_id' => $user['id']]);
                 try {
                     $upd = $this->db->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?');
                     $upd->execute([$user['id']]);
@@ -687,7 +688,7 @@ class AuthController
                 ]);
             }
 
-            $throttle = $this->calculateVerificationThrottle($user);
+            $throttle = $this->calculateVerificationThrottle($request, $user);
             if ($throttle['blocked']) {
                 return $this->jsonResponse($response, [
                     'success' => false,
@@ -793,7 +794,8 @@ class AuthController
 
             try {
                 $expiry = new \DateTimeImmutable($expiresAt);
-            } catch (\Throwable $ignore) {
+            } catch (\Throwable $exception) {
+                $this->logClientException($exception, $request, 400, __METHOD__, $user, 'authentication');
                 $expiry = null;
             }
 
@@ -1002,11 +1004,13 @@ class AuthController
             try {
                 $upd = $this->db->prepare('UPDATE users SET password_hash = ?, password = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW() WHERE id = ?');
                 $upd->execute([$hashed, $hashed, $user['id']]);
-            } catch (\Throwable $ignore) {
+            } catch (\Throwable $exception) {
+                $this->logException($exception, $request, 'Retrying password reset with password_hash column', ['user_id' => $user['id']]);
                 try {
                     $upd = $this->db->prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW() WHERE id = ?');
                     $upd->execute([$hashed, $user['id']]);
-                } catch (\Throwable $ignore) {
+                } catch (\Throwable $exception) {
+                    $this->logException($exception, $request, 'Retrying password reset with password column', ['user_id' => $user['id']]);
                     $upd = $this->db->prepare('UPDATE users SET password = ?, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW() WHERE id = ?');
                     $upd->execute([$hashed, $user['id']]);
                 }
@@ -1092,11 +1096,13 @@ class AuthController
             try {
                 $upd = $this->db->prepare('UPDATE users SET password_hash = ?, password = ?, updated_at = NOW() WHERE id = ?');
                 $upd->execute([$hashed, $hashed, $user['id']]);
-            } catch (\Throwable $ignore) {
+            } catch (\Throwable $exception) {
+                $this->logException($exception, $request, 'Retrying password change with password_hash column', ['user_id' => $user['id']]);
                 try {
                     $upd = $this->db->prepare('UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?');
                     $upd->execute([$hashed, $user['id']]);
-                } catch (\Throwable $ignore) {
+                } catch (\Throwable $exception) {
+                    $this->logException($exception, $request, 'Retrying password change with password column', ['user_id' => $user['id']]);
                     $upd = $this->db->prepare('UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?');
                     $upd->execute([$hashed, $user['id']]);
                 }
@@ -1155,7 +1161,8 @@ class AuthController
             try {
                 $expiry = new \DateTimeImmutable((string)$existingExpiryRaw);
                 $meta['expires_at'] = $expiry->format('Y-m-d H:i:s');
-            } catch (\Throwable $ignore) {
+            } catch (\Throwable $exception) {
+                $this->logException($exception, $request, 'Invalid stored email verification expiry', ['user_id' => $user['id']]);
                 $expiry = null;
                 $meta['expires_at'] = is_string($existingExpiryRaw) ? $existingExpiryRaw : null;
             }
@@ -1169,7 +1176,7 @@ class AuthController
         }
 
         if ($shouldSend) {
-            $throttle = $this->calculateVerificationThrottle($user);
+            $throttle = $this->calculateVerificationThrottle($request, $user);
             if ($throttle['blocked']) {
                 $meta['rate_limited'] = true;
                 $meta['resend_available_at'] = $throttle['retry_after'] ?? null;
@@ -1196,7 +1203,8 @@ class AuthController
             try {
                 $lastSent = new \DateTimeImmutable((string)$lastSentRaw);
                 $meta['resend_available_at'] = $lastSent->modify('+1 hour')->format('Y-m-d H:i:s');
-            } catch (\Throwable $ignore) {
+            } catch (\Throwable $exception) {
+                $this->logException($exception, $request, 'Invalid stored verification send time', ['user_id' => $user['id']]);
                 $meta['resend_available_at'] = is_string($lastSentRaw) ? $lastSentRaw : null;
             }
         }
@@ -1204,7 +1212,7 @@ class AuthController
         return $meta;
     }
 
-    private function calculateVerificationThrottle(array $user): array
+    private function calculateVerificationThrottle(Request $request, array $user): array
     {
         $sendCount = (int)($user['verification_send_count'] ?? 0);
         $lastSentAtRaw = $user['verification_last_sent_at'] ?? null;
@@ -1215,7 +1223,8 @@ class AuthController
         if ($lastSentAtRaw) {
             try {
                 $lastSentAt = new \DateTimeImmutable((string)$lastSentAtRaw);
-            } catch (\Throwable $ignore) {
+            } catch (\Throwable $exception) {
+                $this->logException($exception, $request, 'Invalid stored verification send time', ['user_id' => $user['id']]);
                 $lastSentAt = null;
             }
         }

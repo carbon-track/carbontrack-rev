@@ -229,7 +229,7 @@ class AdminCronController
                     $fallbackPayload,
                     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
                 );
-            } catch (\JsonException $ignore) {
+            } catch (\JsonException) {
                 $json = '{"success":false,"message":"Failed to encode JSON response","code":"JSON_ENCODE_ERROR"}';
             }
         }

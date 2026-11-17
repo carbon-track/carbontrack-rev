@@ -99,8 +99,8 @@ class MessageController
                 if ($colStmt && $colStmt->fetch()) {
                     $hasPriority = true;
                 }
-            } catch (\Throwable $ignore) {
-                // ignore - absence of column will be handled
+            } catch (\Throwable $exception) {
+                $this->logException($exception, $request, __FUNCTION__, 'Failed to check for message priority column');
                 $hasPriority = false;
             }
 
@@ -794,22 +794,22 @@ $auditPayload = [
                         $requestId,
                         $auditLogId,
                         $systemLogId,
-                        $this->encodeJson($cleanErrorLogIds),
+                        $this->encodeJson($request, __FUNCTION__, $cleanErrorLogIds),
                         $title,
                         $content,
                         $priority,
                         $scope,
                         count($targetUserIds),
                         $sentCount,
-                        $this->encodeJson($invalidTargetIds),
-                        $this->encodeJson($failedUserIds),
-                        $this->encodeJson($messageIdSample),
-                        $this->encodeJson($messageMapSample),
+                        $this->encodeJson($request, __FUNCTION__, $invalidTargetIds),
+                        $this->encodeJson($request, __FUNCTION__, $failedUserIds),
+                        $this->encodeJson($request, __FUNCTION__, $messageIdSample),
+                        $this->encodeJson($request, __FUNCTION__, $messageMapSample),
                         $messageIdCount,
                         $contentHash,
-                        $this->encodeJson($emailDeliveryForLog),
-                        $this->encodeJson($filtersSnapshot),
-                        $this->encodeJson(!empty($metaSnapshot) ? $metaSnapshot : null),
+                        $this->encodeJson($request, __FUNCTION__, $emailDeliveryForLog),
+                        $this->encodeJson($request, __FUNCTION__, $filtersSnapshot),
+                        $this->encodeJson($request, __FUNCTION__, $metaSnapshot ?: null),
                         $user['id'] ?? null,
                     ]);
                 }
@@ -934,7 +934,7 @@ $auditPayload = [
     /**
      * 获取广播历史（管理员）
      */
-        public function getBroadcastHistory(Request $request, Response $response): Response
+    public function getBroadcastHistory(Request $request, Response $response): Response
     {
         try {
             $user = $this->authService->getCurrentUser($request);
@@ -1315,7 +1315,7 @@ $auditPayload = [
                 $update = $this->db->prepare('UPDATE message_broadcasts SET email_delivery_snapshot = :snapshot, updated_at = NOW() WHERE id = :id');
                 if ($update) {
                     $update->execute([
-                        ':snapshot' => $this->encodeJson($updatedDelivery),
+                        ':snapshot' => $this->encodeJson($request, __FUNCTION__, $updatedDelivery),
                         ':id' => $broadcastId,
                     ]);
                 }
@@ -1375,6 +1375,7 @@ $auditPayload = [
             ], $context);
             return $this->errorLogService->logError('broadcast_error', $message, $request, $payload);
         } catch (\Throwable $ignore) {
+            error_log('Could not persist broadcast error ' . $message . '. ' . $ignore->getMessage());
             return null;
         }
     }
@@ -1411,15 +1412,15 @@ $auditPayload = [
         return null;
     }
 
-    private function encodeJson($value): ?string
+    private function encodeJson(Request $request, string $action, mixed $value): ?string
     {
         if ($value === null) {
             return null;
         }
         try {
-            $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            return $encoded === false ? null : $encoded;
-        } catch (\Throwable $ignore) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        } catch (\Throwable $exception) {
+            $this->logException($exception, $request, $action, 'Failed to encode broadcast snapshot');
             return null;
         }
     }

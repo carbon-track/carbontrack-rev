@@ -1476,7 +1476,8 @@ class UserController
             // 兼容 MySQL/SQLite 的时间分组函数
             try {
                 $driver = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME) ?: 'mysql';
-            } catch (\Throwable $ignore) {
+            } catch (\Throwable $exception) {
+                $this->logException($exception, $request, 'Failed to detect database driver for user statistics', (int)$user['id']);
                 $driver = 'mysql';
             }
             $monthExpr = $driver === 'sqlite' ? "strftime('%Y-%m', created_at)" : "DATE_FORMAT(created_at, '%Y-%m')";
