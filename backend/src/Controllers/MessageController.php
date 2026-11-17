@@ -547,7 +547,7 @@ class MessageController
                 if (!is_array($targetUsersRaw)) {
                     return $this->json($response, ['error' => 'target_users must be an array of positive integers'], 400);
                 }
-                $resolved = $this->resolveExplicitRecipients($targetUsersRaw);
+                $resolved = $this->resolveExplicitRecipients($targetUsersRaw, $request);
                 if ($resolved['error']) {
                     return $this->json($response, ['error' => $resolved['error']], $resolved['status']);
                 }
@@ -575,7 +575,7 @@ class MessageController
             }
 
             if ($scope === 'all' && empty($targetUserIds)) {
-                $allResult = $this->resolveAllRecipients();
+                $allResult = $this->resolveAllRecipients($request);
                 $targetUserIds = $allResult['user_ids'];
                 $targetUserRecords = $allResult['records'];
             }
@@ -953,7 +953,11 @@ $auditPayload = [
                 if ($countStmt !== false) {
                     $total = (int) $countStmt->fetchColumn();
                 }
-            } catch (\Throwable $ignore) {
+            } catch (\Throwable $e) {
+                $this->logBroadcastError($request, 'Failed to count broadcast history', [
+                    'exception' => get_class($e),
+                    'error' => $e->getMessage(),
+                ]);
                 $total = 0;
             }
 
@@ -966,7 +970,11 @@ $auditPayload = [
                     $listStmt->execute();
                     $rows = $listStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
                 }
-            } catch (\Throwable $ignore) {
+            } catch (\Throwable $e) {
+                $this->logBroadcastError($request, 'Failed to load broadcast history', [
+                    'exception' => get_class($e),
+                    'error' => $e->getMessage(),
+                ]);
                 $rows = [];
             }
 
@@ -1580,7 +1588,7 @@ $auditPayload = [
         }
     }
 
-    private function resolveExplicitRecipients(array $ids): array
+    private function resolveExplicitRecipients(array $ids, Request $request): array
     {
         $result = [
             'error' => null,
@@ -1643,7 +1651,11 @@ $auditPayload = [
 
             $result['user_ids'] = array_values($collectedIds);
             $result['invalid_ids'] = array_values(array_diff($sanitized, $result['user_ids']));
-        } catch (\Throwable $ignore) {
+        } catch (\Throwable $e) {
+            $this->logBroadcastError($request, 'Failed to resolve target users', [
+                'exception' => get_class($e),
+                'error' => $e->getMessage(),
+            ]);
             $result['error'] = 'Failed to resolve target users';
             $result['status'] = 500;
         }
@@ -1682,7 +1694,7 @@ $auditPayload = [
         return $aggregated;
     }
 
-    private function resolveAllRecipients(): array
+    private function resolveAllRecipients(Request $request): array
     {
         $result = [
             'user_ids' => [],
@@ -1704,8 +1716,12 @@ $auditPayload = [
                 $result['user_ids'][] = $id;
                 $result['records'][$id] = $this->normalizeUserRow($row);
             }
-        } catch (\Throwable $ignore) {
-            // Swallow exception and return what we have
+        } catch (\Throwable $e) {
+            $this->logBroadcastError($request, 'Failed to load all broadcast recipients', [
+                'exception' => get_class($e),
+                'error' => $e->getMessage(),
+            ]);
+            // Return the recipients loaded before this failure.
         }
 
         return $result;

@@ -77,17 +77,13 @@ rules:
   # best-effort side effects such as sending email or building asset URLs).
   # The following are deliberately NOT server errors and are excluded:
   #  - client-input exceptions (\InvalidArgumentException, \JsonException):
-  #    the type-based pattern-nots cover single-catch tries; the
-  #    pattern-not-regex entries cover multi-catch tries, because Semgrep
-  #    pairs a pattern-not with a single catch clause, so a type-based
-  #    pattern-not does not suppress a try whose other catches are the ones
-  #    being matched. Trade-off: a try mixing an InvalidArgument catch with
-  #    a genuinely unlogged 500 catch would also be excused; in this codebase
-  #    those tries' other catches are 4xx responses or already log, so the
-  #    risk is accepted and should be revisited if that changes.
-  #  - intentional best-effort catches whose variable is named $ignore /
-  #    $ignored, catches that rethrow (throw $EXP), and catches inside the
-  #    logging helpers themselves that fall back to error_log().
+  #    match only the caught $TYPE with metavariable-regex. An unrelated
+  #    unlogged server-error catch in the same try must still be reported.
+  #  - intentional best-effort catches named $ignore / $ignored; reserve
+  #    these for failures that are safe to ignore, not database 500s.
+  #  - rethrows (throw $EXP), plus logging-helper failures caught as
+  #    $loggingError and sent to error_log() as an emergency fallback.
+  #    Ordinary catch blocks cannot use plain error_log() to pass the rule.
   # Anything else must call ErrorLogService (or a helper above) in the catch.
   - id: enforce-errorlogservice-in-catch
     message: >
@@ -203,28 +199,19 @@ rules:
           } catch ($TYPE $ignored) {
             ...
           }
+      # Only error-log-service fallback handlers may use plain error_log().
       - pattern-not: |
           try {
             ...
-          } catch ($TYPE $EXP) {
+          } catch ($TYPE $loggingError) {
             ...
             error_log(...);
             ...
           }
-      - pattern-not: |
-          try {
-            ...
-          } catch (\InvalidArgumentException $EXP) {
-            ...
-          }
-      - pattern-not: |
-          try {
-            ...
-          } catch (\JsonException $EXP) {
-            ...
-          }
-      - pattern-not-regex: 'catch \(\\InvalidArgumentException'
-      - pattern-not-regex: 'catch \(\\JsonException'
+      # The filter is bound to the caught type, not the entire try statement.
+      - metavariable-regex:
+          metavariable: $TYPE
+          regex: '^(?!\\(?:InvalidArgumentException|JsonException)$).*'
       - pattern-not: |
           try {
             ...

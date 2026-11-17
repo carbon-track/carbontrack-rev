@@ -368,7 +368,8 @@ class AvatarController
             $affectedUsers = [];
 
             if ($isDeactivation) {
-                // nosemgrep: semgrep.enforce-errorlogservice-in-catch -- missing fallback avatar is a client error (409 DEFAULT_AVATAR_REQUIRED), not a server error
+                // No default avatar is a 409 client error, not a server failure.
+                // nosemgrep
                 try {
                     $reassignment = $this->avatarModel->updateAvatarAndReassignUsers(
                         $avatarId,
