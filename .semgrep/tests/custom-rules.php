@@ -90,3 +90,15 @@ class ExceptionLoggingRuleFixture
         }
     }
 }
+
+function native_database_access($connection): void
+{
+    // ruleid: forbid-native-db-access
+    $native = $connection->getPdo();
+    // ruleid: forbid-native-db-access
+    $database = new \PDO('sqlite::memory:');
+    // ruleid: forbid-native-db-access
+    $containerKey = \PDO::class;
+    // ok: forbid-native-db-access
+    $connection->selectOne('SELECT 1');
+}
