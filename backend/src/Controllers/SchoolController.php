@@ -13,6 +13,8 @@ use Illuminate\Database\QueryException;
 
 class SchoolController extends BaseController
 {
+    use LogsClientExceptions;
+
     protected $auditLogService;
     protected $errorLogService;
     /** @var PDO */
@@ -120,8 +122,8 @@ class SchoolController extends BaseController
 
         try {
             $data = $this->sanitizeSchoolPayload($payload);
-        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report a request validation failure to the caller.
+        } catch (\InvalidArgumentException $exception) {
+            $this->logClientException($exception, $request, 400, __METHOD__, auditCategory: 'school_management');
             return $this->response($response, [
                 'success' => false,
                 'message' => $exception->getMessage(),
@@ -261,8 +263,8 @@ class SchoolController extends BaseController
 
         try {
             $data = $this->sanitizeSchoolPayload($payload);
-        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report a request validation failure to the caller.
+        } catch (\InvalidArgumentException $exception) {
+            $this->logClientException($exception, $request, 400, __METHOD__, auditCategory: 'school_management');
             return $this->response($response, [
                 'success' => false,
                 'message' => $exception->getMessage(),

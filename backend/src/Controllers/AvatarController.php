@@ -19,6 +19,8 @@ use Monolog\Logger;
 
 class AvatarController
 {
+    use LogsClientExceptions;
+
     private const ERR_INVALID_REQUEST_BODY = 'Request body must be a JSON object';
 
     private Avatar $avatarModel;
@@ -272,8 +274,8 @@ class AvatarController
                 'data' => $createdAvatar
             ], 201);
 
-        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report a request validation failure to the caller.
+        } catch (\InvalidArgumentException $e) {
+            $this->logClientException($e, $request, 400, __METHOD__, $user ?? null, 'avatar_management');
             return $this->jsonResponse($response, [
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -378,8 +380,8 @@ class AvatarController
                     );
                     $affectedUsers = $reassignment['users'] ?? [];
                     $fallbackAvatar = $reassignment['fallback_avatar'] ?? null;
-                } catch (AvatarFallbackUnavailableException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                    // Report the missing default avatar as a 409 conflict.
+                } catch (AvatarFallbackUnavailableException $e) {
+                    $this->logClientException($e, $request, 409, __METHOD__, $user ?? null, 'avatar_management');
                     return $this->jsonResponse($response, [
                         'success' => false,
                         'message' => $e->getMessage(),
@@ -465,8 +467,8 @@ class AvatarController
                 'data' => $updatedAvatar
             ]);
 
-        } catch (\InvalidArgumentException $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report a request validation failure to the caller.
+        } catch (\InvalidArgumentException $e) {
+            $this->logClientException($e, $request, 400, __METHOD__, $user ?? null, 'avatar_management');
             return $this->jsonResponse($response, [
                 'success' => false,
                 'message' => $e->getMessage(),

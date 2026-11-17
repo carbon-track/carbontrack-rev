@@ -89,8 +89,8 @@ class AdminAiController
             ]);
 
             return $this->json($response, $result);
-        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report a request validation failure to the caller.
+        } catch (\InvalidArgumentException $exception) {
+            $this->logException($exception, $request, 'Admin AI request validation failed');
             $this->logAdminAudit('admin_ai_chat_failed', $user ?? null, $request, [
                 'conversation_id' => $conversationId ?? null,
                 'data' => [
@@ -237,8 +237,8 @@ class AdminAiController
                                 'source' => $source ?? $request->getUri()->getPath(),
                             ],
                         ]);
-                    } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-                        // Report a request validation failure to the caller.
+                    } catch (\InvalidArgumentException $exception) {
+                        $this->logException($exception, $request, 'Admin AI request validation failed');
                         $this->logAdminAudit('admin_ai_chat_stream_failed', $user, $request, [
                             'conversation_id' => $conversationId,
                             'data' => [
@@ -319,8 +319,8 @@ class AdminAiController
             );
 
             return $streamResponse;
-        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report a request validation failure to the caller.
+        } catch (\InvalidArgumentException $exception) {
+            $this->logException($exception, $request, 'Admin AI request validation failed');
             $this->logAdminAudit('admin_ai_chat_stream_failed', $user ?? null, $request, [
                 'conversation_id' => $conversationId ?? null,
                 'data' => [
@@ -522,8 +522,11 @@ class AdminAiController
                 'success' => true,
                 'data' => $detail,
             ]);
-        } catch (\InvalidArgumentException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Report a request validation failure to the caller.
+        } catch (\InvalidArgumentException $exception) {
+            $this->logException($exception, $request, 'Admin AI request validation failed');
+            $this->logAdminAudit('admin_ai_conversation_viewed', $user ?? null, $request, [
+                'data' => ['code' => 'INVALID_CONVERSATION_ID'],
+            ], 'failed');
             return $this->json($response, [
                 'success' => false,
                 'error' => $exception->getMessage(),

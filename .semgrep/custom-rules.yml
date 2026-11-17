@@ -66,10 +66,10 @@ rules:
         - "/backend/src/dependencies.php"
 
   # Match each catch independently and locate the finding on its exception type.
-  # Document a reviewed 4xx or best-effort fallback on the affected catch only.
+  # Document reviewed cleanup, rethrows, and best-effort fallbacks on the affected catch.
   - id: enforce-errorlogservice-in-catch
     message: >-
-      Persist unexpected exceptions through ErrorLogService or a controller helper
+      Persist handled failures through ErrorLogService or a controller helper
       that uses it. Document intentional fallback handlers on the catch itself.
     severity: WARNING
     languages: [php]
@@ -95,6 +95,7 @@ rules:
                         metavariable: $STATUS
                         regex: '^5[0-9]{2}$'
       - pattern-not: try { ... } catch ($TYPE $EXP) { throw $EXP; }
+      - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->logClientException(...); ... }
       - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->logException(...); ... }
       - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->errorLogService->logException(...); ... }
       - pattern-not: try { ... } catch ($TYPE $EXP) { ... $this->errorLogService->logError(...); ... }
