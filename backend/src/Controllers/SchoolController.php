@@ -60,7 +60,8 @@ class SchoolController extends BaseController
         // 优先按 sort_order 排序；若目标数据库缺少该列，则回退到按 name 排序
         try {
             $items = (clone $query)->orderBy('sort_order', 'asc')->offset($offset)->limit($limit)->get();
-        } catch (QueryException $ignore) {
+        } catch (QueryException $exception) {
+            $this->logExceptionWithFallback($exception, $request, 'Retrying school ordering by name after query failure');
             $items = (clone $query)->orderBy('name', 'asc')->offset($offset)->limit($limit)->get();
         }
 
@@ -138,7 +139,7 @@ class SchoolController extends BaseController
             "sort_order" => "integer"
         ]);
 
-        $school = $this->createSchoolWithCompatibility($data);
+        $school = $this->createSchoolWithCompatibility($request, $data);
 
         $this->auditLogService->log(
             $request->getAttribute("user_id"),
@@ -190,7 +191,8 @@ class SchoolController extends BaseController
                             'is_active' => true,
                             'sort_order' => 0
                         ]);
-                    } catch (QueryException $ignore) {
+                    } catch (QueryException $exception) {
+                        $this->logExceptionWithFallback($exception, $request, 'Retrying school insert without sort_order');
                         $school = School::create([
                             'name' => $name,
                             'location' => $location,
@@ -280,7 +282,7 @@ class SchoolController extends BaseController
         ]);
 
         $oldData = $school->toArray();
-        $this->updateSchoolWithCompatibility($school, $data);
+        $this->updateSchoolWithCompatibility($request, $school, $data);
 
         $this->auditLogService->log(
             $request->getAttribute("user_id"),
@@ -568,16 +570,16 @@ class SchoolController extends BaseController
     /**
      * @param array<string,mixed> $data
      */
-    private function createSchoolWithCompatibility(array $data): School
+    private function createSchoolWithCompatibility(Request $request, array $data): School
     {
         try {
             return School::create($data);
-        } catch (QueryException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Retry on a legacy schema without sort_order and propagate other query errors.
+        } catch (QueryException $exception) {
             if (!$this->shouldRetryWithoutSortOrder($data, $exception)) {
                 throw $exception;
             }
 
+            $this->logExceptionWithFallback($exception, $request, 'Retrying school insert without sort_order');
             return School::create($this->withoutSortOrder($data));
         }
     }
@@ -585,7 +587,7 @@ class SchoolController extends BaseController
     /**
      * @param array<string,mixed> $data
      */
-    private function updateSchoolWithCompatibility(School $school, array $data): void
+    private function updateSchoolWithCompatibility(Request $request, School $school, array $data): void
     {
         if ($data === []) {
             return;
@@ -593,12 +595,12 @@ class SchoolController extends BaseController
 
         try {
             $school->update($data);
-        } catch (QueryException $exception) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
-            // Retry on a legacy schema without sort_order and propagate other query errors.
+        } catch (QueryException $exception) {
             if (!$this->shouldRetryWithoutSortOrder($data, $exception)) {
                 throw $exception;
             }
 
+            $this->logExceptionWithFallback($exception, $request, 'School update failed with sort_order');
             $retryData = $this->withoutSortOrder($data);
             if ($retryData !== []) {
                 $school->update($retryData);
