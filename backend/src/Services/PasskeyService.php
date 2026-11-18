@@ -797,32 +797,34 @@ class PasskeyService
             $this->db->statement('UPDATE users SET lastlgn = ? WHERE id = ?', [$timestamp, $userId]);
             return;
         } catch (\Throwable $exception) {
-            if ($this->logger !== null) {
-                $this->logger->debug('Failed to update legacy user login timestamp after passkey authentication', [
-                    'error' => DatabaseService::exceptionMessage($exception),
-                    'user_id' => $userId,
-                ]);
-            }
+            $this->logLoginTimestampFailure($exception, $userId, 'lastlgn');
         }
 
         try {
             $this->db->statement('UPDATE users SET last_login_at = ? WHERE id = ?', [$timestamp, $userId]);
         } catch (\Throwable $exception) {
-            try {
-                $request = SyntheticRequestFactory::fromContext('/internal/auth/passkey/login', 'POST');
-                $this->errorLogService?->logException($exception, $request, ['user_id' => $userId]);
-            } catch (\Throwable $loggingError) {
-                $this->logger?->warning('Failed to log passkey login timestamp error', [
-                    'error' => DatabaseService::exceptionMessage($loggingError),
-                ]);
-            }
-            if ($this->logger !== null) {
-                $this->logger->debug('Failed to update user login timestamp after passkey authentication', [
-                    'error' => DatabaseService::exceptionMessage($exception),
-                    'user_id' => $userId,
-                ]);
-            }
+            $this->logLoginTimestampFailure($exception, $userId, 'last_login_at');
         }
+    }
+
+    private function logLoginTimestampFailure(\Throwable $exception, int $userId, string $column): void
+    {
+        $context = [
+            'user_id' => $userId,
+            'operation' => 'touchUserLogin',
+            'column' => $column,
+        ];
+        try {
+            $request = SyntheticRequestFactory::fromContext('/internal/auth/passkey/login', 'POST');
+            $this->errorLogService?->logException($exception, $request, $context);
+        } catch (\Throwable $loggingError) {
+            $this->logger?->warning('Failed to log passkey login timestamp error', $context + [
+                'error' => DatabaseService::exceptionMessage($loggingError),
+            ]);
+        }
+        $this->logger?->debug('Failed to update user login timestamp after passkey authentication', $context + [
+            'error' => DatabaseService::exceptionMessage($exception),
+        ]);
     }
 
     /**
