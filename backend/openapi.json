@@ -2454,7 +2454,7 @@
         ],
         "responses": {
           "200": {
-            "description": "会话详情获取成功。",
+            "description": "会话详情获取成功，审计动作记录为 admin_ai_conversation_viewed。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2484,7 +2484,7 @@
             }
           },
           "422": {
-            "description": "conversation_id 无效。",
+            "description": "conversation_id 无效，错误码为 INVALID_CONVERSATION_ID，审计动作记录为 admin_ai_conversation_view_failed。",
             "content": {
               "application/json": {
                 "schema": {
