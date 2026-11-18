@@ -763,13 +763,10 @@ class CarbonTrackController
             ";
 
             // 非管理员只能查看自己的记录
-            if (!$this->authService->isAdminUser($user)) {
+            $isAdmin = $this->authService->isAdminUser($user);
+            $queryBindings = ['record_id' => $recordId];
+            if (!$isAdmin) {
                 $sql .= " AND r.user_id = :user_id";
-            }
-
-            $queryBindings = [];
-            $queryBindings['record_id'] = $recordId;
-            if (!$this->authService->isAdminUser($user)) {
                 $queryBindings['user_id'] = $user['id'];
             }
 
@@ -781,6 +778,16 @@ class CarbonTrackController
             // 处理图片字段（详情）
             $decoded = $record['images'] ? json_decode($record['images'], true) : [];
             $record['images'] = $this->normalizeImages($decoded);
+
+            if ($isAdmin) {
+                $this->auditLog->logAdminRead(
+                    $request,
+                    'admin_carbon_record_viewed',
+                    isset($user['id']) ? (int) $user['id'] : null,
+                    'carbon_records',
+                    ['record_id' => $record['id']]
+                );
+            }
 
             return $this->json($response, [
                 'success' => true,

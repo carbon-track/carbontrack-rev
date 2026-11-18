@@ -917,14 +917,25 @@ class CarbonTrackControllerTest extends TestCase
         $stmt->checkParameters = true;
         $stmt->method('parameter')->willReturn(true);
         $stmt->method('bindings')->willReturn(true);
-        $stmt->method('row')->willReturn(['id'=>'r3','images'=>null]);
+        $stmt->method('row')->willReturn([
+            'id' => 'r3',
+            'user_id' => 2,
+            'images' => null,
+            'description' => 'Private record description',
+        ]);
         $connection->method('responseFor')->willReturn($stmt);
 
         $controller = $this->makeController($connection, $calc, $msg, $audit, $auth);
-        $request = makeRequest('GET', '/carbon-track/transactions/r3');
+        $request = makeRequest('GET', '/api/v1/carbon-track/transactions/r3')
+            ->withAttribute('request_id', 'carbon-record-detail-fixture');
+        $audit->expects($this->once())->method('logAdminRead')->with(
+            $request, 'admin_carbon_record_viewed', 9, 'carbon_records', ['record_id' => 'r3']
+        )->willReturn(true);
         $response = new \Slim\Psr7\Response();
         $resp = $controller->getRecordDetail($request, $response, ['id' => 'r3']);
         $this->assertEquals(200, $resp->getStatusCode());
+        $payload = json_decode((string) $resp->getBody(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Private record description', $payload['data']['description']);
     }
 
     public function testGetUserRecordsPaged(): void
@@ -984,6 +995,7 @@ class CarbonTrackControllerTest extends TestCase
         $calc = $this->createMock(CarbonCalculatorService::class);
         $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
         $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit->expects($this->never())->method('logAdminRead');
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>2]);
         $auth->method('isAdminUser')->willReturn(false);

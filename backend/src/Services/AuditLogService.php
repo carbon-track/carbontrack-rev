@@ -282,6 +282,7 @@ class AuditLogService
             'endpoint' => $request->getUri()->getPath(),
             'data' => $scope,
             'status' => 'success',
+            'change_type' => 'read',
             'response_code' => 200,
         ]);
     }
