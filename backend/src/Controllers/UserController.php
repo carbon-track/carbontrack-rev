@@ -1727,7 +1727,7 @@ class UserController
             // For unit test diagnostics, include error in message
             return $this->jsonResponse($response, [
                 'success' => false,
-                'message' => 'Failed to get user stats: ' . $e->getMessage()
+                'message' => 'Failed to get user stats: ' . DatabaseService::exceptionMessage($e)
             ], 500);
         }
     }
