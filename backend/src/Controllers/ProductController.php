@@ -2187,15 +2187,15 @@ class ProductController
                 $row = DatabaseRows::one($this->db->selectOne('SELECT username, email FROM users WHERE id = :id', ['id' => $userId])) ?: [];
                 $username = $username ?: ($row['username'] ?? null);
                 $email = $email ?: ($row['email'] ?? null);
-            } catch (\Throwable $ignore) {
-                // 忽略补充信息失败，继续以已有数据写入
+            } catch (\Throwable $exception) {
+                $this->logControllerException($exception, $request, 'Failed to load user details for points transaction');
             }
         }
 
         $email = $email ?? '';
         $username = $username ?? '';
 
-        $columns = $this->getPointsTransactionColumns();
+        $columns = $this->getPointsTransactionColumns($request);
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
         $normalizedType = $points < 0 ? 'spend' : 'earn';
         $absolutePoints = abs($points);
@@ -2399,7 +2399,7 @@ class ProductController
         $this->db->statement($sql, $params);
     }
 
-    private function getPointsTransactionColumns(): array
+    private function getPointsTransactionColumns(Request $request): array
     {
         if ($this->pointsTransactionColumns !== null) {
             return $this->pointsTransactionColumns;
@@ -2435,8 +2435,8 @@ class ProductController
                     }
                 }
             }
-        } catch (\Throwable $ignore) {
-            // 读取表结构失败时按空集合处理，后续逻辑会走“现代”路径
+        } catch (\Throwable $exception) {
+            $this->logControllerException($exception, $request, 'Failed to read points transaction columns');
         }
 
         return $this->pointsTransactionColumns = $columns;

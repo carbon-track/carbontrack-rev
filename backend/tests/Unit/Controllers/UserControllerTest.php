@@ -637,7 +637,7 @@ class UserControllerTest extends TestCase
         $stmtRank = $this->createMock(DatabaseQueryResponse::class);
         $stmtRank->shape = 'row';
         $stmtRank->method('bindings')->willReturn(true);
-        $stmtRank->method('row')->willReturn(['rank' => 7]);
+        $stmtRank->method('row')->willReturn(['user_rank' => 7]);
 
         $stmtTotalUsers = $this->createMock(DatabaseQueryResponse::class);
         $stmtTotalUsers->shape = 'row';

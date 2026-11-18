@@ -9,6 +9,7 @@ use Illuminate\Database\Connection;
 use CarbonTrack\Models\UserPasskey;
 use CarbonTrack\Models\WebauthnChallenge;
 use CarbonTrack\Services\Webauthn\Base64Url;
+use CarbonTrack\Support\SyntheticRequestFactory;
 use CarbonTrack\Support\Uuid;
 use Monolog\Logger;
 
@@ -807,6 +808,14 @@ class PasskeyService
         try {
             $this->db->statement('UPDATE users SET last_login_at = ? WHERE id = ?', [$timestamp, $userId]);
         } catch (\Throwable $exception) {
+            try {
+                $request = SyntheticRequestFactory::fromContext('/internal/auth/passkey/login', 'POST');
+                $this->errorLogService?->logException($exception, $request, ['user_id' => $userId]);
+            } catch (\Throwable $loggingError) {
+                $this->logger?->warning('Failed to log passkey login timestamp error', [
+                    'error' => DatabaseService::exceptionMessage($loggingError),
+                ]);
+            }
             if ($this->logger !== null) {
                 $this->logger->debug('Failed to update user login timestamp after passkey authentication', [
                     'error' => DatabaseService::exceptionMessage($exception),

@@ -1550,15 +1550,15 @@ class UserController
                 'total_points_earned' => (float)($recordRow['total_points_earned'] ?? ($pointsRow['total_earned'] ?? 0)),
             ];
 
-            // 排名（按用户积分 points 降序）；这里避免额外 prepare 调用，直接置为 null 以兼容单元测试
+            // 积分排名与概览独立计算。
             $rankRow = ['rank' => null];
             try {
-                $fetchedRank = DatabaseRows::one($this->db->selectOne("SELECT COUNT(*) + 1 AS rank FROM users WHERE deleted_at IS NULL AND points > :points", ['points' => (float)($userRow['points'] ?? 0)])) ?: null;
-                if (is_array($fetchedRank) && array_key_exists('rank', $fetchedRank)) {
-                    $rankRow['rank'] = (int)$fetchedRank['rank'];
+                $fetchedRank = DatabaseRows::one($this->db->selectOne("SELECT COUNT(*) + 1 AS user_rank FROM users WHERE deleted_at IS NULL AND points > :points", ['points' => (float)($userRow['points'] ?? 0)])) ?: null;
+                if (is_array($fetchedRank) && array_key_exists('user_rank', $fetchedRank)) {
+                    $rankRow['rank'] = (int)$fetchedRank['user_rank'];
                 }
-            } catch (\Throwable $ignore) {
-                // ignore rank calculation failures to avoid breaking dashboard
+            } catch (\Throwable $exception) {
+                $this->logException($exception, $request, 'Failed to calculate user points rank', (int)$user['id']);
             }
 
             $totalUsers = 0;

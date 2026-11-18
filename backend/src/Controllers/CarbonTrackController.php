@@ -1080,7 +1080,7 @@ class CarbonTrackController
                 return $this->json($response, ['error' => 'Unauthorized'], 401);
             }
 
-            $driver = null; try { $driver = $this->db->getDriverName(); } catch (\Throwable $ignore) {}
+            $driver = $this->db->getDriverName();
 
             $stats = [
                 'total_records' => 0,
@@ -1101,7 +1101,9 @@ class CarbonTrackController
                     FROM carbon_records WHERE user_id = :user_id AND deleted_at IS NULL";
                 $row = DatabaseRows::one($this->db->selectOne($sql, ['user_id' => $user['id']]));
                 if ($row) { $stats = $row; }
-            } catch (\Throwable $ignore) { /* mock prepare null or driver unsupported */ }
+            } catch (\Throwable $exception) {
+                $this->logControllerException($exception, $request, 'Failed to compute user carbon record totals');
+            }
 
             // 月度统计：根据驱动选用不同语法
             $monthlyStats = [];
@@ -1128,7 +1130,9 @@ class CarbonTrackController
                         ORDER BY month DESC";
                 }
                 $monthlyStats = DatabaseRows::all($this->db->select($monthlySql, ['user_id' => $user['id']])) ?: [];
-            } catch (\Throwable $ignore) { /* swallow for unit mocks */ }
+            } catch (\Throwable $exception) {
+                $this->logControllerException($exception, $request, 'Failed to compute monthly user carbon record totals');
+            }
 
             $monthlyAchievements = [];
             try {
@@ -1147,7 +1151,9 @@ class CarbonTrackController
                         GROUP BY r.activity_id, a.name_zh ORDER BY SUM(r.points_earned) DESC LIMIT 10";
                 }
                 $monthlyAchievements = DatabaseRows::all($this->db->select($achievementsSql, ['user_id' => $user['id'], 'current_month' => $currentMonth])) ?: [];
-            } catch (\Throwable $ignore) { /* swallow */ }
+            } catch (\Throwable $exception) {
+                $this->logControllerException($exception, $request, 'Failed to compute monthly user achievements');
+            }
 
             return $this->json($response, [
                 'success' => true,

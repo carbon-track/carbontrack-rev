@@ -194,7 +194,7 @@ class AdminAiAgentService
         }
 
         $outcome = $this->processModelResponse($conversationId, $normalizedMessage, $normalizedContext, $logContext, $rawResponse);
-        $this->updateLlmConversationSnapshot($llmLogId, $normalizedMessage, $outcome, $normalizedContext);
+        $this->updateLlmConversationSnapshot($llmLogId, $normalizedMessage, $outcome, $normalizedContext, $logContext);
 
         if (($outcome['assistant_text'] ?? '') !== '') {
             $this->conversationStoreService->logConversationEvent('admin_ai_assistant_message', $logContext, [
@@ -733,7 +733,7 @@ class AdminAiAgentService
                         'assistant_text' => $content !== '' ? $content : ($assistantParts !== [] ? implode("\n\n", $assistantParts) : '我暂时无法完成这项操作，请再具体一些。'),
                         'metadata' => $this->extractMetadata($rawResponse),
                     ];
-                    $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $outcome, $context);
+                    $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $outcome, $context, $logContext);
                     return $outcome;
                 }
             }
@@ -771,7 +771,7 @@ class AdminAiAgentService
                     $lastOutcome = $blockingOutcomes !== []
                         ? $this->mergeBlockingToolOutcomes($blockingOutcomes, $assistantParts, $lastOutcome, $runId)
                         : $this->buildAgentLimitOutcome($assistantParts, $runId, 'max_tool_executions', [], $context);
-                    $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $lastOutcome, $context);
+                    $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $lastOutcome, $context, $logContext);
                     return $lastOutcome;
                 }
 
@@ -805,7 +805,7 @@ class AdminAiAgentService
 
             if ($blockingOutcomes !== []) {
                 $lastOutcome = $this->mergeBlockingToolOutcomes($blockingOutcomes, $assistantParts, $lastOutcome, $runId);
-                $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $lastOutcome, $context);
+                $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $lastOutcome, $context, $logContext);
                 return $lastOutcome;
             }
 
@@ -813,7 +813,7 @@ class AdminAiAgentService
                 $messages[] = $this->buildToolContinuationMessage($context);
             }
 
-            $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $lastOutcome, $context);
+            $this->updateLlmConversationSnapshot($llmLogId, $userMessage, $lastOutcome, $context, $logContext);
         }
 
         return $this->buildAgentLimitOutcome($assistantParts, $runId, 'max_steps', $lastOutcome, $context);
@@ -2059,8 +2059,13 @@ class AdminAiAgentService
      * @param array<string,mixed> $outcome
      * @param array<string,mixed> $context
      */
-    private function updateLlmConversationSnapshot(?int $llmLogId, string $userMessage, array $outcome, array $context): void
-    {
+    private function updateLlmConversationSnapshot(
+        ?int $llmLogId,
+        string $userMessage,
+        array $outcome,
+        array $context,
+        array $logContext
+    ): void {
         if ($llmLogId === null) {
             return;
         }
@@ -2085,6 +2090,10 @@ class AdminAiAgentService
                 ':id' => $llmLogId,
             ]);
         } catch (\Throwable $exception) {
+            $this->logError($exception, $logContext, [
+                'context_message' => 'Failed to update admin AI LLM conversation snapshot',
+                'llm_log_id' => $llmLogId,
+            ]);
             $this->logger->warning('Failed to update admin AI LLM conversation snapshot.', [
                 'llm_log_id' => $llmLogId,
                 'error' => DatabaseService::exceptionMessage($exception),

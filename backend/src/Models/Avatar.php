@@ -472,6 +472,7 @@ class Avatar
             
         } catch (\Exception $e) {
             $this->db->rollBack();
+            $this->logErrorWithService($e, 'Failed to set the default avatar:');
             return false;
         }
     }
@@ -522,6 +523,7 @@ class Avatar
             
         } catch (\Exception $e) {
             $this->db->rollBack();
+            $this->logErrorWithService($e, 'Failed to update avatar sort orders:');
             return false;
         }
     }

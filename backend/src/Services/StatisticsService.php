@@ -141,8 +141,8 @@ class StatisticsService
                 WHERE deleted_at IS NULL
                 GROUP BY COALESCE(priority, 'normal')";
             $messagePriorityRows = DatabaseRows::all($this->db->select($prioritySql)) ?: [];
-        } catch (\Throwable $ignore) {
-            $messagePriorityRows = [];
+        } catch (\Throwable $exception) {
+            $this->logError($exception, '/internal/statistics/admin', ['aggregation' => 'message_priority']);
         }
 
         $messageTrendRows = [];
@@ -159,8 +159,8 @@ class StatisticsService
                 GROUP BY {$dateExpr}
                 ORDER BY {$dateExpr}";
             $messageTrendRows = DatabaseRows::all($this->db->select($trendSql, [':start_date' => $messageTrendStart->format('Y-m-d H:i:s')])) ?: [];
-        } catch (\Throwable $ignore) {
-            $messageTrendRows = [];
+        } catch (\Throwable $exception) {
+            $this->logError($exception, '/internal/statistics/admin', ['aggregation' => 'message_trend']);
         }
 
         $activityRecordStatsRaw = DatabaseRows::one($this->db->selectOne("SELECT COUNT(*) AS total_records,
@@ -198,7 +198,8 @@ class StatisticsService
                     FROM points_transactions
                     WHERE {$activityDeletedCondition} AND created_at >= :d30
                     GROUP BY {$dateExpr}", [':d30' => $thirtyDaysAgo])) ?: [];
-        } catch (\Throwable $ignore) {
+        } catch (\Throwable $exception) {
+            $this->logError($exception, '/internal/statistics/admin', ['aggregation' => 'transaction_trend']);
         }
 
         $trendCarbon = [];
@@ -209,7 +210,8 @@ class StatisticsService
                     FROM carbon_records
                     WHERE {$carbonDeletedCondition} AND created_at >= :d30 AND LOWER(status) = 'approved'
                     GROUP BY {$dateExpr}", [':d30' => $thirtyDaysAgo])) ?: [];
-        } catch (\Throwable $ignore) {
+        } catch (\Throwable $exception) {
+            $this->logError($exception, '/internal/statistics/admin', ['aggregation' => 'carbon_trend']);
         }
 
         $trendMap = [];
