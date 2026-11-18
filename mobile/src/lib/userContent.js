@@ -56,7 +56,7 @@ const normalizePagination = (pagination, fallbackTotal = 0) => ({
 const normalizeMessage = (message = {}) => ({
   ...message,
   id: message.id,
-  title: message.title || message.subject || message.type || '',
+  title: message.title || message.subject || '',
   content: message.content || message.body || message.message || '',
   isRead: asBoolean(message.is_read) || Boolean(message.read_at),
   createdAt: message.created_at || message.createdAt || '',

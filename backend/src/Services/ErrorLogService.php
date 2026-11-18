@@ -95,13 +95,19 @@ class ErrorLogService
             ]);
             return $id > 0 ? $id : null;
         } catch (\Throwable $ex) {
-            // Fallback to application logger to avoid losing the error entirely
+            $fallback = [
+                'error_type' => $data['error_type'] ?? null,
+                'error_message' => $data['error_message'] ?? null,
+                'error_file' => $data['error_file'] ?? null,
+                'error_line' => $data['error_line'] ?? null,
+                'request_id' => $data['request_id'] ?? null,
+                'persistence_error' => DatabaseService::exceptionMessage($ex),
+            ];
             try {
-                $this->logger->error('Failed to persist error log', [
-                    'message' => DatabaseService::exceptionMessage($ex),
-                ]);
-            } catch (\Throwable $ignored) {
-                // swallow
+                $this->logger->error('Failed to persist error log', $fallback);
+            } catch (\Throwable $loggerFailure) {
+                $fallback['logger_error'] = DatabaseService::exceptionMessage($loggerFailure);
+                error_log('Failed to persist error log ' . json_encode($fallback, JSON_INVALID_UTF8_SUBSTITUTE));
             }
             return null;
         }

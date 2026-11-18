@@ -19,16 +19,18 @@ test('normalizeMessagesPayload accepts CarbonTrack paginated message responses',
     data: [
       { id: 1, title: 'Welcome', is_read: false, created_at: '2026-05-03 08:00:00' },
       { id: 2, subject: 'Reviewed', read_at: '2026-05-03 09:00:00' },
+      { id: 3, title: '', type: 'system', is_read: true },
     ],
     pagination: { page: 2, pages: 5, total: 42 },
     unread_count: 7,
   });
 
-  assert.equal(payload.messages.length, 2);
+  assert.equal(payload.messages.length, 3);
   assert.equal(payload.messages[0].title, 'Welcome');
   assert.equal(payload.messages[0].isRead, false);
   assert.equal(payload.messages[1].title, 'Reviewed');
   assert.equal(payload.messages[1].isRead, true);
+  assert.equal(payload.messages[2].title, '');
   assert.deepEqual(payload.pagination, { page: 2, pages: 5, total: 42 });
   assert.equal(payload.unreadCount, 7);
 });

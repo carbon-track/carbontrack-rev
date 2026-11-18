@@ -476,6 +476,7 @@ class AuthControllerTest extends TestCase
             'confirm_password' => 'fixture password',
         ]);
         $failure = new \Illuminate\Database\QueryException(
+            'sqlite',
             'SELECT * FROM users WHERE reset_token = ?',
             [$resetToken],
             new \RuntimeException('Fixture database unavailable')

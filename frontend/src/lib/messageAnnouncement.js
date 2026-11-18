@@ -5,10 +5,6 @@ export function isAnnouncementMessage(message) {
     return false;
   }
 
-  if (message.type === 'system') {
-    return true;
-  }
-
   if (message.sender_id !== null) {
     return false;
   }

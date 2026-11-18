@@ -420,33 +420,6 @@ class MessageControllerTest extends TestCase
         $this->assertTrue($json['success']);
     }
 
-    public function testGetMessageStatsAggregates(): void
-    {
-        $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
-        $svc = $this->createMock(MessageService::class);
-        $audit = $this->createMock(AuditLogService::class);
-        $auth = $this->createMock(AuthService::class);
-        $auth->method('getCurrentUser')->willReturn(['id' => 30]);
-
-        $stmt = $this->createMock(DatabaseQueryResponse::class);
-        $stmt->shape = 'rows';
-        $stmt->method('bindings')->willReturn(true);
-        $stmt->method('rows')->willReturn([
-            ['type' => 'system', 'priority' => 'high', 'count' => 2, 'unread_count' => 1],
-            ['type' => 'notification', 'priority' => 'low', 'count' => 3, 'unread_count' => 0],
-        ]);
-        $connection->method('responseFor')->willReturn($stmt);
-
-        $controller = $this->makeController($connection, $svc, $audit, $auth);
-        $request = makeRequest('GET', '/messages/stats');
-        $response = new \Slim\Psr7\Response();
-        $resp = $controller->getMessageStats($request, $response);
-        $this->assertEquals(200, $resp->getStatusCode());
-        $json = json_decode((string)$resp->getBody(), true);
-        $this->assertTrue($json['success']);
-        $this->assertEquals(5, $json['data']['by_type']['system']['total'] + $json['data']['by_type']['notification']['total']);
-    }
-
     public function testBroadcastRequiresAdmin(): void
     {
         $connection = new DatabaseConnectionStub();

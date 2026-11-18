@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CarbonTrack\Tests\Unit\Services;
 
 use Illuminate\Database\Connection;
+use Illuminate\Database\UniqueConstraintViolationException;
 use CarbonTrack\Support\DatabaseRows;
 use CarbonTrack\Tests\Support\DatabaseFixture;
 use CarbonTrack\Services\AdminAiConversationStoreService;
@@ -170,7 +171,7 @@ class AdminAiConversationStoreServiceTest extends TestCase
         $row = DatabaseRows::one($connection->selectOne("SELECT error_type, request_id, client_server FROM error_logs ORDER BY id DESC LIMIT 1"));
 
         $this->assertIsArray($row);
-        $this->assertSame('Illuminate\Database\QueryException', $row['error_type']);
+        $this->assertSame(UniqueConstraintViolationException::class, $row['error_type']);
         $this->assertSame('req-run-error-1', $row['request_id']);
         $this->assertStringContainsString('admin_ai_run_start_failed', (string) $row['client_server']);
     }
