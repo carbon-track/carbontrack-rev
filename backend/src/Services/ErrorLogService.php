@@ -8,6 +8,9 @@ use Illuminate\Database\Connection;
 use CarbonTrack\Support\RequestIdNormalizer;
 use CarbonTrack\Support\SensitiveDataRedactor;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Monolog\Handler\ErrorLogHandler;
+use Monolog\Handler\WhatFailureGroupHandler;
+use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 
 class ErrorLogService
@@ -107,7 +110,10 @@ class ErrorLogService
                 $this->logger->error('Failed to persist error log', $fallback);
             } catch (\Throwable $loggerFailure) {
                 $fallback['logger_error'] = DatabaseService::exceptionMessage($loggerFailure);
-                error_log('Failed to persist error log ' . json_encode($fallback, JSON_INVALID_UTF8_SUBSTITUTE));
+                $emergencyLogger = new Logger('carbontrack-emergency', [
+                    new WhatFailureGroupHandler([new ErrorLogHandler()]),
+                ]);
+                $emergencyLogger->error('Failed to persist error log', $fallback);
             }
             return null;
         }

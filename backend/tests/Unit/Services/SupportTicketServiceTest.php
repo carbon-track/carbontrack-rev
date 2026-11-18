@@ -400,7 +400,7 @@ class SupportTicketServiceTest extends TestCase
         $this->assertSame(51, $result['id']);
     }
 
-    public function testSupportReplyClearsResolvedMarkersWhenTicketReopens(): void
+    public function testSupportReplyReopensTicketAndLogsRequesterNotificationFailure(): void
     {
         $now = date('Y-m-d H:i:s');
         $requester = User::create([
@@ -433,12 +433,23 @@ class SupportTicketServiceTest extends TestCase
             'updated_at' => $now,
         ]);
 
+        $notificationFailure = new \RuntimeException('Fixture notification insert failed');
+        $messages = $this->createMock(MessageService::class);
+        $messages->expects($this->once())->method('sendSystemMessage')->willThrowException($notificationFailure);
+        $errorLog = $this->createMock(ErrorLogService::class);
+        $errorLog->expects($this->once())->method('logException')->with(
+            $notificationFailure,
+            $this->callback(static fn ($request): bool => $request->getUri()->getPath() === '/support/notifications'),
+            ['ticket_id' => 52, 'user_id' => (int) $requester->id]
+        );
         $service = new SupportTicketService(
             self::$capsule->getConnection(),
             $this->createMock(LoggerInterface::class),
             $this->createMock(AuditLogService::class),
-            $this->createMock(ErrorLogService::class),
-            $this->createMock(FileMetadataService::class)
+            $errorLog,
+            $this->createMock(FileMetadataService::class),
+            null,
+            $messages
         );
 
         $result = $service->addSupportMessage(
