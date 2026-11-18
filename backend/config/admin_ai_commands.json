@@ -1233,7 +1233,7 @@
     {
       "name": "search_system_logs",
       "label": "Search system logs",
-      "description": "Search admin audit, LLM, and error logs by keyword, conversation, or request id.",
+      "description": "Search admin audit, LLM, and error logs by keyword, conversation, or request id. Count admin_ai_conversation_viewed records with status success as completed conversation views. Rejected conversation IDs use admin_ai_conversation_view_failed.",
       "api": {
         "method": "GET",
         "path": "/api/v1/admin/logs/search",
