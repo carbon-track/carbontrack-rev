@@ -157,6 +157,15 @@ class MessageControllerTest extends TestCase
         $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
         $svc = $this->createMock(MessageService::class);
         $audit = $this->createMock(AuditLogService::class);
+        $audit->expects($this->once())->method('log')->with($this->callback(
+            static fn (array $entry): bool =>
+                $entry['user_id'] === 9
+                && $entry['action'] === 'messages_marked_read'
+                && $entry['affected_table'] === 'messages'
+                && $entry['data']['scope'] === 'single'
+                && $entry['data']['requested_message_ids'] === [100]
+                && $entry['data']['affected_rows'] === 1
+        ));
         $auth = $this->createMock(AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 9]);
 
@@ -170,6 +179,7 @@ class MessageControllerTest extends TestCase
         // update read_at
         $update = $this->createMock(DatabaseQueryResponse::class);
         $update->method('bindings')->willReturn(true);
+        $update->method('affected')->willReturn(1);
         
         $connection->method('responseFor')->willReturnOnConsecutiveCalls($select, $update);
 
@@ -214,6 +224,15 @@ class MessageControllerTest extends TestCase
         $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
         $svc = $this->createMock(MessageService::class);
         $audit = $this->createMock(AuditLogService::class);
+        $audit->expects($this->once())->method('log')->with($this->callback(
+            static fn (array $entry): bool =>
+                $entry['user_id'] === 10
+                && $entry['action'] === 'messages_marked_read'
+                && $entry['affected_table'] === 'messages'
+                && $entry['data']['scope'] === 'all'
+                && $entry['data']['requested_message_ids'] === []
+                && $entry['data']['affected_rows'] === 5
+        ));
         $auth = $this->createMock(AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 10]);
 
@@ -237,6 +256,15 @@ class MessageControllerTest extends TestCase
         $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
         $svc = $this->createMock(MessageService::class);
         $audit = $this->createMock(AuditLogService::class);
+        $audit->expects($this->once())->method('log')->with($this->callback(
+            static fn (array $entry): bool =>
+                $entry['user_id'] === 10
+                && $entry['action'] === 'messages_marked_read'
+                && $entry['affected_table'] === 'messages'
+                && $entry['data']['scope'] === 'selected'
+                && $entry['data']['requested_message_ids'] === [1, 2]
+                && $entry['data']['affected_rows'] === 2
+        ));
         $auth = $this->createMock(AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 10]);
 
@@ -255,11 +283,42 @@ class MessageControllerTest extends TestCase
         $this->assertEquals(2, $json['affected_rows']);
     }
 
+    public function testMarkSelectedMessagesAuditsOnlyChangedRows(): void
+    {
+        $connection = DatabaseFixture::sqlite();
+        $connection->statement('CREATE TABLE messages (id INTEGER PRIMARY KEY, receiver_id INTEGER, is_read INTEGER, updated_at DATETIME, deleted_at DATETIME)');
+        $connection->table('messages')->insert([
+            ['id' => 1, 'receiver_id' => 10, 'is_read' => 0, 'deleted_at' => null],
+            ['id' => 2, 'receiver_id' => 11, 'is_read' => 0, 'deleted_at' => null],
+            ['id' => 3, 'receiver_id' => 10, 'is_read' => 0, 'deleted_at' => '2025-01-01'],
+        ]);
+        $audit = $this->createMock(AuditLogService::class);
+        $audit->expects($this->once())->method('log')->with($this->callback(
+            static fn (array $entry): bool =>
+                $entry['data']['scope'] === 'selected'
+                && $entry['data']['requested_message_ids'] === [1, 2, 3]
+                && $entry['data']['affected_rows'] === 1
+        ));
+        $auth = $this->createMock(AuthService::class);
+        $auth->method('getCurrentUser')->willReturn(['id' => 10]);
+        $controller = $this->makeController($connection, $this->createMock(MessageService::class), $audit, $auth);
+        $request = makeRequest('PUT', '/api/v1/messages/mark-all-read', ['message_ids' => [1, 2, 3]]);
+
+        $first = $controller->markAllAsRead($request, new \Slim\Psr7\Response());
+        $retry = $controller->markAllAsRead($request, new \Slim\Psr7\Response());
+
+        $this->assertSame(200, $first->getStatusCode());
+        $this->assertSame(1, json_decode((string) $first->getBody(), true)['affected_rows']);
+        $this->assertSame(0, json_decode((string) $retry->getBody(), true)['affected_rows']);
+        $this->assertSame([1, 0, 0], array_map('intval', $connection->table('messages')->orderBy('id')->pluck('is_read')->all()));
+    }
+
     public function testMarkAsReadNotOwnedReturns404(): void
     {
         $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
         $svc = $this->createMock(MessageService::class);
         $audit = $this->createMock(AuditLogService::class);
+        $audit->expects($this->never())->method('log');
         $auth = $this->createMock(AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 20]);
 
@@ -281,6 +340,15 @@ class MessageControllerTest extends TestCase
         $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
         $svc = $this->createMock(MessageService::class);
         $audit = $this->createMock(AuditLogService::class);
+        $audit->expects($this->once())->method('log')->with($this->callback(
+            static fn (array $entry): bool =>
+                $entry['user_id'] === 21
+                && $entry['action'] === 'messages_marked_read'
+                && $entry['affected_table'] === 'messages'
+                && $entry['data']['scope'] === 'single'
+                && $entry['data']['requested_message_ids'] === [300]
+                && $entry['data']['affected_rows'] === 1
+        ));
         $auth = $this->createMock(AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id' => 21]);
 
@@ -291,6 +359,7 @@ class MessageControllerTest extends TestCase
 
         $update = $this->createMock(DatabaseQueryResponse::class);
         $update->method('bindings')->willReturn(true);
+        $update->method('affected')->willReturn(1);
 
         $connection->method('responseFor')->willReturnOnConsecutiveCalls($select, $update);
 

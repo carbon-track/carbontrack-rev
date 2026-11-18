@@ -221,7 +221,7 @@ class MessageController
 
             // 如果消息未读，标记为已读
             if (!($message['is_read'] ?? false)) {
-                $this->markMessageAsRead($messageId);
+                $this->markMessagesAsRead((int) $user['id'], [$messageId], 'single');
                 $message['is_read'] = true;
             }
 
@@ -258,7 +258,7 @@ class MessageController
             }
 
             // 标记为已读
-            $this->markMessageAsRead($messageId);
+            $this->markMessagesAsRead((int) $user['id'], [$messageId], 'single');
 
             return $this->json($response, [
                 'success' => true,
@@ -283,26 +283,9 @@ class MessageController
             }
 
             $data = $request->getParsedBody();
-            $messageIds = $data['message_ids'] ?? [];
-
-            if (empty($messageIds)) {
-                // 标记所有未读消息为已读
-                $sql = "
-                    UPDATE messages 
-                    SET is_read = 1, updated_at = CURRENT_TIMESTAMP
-                    WHERE receiver_id = :user_id AND is_read = 0 AND deleted_at IS NULL
-                ";
-                $affectedRows = $this->db->affectingStatement($sql, ['user_id' => $user['id']]);
-            } else {
-                // 标记指定消息为已读
-                $placeholders = str_repeat('?,', count($messageIds) - 1) . '?';
-                $sql = "
-                    UPDATE messages 
-                    SET is_read = 1, updated_at = CURRENT_TIMESTAMP
-                    WHERE receiver_id = ? AND id IN ({$placeholders}) AND is_read = 0 AND deleted_at IS NULL
-                ";
-                $affectedRows = $this->db->affectingStatement($sql, array_merge([$user['id']], $messageIds));
-            }
+            $messageIds = ($data['message_ids'] ?? []) ?: [];
+            $scope = $messageIds === [] ? 'all' : 'selected';
+            $affectedRows = $this->markMessagesAsRead((int) $user['id'], $messageIds, $scope);
 
             return $this->json($response, [
                 'success' => true,
@@ -2281,13 +2264,37 @@ $auditPayload = [
         }
     }
 
-    /**
-     * 标记消息为已读的私有方法
-     */
-    private function markMessageAsRead(string $messageId): void
+    private function markMessagesAsRead(int $userId, array $messageIds, string $scope): int
     {
-        $sql = "UPDATE messages SET is_read = 1, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND is_read = 0";
-        $this->db->statement($sql, ['id' => $messageId]);
+        $messages = $this->db->table('messages')
+            ->where('receiver_id', $userId)
+            ->where('is_read', 0)
+            ->whereNull('deleted_at');
+        if ($messageIds !== []) {
+            $messages->whereIn('id', $messageIds);
+        }
+
+        $affected = $messages->update([
+            'is_read' => 1,
+            'updated_at' => $this->db->raw('CURRENT_TIMESTAMP'),
+        ]);
+        if ($affected > 0) {
+            $this->auditLog->log([
+                'user_id' => $userId,
+                'actor_type' => 'user',
+                'action' => 'messages_marked_read',
+                'operation_category' => 'message',
+                'affected_table' => 'messages',
+                'affected_id' => $scope === 'single' ? (int) $messageIds[0] : null,
+                'data' => [
+                    'scope' => $scope,
+                    'requested_message_ids' => array_values(array_map('intval', $messageIds)),
+                    'affected_rows' => $affected,
+                ],
+            ]);
+        }
+
+        return $affected;
     }
     private function json(Response $response, array $data, int $status = 200): Response
     {
