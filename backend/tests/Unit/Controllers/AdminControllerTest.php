@@ -54,6 +54,58 @@ class AdminControllerTest extends TestCase
         $this->assertTrue(class_exists(AdminController::class));
     }
 
+    public function testGetPendingTransactionsAuditsEffectivePageAndReturnedIds(): void
+    {
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->once())->method('select')
+            ->with($this->stringContains('FROM points_transactions'), [':limit' => 10, ':offset' => 10])
+            ->willReturn([
+                (object) ['id' => 'transaction-11', 'email' => 'fixture@example.test', 'img' => 'proof.png'],
+                (object) ['id' => 'transaction-12', 'notes' => 'Fixture notes'],
+            ]);
+        $connection->expects($this->once())->method('selectOne')->willReturn((object) ['total' => 12]);
+
+        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth->method('getCurrentUser')->willReturn(['id' => 42, 'is_admin' => 1]);
+        $auth->method('isAdminUser')->willReturn(true);
+        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $path = '/api/v1/admin/transactions/pending';
+        $audit->expects($this->once())->method('logAdminOperation')->with(
+            'admin_pending_transactions_viewed',
+            42,
+            'admin',
+            [
+                'table' => 'points_transactions',
+                'request_id' => 'pending-transactions-fixture',
+                'request_method' => 'GET',
+                'endpoint' => $path,
+                'request_data' => [
+                    'page' => 2,
+                    'limit' => 10,
+                    'transaction_ids' => ['transaction-11', 'transaction-12'],
+                ],
+            ]
+        )->willReturn(true);
+
+        $controller = $this->makeController(
+            $connection,
+            $auth,
+            $audit,
+            $this->createMock(BadgeService::class),
+            $this->createMock(StatisticsService::class),
+            $this->createMock(CheckinService::class),
+            new QuotaConfigService()
+        );
+        $request = makeRequest('GET', $path, null, ['page' => 2, 'limit' => 1])
+            ->withAttribute('request_id', 'pending-transactions-fixture');
+        $response = $controller->getPendingTransactions($request, new \Slim\Psr7\Response());
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(['transaction-11', 'transaction-12'], array_column($payload['data']['transactions'], 'id'));
+        $this->assertSame(10, $payload['data']['pagination']['per_page']);
+    }
+
     public function testGetUsersRequiresAdmin(): void
     {
         $connection = new DatabaseConnectionStub();

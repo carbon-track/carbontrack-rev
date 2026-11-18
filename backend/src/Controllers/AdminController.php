@@ -466,6 +466,23 @@ $sql = "
 
             $total = (int)DatabaseRows::scalar($this->db->selectOne("SELECT COUNT(*) FROM points_transactions pt WHERE pt.status='pending' AND pt.deleted_at IS NULL"));
 
+            $this->auditLog->logAdminOperation(
+                'admin_pending_transactions_viewed',
+                isset($user['id']) ? (int) $user['id'] : null,
+                'admin',
+                [
+                    'table' => 'points_transactions',
+                    'request_id' => $request->getAttribute('request_id'),
+                    'request_method' => $request->getMethod(),
+                    'endpoint' => $request->getUri()->getPath(),
+                    'request_data' => [
+                        'page' => $page,
+                        'limit' => $limit,
+                        'transaction_ids' => array_column($transactions, 'id'),
+                    ],
+                ]
+            );
+
             return $this->jsonResponse($response, [
                 'success' => true,
                 'data' => [
