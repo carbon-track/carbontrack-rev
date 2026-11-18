@@ -246,7 +246,7 @@ class SupportRoutingEngineService
                 } catch (\Throwable $exception) {
                     $this->logger->warning('Support SLA reroute failed', [
                         'ticket_id' => $ticketId,
-                        'error' => $exception->getMessage(),
+                        'error' => DatabaseService::exceptionMessage($exception),
                     ]);
                     $this->logError($exception, [
                         'ticket_id' => $ticketId,
@@ -950,7 +950,7 @@ class SupportRoutingEngineService
             $this->logger->warning('Failed to send smart assignment system notification', [
                 'ticket_id' => $ticketId,
                 'user_id' => $userId,
-                'error' => $exception->getMessage(),
+                'error' => DatabaseService::exceptionMessage($exception),
             ]);
             $this->recordNotificationFailure($exception, 'support_routing_system_notification_failed', [
                 'ticket_id' => $ticketId,
@@ -975,7 +975,7 @@ class SupportRoutingEngineService
             $this->logger->warning('Failed to send smart assignment email notification', [
                 'ticket_id' => $ticketId,
                 'user_id' => $userId,
-                'error' => $exception->getMessage(),
+                'error' => DatabaseService::exceptionMessage($exception),
             ]);
             $this->recordNotificationFailure($exception, 'support_routing_email_notification_failed', [
                 'ticket_id' => $ticketId,
@@ -1012,7 +1012,7 @@ class SupportRoutingEngineService
             'affected_table' => 'support_tickets',
             'affected_id' => isset($context['ticket_id']) ? (int) $context['ticket_id'] : null,
             'status' => 'failed',
-            'data' => $context + ['error' => $exception->getMessage()],
+            'data' => $context + ['error' => DatabaseService::exceptionMessage($exception)],
         ]);
 
         $this->logError($exception, $context);

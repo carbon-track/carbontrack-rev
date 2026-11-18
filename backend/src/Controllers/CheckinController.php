@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Controllers;
 
+use CarbonTrack\Services\DatabaseService;
 use CarbonTrack\Support\DatabaseRows;
 use CarbonTrack\Models\UserUsageStats;
 use CarbonTrack\Services\AuthService;
@@ -415,7 +416,7 @@ class CheckinController
     private function logException(\Throwable $e, Request $request, string $message): void
     {
         try {
-            $this->logger->error($message, ['error' => $e->getMessage()]);
+            $this->logger->error($message, ['error' => DatabaseService::exceptionMessage($e)]);
         } catch (\Throwable $ignore) {
             // ignore logger errors
         }

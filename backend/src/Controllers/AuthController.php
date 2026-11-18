@@ -112,7 +112,7 @@ class AuthController
             try {
                 $challenge = $this->proofOfWorkService->createChallenge($scope, $this->getClientIP($request));
             } catch (\RuntimeException $rateLimitError) {
-                if (strpos($rateLimitError->getMessage(), 'rate limit') !== false) {
+                if (strpos(DatabaseService::exceptionMessage($rateLimitError), 'rate limit') !== false) {
                     $this->logClientException($rateLimitError, $request, 429, __METHOD__, auditCategory: 'authentication');
                     return $this->jsonResponse($response, [
                         'success' => false,
@@ -129,7 +129,7 @@ class AuthController
                 'data' => $challenge,
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Proof-of-work challenge creation failed', ['error' => $e->getMessage()]);
+            $this->logger->error('Proof-of-work challenge creation failed', ['error' => DatabaseService::exceptionMessage($e)]);
             try {
                 if ($this->errorLogService) {
                     $this->errorLogService->logException($e, $request);
@@ -137,8 +137,8 @@ class AuthController
             } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
                 // Use the application logger if ErrorLogService itself fails.
                 $this->logger->warning('ErrorLogService failed while logging proof-of-work challenge error', [
-                    'error' => $loggingError->getMessage(),
-                    'original_error' => $e->getMessage(),
+                    'error' => DatabaseService::exceptionMessage($loggingError),
+                    'original_error' => DatabaseService::exceptionMessage($e),
                 ]);
             }
             return $this->jsonResponse($response, [
@@ -315,7 +315,7 @@ class AuthController
                 'data' => $responsePayload
             ], 201);
         } catch (\Throwable $e) {
-            $this->logger->error('User registration failed', ['error' => $e->getMessage()]);
+            $this->logger->error('User registration failed', ['error' => DatabaseService::exceptionMessage($e)]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
             return $this->jsonResponse($response, [
                 'success' => false,
@@ -484,7 +484,7 @@ class AuthController
                 'data' => $responsePayload
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('User login failed', ['error' => $e->getMessage()]);
+            $this->logger->error('User login failed', ['error' => DatabaseService::exceptionMessage($e)]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
             return $this->jsonResponse($response, [
                 'success' => false,
@@ -517,7 +517,7 @@ class AuthController
                 'message' => 'Logout successful'
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('User logout failed', ['error' => $e->getMessage()]);
+            $this->logger->error('User logout failed', ['error' => DatabaseService::exceptionMessage($e)]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
             return $this->jsonResponse($response, [
                 'success' => false,
@@ -605,7 +605,7 @@ class AuthController
                 ]
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Token refresh failed', ['error' => $e->getMessage()]);
+            $this->logger->error('Token refresh failed', ['error' => DatabaseService::exceptionMessage($e)]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
             return $this->jsonResponse($response, [
                 'success' => false,
@@ -703,7 +703,7 @@ class AuthController
                 ]
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Send verification code failed', ['error' => $e->getMessage()]);
+            $this->logger->error('Send verification code failed', ['error' => DatabaseService::exceptionMessage($e)]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
             return $this->jsonResponse($response, [
                 'success' => false,
@@ -853,7 +853,7 @@ class AuthController
                 'data' => $responsePayload
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Verify email failed', ['error' => $e->getMessage()]);
+            $this->logger->error('Verify email failed', ['error' => DatabaseService::exceptionMessage($e)]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
             return $this->jsonResponse($response, [
                 'success' => false,
@@ -890,7 +890,7 @@ class AuthController
                 'data' => $userData
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Get current user failed', ['error' => $e->getMessage()]);
+            $this->logger->error('Get current user failed', ['error' => DatabaseService::exceptionMessage($e)]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
             return $this->jsonResponse($response, [
                 'success' => false,
@@ -938,7 +938,7 @@ class AuthController
                 'message' => 'If the email exists, a password reset link has been sent'
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Forgot password failed', ['error' => $e->getMessage()]);
+            $this->logger->error('Forgot password failed', ['error' => DatabaseService::exceptionMessage($e)]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
             return $this->jsonResponse($response, [
                 'success' => false,
@@ -1009,7 +1009,7 @@ class AuthController
                 'message' => 'Password reset successful'
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Password reset failed', ['error' => $e->getMessage()]);
+            $this->logger->error('Password reset failed', ['error' => DatabaseService::exceptionMessage($e)]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
             return $this->jsonResponse($response, [
                 'success' => false,
@@ -1096,7 +1096,7 @@ class AuthController
                 ],
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Change password failed', ['error' => $e->getMessage()]);
+            $this->logger->error('Change password failed', ['error' => DatabaseService::exceptionMessage($e)]);
             try { $this->errorLogService->logException($e, $request); } catch (\Throwable $ignore) {}
             return $this->jsonResponse($response, [
                 'success' => false,
@@ -1365,7 +1365,7 @@ class AuthController
         } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
             // The verification email result is available even when its audit write fails.
             $this->logger->debug('Failed to record verification email audit log', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'strategy' => $asyncContext ? 'async' : 'sync'
             ]);
         }
@@ -1411,7 +1411,7 @@ class AuthController
                 ]));
             } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
                 // An audit write failure leaves the queued verification email intact.
-                $this->logger->debug('Failed to record verification email schedule log', ['error' => $e->getMessage()]);
+                $this->logger->debug('Failed to record verification email schedule log', ['error' => DatabaseService::exceptionMessage($e)]);
             }
 
             return $result;
@@ -1424,12 +1424,12 @@ class AuthController
             try {
                 $this->auditLogService->logAuthOperation('email_verification_code_schedule', $userId, false, array_merge($context, [
                     'strategy' => 'async',
-                    'error' => $e->getMessage()
+                    'error' => DatabaseService::exceptionMessage($e)
                 ]));
             } catch (\Throwable $logError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
                 // The application logger records a secondary scheduling audit failure.
                 $this->logger->debug('Failed to record verification email schedule failure', [
-                    'error' => $logError->getMessage()
+                    'error' => DatabaseService::exceptionMessage($logError)
                 ]);
             }
 
@@ -1608,7 +1608,7 @@ class AuthController
                 'action' => $action,
                 'scope' => $scope,
                 'reason' => $reason,
-                'error' => $auditError->getMessage(),
+                'error' => DatabaseService::exceptionMessage($auditError),
             ]);
         }
     }
@@ -1756,10 +1756,10 @@ class AuthController
             $this->errorLogService?->logException($exception, $request, $context + ['context_message' => $message]);
         } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
             // Include the persistence failure in the application warning below.
-            $context['logging_error'] = $loggingError->getMessage();
+            $context['logging_error'] = DatabaseService::exceptionMessage($loggingError);
         }
 
-        $this->logger->warning($message, $context + ['error' => $exception->getMessage()]);
+        $this->logger->warning($message, $context + ['error' => DatabaseService::exceptionMessage($exception)]);
     }
 
     private function logTokenRefreshFailure(Request $request, ?int $userId, string $code): void
@@ -1775,7 +1775,7 @@ class AuthController
         } catch (\Throwable $e) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
             // The application logger records a secondary token-refresh audit failure.
             $this->logger->debug('Failed to record token refresh failure audit log', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'code' => $code
             ]);
         }

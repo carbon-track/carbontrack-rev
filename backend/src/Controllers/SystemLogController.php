@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Controllers;
 
+use CarbonTrack\Services\DatabaseService;
 use CarbonTrack\Support\DatabaseRows;
 use Illuminate\Database\Connection;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -127,7 +128,7 @@ class SystemLogController
         } catch (\Exception $e) {
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) { /* swallow secondary logging failure */ }
             $this->logAudit('admin_system_logs_list_failed', $admin ?? null, $request, [
-                'data' => ['error' => $e->getMessage()],
+                'data' => ['error' => DatabaseService::exceptionMessage($e)],
             ], 'failed');
             return $this->json($response, ['error' => 'Internal server error'], 500);
         }
@@ -175,7 +176,7 @@ class SystemLogController
         } catch (\Exception $e) {
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) { /* swallow secondary logging failure */ }
             $this->logAudit('admin_system_log_detail_failed', $admin ?? null, $request, [
-                'data' => ['error' => $e->getMessage()],
+                'data' => ['error' => DatabaseService::exceptionMessage($e)],
             ], 'failed');
             return $this->json($response, ['error' => 'Internal server error'], 500);
         }

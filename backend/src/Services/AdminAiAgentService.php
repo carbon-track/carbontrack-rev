@@ -285,7 +285,7 @@ class AdminAiAgentService
                     'run_id' => $runId,
                 ]));
             } catch (\Throwable $exception) {
-                $this->conversationStoreService->finishRun($runId, 'error', $exception->getMessage(), [
+                $this->conversationStoreService->finishRun($runId, 'error', DatabaseService::exceptionMessage($exception), [
                     'decision' => $decision,
                 ]);
                 throw $exception;
@@ -339,7 +339,7 @@ class AdminAiAgentService
                 $autonomyMode
             );
         } catch (\Throwable $exception) {
-            $this->conversationStoreService->finishRun($runId, 'error', $exception->getMessage(), [
+            $this->conversationStoreService->finishRun($runId, 'error', DatabaseService::exceptionMessage($exception), [
                 'message' => $normalizedMessage,
             ]);
             throw $exception;
@@ -705,7 +705,7 @@ class AdminAiAgentService
                         'conversation_id' => $conversationId,
                         'run_id' => $runId,
                         'step_index' => $stepIndex,
-                        'error' => $exception->getMessage(),
+                        'error' => DatabaseService::exceptionMessage($exception),
                     ]);
                     return $recoveredOutcome;
                 }
@@ -1304,12 +1304,12 @@ class AdminAiAgentService
                 ],
             };
         } catch (\Throwable $exception) {
-            $this->conversationStoreService->finishRunStep($runId, $stepId, 'error', null, $exception->getMessage());
+            $this->conversationStoreService->finishRunStep($runId, $stepId, 'error', null, DatabaseService::exceptionMessage($exception));
             $emitEvent('tool.error', [
                 'step_id' => $stepId,
                 'model_tool_call_id' => $modelToolCallId !== '' ? $modelToolCallId : null,
                 'tool_name' => $functionName,
-                'error' => $exception->getMessage(),
+                'error' => DatabaseService::exceptionMessage($exception),
             ]);
             throw $exception;
         }
@@ -1616,7 +1616,7 @@ class AdminAiAgentService
                 $meta['rollback_available'] = $rollback;
             }
         } catch (\Throwable $exception) {
-            $this->conversationStoreService->updateProposalStatus($proposalId, 'failed', ['decision' => 'confirmed', 'error' => $exception->getMessage()]);
+            $this->conversationStoreService->updateProposalStatus($proposalId, 'failed', ['decision' => 'confirmed', 'error' => DatabaseService::exceptionMessage($exception)]);
             $this->conversationStoreService->logConversationEvent('admin_ai_action_failed', $logContext, [
                 'conversation_id' => $conversationId,
                 'proposal_id' => $proposalId,
@@ -1634,7 +1634,7 @@ class AdminAiAgentService
             $meta = [
                 'decision' => 'confirmed',
                 'proposal_id' => $proposalId,
-                'error' => $exception->getMessage(),
+                'error' => DatabaseService::exceptionMessage($exception),
                 'message_i18n' => $assistantMessageI18n,
             ];
         }
@@ -2024,7 +2024,7 @@ class AdminAiAgentService
             'prompt' => $messages,
             'response_raw' => null,
             'status' => 'failed',
-            'error_message' => $exception->getMessage(),
+            'error_message' => DatabaseService::exceptionMessage($exception),
             'latency_ms' => round((microtime(true) - $startedAt) * 1000, 2),
             'context' => [
                 'conversation_context' => $context,
@@ -2049,8 +2049,8 @@ class AdminAiAgentService
             $this->errorLogService->logException($exception, $request, $extra);
         } catch (\Throwable $loggingError) {
             $this->logger->warning('Failed to persist admin AI error log.', [
-                'error' => $loggingError->getMessage(),
-                'original_error' => $exception->getMessage(),
+                'error' => DatabaseService::exceptionMessage($loggingError),
+                'original_error' => DatabaseService::exceptionMessage($exception),
             ]);
         }
     }
@@ -2087,7 +2087,7 @@ class AdminAiAgentService
         } catch (\Throwable $exception) {
             $this->logger->warning('Failed to update admin AI LLM conversation snapshot.', [
                 'llm_log_id' => $llmLogId,
-                'error' => $exception->getMessage(),
+                'error' => DatabaseService::exceptionMessage($exception),
             ]);
         }
     }
@@ -2258,7 +2258,7 @@ class AdminAiAgentService
     {
         $messages = [];
         do {
-            $messages[] = $exception::class . ': ' . $exception->getMessage();
+            $messages[] = $exception::class . ': ' . DatabaseService::exceptionMessage($exception);
             $exception = $exception->getPrevious();
         } while ($exception instanceof \Throwable);
 

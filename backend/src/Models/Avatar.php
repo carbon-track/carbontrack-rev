@@ -574,7 +574,7 @@ class Avatar
                 return;
             } catch (\Throwable $loggingError) {
                 $this->logger->error('ErrorLogService logging failed for avatar model', [
-                    'message' => $loggingError->getMessage(),
+                    'message' => DatabaseService::exceptionMessage($loggingError),
                     'context_message' => $contextMessage,
                     'exception_type' => get_class($loggingError),
                 ]);

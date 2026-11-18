@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Controllers;
 
+use CarbonTrack\Services\DatabaseService;
 use CarbonTrack\Support\DatabaseRows;
 use Illuminate\Database\Connection;
 use CarbonTrack\Services\AuditLogService;
@@ -152,7 +153,7 @@ class AdminLlmUsageController
         } catch (\Throwable $e) {
             try { $this->errorLogService?->logException($e, $request); } catch (\Throwable $ignore) { /* ignore */ }
             $this->logAudit('admin_llm_usage_summary_failed', $admin ?? null, $request, [
-                'data' => ['error' => $e->getMessage()],
+                'data' => ['error' => DatabaseService::exceptionMessage($e)],
             ], 'failed');
             return $this->json($response, ['error' => 'Internal server error'], 500);
         }
@@ -210,7 +211,7 @@ class AdminLlmUsageController
         } catch (\Throwable $e) {
             try { $this->errorLogService?->logException($e, $request); } catch (\Throwable $ignore) { /* ignore */ }
             $this->logAudit('admin_llm_usage_analytics_failed', $admin ?? null, $request, [
-                'data' => ['error' => $e->getMessage()],
+                'data' => ['error' => DatabaseService::exceptionMessage($e)],
             ], 'failed');
             return $this->json($response, ['error' => 'Internal server error'], 500);
         }
@@ -257,7 +258,7 @@ class AdminLlmUsageController
         } catch (\Throwable $e) {
             try { $this->errorLogService?->logException($e, $request); } catch (\Throwable $ignore) { /* ignore */ }
             $this->logAudit('admin_llm_usage_log_view_failed', $admin ?? null, $request, [
-                'data' => ['error' => $e->getMessage()],
+                'data' => ['error' => DatabaseService::exceptionMessage($e)],
             ], 'failed');
             return $this->json($response, ['error' => 'Internal server error'], 500);
         }

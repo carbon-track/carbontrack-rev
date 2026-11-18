@@ -76,7 +76,7 @@ class SystemLogService
             // 记录系统日志插入失败的警告，不影响主流程
             try {
                 $this->logger->warning('System log insert failed', [
-                    'error' => $e->getMessage(),
+                    'error' => DatabaseService::exceptionMessage($e),
                 ]);
             } catch (\Throwable $ignore) {
                 // swallow secondary logging failure

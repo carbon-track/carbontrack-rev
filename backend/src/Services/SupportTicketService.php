@@ -109,7 +109,7 @@ class SupportTicketService
                 } catch (\Throwable $routingException) {
                     $this->logger->warning('Support ticket routing failed after ticket creation', [
                         'ticket_id' => (int) $ticket->id,
-                        'error' => $routingException->getMessage(),
+                        'error' => DatabaseService::exceptionMessage($routingException),
                     ]);
                     $this->recordFailure($routingException, 'support_ticket_routing_failed', $actor, (int) $ticket->id);
                 }
@@ -1429,7 +1429,7 @@ class SupportTicketService
                 $this->logger->warning('Failed to send support assignee system notification', [
                     'ticket_id' => $ticketId,
                     'user_id' => $userId,
-                    'error' => $exception->getMessage(),
+                    'error' => DatabaseService::exceptionMessage($exception),
                 ]);
                 $this->recordNotificationFailure($exception, 'support_assignee_system_notification_failed', [
                     'ticket_id' => $ticketId,
@@ -1464,7 +1464,7 @@ class SupportTicketService
                 $this->logger->warning('Failed to send support assignee email notification', [
                     'ticket_id' => $ticketId,
                     'user_id' => $userId,
-                    'error' => $exception->getMessage(),
+                    'error' => DatabaseService::exceptionMessage($exception),
                 ]);
                 $this->recordNotificationFailure($exception, 'support_assignee_email_notification_failed', [
                     'ticket_id' => $ticketId,
@@ -1515,7 +1515,7 @@ class SupportTicketService
                 $this->emailService->sendMessageNotification($supportEmail, 'Support Team', $subject, $body, NotificationPreferenceService::CATEGORY_MESSAGE, 'high');
             }
         } catch (\Throwable $e) {
-            $this->logger->warning('Failed to send support mailbox notification', ['subject' => $subject, 'error' => $e->getMessage()]);
+            $this->logger->warning('Failed to send support mailbox notification', ['subject' => $subject, 'error' => DatabaseService::exceptionMessage($e)]);
         }
     }
 
@@ -1528,7 +1528,7 @@ class SupportTicketService
             try {
                 $this->messageService->sendSystemMessage($userId, 'Support replied to your ticket', $messageBody, 'message', 'normal', 'support_ticket', $ticketId, false);
             } catch (\Throwable $e) {
-                $this->logger->warning('Failed to send support reply message', ['ticket_id' => $ticketId, 'error' => $e->getMessage()]);
+                $this->logger->warning('Failed to send support reply message', ['ticket_id' => $ticketId, 'error' => DatabaseService::exceptionMessage($e)]);
             }
         }
         if ($this->emailService !== null && !empty($ticket['requester_email'])) {
@@ -1558,7 +1558,7 @@ class SupportTicketService
                     'normal'
                 );
             } catch (\Throwable $e) {
-                $this->logger->warning('Failed to send support reply email', ['ticket_id' => $ticketId, 'error' => $e->getMessage()]);
+                $this->logger->warning('Failed to send support reply email', ['ticket_id' => $ticketId, 'error' => DatabaseService::exceptionMessage($e)]);
             }
         }
     }
@@ -1608,7 +1608,7 @@ class SupportTicketService
                     false
                 );
             } catch (\Throwable $e) {
-                $this->logger->warning('Failed to send support ticket update message', ['ticket_id' => $ticketId, 'error' => $e->getMessage()]);
+                $this->logger->warning('Failed to send support ticket update message', ['ticket_id' => $ticketId, 'error' => DatabaseService::exceptionMessage($e)]);
             }
         }
 
@@ -1636,7 +1636,7 @@ class SupportTicketService
                     'normal'
                 );
             } catch (\Throwable $e) {
-                $this->logger->warning('Failed to send support ticket update email', ['ticket_id' => $ticketId, 'error' => $e->getMessage()]);
+                $this->logger->warning('Failed to send support ticket update email', ['ticket_id' => $ticketId, 'error' => DatabaseService::exceptionMessage($e)]);
             }
         }
     }
@@ -1950,7 +1950,7 @@ class SupportTicketService
         try {
             return $this->r2Service->generatePresignedUrl($filePath, 900);
         } catch (\Throwable $e) {
-            $this->logger->warning('Failed to build support ticket file URL', ['file_path' => $filePath, 'error' => $e->getMessage()]);
+            $this->logger->warning('Failed to build support ticket file URL', ['file_path' => $filePath, 'error' => DatabaseService::exceptionMessage($e)]);
             return null;
         }
     }
@@ -2175,7 +2175,7 @@ class SupportTicketService
             'affected_table' => 'support_tickets',
             'affected_id' => $ticketId,
             'status' => 'failed',
-            'data' => ['error' => $e->getMessage()],
+            'data' => ['error' => DatabaseService::exceptionMessage($e)],
         ]);
     }
 
@@ -2189,7 +2189,7 @@ class SupportTicketService
             'affected_table' => 'support_tickets',
             'affected_id' => isset($context['ticket_id']) ? (int) $context['ticket_id'] : null,
             'status' => 'failed',
-            'data' => $context + ['error' => $exception->getMessage()],
+            'data' => $context + ['error' => DatabaseService::exceptionMessage($exception)],
         ]);
 
         try {

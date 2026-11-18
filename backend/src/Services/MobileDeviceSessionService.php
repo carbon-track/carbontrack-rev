@@ -143,7 +143,7 @@ class MobileDeviceSessionService
                     ],
                 ]);
             } catch (\Throwable $e) {
-                $this->logger->error('Failed to audit mobile device session revocation', ['error' => $e->getMessage()]);
+                $this->logger->error('Failed to audit mobile device session revocation', ['error' => DatabaseService::exceptionMessage($e)]);
             }
         }
 
@@ -193,7 +193,7 @@ class MobileDeviceSessionService
                     ],
                 ]);
             } catch (\Throwable $e) {
-                $this->logger->error('Failed to audit mobile refresh token reuse', ['error' => $e->getMessage()]);
+                $this->logger->error('Failed to audit mobile refresh token reuse', ['error' => DatabaseService::exceptionMessage($e)]);
             }
         }
     }

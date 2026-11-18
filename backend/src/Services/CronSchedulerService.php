@@ -877,7 +877,7 @@ class CronSchedulerService
         $this->logger->error('Cron task execution failed', [
             'task_key' => $taskKey,
             'trigger_source' => $triggerSource,
-            'error' => $exception->getMessage(),
+            'error' => DatabaseService::exceptionMessage($exception),
         ]);
 
         try {
@@ -902,7 +902,7 @@ class CronSchedulerService
             $this->logger->warning('Cron task exception logging failed', [
                 'task_key' => $taskKey,
                 'trigger_source' => $triggerSource,
-                'error' => $loggingException->getMessage(),
+                'error' => DatabaseService::exceptionMessage($loggingException),
             ]);
         }
     }
@@ -920,7 +920,7 @@ class CronSchedulerService
         $this->logger->warning($message, [
             'task_key' => $taskKey,
             'trigger_source' => $triggerSource,
-            'error' => $exception->getMessage(),
+            'error' => DatabaseService::exceptionMessage($exception),
         ]);
 
         try {

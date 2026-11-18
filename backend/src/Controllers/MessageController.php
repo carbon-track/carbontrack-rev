@@ -2,6 +2,7 @@
 
 namespace CarbonTrack\Controllers;
 
+use CarbonTrack\Services\DatabaseService;
 use CarbonTrack\Support\DatabaseRows;
 use Illuminate\Database\Connection;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -795,7 +796,7 @@ $auditPayload = [
                 ]);
             } catch (\Throwable $persistError) {
                 $this->logBroadcastError($request, 'broadcast_record_persist_failed', [
-                    'message' => $persistError->getMessage(),
+                    'message' => DatabaseService::exceptionMessage($persistError),
                 ]);
             }
 
@@ -930,7 +931,7 @@ $auditPayload = [
                 $this->logBroadcastError($request, 'Failed to count broadcast history', [
                     'action' => 'getBroadcastHistory',
                     'exception' => get_class($e),
-                    'error' => $e->getMessage(),
+                    'error' => DatabaseService::exceptionMessage($e),
                 ]);
                 $total = 0;
             }
@@ -942,7 +943,7 @@ $auditPayload = [
                 $this->logBroadcastError($request, 'Failed to load broadcast history', [
                     'action' => 'getBroadcastHistory',
                     'exception' => get_class($e),
-                    'error' => $e->getMessage(),
+                    'error' => DatabaseService::exceptionMessage($e),
                 ]);
                 $rows = [];
             }
@@ -1613,7 +1614,7 @@ $auditPayload = [
             if ($request !== null) {
                 $this->logBroadcastError($request, 'Failed to resolve target users', [
                     'exception' => get_class($e),
-                    'error' => $e->getMessage(),
+                    'error' => DatabaseService::exceptionMessage($e),
                 ]);
             }
             $result['error'] = 'Failed to resolve target users';
@@ -1676,7 +1677,7 @@ $auditPayload = [
             if ($request !== null) {
                 $this->logBroadcastError($request, 'Failed to load all broadcast recipients', [
                     'exception' => get_class($e),
-                    'error' => $e->getMessage(),
+                    'error' => DatabaseService::exceptionMessage($e),
                 ]);
             }
             // Return the recipients loaded before this failure.

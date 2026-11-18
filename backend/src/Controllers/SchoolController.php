@@ -2,6 +2,7 @@
 
 namespace CarbonTrack\Controllers;
 
+use CarbonTrack\Services\DatabaseService;
 use Illuminate\Database\Connection;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -126,7 +127,7 @@ class SchoolController extends BaseController
             $this->logClientException($exception, $request, 400, __METHOD__, auditCategory: 'school_management');
             return $this->response($response, [
                 'success' => false,
-                'message' => $exception->getMessage(),
+                'message' => DatabaseService::exceptionMessage($exception),
                 'code' => 'VALIDATION_ERROR',
             ], 400);
         }
@@ -268,7 +269,7 @@ class SchoolController extends BaseController
             $this->logClientException($exception, $request, 400, __METHOD__, auditCategory: 'school_management');
             return $this->response($response, [
                 'success' => false,
-                'message' => $exception->getMessage(),
+                'message' => DatabaseService::exceptionMessage($exception),
                 'code' => 'VALIDATION_ERROR',
             ], 400);
         }

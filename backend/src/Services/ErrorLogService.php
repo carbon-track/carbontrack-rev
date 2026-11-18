@@ -98,7 +98,7 @@ class ErrorLogService
             // Fallback to application logger to avoid losing the error entirely
             try {
                 $this->logger->error('Failed to persist error log', [
-                    'message' => $ex->getMessage(),
+                    'message' => DatabaseService::exceptionMessage($ex),
                 ]);
             } catch (\Throwable $ignored) {
                 // swallow
