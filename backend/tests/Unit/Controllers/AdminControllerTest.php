@@ -203,7 +203,7 @@ class AdminControllerTest extends TestCase
         $this->assertSame('user', $capturedParams[':role_user'] ?? null);
     }
 
-    public function testLoadUserRowUsesCanonicalSchoolName(): void
+    public function testLoadUserRowNormalizesIdAndUsesCanonicalSchoolName(): void
     {
         $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['responseFor'])->getMock();
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
@@ -217,7 +217,7 @@ class AdminControllerTest extends TestCase
         $stmt->shape = 'row';
         $stmt->method('bindings')->willReturn(true);
         $stmt->method('row')->willReturn([
-            'id' => 2,
+            'id' => '2',
             'username' => 'legacy',
             'email' => 'legacy@example.com',
             'status' => 'active',
@@ -240,6 +240,7 @@ class AdminControllerTest extends TestCase
         $method->setAccessible(true);
         $row = $method->invoke($controller, makeRequest('GET', '/api/v1/admin/users/2'), 2);
 
+        $this->assertSame(2, $row['id']);
         $this->assertSame('Canonical Academy', $row['school_name']);
         $this->assertSame(7, $row['school_id']);
     }

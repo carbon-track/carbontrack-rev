@@ -162,6 +162,7 @@ class AuditLogServiceTest extends TestCase
         $this->assertSame('admin', $row['actor_type']);
         $this->assertSame('admin_user_overview_viewed', $row['action']);
         $this->assertSame('success', $row['status']);
+        $this->assertSame('read', $row['change_type']);
         $this->assertSame('users', $row['affected_table']);
         $this->assertSame(10, (int) $row['affected_id']);
         $this->assertSame('GET', $row['request_method']);

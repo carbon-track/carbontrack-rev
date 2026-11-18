@@ -11583,7 +11583,7 @@
           "Carbon Records"
         ],
         "summary": "获取碳记录详情",
-        "description": "获取单条碳记录详情。普通用户仅可查看自己的记录，管理员可查看任意记录。",
+        "description": "获取单条碳记录详情。普通用户仅可查看自己的记录，管理员可查看任意记录。\n\nSuccessful administrator reads record the returned record ID in the admin_carbon_record_viewed audit entry.",
         "security": [
           {
             "bearerAuth": []
