@@ -546,6 +546,7 @@ class UserControllerTest extends TestCase
         $actorId = 424242;
         $request = makeRequest('GET', '/api/v1/users/me/stats');
         $failure = new \Illuminate\Database\QueryException(
+            'sqlite',
             'SELECT points FROM points_transactions WHERE uid = ?',
             [$actorId],
             new \RuntimeException('Fixture database unavailable')

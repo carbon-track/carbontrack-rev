@@ -23,7 +23,7 @@
   - 推荐插件：ESLint, Tailwind CSS, PHP Intelephense, Thunder Client (接口测试)
 
 ### 2. 后端要求 (PHP)
-- **PHP**: v8.2+
+- **PHP**: v8.2+。运行网站的 PHP 需要启用 MySQL 驱动（`pdo_mysql`）。通行密钥验证需要启用 `openssl`。
 - **Composer**: PHP 包管理器
 - **MySQL**: 数据库（推荐 v5.7+ 或 v8.0+）
 
@@ -212,6 +212,7 @@ pnpm validate
 
 ### 3. 数据库连接失败
 - 确保 MySQL 服务已运行，并检查 `backend/.env` 中的用户名和密码。
+- Windows 站点升级 PHP 后，在网站绑定的 `php.ini` 启用 `extension=pdo_mysql` 和 `extension=openssl`，然后重载该站点的 PHP 进程。启动错误会写到 PHP 配置的 `error_log`。
 
 ### 4. 样式不生效
 - 检查是否运行了 `pnpm dev`。Tailwind 4 需要开发服务器处理样式。

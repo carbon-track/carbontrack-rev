@@ -27,8 +27,7 @@ class SchoolControllerTest extends TestCase
         $capsule->addConnection(['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => '']);
         $connection = $capsule->getConnection();
         // Backticks enforce identifier resolution in SQLite for the missing sort_order column.
-        $connection->setQueryGrammar(new MySqlGrammar());
-        $connection = $connection;
+        $connection->setQueryGrammar(new MySqlGrammar($connection));
         $connection->unprepared('CREATE TABLE schools (
             id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, location TEXT, is_active INTEGER,
             created_at TEXT, updated_at TEXT, deleted_at TEXT
@@ -165,6 +164,7 @@ class SchoolControllerTest extends TestCase
         $method->setAccessible(true);
 
         $exception = new QueryException(
+            'mysql',
             'insert into schools',
             [],
             new \RuntimeException("SQLSTATE[42S22]: Column not found: 1054 Unknown column 'sort_order' in 'field list'")
@@ -187,6 +187,7 @@ class SchoolControllerTest extends TestCase
         $method->setAccessible(true);
 
         $exception = new QueryException(
+            'mysql',
             'insert into schools',
             [],
             new \RuntimeException('SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry')

@@ -83,7 +83,6 @@ use CarbonTrack\Services\PasskeyConfig;
 use CarbonTrack\Services\PasskeyService;
 use CarbonTrack\Services\WebauthnProviderInterface;
 use CarbonTrack\Services\NativeWebauthnProvider;
-use CarbonTrack\Services\NullWebauthnProvider;
 use CarbonTrack\Controllers\AdminUserGroupController;
 use CarbonTrack\Controllers\CheckinController;
 use CarbonTrack\Controllers\PasskeyController;
@@ -617,13 +616,8 @@ $__deps_initializer = function (Container $container) {
         return new PasskeyConfig();
     });
 
-    $container->set(WebauthnProviderInterface::class, function (ContainerInterface $c) {
-        $nativeProvider = new NativeWebauthnProvider();
-        if ($nativeProvider->isAvailable()) {
-            return $nativeProvider;
-        }
-
-        return new NullWebauthnProvider($c->get(PasskeyConfig::class));
+    $container->set(WebauthnProviderInterface::class, function () {
+        return new NativeWebauthnProvider();
     });
 
     $container->set(UserPasskey::class, function (ContainerInterface $c) {

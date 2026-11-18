@@ -14,6 +14,7 @@ use CarbonTrack\Services\AuditLogService;
 use CarbonTrack\Services\ErrorLogService;
 use CarbonTrack\Services\NativeWebauthnProvider;
 use CarbonTrack\Services\PasskeyConfig;
+use CarbonTrack\Services\PasskeyIntegrationUnavailableException;
 use CarbonTrack\Services\PasskeyOperationException;
 use CarbonTrack\Services\PasskeyService;
 use CarbonTrack\Services\RegionService;
@@ -60,6 +61,29 @@ class PasskeyServiceTest extends TestCase
         ]);
 
         $this->service = $this->createService(new NativeWebauthnProvider());
+    }
+
+    public function testUnavailableNativeVerifierReportsOpenSslRequirement(): void
+    {
+        $provider = new class extends NativeWebauthnProvider {
+            public function isAvailable(): bool
+            {
+                return false;
+            }
+        };
+        $metadata = $provider->getMetadata();
+        $this->assertFalse($metadata['available']);
+        $this->assertSame('openssl', $metadata['expected_extension']);
+        $this->assertSame('openssl_unavailable', $metadata['reason']);
+
+        try {
+            $provider->verifyRegistrationResponse([], [], [], $this->config);
+            $this->fail('Verification requires OpenSSL');
+        } catch (PasskeyIntegrationUnavailableException $error) {
+            $this->assertSame('WEBAUTHN_LIBRARY_UNAVAILABLE', $error->getErrorCode());
+            $this->assertSame(501, $error->getHttpStatus());
+            $this->assertStringContainsString('OpenSSL extension', $error->getMessage());
+        }
     }
 
     public function testBeginRegistrationStoresChallengeAndBuildsOptions(): void

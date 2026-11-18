@@ -100,6 +100,29 @@ class ErrorLogServiceTest extends TestCase
         $this->assertSame('extra-request-id', $row['request_id']);
     }
 
+    public function testLogExceptionKeepsOriginalErrorInFallbackWhenDatabaseWriteFails(): void
+    {
+        $this->connection->getSchemaBuilder()->drop('error_logs');
+        $logger = $this->createMock(Logger::class);
+        $error = new \RuntimeException('Fixture request failed');
+        $requestId = '550e8400-e29b-41d4-a716-446655440001';
+        $request = makeRequest('POST', '/test', ['fixture' => 'request-body'])
+            ->withAttribute('request_id', $requestId);
+        $logger->expects($this->once())->method('error')->with(
+            'Failed to persist error log',
+            $this->callback(static function (array $context) use ($error, $requestId): bool {
+                return $context['error_type'] === \RuntimeException::class
+                    && $context['error_message'] === $error->getMessage()
+                    && $context['request_id'] === $requestId
+                    && str_contains($context['persistence_error'], 'error_logs')
+                    && !array_key_exists('client_post', $context);
+            })
+        );
+        $service = new ErrorLogService($this->connection, $logger);
+
+        $this->assertNull($service->logException($error, $request));
+    }
+
     public function testLogExceptionReturnsNullWhenWritesDisabled(): void
     {
         $_ENV['DISABLE_ERROR_LOG_WRITES'] = '1';

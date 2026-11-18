@@ -10357,7 +10357,7 @@
             }
           },
           "501": {
-            "description": "当前部署未接入可用 WebAuthn 校验器。",
+            "description": "运行网站的 PHP 尚未启用 OpenSSL 扩展。",
             "content": {
               "application/json": {
                 "schema": {
@@ -15979,7 +15979,7 @@
             }
           },
           "501": {
-            "description": "当前环境尚未安装或接入 WebAuthn PHP 校验库。",
+            "description": "运行网站的 PHP 尚未启用 OpenSSL 扩展。",
             "content": {
               "application/json": {
                 "schema": {
@@ -26750,12 +26750,6 @@
           "available": {
             "type": "boolean"
           },
-          "expected_class": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "reason": {
             "type": [
               "string",
@@ -26766,7 +26760,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "example": "openssl"
           },
           "enabled": {
             "type": "boolean"
@@ -28453,9 +28448,9 @@
               "null"
             ]
           },
-          "type": {
+          "sender_id": {
             "type": [
-              "string",
+              "integer",
               "null"
             ]
           },
