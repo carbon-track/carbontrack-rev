@@ -7,7 +7,6 @@ namespace CarbonTrack\Services;
 use CarbonTrack\Support\DatabaseRows;
 use Illuminate\Database\Connection;
 use CarbonTrack\Support\ClientIpResolver;
-use CarbonTrack\Support\SensitiveDataRedactor;
 use Monolog\Logger;
 
 /**
@@ -30,6 +29,11 @@ class SystemLogService
         $this->logger = $logger;
     }
 
+    /**
+     * Persist a log snapshot prepared by the caller.
+     *
+     * @param array<string, mixed> $data Credentials in bodies and server parameters must be filtered at capture.
+     */
     public function log(array $data): ?int
     {
         if ($this->isWriteDisabled()) {
@@ -41,8 +45,8 @@ class SystemLogService
             if ($requestId !== null) {
                 $requestId = substr((string) $requestId, 0, 64);
             }
-            $requestBody = $this->sanitizeBody($data['request_body'] ?? null);
-            $responseBody = $this->sanitizeBody($data['response_body'] ?? null);
+            $requestBody = $this->serializeBody($data['request_body'] ?? null);
+            $responseBody = $this->serializeBody($data['response_body'] ?? null);
             $serverMeta = $this->buildServerMeta(
                 $data['server_params'] ?? [],
                 [
@@ -85,14 +89,12 @@ class SystemLogService
         return null;
     }
 
-    private function sanitizeBody($body): ?string
+    private function serializeBody(mixed $body): ?string
     {
         if ($body === null) {
             return null;
         }
-        if (is_array($body) || is_object($body)) {
-            $body = json_encode(SensitiveDataRedactor::redact($body), JSON_UNESCAPED_UNICODE);
-        } elseif (!is_string($body)) {
+        if (!is_string($body)) {
             $body = json_encode($body, JSON_UNESCAPED_UNICODE);
         }
 
@@ -108,13 +110,12 @@ class SystemLogService
 
     private function buildServerMeta(array $server, array $summaryOverride = []): string
     {
-        $clone = SensitiveDataRedactor::redactServer($server);
-        $clone['_summary'] = [
-            'method' => $this->resolveSummaryMethod($clone, $summaryOverride),
-            'uri' => $this->resolveSummaryUri($clone, $summaryOverride),
-            'ip' => $this->resolveSummaryIp($clone, $summaryOverride),
+        $server['_summary'] = [
+            'method' => $this->resolveSummaryMethod($server, $summaryOverride),
+            'uri' => $this->resolveSummaryUri($server, $summaryOverride),
+            'ip' => $this->resolveSummaryIp($server, $summaryOverride),
         ];
-        $json = json_encode($clone, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $json = json_encode($server, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($json === false) { return '{}'; }
         if (strlen($json) > 120000) { // 防止爆炸日志撑满磁盘
             $json = substr($json, 0, 120000) . '...[TRUNCATED]';

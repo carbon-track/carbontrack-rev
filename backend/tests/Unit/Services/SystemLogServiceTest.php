@@ -72,7 +72,7 @@ class SystemLogServiceTest extends TestCase
         $service = $this->makeService();
         $_SERVER = [];
 
-        $metaJson = $this->invokeBuildServerMeta($service, ['HTTP_AUTHORIZATION' => 'secret-token'], [
+        $metaJson = $this->invokeBuildServerMeta($service, ['HTTP_USER_AGENT' => 'fixture-agent'], [
             'method' => 'POST',
             'path' => '/api/system/test',
             'ip_address' => '198.51.100.2',
@@ -80,7 +80,7 @@ class SystemLogServiceTest extends TestCase
 
         $meta = json_decode($metaJson, true);
         $this->assertIsArray($meta);
-        $this->assertSame('[REDACTED]', $meta['HTTP_AUTHORIZATION']);
+        $this->assertSame('fixture-agent', $meta['HTTP_USER_AGENT']);
         $this->assertSame('POST', $meta['_summary']['method']);
         $this->assertSame('/api/system/test', $meta['_summary']['uri']);
         $this->assertSame('198.51.100.2', $meta['_summary']['ip']);
@@ -146,7 +146,9 @@ class SystemLogServiceTest extends TestCase
 
         $connection = $this->getMockBuilder(DatabaseConnectionStub::class)->onlyMethods(['generatedKey', 'responseFor'])->getMock();
         $stmt = $this->createMock(DatabaseQueryResponse::class);
-        $stmt->method('bindings')->willReturn(true);
+        $stmt->expects($this->once())->method('bindings')->with($this->callback(
+            static fn (array $values): bool => in_array('{"code":"FIXTURE_ERROR"}', $values, true)
+        ))->willReturn(true);
         $connection->expects($this->once())->method('responseFor')->willReturn($stmt);
         $connection->method('generatedKey')->willReturn('1');
 
@@ -156,6 +158,7 @@ class SystemLogServiceTest extends TestCase
             'request_id' => 'req-1',
             'method' => 'GET',
             'path' => '/api/test',
+            'response_body' => ['code' => 'FIXTURE_ERROR'],
         ]);
 
         $this->assertSame(1, $result);
