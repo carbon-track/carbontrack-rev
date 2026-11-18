@@ -395,7 +395,7 @@ class ProofOfWorkService
             $this->logger->warning('pow_audit_log_failed', [
                 'action' => $action,
                 'status' => $status,
-                'error' => $auditError->getMessage(),
+                'error' => DatabaseService::exceptionMessage($auditError),
             ] + $context);
         }
     }
@@ -403,7 +403,7 @@ class ProofOfWorkService
     private function logFailure(string $action, \Throwable $e, array $context): void
     {
         $this->logAudit($action, $context, 'failed');
-        $this->logger->warning($action, ['error' => $e->getMessage()] + $context);
+        $this->logger->warning($action, ['error' => DatabaseService::exceptionMessage($e)] + $context);
 
         if ($this->errorLogService === null) {
             return;
@@ -415,8 +415,8 @@ class ProofOfWorkService
         } catch (\Throwable $errorLogError) {
             $this->logger->warning('pow_error_log_failed', [
                 'action' => $action,
-                'error' => $errorLogError->getMessage(),
-                'original_error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($errorLogError),
+                'original_error' => DatabaseService::exceptionMessage($e),
             ] + $context);
         }
     }

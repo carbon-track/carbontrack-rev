@@ -523,7 +523,7 @@ class UserController
 
         } catch (\Exception $e) {
             $this->logger->error('Get current user failed', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'trace' => $e->getTraceAsString(),
                 'user_id' => $user['id'] ?? null
             ]);
@@ -605,7 +605,7 @@ class UserController
             ]);
         } catch (\Throwable $e) {
             $this->logger->error('Get security activity failed', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'trace' => $e->getTraceAsString(),
             ]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
@@ -897,7 +897,7 @@ class UserController
 
         } catch (\Exception $e) {
             $this->logger->error('Update profile failed', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'trace' => $e->getTraceAsString(),
                 'user_id' => $user['id'] ?? null
             ]);
@@ -932,7 +932,7 @@ class UserController
             ]);
         } catch (\Throwable $e) {
             $this->logger->error('Failed to load notification preferences', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
             ]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
 
@@ -989,7 +989,7 @@ class UserController
             ]);
         } catch (\Throwable $e) {
             $this->logger->error('Failed to update notification preferences', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
             ]);
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
 
@@ -1127,7 +1127,7 @@ class UserController
         } catch (\Throwable $e) {
             try { if ($this->errorLogService) { $this->errorLogService->logException($e, $request); } } catch (\Throwable $ignore) {}
             $this->logger->error('Failed to send notification test email', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
             ]);
 
             return $this->jsonResponse($response, [
@@ -1222,7 +1222,7 @@ class UserController
 
         } catch (\Exception $e) {
             $this->logger->error('Select avatar failed', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'trace' => $e->getTraceAsString(),
                 'user_id' => $user['id'] ?? null
             ]);
@@ -1407,7 +1407,7 @@ class UserController
 
         } catch (\Exception $e) {
             $this->logger->error('Get points history failed', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'trace' => $e->getTraceAsString(),
                 'user_id' => $user['id'] ?? null
             ]);
@@ -1718,7 +1718,7 @@ class UserController
 
         } catch (\Exception $e) {
             $this->logger->error('Get user stats failed', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'trace' => $e->getTraceAsString(),
                 'user_id' => $user['id'] ?? null
             ]);
@@ -1765,7 +1765,7 @@ class UserController
             ]);
         } catch (\Exception $e) {
             $this->logger->error('Get chart data failed', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'trace' => $e->getTraceAsString(),
                 'user_id' => $user['id'] ?? null
             ]);
@@ -1832,7 +1832,7 @@ class UserController
             ]);
         } catch (\Exception $e) {
             $this->logger->error('Get recent activities failed', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'trace' => $e->getTraceAsString(),
                 'user_id' => $user['id'] ?? null
             ]);
@@ -1867,10 +1867,10 @@ class UserController
             ]);
         } catch (\Throwable $ignore) {
             $this->logger->warning('Could not persist a handled user request exception', [
-                'error' => $ignore->getMessage(),
+                'error' => DatabaseService::exceptionMessage($ignore),
             ]);
         }
-        $this->logger->debug($message, ['error' => $exception->getMessage(), 'user_id' => $userId]);
+        $this->logger->debug($message, ['error' => DatabaseService::exceptionMessage($exception), 'user_id' => $userId]);
     }
 
     private function findOrCreateSchoolId(string $name, Request $request, array $user): ?int
@@ -1893,7 +1893,7 @@ class UserController
         } catch (\Throwable $e) {
             $this->logClientException($e, $request, 400, __METHOD__, $user, 'user_management');
             $this->logger->error('Failed to resolve school name for profile update', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'school_name' => $normalized
             ]);
             return null;

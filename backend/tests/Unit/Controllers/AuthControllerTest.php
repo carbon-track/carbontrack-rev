@@ -467,6 +467,50 @@ class AuthControllerTest extends TestCase
         $this->assertSame('https://r2-dev.carbontrackapp.com/avatars/default/avatar_01.png', $result['avatar_url']);
     }
 
+    public function testResetPasswordQueryFailureLogsDriverMessageWithoutBoundToken(): void
+    {
+        $resetToken = 'fixture-reset-token';
+        $request = makeRequest('POST', '/api/v1/auth/reset-password', [
+            'token' => $resetToken,
+            'password' => 'fixture password',
+            'confirm_password' => 'fixture password',
+        ]);
+        $failure = new \Illuminate\Database\QueryException(
+            'SELECT * FROM users WHERE reset_token = ?',
+            [$resetToken],
+            new \RuntimeException('Fixture database unavailable')
+        );
+        $db = $this->createMock(\Illuminate\Database\Connection::class);
+        $db->expects($this->once())
+            ->method('selectOne')
+            ->with($this->stringContains('reset_token = ?'), [$resetToken])
+            ->willThrowException($failure);
+        $logger = $this->createMock(\Monolog\Logger::class);
+        $logger->expects($this->once())
+            ->method('error')
+            ->with('Password reset failed', ['error' => 'Fixture database unavailable']);
+        $errorLog = $this->createMock(ErrorLogService::class);
+        $errorLog->expects($this->once())->method('logException')->with($failure, $request);
+
+        $controller = new AuthController(
+            $this->createMock(AuthService::class),
+            $this->createMock(EmailService::class),
+            $this->createMock(TurnstileService::class),
+            $this->createMock(AuditLogService::class),
+            $this->createMock(MessageService::class),
+            null,
+            $logger,
+            $db,
+            $errorLog,
+            $this->createMock(RegionService::class)
+        );
+
+        $response = $controller->resetPassword($request, new \Slim\Psr7\Response());
+
+        $this->assertSame(500, $response->getStatusCode());
+        $this->assertStringNotContainsString($resetToken, (string) $response->getBody());
+    }
+
     public function testForgotPasswordRequiresTurnstile(): void
     {
         $mockAuthService = $this->createMock(AuthService::class);

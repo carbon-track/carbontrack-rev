@@ -65,12 +65,12 @@ class LeaderboardService
             return $data;
         } catch (\Throwable $e) {
             $this->log('error', 'Failed to rebuild leaderboard cache', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'reason' => $reason,
             ]);
             $this->logAudit('leaderboard_cache_rebuild_failed', 'failed', [
                 'reason' => $reason,
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
             ]);
             $this->logError($e, '/internal/leaderboard/rebuild', [
                 'reason' => $reason,

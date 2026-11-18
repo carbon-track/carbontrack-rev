@@ -106,7 +106,7 @@ class AuthService
             // password-change / reset flow stays user-visible-successful.
             $this->logAudit('auth_token_version_bump_failed', [
                 'user_id' => $userId,
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
             ], 'failed');
         }
     }

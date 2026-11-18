@@ -112,7 +112,7 @@ class CheckinService
                 'user_id' => $userId,
             ]);
             $this->log('Checkin sync failed', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'user_id' => $userId,
             ]);
             return 0;
@@ -319,7 +319,7 @@ class CheckinService
                 'record_id' => $recordId,
             ]);
             $this->log('Checkin insert failed', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'user_id' => $userId,
                 'checkin_date' => $date,
                 'source' => $source,

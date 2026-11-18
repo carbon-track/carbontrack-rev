@@ -91,7 +91,7 @@ class StreakLeaderboardService
                 'reason' => $reason,
             ]);
             $this->log('error', 'Failed to rebuild streak leaderboard cache', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
                 'reason' => $reason,
             ]);
             return $this->readCache() ?? [

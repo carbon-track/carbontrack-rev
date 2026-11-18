@@ -82,7 +82,7 @@ class LlmLogService
         } catch (\Throwable $e) {
             try {
                 $this->logger->warning('LLM log insert failed', [
-                    'error' => $e->getMessage(),
+                    'error' => DatabaseService::exceptionMessage($e),
                 ]);
             } catch (\Throwable $ignore) {
                 // swallow secondary logging failure

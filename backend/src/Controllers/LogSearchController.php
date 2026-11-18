@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Controllers;
 
+use CarbonTrack\Services\DatabaseService;
 use CarbonTrack\Support\DatabaseRows;
 use Illuminate\Database\Connection;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -128,7 +129,7 @@ class LogSearchController
         } catch (\Exception $e) {
             try { $this->errorLogService?->logException($e, $request); } catch (\Throwable $ignore) { /* swallow secondary */ }
             $this->logAudit('admin_logs_search_failed', null, $request, [
-                'data' => ['error' => $e->getMessage()],
+                'data' => ['error' => DatabaseService::exceptionMessage($e)],
             ], 'failed');
             return $this->json($response, ['error' => 'Internal server error'], 500);
         }
@@ -263,7 +264,7 @@ class LogSearchController
             } catch (\Throwable $e) {
                 try { $this->errorLogService?->logException($e, $request); } catch (\Throwable $ignore) { /* swallow secondary */ }
                 $this->logAudit('admin_logs_export_failed', null, $request, [
-                    'data' => ['error' => $e->getMessage()],
+                    'data' => ['error' => DatabaseService::exceptionMessage($e)],
                 ], 'failed');
                 return $this->json($response, ['error' => 'Internal server error'], 500);
             }
@@ -304,7 +305,7 @@ class LogSearchController
             } catch (\Throwable $e) {
                 try { $this->errorLogService?->logException($e, $request); } catch (\Throwable $ignore) { /* swallow secondary */ }
                 $this->logAudit('admin_logs_related_failed', null, $request, [
-                    'data' => ['error' => $e->getMessage()],
+                    'data' => ['error' => DatabaseService::exceptionMessage($e)],
                 ], 'failed');
                 return $this->json($response, ['error' => 'Internal server error'], 500);
             }

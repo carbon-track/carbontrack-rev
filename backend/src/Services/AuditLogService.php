@@ -110,7 +110,7 @@ class AuditLogService
             }
         } catch (\Throwable $e) {
             $this->logger->error('AuditLogService::log failed', [
-                'error' => $e->getMessage(),
+                'error' => DatabaseService::exceptionMessage($e),
             ]);
             $result = false;
         }
@@ -178,7 +178,7 @@ class AuditLogService
             return true;
         } catch (\Throwable $e) {
             $this->logger->error('Audit logging exception', [
-                'message' => $e->getMessage(),
+                'message' => DatabaseService::exceptionMessage($e),
                 'trace' => $e->getTraceAsString(),
             ]);
             return false;
@@ -295,7 +295,7 @@ class AuditLogService
         try {
             return DatabaseRows::all($this->db->select('SELECT * FROM audit_logs WHERE user_id = :uid OR user_uuid = :user_uuid ORDER BY created_at DESC LIMIT :lim', [':uid' => $userId, ':user_uuid' => $this->lookupUserUuidById($userId) ?? '', ':lim' => $limit])) ?: [];
         } catch (\Throwable $e) {
-            $this->logger->warning('getUserLogs failed', ['error' => $e->getMessage()]);
+            $this->logger->warning('getUserLogs failed', ['error' => DatabaseService::exceptionMessage($e)]);
             return [];
         }
     }
@@ -327,7 +327,7 @@ class AuditLogService
             $sql .= " GROUP BY actor_type, operation_category ORDER BY count DESC";
             return DatabaseRows::all($this->db->select($sql, $params)) ?: [];
         } catch (\Throwable $e) {
-            $this->logger->error('Failed to get audit stats', ['error' => $e->getMessage()]);
+            $this->logger->error('Failed to get audit stats', ['error' => DatabaseService::exceptionMessage($e)]);
             return [];
         }
     }
@@ -348,7 +348,7 @@ class AuditLogService
             $params[] = $limit; $params[] = $offset;
             return DatabaseRows::all($this->db->select($sql, $params)) ?: [];
         } catch (\Throwable $e) {
-            $this->logger->error('Failed to get audit logs', ['error' => $e->getMessage()]);
+            $this->logger->error('Failed to get audit logs', ['error' => DatabaseService::exceptionMessage($e)]);
             return [];
         }
     }
@@ -367,7 +367,7 @@ class AuditLogService
             if (isset($filters['date_to'])) { $sql .= self::SQL_AND_CREATED_AT_LTE; $params[] = $filters['date_to']; }
             return (int)DatabaseRows::scalar($this->db->selectOne($sql, $params));
         } catch (\Throwable $e) {
-            $this->logger->error('Failed to get audit logs count', ['error' => $e->getMessage()]);
+            $this->logger->error('Failed to get audit logs count', ['error' => DatabaseService::exceptionMessage($e)]);
             return 0;
         }
     }
@@ -378,7 +378,7 @@ class AuditLogService
             $cutoff = date('Y-m-d H:i:s', strtotime("-$days days"));
             return $this->db->affectingStatement("DELETE FROM audit_logs WHERE created_at < ?", [$cutoff]);
         } catch (\Throwable $e) {
-            $this->logger->error('Failed to cleanup old audit logs', ['error' => $e->getMessage(), 'days' => $days]);
+            $this->logger->error('Failed to cleanup old audit logs', ['error' => DatabaseService::exceptionMessage($e), 'days' => $days]);
             return 0;
         }
     }

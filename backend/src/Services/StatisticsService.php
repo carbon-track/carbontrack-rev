@@ -58,7 +58,7 @@ class StatisticsService
 
             return $data;
         } catch (\Throwable $exception) {
-            $this->logAudit('statistics_admin_failed', 'failed', ['force_refresh' => $forceRefresh, 'error' => $exception->getMessage()]);
+            $this->logAudit('statistics_admin_failed', 'failed', ['force_refresh' => $forceRefresh, 'error' => DatabaseService::exceptionMessage($exception)]);
             $this->logError($exception, '/internal/statistics/admin', ['force_refresh' => $forceRefresh]);
             throw $exception;
         }
@@ -82,7 +82,7 @@ class StatisticsService
 
             return $summary;
         } catch (\Throwable $exception) {
-            $this->logAudit('statistics_public_failed', 'failed', ['force_refresh' => $forceRefresh, 'error' => $exception->getMessage()]);
+            $this->logAudit('statistics_public_failed', 'failed', ['force_refresh' => $forceRefresh, 'error' => DatabaseService::exceptionMessage($exception)]);
             $this->logError($exception, '/internal/statistics/public', ['force_refresh' => $forceRefresh]);
             throw $exception;
         }

@@ -335,7 +335,7 @@ class PasskeyService
             } catch (\Throwable $exception) {
                 if ($this->logger !== null) {
                     $this->logger->debug('Failed to sync user checkins on passkey login', [
-                        'error' => $exception->getMessage(),
+                        'error' => DatabaseService::exceptionMessage($exception),
                         'user_id' => $user['id'],
                     ]);
                 }
@@ -798,7 +798,7 @@ class PasskeyService
         } catch (\Throwable $exception) {
             if ($this->logger !== null) {
                 $this->logger->debug('Failed to update legacy user login timestamp after passkey authentication', [
-                    'error' => $exception->getMessage(),
+                    'error' => DatabaseService::exceptionMessage($exception),
                     'user_id' => $userId,
                 ]);
             }
@@ -809,7 +809,7 @@ class PasskeyService
         } catch (\Throwable $exception) {
             if ($this->logger !== null) {
                 $this->logger->debug('Failed to update user login timestamp after passkey authentication', [
-                    'error' => $exception->getMessage(),
+                    'error' => DatabaseService::exceptionMessage($exception),
                     'user_id' => $userId,
                 ]);
             }
