@@ -942,6 +942,13 @@ class MessageControllerTest extends TestCase
 
         $controller = $this->makeController($connection, $svc, $audit, $auth, null, $this->makeUserProfileViewService($region));
         $request = makeRequest('GET', '/admin/messages/broadcast/recipients', null, ['search' => 'example', 'limit' => 1]);
+        $audit->expects($this->once())->method('logAdminRead')->with(
+            $request,
+            'admin_broadcast_recipients_searched',
+            1,
+            'users',
+            ['page' => 1, 'limit' => 1, 'recipient_ids' => [10]]
+        )->willReturn(true);
         $response = new \Slim\Psr7\Response();
         $resp = $controller->searchBroadcastRecipients($request, $response);
 
@@ -1194,6 +1201,13 @@ class MessageControllerTest extends TestCase
         $auth->method('isAdminUser')->willReturn(true);
 
         $request = makeRequest('GET', '/admin/messages/broadcasts');
+        $audit->expects($this->once())->method('logAdminRead')->with(
+            $request,
+            'admin_broadcast_history_viewed',
+            99,
+            'message_broadcasts',
+            ['page' => 1, 'limit' => 10, 'broadcast_ids' => [1]]
+        )->willReturn(true);
         $errorLog = $this->createMock(ErrorLogService::class);
         if ($recipientLookupFails) {
             $connection->unprepared('ALTER TABLE messages RENAME TO archived_messages');

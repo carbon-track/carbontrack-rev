@@ -964,6 +964,14 @@ $auditPayload = [
                 ];
             }
 
+            $this->auditLog->logAdminRead(
+                $request,
+                'admin_broadcast_history_viewed',
+                isset($user['id']) ? (int) $user['id'] : null,
+                'message_broadcasts',
+                ['page' => $page, 'limit' => $limit, 'broadcast_ids' => array_column($items, 'id')]
+            );
+
             return $this->json($response, [
                 'success' => true,
                 'data' => $items,
@@ -1440,6 +1448,14 @@ $auditPayload = [
                 }
                 $data[] = $normalized;
             }
+
+            $this->auditLog->logAdminRead(
+                $request,
+                'admin_broadcast_recipients_searched',
+                isset($user['id']) ? (int) $user['id'] : null,
+                'users',
+                ['page' => $page, 'limit' => $limit, 'recipient_ids' => array_column($data, 'id')]
+            );
 
             return $this->json($response, [
                 'success' => true,

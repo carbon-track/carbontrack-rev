@@ -401,6 +401,7 @@ class ProductControllerTest extends TestCase
         $connection = new DatabaseConnectionStub();
         $messageService = $this->createMock(\CarbonTrack\Services\MessageService::class);
         $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit->expects($this->never())->method('logAdminRead');
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>1]);
         $auth->method('isAdminUser')->willReturn(false);
@@ -432,19 +433,29 @@ class ProductControllerTest extends TestCase
         $listStmt->method('parameter')->willReturn(true);
         $listStmt->method('bindings')->willReturn(true);
         $listStmt->method('rows')->willReturn([
-            ['id'=>'e1','user_id'=>1,'status'=>'pending']
+            ['id'=>'e1','user_id'=>1,'status'=>'pending','email'=>'buyer@example.test']
         ]);
 
         $connection->method('responseFor')->willReturnOnConsecutiveCalls($this->exchangeUserColumn(), $countStmt, $listStmt);
 
         $controller = new ProductController($connection, $messageService, $audit, $auth);
-        $request = makeRequest('GET', '/admin/exchanges');
+        $request = makeRequest('GET', '/api/v1/admin/exchanges', null, [
+            'page' => 0, 'limit' => 5, 'search' => 'buyer@example.test',
+        ])->withAttribute('request_id', 'exchange-list-fixture');
+        $audit->expects($this->once())->method('logAdminRead')->with(
+            $request,
+            'admin_exchange_records_viewed',
+            9,
+            'point_exchanges',
+            ['page' => 1, 'limit' => 10, 'exchange_ids' => ['e1']]
+        )->willReturn(true);
         $response = new \Slim\Psr7\Response();
         $resp = $controller->getExchangeRecords($request, $response);
         $this->assertEquals(200, $resp->getStatusCode());
         $json = json_decode((string)$resp->getBody(), true);
         $this->assertTrue($json['success']);
         $this->assertEquals(1, $json['pagination']['total']);
+        $this->assertSame('buyer@example.test', $json['data'][0]['user_email']);
     }
 
     public function testGetExchangeRecordsSearchUsesDistinctBindings(): void
@@ -593,7 +604,15 @@ class ProductControllerTest extends TestCase
         $connection->method('responseFor')->willReturn($stmt);
 
         $controller = new ProductController($connection, $messageService, $audit, $auth);
-        $request = makeRequest('GET', '/admin/exchanges/e1');
+        $request = makeRequest('GET', '/api/v1/admin/exchanges/e1')
+            ->withAttribute('request_id', 'exchange-detail-fixture');
+        $audit->expects($this->once())->method('logAdminRead')->with(
+            $request,
+            'admin_exchange_record_viewed',
+            9,
+            'point_exchanges',
+            ['exchange_id' => 'e1']
+        )->willReturn(true);
         $response = new \Slim\Psr7\Response();
         $resp = $controller->getExchangeRecordDetail($request, $response, ['id' => 'e1']);
         $this->assertEquals(200, $resp->getStatusCode());

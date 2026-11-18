@@ -361,6 +361,15 @@ $sql = "
             $badgePayload['metrics'] = $this->badgeService->compileUserMetrics($userId);
             $badgePayload['user'] = $userRow;
 
+            $this->auditLog->logAdminRead(
+                $request,
+                'admin_user_badges_viewed',
+                isset($admin['id']) ? (int) $admin['id'] : null,
+                'users',
+                ['include_revoked' => $includeRevoked],
+                $userId
+            );
+
             return $this->jsonResponse($response, ['success' => true, 'data' => $badgePayload]);
         } catch (\Throwable $e) {
             if (($_ENV['APP_ENV'] ?? '') === 'testing') {
@@ -402,6 +411,15 @@ $sql = "
                       10
                   ),
               ];
+
+            $this->auditLog->logAdminRead(
+                $request,
+                'admin_user_overview_viewed',
+                isset($admin['id']) ? (int) $admin['id'] : null,
+                'users',
+                [],
+                $userId
+            );
 
             return $this->jsonResponse($response, ['success' => true, 'data' => $payload]);
         } catch (\Throwable $e) {
@@ -466,21 +484,12 @@ $sql = "
 
             $total = (int)DatabaseRows::scalar($this->db->selectOne("SELECT COUNT(*) FROM points_transactions pt WHERE pt.status='pending' AND pt.deleted_at IS NULL"));
 
-            $this->auditLog->logAdminOperation(
+            $this->auditLog->logAdminRead(
+                $request,
                 'admin_pending_transactions_viewed',
                 isset($user['id']) ? (int) $user['id'] : null,
-                'admin',
-                [
-                    'table' => 'points_transactions',
-                    'request_id' => $request->getAttribute('request_id'),
-                    'request_method' => $request->getMethod(),
-                    'endpoint' => $request->getUri()->getPath(),
-                    'request_data' => [
-                        'page' => $page,
-                        'limit' => $limit,
-                        'transaction_ids' => array_column($transactions, 'id'),
-                    ],
-                ]
+                'points_transactions',
+                ['page' => $page, 'limit' => $limit, 'transaction_ids' => array_column($transactions, 'id')]
             );
 
             return $this->jsonResponse($response, [

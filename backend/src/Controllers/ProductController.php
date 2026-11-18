@@ -708,6 +708,14 @@ class ProductController
             }
 
             $pages = (int)ceil($total / $limit);
+            $this->auditLog->logAdminRead(
+                $request,
+                'admin_exchange_records_viewed',
+                isset($user['id']) ? (int) $user['id'] : null,
+                'point_exchanges',
+                ['page' => $page, 'limit' => $limit, 'exchange_ids' => array_column($exchanges, 'id')]
+            );
+
             return $this->json($response, [
                 'success' => true,
                 'data' => $exchanges,
@@ -790,6 +798,14 @@ class ProductController
                 $imgUrl = $exchange['current_product_image_path'];
             }
             $exchange['product_image_url'] = $exchange['product_image_url'] ?? $imgUrl;
+
+            $this->auditLog->logAdminRead(
+                $request,
+                'admin_exchange_record_viewed',
+                isset($user['id']) ? (int) $user['id'] : null,
+                'point_exchanges',
+                ['exchange_id' => $exchange['id']]
+            );
 
             return $this->json($response, [
                 'success' => true,
