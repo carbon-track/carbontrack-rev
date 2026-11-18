@@ -1516,6 +1516,9 @@ class SupportTicketService
             }
         } catch (\Throwable $e) {
             $this->logger->warning('Failed to send support mailbox notification', ['subject' => $subject, 'error' => DatabaseService::exceptionMessage($e)]);
+            $this->recordNotificationFailure($e, 'support_mailbox_notification_failed', [
+                'ticket_id' => $emailPayload['ticket']['id'] ?? null,
+            ]);
         }
     }
 
@@ -1529,6 +1532,10 @@ class SupportTicketService
                 $this->messageService->sendSystemMessage($userId, 'Support replied to your ticket', $messageBody, 'message', 'normal', 'support_ticket', $ticketId, false);
             } catch (\Throwable $e) {
                 $this->logger->warning('Failed to send support reply message', ['ticket_id' => $ticketId, 'error' => DatabaseService::exceptionMessage($e)]);
+                $this->recordNotificationFailure($e, 'support_requester_reply_message_failed', [
+                    'ticket_id' => $ticketId,
+                    'user_id' => $userId,
+                ]);
             }
         }
         if ($this->emailService !== null && !empty($ticket['requester_email'])) {
@@ -1559,6 +1566,10 @@ class SupportTicketService
                 );
             } catch (\Throwable $e) {
                 $this->logger->warning('Failed to send support reply email', ['ticket_id' => $ticketId, 'error' => DatabaseService::exceptionMessage($e)]);
+                $this->recordNotificationFailure($e, 'support_requester_reply_email_failed', [
+                    'ticket_id' => $ticketId,
+                    'user_id' => $userId,
+                ]);
             }
         }
     }
@@ -1609,6 +1620,10 @@ class SupportTicketService
                 );
             } catch (\Throwable $e) {
                 $this->logger->warning('Failed to send support ticket update message', ['ticket_id' => $ticketId, 'error' => DatabaseService::exceptionMessage($e)]);
+                $this->recordNotificationFailure($e, 'support_requester_update_message_failed', [
+                    'ticket_id' => $ticketId,
+                    'user_id' => $userId,
+                ]);
             }
         }
 
@@ -1637,6 +1652,10 @@ class SupportTicketService
                 );
             } catch (\Throwable $e) {
                 $this->logger->warning('Failed to send support ticket update email', ['ticket_id' => $ticketId, 'error' => DatabaseService::exceptionMessage($e)]);
+                $this->recordNotificationFailure($e, 'support_requester_update_email_failed', [
+                    'ticket_id' => $ticketId,
+                    'user_id' => $userId,
+                ]);
             }
         }
     }
