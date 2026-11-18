@@ -8253,7 +8253,7 @@
         "tags": [
           "Admin"
         ],
-        "summary": "获取待审核碳记录 (管理员)",
+        "summary": "获取待审核积分交易 (管理员)",
         "security": [
           {
             "bearerAuth": []
@@ -8285,7 +8285,7 @@
           }
         },
         "operationId": "adminGetPendingTransactions",
-        "description": "获取待审核碳记录 (管理员)详细信息。"
+        "description": "分页获取待审核积分交易。成功时审计记录访问者、页码、每页数量及返回的交易 ID。"
       }
     },
     "/api/v1/admin/users": {
