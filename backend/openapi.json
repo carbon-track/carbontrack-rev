@@ -1468,7 +1468,7 @@
           "Carbon Records"
         ],
         "summary": "获取碳减排记录列表（管理员审核）",
-        "description": "管理员分页获取碳减排记录列表，支持按审核状态、关键字、活动、日期与排序方式筛选，用于审核后台。",
+        "description": "管理员分页获取碳减排记录列表，支持按审核状态、关键字、活动、日期与排序方式筛选，用于审核后台。\n\nSuccessful reads record the effective pagination and returned record IDs in the admin_carbon_records_viewed audit entry.",
         "security": [
           {
             "bearerAuth": []
@@ -4404,7 +4404,7 @@
           "Carbon Activities"
         ],
         "summary": "待审核碳记录列表 (别名)",
-        "description": "管理员兼容别名接口：获取待审核碳记录列表。\n\nDeprecated alias. Use `/api/v1/admin/activities` as the canonical runtime path.",
+        "description": "管理员兼容别名接口：获取待审核碳记录列表。\n\nDeprecated alias. Use `/api/v1/admin/activities` as the canonical runtime path.\n\nSuccessful reads record the effective pagination and returned record IDs in the admin_carbon_records_viewed audit entry.",
         "security": [
           {
             "bearerAuth": []
@@ -4703,7 +4703,7 @@
           "Carbon Records"
         ],
         "summary": "待审核碳记录列表 (别名)",
-        "description": "管理员兼容别名接口：获取待审核碳记录列表。\n\nDeprecated alias. Use `/api/v1/admin/activities` as the canonical runtime path.",
+        "description": "管理员兼容别名接口：获取待审核碳记录列表。\n\nDeprecated alias. Use `/api/v1/admin/activities` as the canonical runtime path.\n\nSuccessful reads record the effective pagination and returned record IDs in the admin_carbon_records_viewed audit entry.",
         "security": [
           {
             "bearerAuth": []
@@ -4910,7 +4910,7 @@
           "Exchange"
         ],
         "summary": "获取兑换记录列表 (管理员)",
-        "description": "管理员分页获取兑换记录列表，可按状态、关键词和排序方式筛选，用于兑换履约与售后处理。",
+        "description": "管理员分页获取兑换记录列表，可按状态、关键词和排序方式筛选，用于兑换履约与售后处理。\n\nSuccessful reads record the effective pagination and returned exchange IDs in the admin_exchange_records_viewed audit entry.",
         "security": [
           {
             "bearerAuth": []
@@ -5039,7 +5039,7 @@
           "Exchange"
         ],
         "summary": "获取兑换记录详情 (管理员)",
-        "description": "管理员获取单条兑换记录详情，包含用户、商品与履约信息。",
+        "description": "管理员获取单条兑换记录详情，包含用户、商品与履约信息。\n\nSuccessful reads record the returned exchange ID in the admin_exchange_record_viewed audit entry.",
         "security": [
           {
             "bearerAuth": []
@@ -6371,7 +6371,7 @@
           "Messages"
         ],
         "summary": "搜索广播收件人",
-        "description": "管理员搜索广播收件人，支持按关键字、学校、邮箱后缀、状态与管理员标记筛选。",
+        "description": "管理员搜索广播收件人，支持按关键字、学校、邮箱后缀、状态与管理员标记筛选。\n\nSuccessful reads record the effective pagination and returned user IDs in the admin_broadcast_recipients_searched audit entry.",
         "security": [
           {
             "bearerAuth": []
@@ -6492,7 +6492,7 @@
           "Messages"
         ],
         "summary": "获取广播历史 (管理员)",
-        "description": "获取广播历史及其渲染元数据，用于管理端统一预览历史公告内容。",
+        "description": "获取广播历史及其渲染元数据，用于管理端统一预览历史公告内容。\n\nSuccessful reads record the effective pagination and returned broadcast IDs in the admin_broadcast_history_viewed audit entry.",
         "security": [
           {
             "bearerAuth": []
@@ -8656,7 +8656,7 @@
         ],
         "responses": {
           "200": {
-            "description": "成功返回指定用户的徽章列表。",
+            "description": "成功返回指定用户的徽章列表。\n\nSuccessful reads record the target user ID and whether revoked badges were included in the admin_user_badges_viewed audit entry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8705,7 +8705,7 @@
         ],
         "responses": {
           "200": {
-            "description": "成功返回用户概览、Passkey 摘要与最近安全活动。",
+            "description": "成功返回用户概览、Passkey 摘要与最近安全活动。\n\nSuccessful reads record the target user ID in the admin_user_overview_viewed audit entry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9089,7 +9089,7 @@
         ],
         "responses": {
           "200": {
-            "description": "成功返回指定用户的徽章列表。",
+            "description": "成功返回指定用户的徽章列表。\n\nSuccessful reads record the resolved user ID and whether revoked badges were included in the admin_user_badges_viewed audit entry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9139,7 +9139,7 @@
         ],
         "responses": {
           "200": {
-            "description": "成功返回用户概览、Passkey 摘要与最近安全活动。",
+            "description": "成功返回用户概览、Passkey 摘要与最近安全活动。\n\nSuccessful reads record the resolved user ID in the admin_user_overview_viewed audit entry.",
             "content": {
               "application/json": {
                 "schema": {

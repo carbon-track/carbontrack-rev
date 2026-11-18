@@ -9,6 +9,7 @@ use Illuminate\Database\Connection;
 use CarbonTrack\Support\SensitiveDataRedactor;
 use Monolog\Logger;
 use JsonException;
+use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * AuditLogService
@@ -259,6 +260,30 @@ class AuditLogService
             $context['new_data'] ?? null,
             $context
         );
+    }
+
+    public function logAdminRead(
+        ServerRequestInterface $request,
+        string $action,
+        ?int $adminId,
+        string $table,
+        array $scope,
+        ?int $recordId = null
+    ): bool {
+        return $this->log([
+            'action' => $action,
+            'operation_category' => 'admin',
+            'actor_type' => 'admin',
+            'user_id' => $adminId,
+            'affected_table' => $table,
+            'affected_id' => $recordId,
+            'request_id' => $request->getAttribute('request_id'),
+            'request_method' => $request->getMethod(),
+            'endpoint' => $request->getUri()->getPath(),
+            'data' => $scope,
+            'status' => 'success',
+            'response_code' => 200,
+        ]);
     }
 
     // alias kept: primary log() already exists at top for compatibility

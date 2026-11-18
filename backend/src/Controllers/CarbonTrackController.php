@@ -1047,6 +1047,14 @@ class CarbonTrackController
             }
 
             $pages = (int)ceil($total / $limit);
+            $this->auditLog->logAdminRead(
+                $request,
+                'admin_carbon_records_viewed',
+                isset($user['id']) ? (int) $user['id'] : null,
+                'carbon_records',
+                ['page' => $page, 'limit' => $limit, 'record_ids' => array_column($records, 'id')]
+            );
+
             return $this->json($response, [
                 'success' => true,
                 'data' => $records,

@@ -8,6 +8,7 @@ use CarbonTrack\Support\DatabaseRows;
 use CarbonTrack\Tests\Support\DatabaseQueryResponse;
 use CarbonTrack\Tests\Support\DatabaseConnectionStub;
 use CarbonTrack\Tests\Support\DatabaseFixture;
+use CarbonTrack\Tests\Integration\TestSchemaBuilder;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
 use CarbonTrack\Services\AuditLogService;
@@ -143,6 +144,29 @@ class AuditLogServiceTest extends TestCase
         $this->assertSame('system', $row['actor_type']);
         $this->assertSame('statistics_public_computed', $row['action']);
         $this->assertSame('statistics_service', $row['operation_category']);
+    }
+
+    public function testLogAdminReadStoresPathAndScopeWithRequestId(): void
+    {
+        $connection = DatabaseFixture::sqlite();
+        TestSchemaBuilder::init($connection);
+        $service = new AuditLogService($connection, new Logger('test'));
+
+        $request = makeRequest('GET', '/api/v1/admin/users/10/overview')
+            ->withAttribute('request_id', 'admin-read-fixture');
+        $request = $request->withUri($request->getUri()->withQuery('search=owner@example.test'));
+
+        $this->assertTrue($service->logAdminRead($request, 'admin_user_overview_viewed', 1, 'users', [], 10));
+        $row = (array) $connection->table('audit_logs')->where('request_id', 'admin-read-fixture')->first();
+        $this->assertSame(1, (int) $row['user_id']);
+        $this->assertSame('admin', $row['actor_type']);
+        $this->assertSame('admin_user_overview_viewed', $row['action']);
+        $this->assertSame('success', $row['status']);
+        $this->assertSame('users', $row['affected_table']);
+        $this->assertSame(10, (int) $row['affected_id']);
+        $this->assertSame('GET', $row['request_method']);
+        $this->assertSame('/api/v1/admin/users/10/overview', $row['endpoint']);
+        $this->assertSame([], json_decode($row['data'], true, 512, JSON_THROW_ON_ERROR));
     }
 
     public function testLogAuditSkipsInsertWhenWritesDisabled(): void

@@ -70,22 +70,6 @@ class AdminControllerTest extends TestCase
         $auth->method('isAdminUser')->willReturn(true);
         $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
         $path = '/api/v1/admin/transactions/pending';
-        $audit->expects($this->once())->method('logAdminOperation')->with(
-            'admin_pending_transactions_viewed',
-            42,
-            'admin',
-            [
-                'table' => 'points_transactions',
-                'request_id' => 'pending-transactions-fixture',
-                'request_method' => 'GET',
-                'endpoint' => $path,
-                'request_data' => [
-                    'page' => 2,
-                    'limit' => 10,
-                    'transaction_ids' => ['transaction-11', 'transaction-12'],
-                ],
-            ]
-        )->willReturn(true);
 
         $controller = $this->makeController(
             $connection,
@@ -98,6 +82,13 @@ class AdminControllerTest extends TestCase
         );
         $request = makeRequest('GET', $path, null, ['page' => 2, 'limit' => 1])
             ->withAttribute('request_id', 'pending-transactions-fixture');
+        $audit->expects($this->once())->method('logAdminRead')->with(
+            $request,
+            'admin_pending_transactions_viewed',
+            42,
+            'points_transactions',
+            ['page' => 2, 'limit' => 10, 'transaction_ids' => ['transaction-11', 'transaction-12']]
+        )->willReturn(true);
         $response = $controller->getPendingTransactions($request, new \Slim\Psr7\Response());
 
         $this->assertSame(200, $response->getStatusCode());
@@ -331,7 +322,11 @@ class AdminControllerTest extends TestCase
         $prop->setAccessible(true);
         $prop->setValue($controller, 'lastlgn');
 
-        $request = makeRequest('GET', '/admin/users/1/overview');
+        $request = makeRequest('GET', '/api/v1/admin/users/1/overview')
+            ->withAttribute('request_id', 'user-overview-fixture');
+        $audit->expects($this->once())->method('logAdminRead')->with(
+            $request, 'admin_user_overview_viewed', 1, 'users', [], 1
+        )->willReturn(true);
         $response = new \Slim\Psr7\Response();
         $resp = $controller->getUserOverview($request, $response, ['id' => 1]);
 
@@ -367,7 +362,11 @@ class AdminControllerTest extends TestCase
         $prop->setAccessible(true);
         $prop->setValue($controller, 'lastlgn');
 
-        $request = makeRequest('GET', '/admin/users/by-uuid/550e8400-e29b-41d4-a716-4466554400aa/overview');
+        $request = makeRequest('GET', '/api/v1/admin/users/by-uuid/550e8400-e29b-41d4-a716-4466554400aa/overview')
+            ->withAttribute('request_id', 'user-overview-by-uuid-fixture');
+        $audit->expects($this->once())->method('logAdminRead')->with(
+            $request, 'admin_user_overview_viewed', 1, 'users', [], 1
+        )->willReturn(true);
         $response = new \Slim\Psr7\Response();
         $resp = $controller->getUserOverviewByUuid($request, $response, ['uuid' => '550e8400-e29b-41d4-a716-4466554400aa']);
 
@@ -375,6 +374,39 @@ class AdminControllerTest extends TestCase
         $json = json_decode((string) $resp->getBody(), true);
         $this->assertTrue($json['success']);
         $this->assertSame('550e8400-e29b-41d4-a716-4466554400aa', $json['data']['user']['uuid']);
+    }
+
+    public function testGetUserBadgesAuditsResolvedUserAndRevocationFilter(): void
+    {
+        $connection = DatabaseFixture::sqlite();
+        TestSchemaBuilder::init($connection);
+
+        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth->method('getCurrentUser')->willReturn(['id' => 9, 'is_admin' => 1]);
+        $auth->method('isAdminUser')->willReturn(true);
+
+        $uuid = '550e8400-e29b-41d4-a716-4466554400aa';
+        $request = makeRequest('GET', '/api/v1/admin/users/by-uuid/' . $uuid . '/badges', null, ['include_revoked' => 'true'])
+            ->withAttribute('request_id', 'user-badges-fixture');
+        $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit->expects($this->once())->method('logAdminRead')->with(
+            $request, 'admin_user_badges_viewed', 9, 'users', ['include_revoked' => true], 1
+        )->willReturn(true);
+
+        $controller = $this->makeController(
+            $connection,
+            $auth,
+            $audit,
+            $this->createMock(BadgeService::class),
+            $this->createMock(StatisticsService::class),
+            $this->createMock(CheckinService::class),
+            new QuotaConfigService()
+        );
+        $response = $controller->getUserBadgesByUuid($request, new \Slim\Psr7\Response(), ['uuid' => $uuid]);
+
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(1, $payload['data']['user']['id']);
     }
 
     public function testGetUserSecurityActivityAppliesFiltersAndPagination(): void

@@ -1102,6 +1102,7 @@ class CarbonTrackControllerTest extends TestCase
         $calc = $this->createMock(CarbonCalculatorService::class);
         $msg = $this->createMock(\CarbonTrack\Services\MessageService::class);
         $audit = $this->createMock(\CarbonTrack\Services\AuditLogService::class);
+        $audit->expects($this->never())->method('logAdminRead');
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
         $auth->method('getCurrentUser')->willReturn(['id'=>1]);
         $auth->method('isAdmin')->willReturn(false);
@@ -1140,7 +1141,15 @@ class CarbonTrackControllerTest extends TestCase
         $connection->method('responseFor')->willReturnOnConsecutiveCalls($countStmt, $listStmt);
 
         $controller = $this->makeController($connection, $calc, $msg, $audit, $auth);
-        $request = makeRequest('GET', '/admin/activities');
+        $request = makeRequest('GET', '/api/v1/admin/activities', null, ['search' => 'owner@example.test'])
+            ->withAttribute('request_id', 'carbon-record-list-fixture');
+        $audit->expects($this->once())->method('logAdminRead')->with(
+            $request,
+            'admin_carbon_records_viewed',
+            9,
+            'carbon_records',
+            ['page' => 1, 'limit' => 20, 'record_ids' => ['r1']]
+        )->willReturn(true);
         $response = new \Slim\Psr7\Response();
         $resp = $controller->getPendingRecords($request, $response);
         $this->assertEquals(200, $resp->getStatusCode());
