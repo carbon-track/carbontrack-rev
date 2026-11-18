@@ -97,9 +97,14 @@ class StatisticsService
         $driver = $this->db->getDriverName();
         $dateExpr = $driver === 'sqlite' ? "substr(created_at,1,10)" : "DATE(created_at)";
 
-        $carbonDeletedCondition = $driver === 'sqlite' ? 'deleted_at IS NULL' : "(deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')";
-        $carbonDeletedConditionAliasedCr = $driver === 'sqlite' ? 'cr.deleted_at IS NULL' : "(cr.deleted_at IS NULL OR cr.deleted_at = '0000-00-00 00:00:00')";
-        $activityDeletedCondition = $driver === 'sqlite' ? 'deleted_at IS NULL' : "(deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')";
+        // Legacy MySQL rows can contain a zero datetime that strict SQL mode rejects as a datetime literal.
+        $carbonDeletedCondition = $driver === 'sqlite'
+            ? 'deleted_at IS NULL'
+            : "(deleted_at IS NULL OR CAST(deleted_at AS CHAR) = '0000-00-00 00:00:00')";
+        $carbonDeletedConditionAliasedCr = $driver === 'sqlite'
+            ? 'cr.deleted_at IS NULL'
+            : "(cr.deleted_at IS NULL OR CAST(cr.deleted_at AS CHAR) = '0000-00-00 00:00:00')";
+        $activityDeletedCondition = $carbonDeletedCondition;
 
         $userStatsRaw = DatabaseRows::one($this->db->selectOne("SELECT COUNT(*) AS total_users,
                 SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) AS active_users,
@@ -136,7 +141,7 @@ class StatisticsService
             $prioritySql = "SELECT COALESCE(priority, 'normal') AS priority,
                     COUNT(*) AS total,
                     SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) AS unread,
-                    SUM(CASE WHEN is_read = 1 THEN 1 ELSE 0 END) AS read
+                    SUM(CASE WHEN is_read = 1 THEN 1 ELSE 0 END) AS read_count
                 FROM messages
                 WHERE deleted_at IS NULL
                 GROUP BY COALESCE(priority, 'normal')";
@@ -153,7 +158,7 @@ class StatisticsService
             $trendSql = "SELECT {$dateExpr} AS day_label,
                     COUNT(*) AS total,
                     SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) AS unread,
-                    SUM(CASE WHEN is_read = 1 THEN 1 ELSE 0 END) AS read
+                    SUM(CASE WHEN is_read = 1 THEN 1 ELSE 0 END) AS read_count
                 FROM messages
                 WHERE deleted_at IS NULL AND created_at >= :start_date
                 GROUP BY {$dateExpr}
@@ -490,7 +495,7 @@ class StatisticsService
             }
             $total = $this->toInt($row['total'] ?? 0);
             $unread = $this->toInt($row['unread'] ?? 0);
-            $read = $this->toInt($row['read'] ?? 0);
+            $read = $this->toInt($row['read_count'] ?? 0);
             if ($read === 0 && $total >= $unread) {
                 $read = max(0, $total - $unread);
             }
@@ -550,7 +555,7 @@ class StatisticsService
             $label = substr($labelRaw, 0, 10);
             $total = $this->toInt($row['total'] ?? 0);
             $unread = $this->toInt($row['unread'] ?? 0);
-            $read = $this->toInt($row['read'] ?? 0);
+            $read = $this->toInt($row['read_count'] ?? 0);
             if ($read === 0 && $total >= $unread) {
                 $read = max(0, $total - $unread);
             }
