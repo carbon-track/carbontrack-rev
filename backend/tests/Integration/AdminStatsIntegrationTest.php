@@ -190,7 +190,10 @@ class AdminStatsIntegrationTest extends TestCase
         $this->assertGreaterThan(0, $data['messages']['unread_ratio']);
         $this->assertArrayHasKey('priority_breakdown', $data['messages']);
         $this->assertArrayHasKey('daily_counts', $data['messages']);
-        $this->assertGreaterThan(0, count($data['messages']['priority_breakdown']));
+        $this->assertSame(
+            ['urgent', 'high', 'normal'],
+            array_column($data['messages']['priority_breakdown'], 'priority')
+        );
         $priorityTotals = array_sum(array_map(static fn(array $entry): int => (int) ($entry['total'] ?? 0), $data['messages']['priority_breakdown']));
         $this->assertSame(3, $priorityTotals);
         $dailyTotals = array_sum(array_map(static fn(array $entry): int => (int) ($entry['total'] ?? 0), $data['messages']['daily_counts']));
