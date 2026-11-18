@@ -140,7 +140,8 @@ class AuthService
             }
             return is_numeric($value) ? (int) $value : 0;
         } catch (\Throwable $e) {
-            // Schema may not yet have the column on legacy environments; treat as 0.
+            // Legacy schemas may lack token_version.
+            $this->logError($e, '/internal/auth/token-version', 'Failed to read user token version', ['user_id' => $userId]);
             return 0;
         }
     }
@@ -831,6 +832,7 @@ class AuthService
                 'id' => $userId,
             ]);
         } catch (\Throwable $e) {
+            $this->logError($e, '/internal/auth/user-uuid', 'Failed to persist missing user UUID', ['user_id' => $userId]);
             return null;
         }
 

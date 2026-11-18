@@ -11,11 +11,14 @@ use CarbonTrack\Services\AuthService;
 use CarbonTrack\Services\AuditLogService;
 use CarbonTrack\Services\BadgeService;
 use CarbonTrack\Services\CheckinService;
+use CarbonTrack\Services\ErrorLogService;
 use CarbonTrack\Services\RegionService;
 use CarbonTrack\Services\StatisticsService;
 use CarbonTrack\Services\QuotaConfigService;
 use CarbonTrack\Services\UserProfileViewService;
+use Illuminate\Database\QueryException;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Slim\Psr7\Response;
 
 class AdminStatsIntegrationTest extends TestCase
@@ -97,6 +100,53 @@ class AdminStatsIntegrationTest extends TestCase
             new UserProfileViewService(new RegionService(null, null, null, null)),
             null,
             null
+        );
+    }
+
+    public function testLegacyMessagePriorityFallbackPersistsQueryFailure(): void
+    {
+        $connection = DatabaseFixture::sqlite();
+        TestSchemaBuilder::init($connection);
+        $connection->statement('ALTER TABLE messages DROP COLUMN priority');
+        $connection->table('messages')->insert([
+            'is_read' => 0,
+            'created_at' => date('Y-m-d H:i:s', strtotime('-2 days')),
+        ]);
+
+        $cacheDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'carbontrack_stats_cache_' . uniqid();
+        $service = new StatisticsService(
+            $connection,
+            $cacheDir,
+            errorLogService: new ErrorLogService($connection, new NullLogger())
+        );
+
+        try {
+            $data = $service->getAdminStats(true);
+        } finally {
+            if (is_dir($cacheDir)) {
+                foreach (glob($cacheDir . DIRECTORY_SEPARATOR . '*_stats.json') ?: [] as $cacheFile) {
+                    unlink($cacheFile);
+                }
+                rmdir($cacheDir);
+            }
+        }
+
+        $this->assertSame(1, $data['messages']['total_messages']);
+        $this->assertSame([[
+            'priority' => 'normal',
+            'total' => 1,
+            'unread' => 1,
+            'read' => 0,
+            'unread_ratio' => 1.0,
+        ]], $data['messages']['priority_breakdown']);
+        $this->assertSame(1, array_sum(array_column($data['messages']['daily_counts'], 'total')));
+        $errors = $connection->table('error_logs')->get();
+        $this->assertCount(1, $errors);
+        $this->assertSame(QueryException::class, $errors[0]->error_type);
+        $this->assertSame('/internal/statistics/admin', $errors[0]->script_name);
+        $this->assertSame(
+            ['aggregation' => 'message_priority'],
+            json_decode($errors[0]->client_post, true, 512, JSON_THROW_ON_ERROR)
         );
     }
 

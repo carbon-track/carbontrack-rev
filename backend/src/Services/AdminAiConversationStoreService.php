@@ -147,6 +147,9 @@ class AdminAiConversationStoreService
 
             return $items;
         } catch (\Throwable $exception) {
+            $this->logPersistenceError($exception, 'admin_ai_conversation_list_failed', [
+                'source' => '/admin/ai/conversations',
+            ]);
             $this->logger->warning('Failed to list admin AI conversations from dedicated store.', [
                 'error' => DatabaseService::exceptionMessage($exception),
             ]);
@@ -264,6 +267,10 @@ class AdminAiConversationStoreService
                 ];
             }
         } catch (\Throwable $exception) {
+            $this->logPersistenceError($exception, 'admin_ai_proposal_load_failed', [
+                'conversation_id' => $conversationId,
+                'proposal_id' => $proposalId,
+            ]);
             $this->logger->warning('Failed to load admin AI proposal from dedicated store.', [
                 'conversation_id' => $conversationId,
                 'proposal_id' => $proposalId,
@@ -305,6 +312,9 @@ class AdminAiConversationStoreService
                 return $this->db->affectingStatement($sql, $params) === 1;
             }
         } catch (\Throwable $exception) {
+            $this->logPersistenceError($exception, 'admin_ai_proposal_update_failed', [
+                'proposal_id' => $proposalId,
+            ]);
             $this->logger->warning('Failed to update admin AI proposal in dedicated store.', [
                 'proposal_id' => $proposalId,
                 'error' => DatabaseService::exceptionMessage($exception),
@@ -694,6 +704,9 @@ class AdminAiConversationStoreService
 
             return $runs;
         } catch (\Throwable $exception) {
+            $this->logPersistenceError($exception, 'admin_ai_conversation_runs_load_failed', [
+                'conversation_id' => $conversationId,
+            ]);
             $this->logger->warning('Failed to fetch admin AI runs.', [
                 'conversation_id' => $conversationId,
                 'error' => DatabaseService::exceptionMessage($exception),
@@ -762,6 +775,9 @@ class AdminAiConversationStoreService
 
             return $stepsByRun;
         } catch (\Throwable $exception) {
+            $this->logPersistenceError($exception, 'admin_ai_run_steps_load_failed', [
+                'run_count' => count($runIds),
+            ]);
             $this->logger->warning('Failed to fetch admin AI run steps.', [
                 'run_ids' => $runIds,
                 'error' => DatabaseService::exceptionMessage($exception),
@@ -841,6 +857,12 @@ class AdminAiConversationStoreService
             $this->touchConversationRecord($conversationId, $content, $kind, $role);
             return $messageId > 0 ? $messageId : null;
         } catch (\Throwable $exception) {
+            $this->logPersistenceError($exception, 'admin_ai_conversation_store_write_failed', [
+                'action' => $action,
+                'conversation_id' => $conversationId,
+                'request_id' => $logContext['request_id'] ?? null,
+                'source' => $logContext['source'] ?? '/admin/ai/chat',
+            ]);
             $this->logger->warning('Failed to write admin AI conversation store record.', [
                 'action' => $action,
                 'conversation_id' => $conversationId,
@@ -953,6 +975,10 @@ class AdminAiConversationStoreService
 
             return $messages;
         } catch (\Throwable $exception) {
+            $this->logPersistenceError($exception, 'admin_ai_conversation_timeline_load_failed', [
+                'source' => '/admin/ai/conversations',
+                'conversation_id' => $conversationId,
+            ]);
             $this->logger->warning('Failed to fetch admin AI conversation timeline from dedicated store.', [
                 'conversation_id' => $conversationId,
                 'error' => DatabaseService::exceptionMessage($exception),

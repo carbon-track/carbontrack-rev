@@ -716,7 +716,7 @@ $auditPayload = [
             } else {
                 $requestId = null;
             }
-            $systemLogId = $this->lookupSystemLogId($requestId);
+            $systemLogId = $this->lookupSystemLogId($request, $requestId);
 
             $cleanErrorLogIds = [];
             foreach ($errorLogIds as $candidateId) {
@@ -864,7 +864,8 @@ $auditPayload = [
                     'unread' => $unread,
                     'read' => max(0, $total - $unread)
                 ];
-            } catch (\Throwable $ignored) {
+            } catch (\Throwable $exception) {
+                $this->logException($exception, $request, __FUNCTION__, 'Failed to compute message counts by type and priority');
                 // Fallback simple counts
                 $row = DatabaseRows::one($this->db->selectOne("SELECT COUNT(*) as total, COUNT(CASE WHEN is_read = 0 THEN 1 END) as unread FROM messages WHERE receiver_id = :user_id AND deleted_at IS NULL", ['user_id' => $user['id']])) ?: ['total' => 0, 'unread' => 0];
                 $overview = [
@@ -1335,7 +1336,7 @@ $auditPayload = [
         }
     }
 
-    private function lookupSystemLogId(?string $requestId): ?int
+    private function lookupSystemLogId(Request $request, ?string $requestId): ?int
     {
         if ($requestId === null || $requestId === '') {
             return null;
@@ -1346,7 +1347,8 @@ $auditPayload = [
                 $id = (int) $value;
                 return $id > 0 ? $id : null;
             }
-        } catch (\Throwable $ignored) {
+        } catch (\Throwable $exception) {
+            $this->logException($exception, $request, __FUNCTION__, 'Failed to look up the broadcast system log');
         }
         return null;
     }
