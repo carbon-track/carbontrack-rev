@@ -344,7 +344,7 @@ class CronSchedulerService
         } catch (\Throwable $exception) {
             $finishedAt = $this->now();
             $durationMs = $this->diffMilliseconds($startedAtMicro, microtime(true));
-            $errorMessage = trim($exception->getMessage()) !== '' ? $exception->getMessage() : 'Unknown cron task error';
+            $errorMessage = trim(DatabaseService::exceptionMessage($exception)) !== '' ? DatabaseService::exceptionMessage($exception) : 'Unknown cron task error';
             $freshTask = $this->findTask($taskKey);
             $nextRunAt = null;
             if ($freshTask?->enabled) {

@@ -215,7 +215,7 @@ class SchoolController extends BaseController
                         'data' => ['school' => $school]
                     ];
                 } catch (\Throwable $e) {
-                    $this->logExceptionWithFallback($e, $request, 'SchoolController::create error: ' . $e->getMessage());
+                    $this->logExceptionWithFallback($e, $request, 'SchoolController::create error: ' . DatabaseService::exceptionMessage($e));
                     $httpStatus = 500;
                     $payload = [
                         'success' => false,
@@ -531,13 +531,13 @@ class SchoolController extends BaseController
                 return;
             } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
                 // Use the emergency log if ErrorLogService itself fails.
-                error_log('ErrorLogService logging failed: ' . $loggingError->getMessage());
+                error_log('ErrorLogService logging failed: ' . DatabaseService::exceptionMessage($loggingError));
             }
         }
         if ($contextMessage !== '') {
             error_log($contextMessage);
         } else {
-            error_log($exception->getMessage());
+            error_log(DatabaseService::exceptionMessage($exception));
         }
     }
 
@@ -612,7 +612,7 @@ class SchoolController extends BaseController
             return false;
         }
 
-        $message = strtolower($exception->getMessage());
+        $message = strtolower(DatabaseService::exceptionMessage($exception));
         if (!str_contains($message, 'sort_order')) {
             return false;
         }

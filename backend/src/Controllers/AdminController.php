@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace CarbonTrack\Controllers;
 
+use CarbonTrack\Services\DatabaseService;
 use CarbonTrack\Support\DatabaseRows;
 use Illuminate\Database\Connection;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -303,7 +304,7 @@ $sql = "
             if (($_ENV['APP_ENV'] ?? '') === 'testing') {
                 throw $e;
             }
-            $this->logExceptionWithFallback($e, $request, 'getUsers exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            $this->logExceptionWithFallback($e, $request, 'getUsers exception: ' . DatabaseService::exceptionMessage($e) . "\n" . $e->getTraceAsString());
             return $this->jsonResponse($response, ['error' => 'Internal server error'], 500);
         }
     }
@@ -1411,13 +1412,13 @@ $sql = "
                 return;
             } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
                 // Use the emergency log if ErrorLogService itself fails.
-                error_log('ErrorLogService failed: ' . $loggingError->getMessage());
+                error_log('ErrorLogService failed: ' . DatabaseService::exceptionMessage($loggingError));
             }
         }
         if ($contextMessage !== '') {
             error_log($contextMessage);
         } else {
-            error_log($exception->getMessage());
+            error_log(DatabaseService::exceptionMessage($exception));
         }
     }
 
