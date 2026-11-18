@@ -581,7 +581,7 @@ class Avatar
             }
         }
 
-        $this->logger->error(trim($contextMessage . ' ' . $exception->getMessage()), [
+        $this->logger->error(trim($contextMessage . ' ' . DatabaseService::exceptionMessage($exception)), [
             'exception_type' => get_class($exception),
             'exception_file' => $exception->getFile(),
             'exception_line' => $exception->getLine(),

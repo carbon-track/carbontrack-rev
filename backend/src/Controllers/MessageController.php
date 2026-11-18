@@ -1334,7 +1334,7 @@ $auditPayload = [
             ], $context);
             return $this->errorLogService->logError('broadcast_error', $message, $request, $payload);
         } catch (\Throwable $ignore) {
-            error_log('Could not persist broadcast error ' . $message . '. ' . $ignore->getMessage());
+            error_log('Could not persist broadcast error ' . $message . '. ' . DatabaseService::exceptionMessage($ignore));
             return null;
         }
     }
@@ -1348,7 +1348,7 @@ $auditPayload = [
                 'context_message' => $message,
             ]);
         } catch (\Throwable $ignore) {
-            error_log($message . ': ' . $exception->getMessage() . '. Error log failed: ' . $ignore->getMessage());
+            error_log($message . ': ' . DatabaseService::exceptionMessage($exception) . '. Error log failed: ' . DatabaseService::exceptionMessage($ignore));
         }
     }
 

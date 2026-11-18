@@ -689,7 +689,7 @@ class AdminAiAgentService
                 }
                 $llmLogId = $this->logLlmCall($payload['messages'], $rawResponse, $logContext, $context, $conversationId, $turnNo + $stepIndex, $startedAt);
             } catch (\Throwable $exception) {
-                if ($exception->getMessage() === 'STREAM_CLIENT_DISCONNECTED') {
+                if (DatabaseService::exceptionMessage($exception) === 'STREAM_CLIENT_DISCONNECTED') {
                     throw $exception;
                 }
                 $this->logLlmFailure($payload['messages'], $logContext, $context, $conversationId, $turnNo + $stepIndex, $startedAt, $exception);

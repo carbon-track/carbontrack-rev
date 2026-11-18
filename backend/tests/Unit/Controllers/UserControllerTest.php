@@ -541,6 +541,43 @@ class UserControllerTest extends TestCase
         $this->assertSame('legacy-note', $json['data']['transactions'][0]['admin_notes']);
     }
 
+    public function testStatsQueryFailureKeepsDatabaseDetailsOutOfResponse(): void
+    {
+        $actorId = 424242;
+        $request = makeRequest('GET', '/api/v1/users/me/stats');
+        $failure = new \Illuminate\Database\QueryException(
+            'SELECT points FROM points_transactions WHERE uid = ?',
+            [$actorId],
+            new \RuntimeException('Fixture database unavailable')
+        );
+        $db = $this->createMock(\Illuminate\Database\Connection::class);
+        $db->expects($this->once())->method('selectOne')->willThrowException($failure);
+        $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);
+        $auth->method('getCurrentUser')->willReturn(['id' => $actorId]);
+        $errors = $this->createMock(\CarbonTrack\Services\ErrorLogService::class);
+        $errors->expects($this->once())->method('logException')->with($failure, $request);
+
+        $controller = new UserController(
+            $auth,
+            $this->createMock(\CarbonTrack\Services\AuditLogService::class),
+            $this->createMock(\CarbonTrack\Services\MessageService::class),
+            $this->createMock(\CarbonTrack\Models\Avatar::class),
+            $this->createMock(\CarbonTrack\Services\NotificationPreferenceService::class),
+            logger: $this->createMock(\Monolog\Logger::class),
+            db: $db,
+            errorLogService: $errors,
+            regionService: $this->createMock(\CarbonTrack\Services\RegionService::class)
+        );
+
+        $response = $controller->getUserStats($request, new \Slim\Psr7\Response());
+
+        $this->assertSame(500, $response->getStatusCode());
+        $this->assertSame(
+            ['success' => false, 'message' => 'Failed to get user stats: Fixture database unavailable'],
+            json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR)
+        );
+    }
+
     public function testGetUserStatsReturnsAggregates(): void
     {
         $auth = $this->createMock(\CarbonTrack\Services\AuthService::class);

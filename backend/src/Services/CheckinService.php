@@ -348,7 +348,7 @@ class CheckinService
         }
 
         return $sqlState === '23000'
-            && stripos($e->getMessage(), 'UNIQUE constraint failed') !== false;
+            && stripos(DatabaseService::exceptionMessage($e), 'UNIQUE constraint failed') !== false;
     }
 
     private function formatDate(DateTimeInterface $date): string

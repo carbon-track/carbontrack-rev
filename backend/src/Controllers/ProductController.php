@@ -217,7 +217,7 @@ class ProductController
             ]);
 
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::getProducts error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::getProducts error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -265,7 +265,7 @@ class ProductController
             ]);
 
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::getProductDetail error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::getProductDetail error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -432,7 +432,7 @@ class ProductController
             }
 
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::exchangeProduct error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::exchangeProduct error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, [
                 'success' => false,
                 'message' => DatabaseService::exceptionMessage($e),
@@ -469,7 +469,7 @@ class ProductController
             }
             return $this->json($response, ['success' => true, 'data' => $row]);
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::getExchangeTransaction error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::getExchangeTransaction error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -583,7 +583,7 @@ class ProductController
             ]);
 
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::getUserExchanges error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::getUserExchanges error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -725,7 +725,7 @@ class ProductController
             ]);
 
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::getExchangeRecords error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::getExchangeRecords error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -796,7 +796,7 @@ class ProductController
                 'data' => $exchange
             ]);
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::getExchangeRecordDetail error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::getExchangeRecordDetail error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -862,7 +862,7 @@ class ProductController
             ]);
 
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::updateExchangeStatus error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::updateExchangeStatus error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -998,7 +998,7 @@ class ProductController
             ]);
 
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::getCategories error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::getCategories error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -1084,7 +1084,7 @@ class ProductController
                 throw $txError;
             }
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::createProduct error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::createProduct error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -1189,7 +1189,7 @@ class ProductController
                 throw $txError;
             }
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::updateProduct error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::updateProduct error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -1236,7 +1236,7 @@ class ProductController
                 ]
             );
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::searchProductTags error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::searchProductTags error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
@@ -1436,10 +1436,10 @@ class ProductController
                 return;
             } catch (\Throwable $loggingError) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
                 // Use the emergency log if ErrorLogService itself fails.
-                error_log(self::ERRLOG_PREFIX . $loggingError->getMessage());
+                error_log(self::ERRLOG_PREFIX . DatabaseService::exceptionMessage($loggingError));
             }
         }
-        $fallbackMessage = $contextMessage !== '' ? $contextMessage : $exception->getMessage();
+        $fallbackMessage = $contextMessage !== '' ? $contextMessage : DatabaseService::exceptionMessage($exception);
         error_log($fallbackMessage);
     }
 
@@ -2047,7 +2047,7 @@ class ProductController
 
             return $this->json($response, ['success' => true, 'message' => 'Product deleted successfully']);
         } catch (\Exception $e) {
-            $this->logControllerException($e, $request, 'ProductController::deleteProduct error: ' . $e->getMessage());
+            $this->logControllerException($e, $request, 'ProductController::deleteProduct error: ' . DatabaseService::exceptionMessage($e));
             return $this->json($response, ['error' => self::ERR_INTERNAL], 500);
         }
     }
