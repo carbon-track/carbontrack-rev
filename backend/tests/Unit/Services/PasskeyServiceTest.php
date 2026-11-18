@@ -210,8 +210,17 @@ class PasskeyServiceTest extends TestCase
         $this->assertSame(OPENSSL_KEYTYPE_EC, $details['type']);
     }
 
-    public function testCompleteAuthenticationVerifiesAssertionAndUpdatesCounter(): void
+    /**
+     * @dataProvider loginTimestampColumns
+     */
+    public function testCompleteAuthenticationVerifiesAssertionAndUpdatesCounter(string $loginColumn): void
     {
+        if ($loginColumn === 'last_login_at') {
+            $this->connection->statement('ALTER TABLE users RENAME COLUMN lastlgn TO last_login_at');
+        }
+        $errorLog = new ErrorLogService($this->connection, $this->createMock(Logger::class));
+        $this->service = $this->createService(new NativeWebauthnProvider(), $errorLog);
+
         $registration = $this->service->beginRegistration($this->userFixture(), [
             'label' => 'Phone',
         ]);
@@ -257,6 +266,28 @@ class PasskeyServiceTest extends TestCase
         $stored = DatabaseRows::one($this->connection->selectOne('SELECT sign_count, last_used_at FROM user_passkeys WHERE credential_id = "' . $credentialId . '"'));
         $this->assertSame('2', (string) $stored['sign_count']);
         $this->assertNotEmpty($stored['last_used_at']);
+        $this->assertNotEmpty($this->connection->table('users')->where('id', 1)->value($loginColumn));
+
+        $errors = $this->connection->table('error_logs')->get();
+        if ($loginColumn === 'last_login_at') {
+            $this->assertCount(1, $errors);
+            $this->assertStringContainsString('lastlgn', $errors[0]->error_message);
+            $context = json_decode($errors[0]->client_server, true, 512, JSON_THROW_ON_ERROR)['_summary'];
+            $this->assertSame('/internal/auth/passkey/login', $context['uri']);
+            $this->assertSame(1, $context['user_id']);
+            $this->assertSame('touchUserLogin', $context['operation']);
+            $this->assertSame('lastlgn', $context['column']);
+        } else {
+            $this->assertCount(0, $errors);
+        }
+    }
+
+    public static function loginTimestampColumns(): array
+    {
+        return [
+            'current schema' => ['lastlgn'],
+            'alternate column' => ['last_login_at'],
+        ];
     }
 
     public function testCompleteAuthenticationAllowsConfiguredRpIdOriginForMobileAssociatedDomain(): void
@@ -541,8 +572,10 @@ class PasskeyServiceTest extends TestCase
         ];
     }
 
-    private function createService(WebauthnProviderInterface $webauthnProvider): PasskeyService
-    {
+    private function createService(
+        WebauthnProviderInterface $webauthnProvider,
+        ?ErrorLogService $errorLogService = null
+    ): PasskeyService {
         return new PasskeyService(
             $this->config,
             new UserPasskey($this->connection),
@@ -553,7 +586,7 @@ class PasskeyServiceTest extends TestCase
             $this->regionService,
             null,
             null,
-            $this->createMock(ErrorLogService::class),
+            $errorLogService ?? $this->createMock(ErrorLogService::class),
             $this->createMock(Logger::class)
         );
     }
