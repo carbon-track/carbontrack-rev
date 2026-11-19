@@ -20623,7 +20623,7 @@
             }
           },
           "403": {
-            "description": "The Origin is disallowed.",
+            "description": "The Origin is disallowed. CarbonTrack records a diagnostic rejection audit while diagnostics are enabled.",
             "content": {
               "application/json": {
                 "schema": {
