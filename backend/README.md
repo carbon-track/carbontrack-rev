@@ -4,10 +4,11 @@
 
 `vendor/` 随 Git 提交交付 Composer 锁定的生产依赖。后端镜像同步使用提交里的文件。服务器拉取部署分支后可直接加载 `vendor/autoload.php`，PHP 版本和扩展仍须满足项目要求。
 
-更新 `composer.lock` 后，在该版本的独立工作目录中进入后端目录，重新生成并提交生产依赖。测试依赖由 CI 单独安装。
+更新 `composer.lock` 后，在该版本的独立工作目录中进入后端目录，重新生成并提交生产依赖。CI 用提交中的生产包验证部署，并在镜像同步前核对锁文件。测试依赖由 CI 单独安装。
 
 ```sh
 composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+php check_vendored_dependencies.php
 git add -f -- vendor/
 ```
 
