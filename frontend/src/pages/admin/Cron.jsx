@@ -263,7 +263,9 @@ export default function AdminCronPage() {
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-3">
-                      <h2 className="text-lg font-semibold">{task.task_name}</h2>
+                      <h2 className="text-lg font-semibold">
+                        {t('admin.cron.taskDefinitions.' + task.task_key + '.name', { defaultValue: task.task_name })}
+                      </h2>
                       <Badge variant="outline" className={taskStatusTone(task.last_status)}>
                         {translateCronStatus(t, task.last_status || 'idle')}
                       </Badge>
@@ -273,7 +275,9 @@ export default function AdminCronPage() {
                         </Badge>
                       ) : null}
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">{task.description || '--'}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      {t('admin.cron.taskDefinitions.' + task.task_key + '.description', { defaultValue: task.description || '--' })}
+                    </p>
                     <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
                       <div>
                         <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{t('admin.cron.tasks.nextRun')}</p>
@@ -377,7 +381,7 @@ export default function AdminCronPage() {
                 <SelectItem value="all">{t('admin.cron.filters.allTasks')}</SelectItem>
                 {tasks.map((task) => (
                   <SelectItem key={task.task_key} value={task.task_key}>
-                    {task.task_name}
+                    {t('admin.cron.taskDefinitions.' + task.task_key + '.name', { defaultValue: task.task_name })}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -11,6 +11,7 @@ import RawView from '../../components/logs/RawView';
 import RequestIdRelatedDrawer from '../../components/logs/RequestIdRelatedDrawer';
 import JsonTreeViewer from '../../components/logs/JsonTreeViewer';
 import AuditDiffViewer from '../../components/logs/AuditDiffViewer';
+import LogDiagnosticAuthorization from '../../components/logs/LogDiagnosticAuthorization';
 import { maskServerMeta } from '../../lib/logRedaction';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -306,6 +307,7 @@ export default function SystemLogsPage() {
                 <Download className="mr-2 h-4 w-4" />
                 {t('admin.systemLogs.exportNdjson')}
               </Button>
+              <LogDiagnosticAuthorization initialTypes={activeTypes} from={dateFrom} to={dateTo} />
               <ColumnSelector
                 systemCols={systemCols}
                 auditCols={auditCols}

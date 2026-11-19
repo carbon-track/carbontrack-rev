@@ -1193,6 +1193,70 @@
       "newData": "新数据",
       "affected": "影响"
     },
+    "logDiagnostics": {
+      "title": "AI 诊断授权",
+      "description": "允许外部 Agent 在固定时间窗内只读查询日志。可随时撤销授权。",
+      "create": "创建授权",
+      "name": "授权名称",
+      "autoName": "留空自动生成",
+      "types": "授权日志类型",
+      "llmMetadata": "LLM 日志仅提供模型、调用状态、耗时和用量等元数据。",
+      "from": "日志起始时间",
+      "to": "日志结束时间",
+      "windowHint": "起止时间留空时使用最近两小时。",
+      "duration": "授权有效期（分钟）",
+      "issueNow": "同时签发 REST Token",
+      "createError": "创建授权失败，请检查时间窗、有效期和日志类型。",
+      "sessions": "诊断授权",
+      "noCredentials": "此授权还没有签发凭证。",
+      "credentials": "接入凭证",
+      "emptySessions": "暂无诊断授权。",
+      "loadError": "无法加载诊断授权。",
+      "loading": "加载中…",
+      "revoke": "撤销授权",
+      "revokeCredential": "撤销凭证",
+      "issueRest": "签发 REST Token",
+      "confirmSession": "撤销此授权及其全部凭证？",
+      "confirmCredential": "撤销此凭证？",
+      "actionError": "凭证操作失败。",
+      "audit": "访问记录",
+      "emptyAudit": "此授权暂无操作记录。",
+      "firstPage": "首页",
+      "nextPage": "下一页",
+      "tokenOnce": "REST Token 仅展示一次，请在此处复制。",
+      "mcpUrl": "远程 MCP 地址",
+      "restUrl": "REST 基础地址",
+      "restToken": "临时 REST Token",
+      "expiresAt": "到期时间",
+      "creator": "创建管理员 #{{id}}",
+      "usage": "成功查询用量",
+      "usageValue": "{{calls}} 次 · {{bytes}} 字节",
+      "dismissToken": "隐藏 Token",
+      "copy": "复制",
+      "copied": "已复制。",
+      "copyError": "请选中文本后手动复制。",
+      "consentTitle": "连接外部 Agent",
+      "consentDescription": "{{client}} 请求只读访问 CarbonTrack 日志。",
+      "chooseSession": "请选择一条由你创建且仍有效的诊断授权。",
+      "noEligible": "请先在系统日志中创建授权。",
+      "openLogs": "打开系统日志",
+      "approve": "允许访问",
+      "deny": "拒绝",
+      "consentError": "授权请求当前不可用或已过期。",
+      "states": {
+        "active": "有效",
+        "inactive": "创建者已停用",
+        "expired": "已过期",
+        "revoked": "已撤销"
+      },
+      "actions": {
+        "log_diagnostic_created": "创建授权",
+        "log_diagnostic_credential_issued": "签发凭证",
+        "log_diagnostic_revoked": "撤销访问",
+        "log_diagnostic_oauth_decided": "OAuth 授权选择",
+        "log_diagnostic_oauth_confirmed": "OAuth 浏览器确认"
+      }
+    },
     "systemLogs": {
       "title": "统一日志中心",
       "subtitle": "结合筛选与高级语法快速定位系统审计与异常日志。",
@@ -1806,6 +1870,12 @@
       }
     },
     "cron": {
+      "taskDefinitions": {
+        "log_diagnostic_cleanup": {
+          "name": "日志诊断清理",
+          "description": "清理已过期的诊断 OAuth 事务和查询租约。"
+        }
+      },
       "eyebrow": "统一调度",
       "title": "Cron 调度台",
       "subtitle": "集中查看任务频率、到点状态、最近执行结果，并支持单任务即时触发。",
