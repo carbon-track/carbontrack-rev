@@ -62,7 +62,7 @@ final class DiagnosticOAuthClientsTest extends TestCase
 
     public function testPrivateKeyAssertionChecksClaimsAndReturnsReplayKey(): void
     {
-        $key = $this->signingKey(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        $key = $this->signingKey(['private_key_type' => OPENSSL_KEYTYPE_RSA]);
         $rsa = openssl_pkey_get_details($key)['rsa'];
         $jwks = ['keys' => [[
             'kty' => 'RSA', 'kid' => 'fixture-rsa', 'alg' => 'RS256',
@@ -129,7 +129,8 @@ final class DiagnosticOAuthClientsTest extends TestCase
         $configPath = tempnam(sys_get_temp_dir(), 'ctdiag-openssl-');
         file_put_contents($configPath, "[req]\ndistinguished_name = dn\n[dn]\n");
         try {
-            $key = openssl_pkey_new($options + ['config' => $configPath]);
+            // PHP 8.2 validates a bit count before using the EC curve.
+            $key = openssl_pkey_new($options + ['private_key_bits' => 2048, 'config' => $configPath]);
         } finally {
             unlink($configPath);
         }

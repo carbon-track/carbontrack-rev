@@ -98,6 +98,14 @@ final class LogDiagnosticMcpController
         } catch (\Throwable $failure) {
             $problem = $failure instanceof DiagnosticProblem ? $failure : DiagnosticProblem::unavailable();
             if ($this->config->enabled) {
+                try {
+                    $this->access->record($request, 'rejected', null, [
+                        'channel' => 'mcp',
+                        'reason' => $problem->reason,
+                    ], status: $problem->status);
+                } catch (\Throwable) {
+                    // Preserve the rejection if the audit store is unavailable.
+                }
                 $this->errorLogService->logError('LogDiagnosticFailure', $problem->reason, $request);
             }
             $response->getBody()->write(json_encode([

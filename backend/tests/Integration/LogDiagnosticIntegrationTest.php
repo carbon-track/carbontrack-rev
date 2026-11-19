@@ -407,6 +407,28 @@ final class LogDiagnosticIntegrationTest extends TestCase
         }
     }
 
+    public function testMcpRejectsDisallowedOriginWithAnOperationAudit(): void
+    {
+        $path = self::REST . '/mcp';
+        $response = $this->http('POST', $path, [
+            'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list',
+        ], headers: ['Origin' => 'https://other.diagnostics.test']);
+        self::assertSame(403, $response->getStatusCode());
+        $requestId = $response->getHeaderLine('X-Request-ID');
+        $audit = $this->db->table('audit_logs')
+            ->where('request_id', $requestId)
+            ->where('action', 'log_diagnostic_rejected')
+            ->sole();
+        self::assertSame('log_diagnostics', $audit->operation_category);
+        self::assertSame($path, $audit->endpoint);
+        self::assertSame(403, (int) $audit->response_code);
+        self::assertSame(
+            ['channel' => 'mcp', 'reason' => 'invalid_origin'],
+            json_decode($audit->data, true, 512, JSON_THROW_ON_ERROR)
+        );
+        self::assertSame('invalid_origin', $this->db->table('error_logs')->where('request_id', $requestId)->value('error_message'));
+    }
+
     public function testRevocationBeforeDeliveryDiscardsAnInFlightResult(): void
     {
         $grant = $this->grant(['system']);
