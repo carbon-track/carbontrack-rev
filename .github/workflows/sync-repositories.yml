@@ -243,7 +243,7 @@ jobs:
           find . -mindepth 1 -maxdepth 1 ! -name ".git" -exec rm -rf {} +
           # The checkout also contains test dependencies installed above.
           git -C .. archive HEAD:backend | tar -x
-          test -f vendor/autoload.php
+          php check_vendored_dependencies.php
 
           git add -A
           git add -f -- vendor/
