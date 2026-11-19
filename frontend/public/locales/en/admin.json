@@ -1192,6 +1192,70 @@
       "newData": "New Data",
       "affected": "Affected"
     },
+    "logDiagnostics": {
+      "title": "AI diagnostic access",
+      "description": "Grant an external agent read-only access to a fixed window of logs. Revoke access at any time.",
+      "create": "Create authorization",
+      "name": "Authorization name",
+      "autoName": "Name generated automatically",
+      "types": "Allowed log types",
+      "llmMetadata": "LLM access includes invocation metadata such as model, status, latency and usage.",
+      "from": "Log window start",
+      "to": "Log window end",
+      "windowHint": "Leave the dates blank to use the last two hours.",
+      "duration": "Access duration in minutes",
+      "issueNow": "Issue a REST Token now",
+      "createError": "Could not create the authorization. Check the time window, duration and log types.",
+      "sessions": "Diagnostic authorizations",
+      "noCredentials": "This authorization has no credentials yet.",
+      "credentials": "Credentials",
+      "emptySessions": "No diagnostic authorizations.",
+      "loadError": "Could not load log diagnostic access.",
+      "loading": "Loading…",
+      "revoke": "Revoke authorization",
+      "revokeCredential": "Revoke credential",
+      "issueRest": "Issue REST Token",
+      "confirmSession": "Revoke this authorization and all of its credentials?",
+      "confirmCredential": "Revoke this credential?",
+      "actionError": "The credential action could not be completed.",
+      "audit": "Access history",
+      "emptyAudit": "No activity for this authorization yet.",
+      "firstPage": "First page",
+      "nextPage": "Next page",
+      "tokenOnce": "Copy this REST Token now. It is shown once.",
+      "mcpUrl": "Remote MCP URL",
+      "restUrl": "REST base URL",
+      "restToken": "Temporary REST Token",
+      "expiresAt": "Expires",
+      "creator": "Created by administrator #{{id}}",
+      "usage": "Successful query usage",
+      "usageValue": "{{calls}} calls · {{bytes}} bytes",
+      "dismissToken": "Hide Token",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "copyError": "Select the value to copy it.",
+      "consentTitle": "Connect an external agent",
+      "consentDescription": "{{client}} requests read-only access to CarbonTrack logs.",
+      "chooseSession": "Choose an active authorization that you created.",
+      "noEligible": "Create an authorization in the system logs.",
+      "openLogs": "Open system logs",
+      "approve": "Allow access",
+      "deny": "Deny",
+      "consentError": "The authorization request is unavailable or has expired.",
+      "states": {
+        "active": "Active",
+        "inactive": "Owner inactive",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      },
+      "actions": {
+        "log_diagnostic_created": "Authorization created",
+        "log_diagnostic_credential_issued": "Credential issued",
+        "log_diagnostic_revoked": "Access revoked",
+        "log_diagnostic_oauth_decided": "OAuth decision",
+        "log_diagnostic_oauth_confirmed": "OAuth confirmation"
+      }
+    },
     "systemLogs": {
       "title": "Unified Log Center",
       "subtitle": "Filter and inspect system, audit, and error logs in one place.",
@@ -1805,6 +1869,12 @@
       }
     },
     "cron": {
+      "taskDefinitions": {
+        "log_diagnostic_cleanup": {
+          "name": "Log diagnostic cleanup",
+          "description": "Delete expired diagnostic OAuth transactions and query leases."
+        }
+      },
       "eyebrow": "Unified scheduler",
       "title": "Cron Scheduler",
       "subtitle": "Review task cadence, due state, last execution results, and trigger single runs without leaving admin.",

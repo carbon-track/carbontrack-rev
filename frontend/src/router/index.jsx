@@ -47,6 +47,7 @@ const AdminSupportOpsPage = React.lazy(() => import('../pages/admin/SupportOps')
 const AdminCronPage = React.lazy(() => import('../pages/admin/Cron'));
 const AdminAiWorkspacePage = React.lazy(() => import('../pages/admin/AiWorkspace'));
 const AdminSystemLogsPage = React.lazy(() => import('../pages/admin/SystemLogs'));
+const AdminLogDiagnosticConsent = React.lazy(() => import('../pages/admin/LogDiagnosticConsent'));
 const AdminDiagnosticsPage = React.lazy(() => import('../pages/admin/Diagnostics'));
 const AdminLlmUsagePage = React.lazy(() => import('../pages/admin/LlmUsage'));
 const SupportWorkbenchPage = React.lazy(() => import('../pages/support/WorkbenchPage'));
@@ -136,6 +137,7 @@ export const router = createBrowserRouter([
       { path: 'cron', element: <React.Suspense fallback={loadingSpinner}><AdminCronPage /></React.Suspense> },
       { path: 'llm-usage', element: <React.Suspense fallback={loadingSpinner}><AdminLlmUsagePage /></React.Suspense> },
       { path: 'system-logs', element: <React.Suspense fallback={loadingSpinner}><AdminSystemLogsPage /></React.Suspense> },
+      { path: 'system-logs/diagnostic-consent/:id', element: <React.Suspense fallback={loadingSpinner}><AdminLogDiagnosticConsent /></React.Suspense> },
       { path: 'diagnostics', element: <React.Suspense fallback={loadingSpinner}><AdminDiagnosticsPage /></React.Suspense> }
     ]
   },

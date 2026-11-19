@@ -128,6 +128,7 @@ The WeChat Mini Program client lives under `miniprogram/`.
 - Cron management is part of the admin AI surface. If you add or rename cron read/write actions, sync `backend/config/admin_ai_commands.json`, `AdminAiReadModelService`, `AdminAiWriteActionService`, `/admin/cron`, and the documented admin cron APIs in one change.
 - Keep task-template prompts and action labels in `/admin/ai` operational and locale-aware. Prefer direct admin phrasing that reliably maps to backend `managementActions`, especially for Chinese prompts used by administrators in production.
 - Conversation history is reconstructed from logs. If you change admin AI message/audit semantics, keep `llm_logs`, `audit_logs`, and any conversation aggregation responses compatible.
+- External agent log diagnostics are managed from `/admin/system-logs`. Keep the admin AI navigation catalogue aligned with the authorization entry, and keep credential issuance and OAuth consent in the administrator UI.
 - If the agent adds or changes keyword fallback routing, synonym matching, or “continue from result” affordances, update `backend/config/admin_ai_commands.json` keywords alongside the workspace UI so natural-language prompts and one-click follow-up actions stay aligned.
 - Any change to admin AI tools, keywords, navigation targets, confirmation behavior, session audit structure, or route contracts must update both root agent docs (`AGENTS.md`, `GEMINI.md`).
 
