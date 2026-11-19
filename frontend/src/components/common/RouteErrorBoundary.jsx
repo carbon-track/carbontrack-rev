@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from '../../hooks/useTranslation';
 
 function RouteErrorFallback({ onRetry }) {
-  const { t } = useTranslation(['errors', 'common']);
+  const { t } = useTranslation(['errors', 'common'], { useSuspense: false });
 
   return (
     <div className="container mx-auto py-16 px-4">

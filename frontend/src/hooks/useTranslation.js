@@ -5,10 +5,10 @@ import { getCurrentLanguage, formatNumber, formatDate, formatDateTime, formatRel
  * 自定义翻译Hook，扩展了react-i18next的功能
  * 提供了额外的格式化函数和便捷方法
  */
-export const useTranslation = (ns = 'common') => {
+export const useTranslation = (ns = 'common', options = undefined) => {
   const namespaces = Array.isArray(ns) ? ns : [ns];
   const activeNamespaces = Array.from(new Set(namespaces.filter(Boolean)));
-  const { t, i18n, ready } = useI18nTranslation(activeNamespaces);
+  const { t, i18n, ready } = useI18nTranslation(activeNamespaces, options);
   
   // 获取当前语言
   const currentLanguage = getCurrentLanguage();
