@@ -174,6 +174,13 @@ CIMD 元数据只从运维登记的 HTTPS 地址加载。精确核验文档 `cli
 3. 在 `LOG_DIAGNOSTICS_OAUTH_CLIENTS_JSON` 登记需要接入的客户端。CIMD 与 JWKS 通过 PHP cURL 访问，部署端应允许这些登记地址的直连 HTTPS。预登记客户端使用实际的客户端 ID 与逐条回调 URI。使用客户端密钥时，在配置中保存随机密钥的 SHA-256 摘要 `secret_sha256`。
 4. 在「系统日志」创建授权。REST 使用界面展示的地址和一次性披露的 Token。MCP 将界面中的地址添加为客户端连接器，连接时选取该授权。测试时分别记录发现、授权、工具调用及撤销后的结果。 [部署变量](../backend/.env.example) · [数据库迁移](../backend/database/migrations/20261119_add_log_diagnostics.sql) · [OpenAPI](../backend/openapi.json)
 
+OAuth 元数据由 Slim 的 GET 路由从部署配置生成。将 API 域名上的下列路径转发给 `backend/public/index.php`，然后确认两者均返回 HTTP 200 和 JSON。元数据端点供客户端公开发现，实际读取日志需要诊断授权。
+
+| 路径 | 核对字段 |
+| --- | --- |
+| `/.well-known/oauth-protected-resource/api/v1/log-diagnostics/mcp` | `resource` 为完整 MCP 地址，`authorization_servers` 包含当前发行者 |
+| `/.well-known/oauth-authorization-server/api/v1/log-diagnostics/oauth` | `issuer` 与上述发行者一致，`authorization_endpoint` 和 `token_endpoint` 位于此发行者下 |
+
 ChatGPT 使用稳定回调模式时可按下方登记。将回调与管理页显示的实际值逐字核对。Claude 可同样登记其发布身份，或填写连接器配置中的预登记客户端 ID 和回调。 [ChatGPT 回调说明](https://developers.openai.com/plugins/build/auth#redirect-url) · [Claude 连接器配置](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
 
 ```json
