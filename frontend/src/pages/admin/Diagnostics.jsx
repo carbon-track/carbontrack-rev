@@ -206,7 +206,7 @@ function sortStatusCodes(codes) {
   });
 }
 export default function AdminDiagnosticsPage() {
-  const { t, currentLanguage } = useTranslation(['admin', 'errors', 'messages']);
+  const { t, currentLanguage } = useTranslation('admin');
   const [searchTerm, setSearchTerm] = useState('');
   const [methodFilter, setMethodFilter] = useState('all');
   const [tagFilter, setTagFilter] = useState('all');
@@ -830,7 +830,7 @@ function InfoBlock({ title, value }) {
 }
 
 function RequestTester({ operation }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('admin');
   const pathParams = useMemo(
     () => (operation.parameters || []).filter((param) => param.in === 'path'),
     [operation.parameters]
