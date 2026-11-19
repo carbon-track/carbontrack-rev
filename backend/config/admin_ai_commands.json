@@ -202,7 +202,7 @@
       "id": "systemLogs",
       "label": "System Logs",
       "route": "/admin/system-logs",
-      "description": "Inspect audit logs and request traces. Open AI diagnostic access to manage external-agent log grants, credentials, and access history.",
+      "description": "Inspect audit logs and request traces. Open AI diagnostic access to manage external-agent log grants, credentials, and access history. Viewing enabled diagnostic settings records log_diagnostic_settings_viewed.",
       "keywords": [
         "log",
         "日志",

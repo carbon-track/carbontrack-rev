@@ -62,14 +62,7 @@ final class DiagnosticOAuthClientsTest extends TestCase
 
     public function testPrivateKeyAssertionChecksClaimsAndReturnsReplayKey(): void
     {
-        $configPath = tempnam(sys_get_temp_dir(), 'ctdiag-openssl-');
-        file_put_contents($configPath, "[req]\ndistinguished_name = dn\n[dn]\n");
-        try {
-            $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA, 'config' => $configPath]);
-        } finally {
-            unlink($configPath);
-        }
-        self::assertInstanceOf(\OpenSSLAsymmetricKey::class, $key);
+        $key = $this->signingKey(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
         $rsa = openssl_pkey_get_details($key)['rsa'];
         $jwks = ['keys' => [[
             'kty' => 'RSA', 'kid' => 'fixture-rsa', 'alg' => 'RS256',
@@ -94,6 +87,54 @@ final class DiagnosticOAuthClientsTest extends TestCase
         $this->expectException(DiagnosticProblem::class);
         $input['client_assertion'] = JWT::encode(array_replace($assertion, ['aud' => self::REDIRECT]), $key, 'RS256', 'fixture-rsa');
         $clients->authenticate($client, $request, $input);
+    }
+
+    public function testEs256AssertionUsesTheRegisteredCurveWhenJwkOmitsAlgorithm(): void
+    {
+        $key = $this->signingKey(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'prime256v1']);
+        $ec = openssl_pkey_get_details($key)['ec'];
+        $publicKey = [
+            'kty' => 'EC', 'kid' => 'fixture-ec', 'crv' => 'P-256',
+            'x' => DiagnosticConfig::base64Url(str_pad($ec['x'], 32, "\0", STR_PAD_LEFT)),
+            'y' => DiagnosticConfig::base64Url(str_pad($ec['y'], 32, "\0", STR_PAD_LEFT)),
+        ];
+        [$clients, , $config] = $this->clients(
+            ['keys' => [$publicKey]],
+            ['keys' => [$publicKey + ['alg' => 'RS256']]]
+        );
+        self::assertSame(['RS256', 'ES256'], $clients->signingAlgorithms());
+        $tokenEndpoint = $config->issuer() . '/token';
+        $expires = time() + 60;
+        $request = (new ServerRequestFactory())->createServerRequest('POST', $tokenEndpoint);
+        $client = $clients->registered(self::CLIENT_ID);
+        $input = [
+            'client_id' => self::CLIENT_ID,
+            'client_assertion_type' => 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+            'client_assertion' => JWT::encode([
+                'iss' => self::CLIENT_ID, 'sub' => self::CLIENT_ID, 'aud' => $tokenEndpoint,
+                'exp' => $expires, 'jti' => 'fixture-ec-id',
+            ], $key, 'ES256', 'fixture-ec'),
+        ];
+        self::assertSame([
+            'hash' => hash('sha256', self::CLIENT_ID . "\0fixture-ec-id"), 'expires_at' => $expires,
+        ], $clients->authenticate($client, $request, $input));
+
+        $this->expectException(DiagnosticProblem::class);
+        $this->expectExceptionMessage('OAuth client validation failed.');
+        $clients->authenticate($client, $request, $input);
+    }
+
+    private function signingKey(array $options): \OpenSSLAsymmetricKey
+    {
+        $configPath = tempnam(sys_get_temp_dir(), 'ctdiag-openssl-');
+        file_put_contents($configPath, "[req]\ndistinguished_name = dn\n[dn]\n");
+        try {
+            $key = openssl_pkey_new($options + ['config' => $configPath]);
+        } finally {
+            unlink($configPath);
+        }
+        self::assertInstanceOf(\OpenSSLAsymmetricKey::class, $key);
+        return $key;
     }
 
     private function clients(array ...$documents): array

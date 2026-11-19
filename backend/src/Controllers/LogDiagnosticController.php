@@ -21,7 +21,7 @@ final class LogDiagnosticController
         private readonly DiagnosticAccess $access,
         private readonly DiagnosticQueries $queries,
         private readonly DiagnosticOAuth $oauth,
-        private readonly ErrorLogService $errors
+        private readonly ErrorLogService $errorLogService
     ) {
     }
 
@@ -31,7 +31,8 @@ final class LogDiagnosticController
             if (!$this->config->enabled) {
                 return $this->json($response, ['enabled' => false]);
             }
-            $this->access->adminId($request);
+            $adminId = $this->access->adminId($request);
+            $this->access->record($request, 'settings_viewed', null, [], $adminId);
             return $this->json($response, [
                 'enabled' => true,
                 'rest_url' => $this->config->apiOrigin . DiagnosticConfig::API,
@@ -113,7 +114,11 @@ final class LogDiagnosticController
     {
         return $this->guard($request, $response, function () use ($request, $response): Response {
             $result = $this->oauth->begin($request);
-            $response = $this->redirect($response, $result['redirect']);
+            // begin() selects the configured admin origin or a validated client callback.
+            $response = $response->withStatus(303)
+                ->withHeader('Location', $result['redirect'])
+                ->withHeader('Cache-Control', 'no-store')
+                ->withHeader('Referrer-Policy', 'no-referrer');
             if (isset($result['browser'])) {
                 $response = $response->withHeader(
                     'Set-Cookie',
@@ -202,18 +207,17 @@ HTML;
 
     private function query(Request $request, Response $response, string $tool): Response
     {
-        try {
+        return $this->guard($request, $response, function () use ($request, $response, $tool): Response {
             $input = $this->body($request);
-        } catch (DiagnosticProblem $e) {
-            return $this->guard($request, $response, static fn (): never => throw $e);
-        }
-        try {
-            $data = $this->access->search($request, 'rest', $tool, $input,
-                fn (object $grant, int $deadline): array => $this->queries->find($tool, $grant, $input, $deadline));
+            try {
+                $data = $this->access->search($request, 'rest', $tool, $input,
+                    fn (object $grant, int $deadline): array => $this->queries->find($tool, $grant, $input, $deadline));
+            } catch (DiagnosticProblem $problem) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                // DiagnosticAccess already logs and audits failures while diagnostics is enabled.
+                return $this->problem($request, $response, $problem, false);
+            }
             return $this->json($response, $data);
-        } catch (DiagnosticProblem $e) {
-            return $this->problem($request, $response, $e, false);
-        }
+        });
     }
 
     private function guard(Request $request, Response $response, callable $operation, bool $oauthToken = false): Response
@@ -230,7 +234,7 @@ HTML;
                 } catch (\Throwable) {
                     // A failed audit can never make a protected result available.
                 }
-                $this->errors->logError('LogDiagnosticFailure', $error->reason, $request);
+                $this->errorLogService->logError('LogDiagnosticFailure', $error->reason, $request);
             }
             return $this->problem($request, $response, $error, $oauthToken);
         }
@@ -279,14 +283,6 @@ HTML;
             throw DiagnosticProblem::invalid('Invalid before_id.');
         }
         return (int) $value;
-    }
-
-    private function redirect(Response $response, string $uri): Response
-    {
-        return $response->withStatus(303)
-            ->withHeader('Location', $uri)
-            ->withHeader('Cache-Control', 'no-store')
-            ->withHeader('Referrer-Policy', 'no-referrer');
     }
 
     private function json(Response $response, array $data, int $status = 200): Response
