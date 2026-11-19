@@ -338,8 +338,8 @@ export const initializeI18n = async () => {
       } : undefined,
       
       // 解析缺失键
-      parseMissingKeyHandler: (key) => {
-        return key;
+      parseMissingKeyHandler: (key, defaultValue) => {
+        return defaultValue ?? key;
       }
     });
 
