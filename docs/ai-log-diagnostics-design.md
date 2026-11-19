@@ -39,6 +39,7 @@
 
 | 方法与路径 | 用途 |
 | --- | --- |
+| `GET /settings` | 查看诊断可用状态。启用时记录操作审计，再返回接入地址及最长授权时长 |
 | `POST /sessions` | 创建授权，可随同签发首枚 REST Token |
 | `GET /sessions`、`GET /sessions/{id}` | 分页查看授权及凭证元数据 |
 | `POST /sessions/{id}/credentials` | 创建者签发 REST Token |

@@ -19280,6 +19280,7 @@
           "Log diagnostics"
         ],
         "summary": "Check diagnostic availability and connection addresses.",
+        "description": "When diagnostics is enabled, CarbonTrack records an operation audit before returning connection settings. The request fails if it cannot record the audit.",
         "operationId": "getLogDiagnosticSettings",
         "security": [
           {
@@ -33766,7 +33767,11 @@
           "token_endpoint_auth_signing_alg_values_supported": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "RS256",
+                "ES256"
+              ]
             }
           },
           "code_challenge_methods_supported": {

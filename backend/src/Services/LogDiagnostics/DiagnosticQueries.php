@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace CarbonTrack\Services\LogDiagnostics;
 
 use Illuminate\Database\Connection;
+use Illuminate\Database\MySqlConnection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\QueryException;
-use PDO;
 
 final class DiagnosticQueries
 {
@@ -19,7 +19,8 @@ final class DiagnosticQueries
         'llm' => ['llm_logs', 'created_at', ['source', 'model', 'status', 'latency_ms', 'prompt_tokens', 'completion_tokens', 'total_tokens'], ['source', 'model', 'status']],
     ];
 
-    private ?string $engine = null;
+    private ?bool $isMaria = null;
+    private ?string $serverVersion = null;
 
     public function __construct(
         private readonly Connection $db,
@@ -338,12 +339,11 @@ final class DiagnosticQueries
             throw self::timeout();
         }
         $sql = $query->toSql();
-        if ($this->db->getDriverName() === 'mysql') {
-            $engine = $this->engine ??= (string) $this->db->getPdo()->getAttribute(PDO::ATTR_SERVER_VERSION);
-            if (stripos($engine, 'mariadb') !== false) {
+        if ($this->db instanceof MySqlConnection) {
+            if ($this->isMaria ??= $this->db->isMaria()) {
                 $seconds = number_format($remaining / 1000, 3, '.', '');
                 $sql = 'SET STATEMENT max_statement_time=' . $seconds . ' FOR ' . $sql;
-            } elseif (version_compare($engine, '5.7.8', '>=')) {
+            } elseif (version_compare($this->serverVersion ??= $this->db->getServerVersion(), '5.7.8', '>=')) {
                 $sql = 'select /*+ MAX_EXECUTION_TIME(' . $remaining . ') */ ' . substr($sql, 7);
             } else {
                 throw DiagnosticProblem::unavailable();

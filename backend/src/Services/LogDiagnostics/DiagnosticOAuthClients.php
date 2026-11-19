@@ -13,6 +13,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 final class DiagnosticOAuthClients
 {
     private const METHODS = ['none', 'client_secret_basic', 'client_secret_post', 'private_key_jwt'];
+    private const ASSERTION_ALGORITHMS = ['RSA' => 'RS256', 'EC' => 'ES256'];
 
     public function __construct(
         private readonly DiagnosticConfig $config,
@@ -39,6 +40,11 @@ final class DiagnosticOAuthClients
             }
         }
         return false;
+    }
+
+    public function signingAlgorithms(): array
+    {
+        return array_values(self::ASSERTION_ALGORITHMS);
     }
 
     public function registered(mixed $id): array
@@ -143,7 +149,7 @@ final class DiagnosticOAuthClients
     {
         $jwks = $this->document($client['jwks_uri'] ?? '');
         try {
-            $claims = JWT::decode($assertion, JWK::parseKeySet($jwks, 'RS256'));
+            $claims = JWT::decode($assertion, JWK::parseKeySet(['keys' => self::assertionKeys($jwks)]));
         } catch (\Throwable) {
             throw self::invalid();
         }
@@ -156,6 +162,28 @@ final class DiagnosticOAuthClients
             throw self::invalid();
         }
         return ['hash' => hash('sha256', $client['id'] . "\0" . $claims->jti), 'expires_at' => $claims->exp];
+    }
+
+    private static function assertionKeys(array $jwks): array
+    {
+        if (!is_array($jwks['keys'] ?? null)) {
+            throw self::invalid();
+        }
+        $keys = [];
+        foreach ($jwks['keys'] as $index => $key) {
+            if (!is_array($key) || !is_string($key['kty'] ?? null)) {
+                continue;
+            }
+            $algorithm = self::ASSERTION_ALGORITHMS[$key['kty']] ?? null;
+            if ($algorithm === null
+                || ($key['kty'] === 'EC' && ($key['crv'] ?? null) !== 'P-256')
+                || (array_key_exists('alg', $key) && $key['alg'] !== $algorithm)) {
+                continue;
+            }
+            $key['alg'] = $algorithm;
+            $keys[$index] = $key;
+        }
+        return $keys;
     }
 
     private function document(mixed $url): array

@@ -153,6 +153,27 @@ final class LogDiagnosticIntegrationTest extends TestCase
         self::assertStringNotContainsString($token, json_encode($history, JSON_THROW_ON_ERROR));
     }
 
+    public function testEnabledSettingsRequireAnOperationAudit(): void
+    {
+        $path = self::ADMIN . '/settings';
+        $settings = $this->http('GET', $path, bearer: 'fixture-admin');
+        self::assertSame(200, $settings->getStatusCode());
+        self::assertSame(self::API_ORIGIN . self::REST, $this->json($settings)['rest_url']);
+        $audit = $this->db->table('audit_logs')
+            ->where('action', 'log_diagnostic_settings_viewed')
+            ->where('request_id', $settings->getHeaderLine('X-Request-ID'))
+            ->sole();
+        self::assertSame('log_diagnostics', $audit->operation_category);
+        self::assertSame(1, (int) $audit->user_id);
+        self::assertSame($path, $audit->endpoint);
+        self::assertSame(200, (int) $audit->response_code);
+
+        $this->db->getSchemaBuilder()->drop('audit_logs');
+        $settings = $this->http('GET', $path, bearer: 'fixture-admin');
+        self::assertSame(503, $settings->getStatusCode());
+        self::assertArrayNotHasKey('rest_url', $this->json($settings));
+    }
+
     public function testDisabledDeploymentOffersNoDiagnosticDataOrDiscovery(): void
     {
         $utc = new DateTimeZone('UTC');
@@ -280,6 +301,7 @@ final class LogDiagnosticIntegrationTest extends TestCase
         self::assertSame($this->config->resource(), $resource['resource']);
         self::assertSame([$this->config->issuer()], $resource['authorization_servers']);
         self::assertSame(['S256'], $issuer['code_challenge_methods_supported']);
+        self::assertSame(['RS256', 'ES256'], $issuer['token_endpoint_auth_signing_alg_values_supported']);
         self::assertTrue($issuer['authorization_response_iss_parameter_supported']);
         $verifier = DiagnosticConfig::secret();
         $params = [
@@ -287,17 +309,30 @@ final class LogDiagnosticIntegrationTest extends TestCase
             'state' => 'fixture-state', 'response_type' => 'code', 'code_challenge_method' => 'S256',
             'code_challenge' => DiagnosticConfig::base64Url(hash('sha256', $verifier, true)),
         ];
-        self::assertSame(400, $this->http('GET', self::REST . '/oauth/authorize', query: array_replace($params, [
+        $authorizePath = self::REST . '/oauth/authorize';
+        $wrongRedirect = $this->http('GET', $authorizePath, query: array_replace($params, [
             'redirect_uri' => 'https://wrong.diagnostics.test/callback',
-        ]))->getStatusCode());
+        ]));
+        self::assertSame(400, $wrongRedirect->getStatusCode());
+        self::assertFalse($wrongRedirect->hasHeader('Location'));
 
-        $auth = $this->http('GET', self::REST . '/oauth/authorize', query: $params);
+        $auth = $this->http('GET', $authorizePath, query: $params);
         self::assertSame(303, $auth->getStatusCode(), (string) $auth->getBody());
+        self::assertStringStartsWith(self::FRONTEND_ORIGIN . '/admin/system-logs/diagnostic-consent/', $auth->getHeaderLine('Location'));
         self::assertStringContainsString('Secure; HttpOnly; SameSite=Lax', $auth->getHeaderLine('Set-Cookie'));
         $browser = explode('=', explode(';', $auth->getHeaderLine('Set-Cookie'), 2)[0], 2)[1];
         $id = basename($auth->getHeaderLine('Location'));
         $requestPath = self::ADMIN . '/oauth-requests/' . $id;
-        self::assertSame('Fixture connector', $this->json($this->http('GET', $requestPath, bearer: 'fixture-admin'))['client_name']);
+        $description = $this->http('GET', $requestPath, bearer: 'fixture-admin');
+        self::assertSame('Fixture connector', $this->json($description)['client_name']);
+        foreach ([
+            [$auth, $authorizePath],
+            [$description, self::ADMIN . '/oauth-requests/{id}'],
+        ] as [$response, $safePath]) {
+            $meta = $this->db->table('system_logs')->where('request_id', $response->getHeaderLine('X-Request-ID'))
+                ->value('server_meta');
+            self::assertSame($safePath, json_decode($meta, true, 512, JSON_THROW_ON_ERROR)['_summary']['uri']);
+        }
         $decision = $this->json($this->http('POST', $requestPath . '/decision', [
             'approve' => true, 'session_id' => $grant['session']['id'],
         ], 'fixture-admin', headers: ['Origin' => self::FRONTEND_ORIGIN]));
@@ -577,7 +612,8 @@ final class LogDiagnosticIntegrationTest extends TestCase
         array $headers = [],
         array $cookies = []
     ): ResponseInterface {
-        $request = (new ServerRequestFactory())->createServerRequest($method, self::API_ORIGIN . $path)
+        $uri = $path . ($query === [] ? '' : '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986));
+        $request = (new ServerRequestFactory())->createServerRequest($method, self::API_ORIGIN . $uri)
             ->withQueryParams($query)->withCookieParams($cookies);
         if ($bearer !== null) {
             $request = $request->withHeader('Authorization', 'Bearer ' . $bearer);
@@ -591,7 +627,17 @@ final class LogDiagnosticIntegrationTest extends TestCase
         foreach ($headers as $key => $value) {
             $request = $request->withHeader($key, $value);
         }
-        return $this->app->handle($request);
+        $previousUri = $_SERVER['REQUEST_URI'] ?? null;
+        $_SERVER['REQUEST_URI'] = $uri;
+        try {
+            return $this->app->handle($request);
+        } finally {
+            if ($previousUri === null) {
+                unset($_SERVER['REQUEST_URI']);
+            } else {
+                $_SERVER['REQUEST_URI'] = $previousUri;
+            }
+        }
     }
 
     private function json(ResponseInterface $response): array

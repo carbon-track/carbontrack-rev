@@ -32,7 +32,7 @@ final class LogDiagnosticMcpController
         private readonly DiagnosticConfig $config,
         private readonly DiagnosticAccess $access,
         private readonly DiagnosticQueries $queries,
-        private readonly ErrorLogService $errors
+        private readonly ErrorLogService $errorLogService
     ) {
     }
 
@@ -64,7 +64,8 @@ final class LogDiagnosticMcpController
                         return new CallToolResult([
                             new TextContent(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)),
                         ], structuredContent: $data);
-                    } catch (DiagnosticProblem $problem) {
+                    } catch (DiagnosticProblem $problem) { // nosemgrep: semgrep.enforce-errorlogservice-in-catch
+                        // DiagnosticAccess already logs and audits failures while diagnostics is enabled.
                         $authFailed = $problem->status === 401;
                         $metadata = $authFailed ? ['mcp/www_authenticate' => [$challenge]] : null;
                         return new CallToolResult([new TextContent($problem->getMessage())], true,
@@ -97,7 +98,7 @@ final class LogDiagnosticMcpController
         } catch (\Throwable $failure) {
             $problem = $failure instanceof DiagnosticProblem ? $failure : DiagnosticProblem::unavailable();
             if ($this->config->enabled) {
-                $this->errors->logError('LogDiagnosticFailure', $problem->reason, $request);
+                $this->errorLogService->logError('LogDiagnosticFailure', $problem->reason, $request);
             }
             $response->getBody()->write(json_encode([
                 'jsonrpc' => '2.0', 'id' => null,

@@ -81,6 +81,7 @@ class RequestLoggingMiddleware implements MiddlewareInterface
                 'request_id' => $requestId,
                 'method' => $request->getMethod(),
                 'path' => $diagnosticPath,
+                'server_params' => ['REQUEST_URI' => $diagnosticPath],
                 'status_code' => $response->getStatusCode(),
                 'duration_ms' => round((microtime(true) - $start) * 1000, 2),
             ]);
