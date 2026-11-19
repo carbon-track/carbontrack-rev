@@ -224,6 +224,7 @@ jobs:
           composer test
 
       - name: Mirror backend subtree to target repository
+        shell: bash
         run: |
           rm -rf backend-repo
           git clone "https://x-access-token:${{ steps.backend-app-token.outputs.token }}@github.com/carbon-track/backend.git" backend-repo
@@ -240,9 +241,12 @@ jobs:
           fi
 
           find . -mindepth 1 -maxdepth 1 ! -name ".git" -exec rm -rf {} +
-          cp -a ../backend/. .
+          # The checkout also contains test dependencies installed above.
+          git -C .. archive HEAD:backend | tar -x
+          test -f vendor/autoload.php
 
           git add -A
+          git add -f -- vendor/
 
           if git diff --cached --quiet --exit-code; then
             echo "Backend mirror already up to date on ${TARGET_BRANCH}"
