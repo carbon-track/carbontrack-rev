@@ -181,18 +181,13 @@ OAuth 元数据由 Slim 的 GET 路由从部署配置生成。将 API 域名上�
 | `/.well-known/oauth-protected-resource/api/v1/log-diagnostics/mcp` | `resource` 为完整 MCP 地址，`authorization_servers` 包含当前发行者 |
 | `/.well-known/oauth-authorization-server/api/v1/log-diagnostics/oauth` | `issuer` 与上述发行者一致，`authorization_endpoint` 和 `token_endpoint` 位于此发行者下 |
 
-ChatGPT 使用稳定回调模式时可按下方登记。将回调与管理页显示的实际值逐字核对。Claude 可同样登记其发布身份，或填写连接器配置中的预登记客户端 ID 和回调。 [ChatGPT 回调说明](https://developers.openai.com/plugins/build/auth#redirect-url) · [Claude 连接器配置](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
+下例让 ChatGPT 和 Claude 都用公开的客户端元数据（CIMD）与 PKCE。ChatGPT 使用稳定回调模式，Claude 自定义连接器选择「Use Claude’s published identity」。`none` 是客户端换码认证方式，管理员仍须在 CarbonTrack 登录并确认授权。 [ChatGPT OAuth 文档](https://developers.openai.com/plugins/build/auth#client-registration) · [Claude OAuth 文档](https://claude.com/docs/connectors/building/authentication#dcr-and-cimd-details) · [Claude 客户端元数据](https://claude.ai/oauth/mcp-oauth-client-metadata)
 
-```json
-[
-  {
-    "id": "https://chatgpt.com/oauth/client.json",
-    "name": "ChatGPT",
-    "redirect_uris": ["https://chatgpt.com/connector_platform_oauth_redirect"],
-    "auth_methods": ["none", "private_key_jwt"],
-    "jwks_uri": "https://chatgpt.com/oauth/jwks.json"
-  }
-]
+以下时区适用于数据库连接读出的日志时间固定为 UTC+8 的部署。`error_logs.error_time` 的时区独立配置，默认跟随 PHP 时区。
+
+```dotenv
+LOG_DIAGNOSTICS_DB_LOG_TIMEZONE=+08:00
+LOG_DIAGNOSTICS_OAUTH_CLIENTS_JSON='[{"id":"https://chatgpt.com/oauth/client.json","name":"ChatGPT","redirect_uris":["https://chatgpt.com/connector_platform_oauth_redirect"],"auth_method":"none"},{"id":"https://claude.ai/oauth/mcp-oauth-client-metadata","name":"Claude","redirect_uris":["https://claude.ai/api/mcp/auth_callback"],"auth_method":"none"}]'
 ```
 
 库内集成测试用合成数据覆盖授权、读取、换码和两代 MCP。默认通过 SQLite 运行。设置 `CTDIAG_TEST_MYSQL_PORT` 可在独立的本机 MySQL 实例上运行同一组测试。测试在该实例创建和删除唯一命名的临时数据库。
