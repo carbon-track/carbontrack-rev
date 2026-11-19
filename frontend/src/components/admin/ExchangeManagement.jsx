@@ -389,7 +389,7 @@ export function ExchangeManagement() {
 }
 
 function ExchangeDetailModal({ isOpen, onClose, exchange }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['admin', 'common']);
 
   if (!isOpen || !exchange) return null;
 

@@ -105,7 +105,6 @@
       "unavailableDescription": "仍可查看会话、能力目录和快捷入口；如需恢复对话，请检查后端 LLM 配置与诊断状态。",
       "conversationsTitle": "最近会话",
       "conversationsDescription": "保留会话标题、最后消息和最近活动时间。",
-      "newConversationTitle": "新的治理会话",
       "newConversationDescription": "直接输入目标、对象和范围，工作台会返回查询结果或执行草案。",
       "shortcutsTitle": "快捷入口",
       "shortcutsDescription": "需要精确落到页面时，直接跳转到对应后台模块。",

@@ -734,7 +734,7 @@ function getStreamToolStatus(event, data, previousStatus) {
 }
 
 function summarizeObject(value, isZh, t) {
-  const emptyText = t('aiWorkspace.stream.emptyStructuredData', {
+  const emptyText = t('admin.aiWorkspace.stream.emptyStructuredData', {
     defaultValue: isZh ? '没有附带结构化数据。' : 'No structured data attached.',
   });
 
@@ -764,7 +764,7 @@ function summarizeObject(value, isZh, t) {
 
 function formatMissingFieldLabel(field, isZh, t) {
   if (field == null || field === '') {
-    return t('aiWorkspace.stream.unknownField', { defaultValue: isZh ? '未知字段' : 'Unknown field' });
+    return t('admin.aiWorkspace.stream.unknownField', { defaultValue: isZh ? '未知字段' : 'Unknown field' });
   }
   if (typeof field !== 'object') {
     return String(field);
@@ -1469,10 +1469,10 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
   if (item?.kind === 'stream_status') {
     const status = data.status || (event === 'run.finished' ? 'finished' : 'running');
     const label = status === 'finished'
-      ? t('aiWorkspace.stream.status.runFinished', { defaultValue: isZh ? 'Agent 已完成处理' : 'Agent run finished' })
+      ? t('admin.aiWorkspace.stream.status.runFinished', { defaultValue: isZh ? 'Agent 已完成处理' : 'Agent run finished' })
       : status === 'error'
-        ? t('aiWorkspace.stream.status.runFailed', { defaultValue: isZh ? 'Agent 处理失败' : 'Agent run failed' })
-        : t('aiWorkspace.stream.status.runStarted', { defaultValue: isZh ? 'Agent 已开始处理' : 'Agent run started' });
+        ? t('admin.aiWorkspace.stream.status.runFailed', { defaultValue: isZh ? 'Agent 处理失败' : 'Agent run failed' })
+        : t('admin.aiWorkspace.stream.status.runStarted', { defaultValue: isZh ? 'Agent 已开始处理' : 'Agent run started' });
     const statusToneClass = status === 'error'
       ? 'border-red-200/80 bg-red-50/80 text-red-900 dark:border-red-400/25 dark:bg-red-400/10 dark:text-red-100'
       : status === 'finished'
@@ -1506,8 +1506,8 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
           {data.streaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
           {data.streaming
-            ? t('aiWorkspace.stream.status.streaming', { defaultValue: isZh ? '正在生成回复' : 'Streaming response' })
-            : t('aiWorkspace.stream.status.assistantMessage', { defaultValue: isZh ? 'AI 回复' : 'Assistant message' })}
+            ? t('admin.aiWorkspace.stream.status.streaming', { defaultValue: isZh ? '正在生成回复' : 'Streaming response' })
+            : t('admin.aiWorkspace.stream.status.assistantMessage', { defaultValue: isZh ? 'AI 回复' : 'Assistant message' })}
         </div>
         <AdminAiMarkdown content={content} />
       </div>
@@ -1552,11 +1552,11 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
         ) : null}
         {hasToolInput || hasToolResult ? (
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
-            <ResultSnapshot title={t('aiWorkspace.stream.toolInput', { defaultValue: isZh ? '工具输入' : 'Tool input' })} value={data.arguments} isZh={isZh} />
-            <ResultSnapshot title={t('aiWorkspace.stream.toolResult', { defaultValue: isZh ? '工具结果' : 'Tool result' })} value={data.result} isZh={isZh} />
+            <ResultSnapshot title={t('admin.aiWorkspace.stream.toolInput', { defaultValue: isZh ? '工具输入' : 'Tool input' })} value={data.arguments} isZh={isZh} />
+            <ResultSnapshot title={t('admin.aiWorkspace.stream.toolResult', { defaultValue: isZh ? '工具结果' : 'Tool result' })} value={data.result} isZh={isZh} />
           </div>
         ) : null}
-        {data.proposal ? <ResultSnapshot title={t('aiWorkspace.stream.approvalProposal', { defaultValue: isZh ? '确认提案' : 'Approval proposal' })} value={data.proposal} isZh={isZh} /> : null}
+        {data.proposal ? <ResultSnapshot title={t('admin.aiWorkspace.stream.approvalProposal', { defaultValue: isZh ? '确认提案' : 'Approval proposal' })} value={data.proposal} isZh={isZh} /> : null}
       </div>
     );
   }
@@ -1566,9 +1566,9 @@ function AgentStreamEventCard({ item, isZh, disabled, onRollback, t }) {
       <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
         <div className="flex items-center gap-2 font-semibold">
           <ShieldAlert className="h-4 w-4" />
-          {t('aiWorkspace.stream.approvalRequired', { defaultValue: isZh ? '需要在对话中确认' : 'Approval required' })}
+          {t('admin.aiWorkspace.stream.approvalRequired', { defaultValue: isZh ? '需要在对话中确认' : 'Approval required' })}
         </div>
-        <div className="mt-2 leading-6">{data.proposal?.summary || data.proposal?.label || t('aiWorkspace.stream.waitingApproval', { defaultValue: isZh ? '等待管理员确认后执行。' : 'Waiting for admin approval before execution.' })}</div>
+        <div className="mt-2 leading-6">{data.proposal?.summary || data.proposal?.label || t('admin.aiWorkspace.stream.waitingApproval', { defaultValue: isZh ? '等待管理员确认后执行。' : 'Waiting for admin approval before execution.' })}</div>
       </div>
     );
   }
@@ -2273,7 +2273,7 @@ function MessageBubble({
             isUser
               ? <div className="whitespace-pre-wrap">{messageContent}</div>
               : <AdminAiMarkdown content={messageContent} />
-          ) : t('aiWorkspace.stream.noAssistantText', { defaultValue: isZh ? 'AI 未返回文本。' : 'No assistant text returned.' })}
+          ) : t('admin.aiWorkspace.stream.noAssistantText', { defaultValue: isZh ? 'AI 未返回文本。' : 'No assistant text returned.' })}
         </div>
 
         {!isUser && (actionName || result || missing.length > 0) ? (
@@ -2884,8 +2884,8 @@ export default function AdminAiWorkspacePage() {
     || {};
   const selectedConversationTitle = currentSummary.title || (
     isCreatingConversation
-      ? t('aiWorkspace.newConversationTitle', { defaultValue: isZh ? '新会话' : 'New session' })
-      : t('aiWorkspace.controlChannelTitle', { defaultValue: isZh ? '控制通道' : 'Control channel' })
+      ? t('admin.aiWorkspace.newConversationTitle', { defaultValue: isZh ? '新会话' : 'New session' })
+      : t('admin.aiWorkspace.controlChannelTitle', { defaultValue: isZh ? '控制通道' : 'Control channel' })
   );
   const currentConversationIdLabel = activeConversationId || normalizedSelectedConversationId || null;
   const lastActivityLabel = formatAbsoluteTime(currentSummary.last_activity_at, locale);

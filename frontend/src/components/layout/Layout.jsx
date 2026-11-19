@@ -3,22 +3,11 @@ import { Outlet } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import RouteErrorBoundary from '../common/RouteErrorBoundary';
 import PropTypes from 'prop-types';
-import i18n from '../../lib/i18n';
 
 const Footer = React.lazy(() => import('./Footer').then((module) => ({ default: module.Footer })));
 
 export function Layout({ showFooter = true }) {
   const [showDeferredFooter, setShowDeferredFooter] = React.useState(false);
-
-  const t = React.useCallback((key) => {
-    const fallbackMap = {
-      'errors.unexpected': '发生未知错误',
-      'errors.tryAgain': '请稍后重试或刷新页面',
-      'common.retry': '重试',
-    };
-
-    return i18n.t(key, { defaultValue: fallbackMap[key] || key });
-  }, []);
 
   React.useEffect(() => {
     if (!showFooter || showDeferredFooter) {
@@ -63,7 +52,7 @@ export function Layout({ showFooter = true }) {
       <Navbar />
       
       <main className="min-w-0 w-full flex-1">
-        <RouteErrorBoundary t={t}>
+        <RouteErrorBoundary>
           <Outlet />
         </RouteErrorBoundary>
       </main>
