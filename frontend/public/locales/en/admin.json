@@ -105,7 +105,6 @@
       "unavailableDescription": "You can still browse sessions, capabilities, and quick links. To restore chat, check the backend LLM configuration and diagnostics.",
       "conversationsTitle": "Recent sessions",
       "conversationsDescription": "Keep titles, last messages, and recent activity together.",
-      "newConversationTitle": "New admin session",
       "newConversationDescription": "Describe the goal, target, and scope. The workspace will return results or a draft action plan.",
       "shortcutsTitle": "Quick links",
       "shortcutsDescription": "Jump straight to the relevant admin screen when you need a precise route.",
