@@ -1195,6 +1195,9 @@
     "logDiagnostics": {
       "title": "AI diagnostic access",
       "description": "Grant an external agent read-only access to a fixed window of logs. Revoke access at any time.",
+      "agentSetup": "Agent setup instructions",
+      "copyAgentSetup": "Copy setup instructions",
+      "agentSetupPrompt": "Connect this computer's agent to the CarbonTrack log diagnostics MCP at {{url}} using Streamable HTTP and OAuth.\n\nIf you have Codex CLI, first run codex mcp get carbontrack-log-diagnostics --json. If the server is missing, run codex mcp add carbontrack-log-diagnostics --url \"{{url}}\". If that starts authorization, use the browser it opens. Otherwise, run codex mcp login carbontrack-log-diagnostics. If an existing entry at this URL uses the old carbontrack-codex-cli client ID, remove that ID and its fixed callback URL and port from this entry before starting OAuth. Ask me before replacing an entry at a different URL.\n\nFor other agents, use their remote MCP settings to add the URL and start OAuth. Open the CarbonTrack authorization page in my browser so I can select a diagnostic authorization and approve it. If browser launch is unavailable, show me the authorization link. Wait for my approval and report the result.",
       "create": "Create authorization",
       "name": "Authorization name",
       "autoName": "Name generated automatically",
@@ -1410,6 +1413,8 @@
         "systemTitle": "System ({{count}})",
         "auditTitle": "Audit ({{count}})",
         "errorsTitle": "Errors ({{count}})",
+        "auditResponseCode": "Operation status code",
+        "diagnosticContext": "Diagnostic failure details",
         "llmTitle": "LLM ({{count}})"
       },
       "dateFrom": "Date from",

@@ -6,6 +6,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { logDiagnostics } from '../../lib/api/logDiagnostics';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Alert, AlertDescription } from '../ui/Alert';
 import { Badge } from '../ui/badge';
@@ -20,7 +21,7 @@ function localTime(value) {
   return new Date(value).toLocaleString();
 }
 
-function CopyValue({ label, value }) {
+function CopyValue({ label, value, multiline = false }) {
   const { t } = useTranslation(['admin']);
   const [status, setStatus] = useState('');
   async function copy() {
@@ -32,13 +33,18 @@ function CopyValue({ label, value }) {
     }
   }
 
+  const Field = multiline ? Textarea : Input;
   return (
     <div className="min-w-0 space-y-1">
       <p className="text-sm font-medium">{label}</p>
-      <div className="flex items-center gap-2">
-        <Input aria-label={label} readOnly value={value} className="font-mono text-xs" onFocus={(event) => event.target.select()} />
-        <Button type="button" variant="outline" size="sm" onClick={copy} aria-label={t(namespace + 'copy')}>
+      <div className={multiline ? 'space-y-2' : 'flex items-center gap-2'}>
+        <Field aria-label={label} readOnly value={value}
+          className={multiline ? 'max-h-32 resize-y font-mono text-xs' : 'font-mono text-xs'}
+          onFocus={(event) => event.target.select()} />
+        <Button type="button" variant="outline" size="sm" onClick={copy}
+          aria-label={multiline ? undefined : t(namespace + 'copy')}>
           <ClipboardCopy className="h-4 w-4" aria-hidden="true" />
+          {multiline && t(namespace + 'copyAgentSetup')}
         </Button>
       </div>
       {status && <p role="status" className="text-xs text-muted-foreground">{t(namespace + status)}</p>}
@@ -46,7 +52,11 @@ function CopyValue({ label, value }) {
   );
 }
 
-CopyValue.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired };
+CopyValue.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  multiline: PropTypes.bool,
+};
 
 function DiagnosticCreateForm({ initialTypes, from, to, settings, onCreated }) {
   const { t } = useTranslation(['admin']);
@@ -255,6 +265,10 @@ function AuthorizationPanel({ initialTypes, from, to, settings }) {
   return (
     <div className="space-y-4">
       <CopyValue label={t(namespace + 'mcpUrl')} value={settings.mcp_url} />
+      <CopyValue label={t(namespace + 'agentSetup')} multiline value={t(namespace + 'agentSetupPrompt', {
+        url: settings.mcp_url,
+        interpolation: { escapeValue: false },
+      })} />
       <DiagnosticCreateForm initialTypes={initialTypes} from={from} to={to} settings={settings} onCreated={created} />
       {issued && <div className="space-y-3 rounded-lg border p-4">
         <p className="text-sm font-medium">{t(namespace + 'tokenOnce')}</p>
