@@ -190,4 +190,6 @@ LOG_DIAGNOSTICS_DB_LOG_TIMEZONE=+08:00
 LOG_DIAGNOSTICS_OAUTH_CLIENTS_JSON='[{"id":"https://chatgpt.com/oauth/client.json","name":"ChatGPT","redirect_uris":["https://chatgpt.com/connector_platform_oauth_redirect"],"auth_method":"none"},{"id":"https://claude.ai/oauth/mcp-oauth-client-metadata","name":"Claude","redirect_uris":["https://claude.ai/api/mcp/auth_callback"],"auth_method":"none"}]'
 ```
 
-库内集成测试用合成数据覆盖授权、读取、换码和两代 MCP。默认通过 SQLite 运行。设置 `CTDIAG_TEST_MYSQL_PORT` 可在独立的本机 MySQL 实例上运行同一组测试。测试在该实例创建和删除唯一命名的临时数据库。
+MySQL 5.6 部署需在 API 的 PHP 环境启用 `mysqli` 和 `mysqlnd`。REST 和 MCP 的日志读取共同使用 `LOG_DIAGNOSTICS_TIMEOUT_MS`。MySQL 5.6 的读取使用同一数据库账号的专用连接，超时后由应用主连接取消该连接。REST 返回 HTTP 504，MCP 工具返回同一个 `query_timeout` 错误码。
+
+库内集成测试用合成数据覆盖授权、读取、换码和两代 MCP。默认通过 SQLite 运行。设置 `CTDIAG_TEST_MYSQL_PORT` 可在独立的本机 MySQL 实例上运行同一组测试。测试在该实例创建和删除唯一命名的临时数据库。MySQL 5.6 实例也会验证慢查询取消、超时审计和租约释放。
