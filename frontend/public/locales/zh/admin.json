@@ -1195,6 +1195,9 @@
     "logDiagnostics": {
       "title": "AI 诊断授权",
       "description": "允许外部 Agent 在固定时间窗内只读查询日志。可随时撤销授权。",
+      "agentSetup": "给 Agent 的接入说明",
+      "copyAgentSetup": "复制接入说明",
+      "agentSetupPrompt": "请在这台电脑上接入 CarbonTrack 日志诊断 MCP（{{url}}），使用 Streamable HTTP 和 OAuth。\n\n如果能运行 Codex CLI，先执行 codex mcp get carbontrack-log-diagnostics --json。缺少连接时执行 codex mcp add carbontrack-log-diagnostics --url \"{{url}}\"。如果新增时已发起授权，就用它打开的浏览器。否则执行 codex mcp login carbontrack-log-diagnostics。如果同地址的旧连接使用 carbontrack-codex-cli 客户端 ID，先从该连接移除这个 ID 和为它固定的回调地址及端口，再发起登录。如果同名连接指向其他地址，替换前先问我。\n\n其他 Agent 请通过自身的远程 MCP 设置添加该地址，再发起 OAuth。请打开 CarbonTrack 授权页，让我自己选择诊断授权并批准。无法打开浏览器时，把授权链接显示给我。等我完成授权后，再告诉我结果。",
       "create": "创建授权",
       "name": "授权名称",
       "autoName": "留空自动生成",
@@ -1410,6 +1413,8 @@
         "systemTitle": "系统（{{count}}）",
         "auditTitle": "审计（{{count}}）",
         "errorsTitle": "错误（{{count}}）",
+        "auditResponseCode": "操作状态码",
+        "diagnosticContext": "诊断失败详情",
         "llmTitle": "LLM（{{count}}）"
       },
       "dateFrom": "起始日期",

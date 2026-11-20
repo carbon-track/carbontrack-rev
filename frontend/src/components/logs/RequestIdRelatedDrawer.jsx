@@ -406,6 +406,7 @@ export function RequestIdRelatedDrawer({
                             { label: columnLabel('status'), value: log.status },
                             { label: columnLabel('user_id'), value: log.user_id ?? '-' },
                             { label: columnLabel('ip_address'), value: log.ip_address ?? '-' },
+                            { label: t('admin.systemLogs.drawer.auditResponseCode'), value: log.response_code },
                             { label: columnLabel('created_at'), value: log.created_at }
                           ]}
                         />
@@ -477,6 +478,9 @@ export function RequestIdRelatedDrawer({
                             value={log.error_message}
                             toneClass="border border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300"
                           />
+                        )}
+                        {log.diagnostic_context && (
+                          <DetailValueBlock title={t('admin.systemLogs.drawer.diagnosticContext')} value={log.diagnostic_context} />
                         )}
                       </div>
                     )}
