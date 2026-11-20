@@ -5,16 +5,15 @@ declare(strict_types=1);
 namespace CarbonTrack\Services\LogDiagnostics;
 
 use Illuminate\Database\Connection;
+use Illuminate\Database\QueryException;
 use mysqli;
 use mysqli_result;
-use PDO;
-use PDOException;
 use Throwable;
 
 final class LegacyMysqlDiagnosticReader
 {
     private ?mysqli $reader = null;
-    private ?PDO $control = null;
+    private ?string $controlMarker = null;
 
     public function __construct(private readonly Connection $db)
     {
@@ -86,7 +85,7 @@ final class LegacyMysqlDiagnosticReader
     {
         $reader = $this->reader;
         $this->reader = null;
-        $this->control = null;
+        $this->controlMarker = null;
         $reader?->close();
     }
 
@@ -111,25 +110,30 @@ final class LegacyMysqlDiagnosticReader
 
         // Verify the connection is cancellable by the same account on the same server.
         $identitySql = 'SELECT @@server_uuid AS server_uuid, CURRENT_USER() AS account';
-        $control = $this->db->getPdo();
-        $session = $control->query($identitySql . ', @@character_set_connection AS charset, '
-            . '@@collation_connection AS collation_name, @@time_zone AS time_zone, @@sql_mode AS sql_mode')->fetch(PDO::FETCH_ASSOC);
+        $marker = bin2hex(random_bytes(16));
+        $session = $this->db->selectOne(
+            $identitySql . ', @@character_set_connection AS charset, @@collation_connection AS collation_name, '
+                . '@@time_zone AS time_zone, @@sql_mode AS sql_mode, (@ct_diag_cancel_guard := ?) AS cancel_guard',
+            [$marker],
+            false
+        );
         $identity = $reader->query($identitySql);
         if (!$identity instanceof mysqli_result) {
             throw DiagnosticProblem::unavailable();
         }
         $actual = $identity->fetch_assoc();
         $identity->free();
-        if ($session === false || !$actual
-            || $session['server_uuid'] !== $actual['server_uuid']
-            || $session['account'] !== $actual['account']
-            || !$reader->set_charset($session['charset'])
+        if ($session === null || !$actual
+            || $session->cancel_guard !== $marker
+            || $session->server_uuid !== $actual['server_uuid']
+            || $session->account !== $actual['account']
+            || !$reader->set_charset($session->charset)
             || !$reader->execute_query('SET SESSION collation_connection = ?, SESSION time_zone = ?, SESSION sql_mode = ?',
-                [$session['collation_name'], $session['time_zone'], $session['sql_mode']])) {
+                [$session->collation_name, $session->time_zone, $session->sql_mode])) {
             throw DiagnosticProblem::unavailable();
         }
         $this->remainingMicroseconds($deadline);
-        $this->control = $control;
+        $this->controlMarker = $marker;
         return $reader;
     }
 
@@ -165,12 +169,20 @@ final class LegacyMysqlDiagnosticReader
 
     private function cancel(mysqli $reader): void
     {
+        $threadId = (int) $reader->thread_id;
+        if ($threadId < 1 || $this->controlMarker === null) {
+            throw DiagnosticProblem::unavailable();
+        }
         try {
-            $threadId = (int) $reader->thread_id;
-            if ($threadId < 1 || $this->control->exec('KILL CONNECTION ' . $threadId) === false) {
-                throw DiagnosticProblem::unavailable();
-            }
-        } catch (PDOException $error) {
+            // The marker detects a replaced connection. The transaction prevents retrying KILL on a new connection.
+            $this->db->transaction(function () use ($threadId): void {
+                $session = $this->db->selectOne('SELECT @ct_diag_cancel_guard AS cancel_guard', [], false);
+                if (($session->cancel_guard ?? null) !== $this->controlMarker
+                    || !$this->db->unprepared('KILL CONNECTION ' . $threadId)) {
+                    throw DiagnosticProblem::unavailable();
+                }
+            });
+        } catch (QueryException $error) {
             // ER_NO_SUCH_THREAD means the dedicated connection has already stopped.
             if ((int) ($error->errorInfo[1] ?? 0) !== 1094) {
                 throw DiagnosticProblem::unavailable();
