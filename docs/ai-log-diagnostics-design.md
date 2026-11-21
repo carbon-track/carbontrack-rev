@@ -99,7 +99,7 @@ REST 和 MCP 使用不同用途的不透明 Token，均通过 `Authorization: Be
 
 启用官方 SDK 前验证当前 Composer 锁可解析，且 SDK 版本同时覆盖所选两代协议。握手版可对未提供的 GET SSE 通道返回 `405`。按所选协议处理版本、请求头、通知和 `Origin`。 [MCP 版本](https://modelcontextprotocol.io/specification/versioning) · [Streamable HTTP 规范](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http) · [PHP SDK 发布说明](https://github.com/modelcontextprotocol/php-sdk/releases)
 
-CIMD 元数据只从运维登记的 HTTPS 地址加载。核验文档 `client_id`、回调 URI 和通告的客户端认证方式。网络访问限制到登记端点，跨站重定向与内网地址拒绝。公共客户端使用 PKCE 并按 `none` 换码。预登记客户端按登记的方法认证，机密客户端的密钥只做摘要校验。使用 `private_key_jwt` 的连接器按登记的 JWKS 校验签名、发行者、受众、有效期和断言重放。 [MCP 客户端注册](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization/client-registration) · [ChatGPT OAuth 对接](https://developers.openai.com/plugins/build/auth) · [Claude 自定义连接器](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
+CIMD 元数据可以从运维登记的 HTTPS 地址在线取得，也可以在客户端登记时加入已核验的文档。两种方式都核验文档 `client_id`、回调 URI 和通告的客户端认证方式。在线访问限制到登记端点，跨站重定向与内网地址拒绝。公共客户端使用 PKCE 并按 `none` 换码。机密客户端的密钥只做摘要校验。使用 `private_key_jwt` 的连接器按登记的 JWKS 校验签名、发行者、受众、有效期和断言重放。 [MCP 客户端注册](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization/client-registration) · [CIMD 草案 §9.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document#section-9.2) · [ChatGPT OAuth 对接](https://developers.openai.com/plugins/build/auth) · [Claude 自定义连接器](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
 
 为桌面客户端登记不带端口的 HTTP 回环地址时，授权请求可以在 `127.0.0.1` 或 `[::1]` 上指定实际监听端口。服务端配置和 CIMD 文档各自核对地址的其余部分。HTTPS 和显式指定端口的回调按完整 URI 匹配。换码核对本次授权提交的完整回调 URI 和 PKCE。 [RFC 8252 §7.3](https://www.rfc-editor.org/rfc/rfc8252.html#section-7.3)
 
@@ -175,7 +175,7 @@ CIMD 元数据只从运维登记的 HTTPS 地址加载。核验文档 `client_id
 
 1. 通过 Composer 锁文件安装依赖，再应用日志诊断迁移。核实 `APP_URL` 和 `FRONTEND_URL` 指向各自的 HTTPS 源站。将 `LOG_DIAGNOSTICS_DB_LOG_TIMEZONE` 和 `LOG_DIAGNOSTICS_ERROR_LOG_TIMEZONE` 设为实际日志存储时区。
 2. 配置独立的 `LOG_DIAGNOSTICS_CURSOR_KEY`，至少 32 个字符。确认诊断路由与 OAuth 回调的反代配置只记录规范化路径和状态，随后在测试环境设置 `LOG_DIAGNOSTICS_ENABLED=true`。 `log_diagnostic_cleanup` 在「计划任务」中管理。
-3. 在 `LOG_DIAGNOSTICS_OAUTH_CLIENTS_JSON` 登记需要接入的客户端。CIMD 与 JWKS 通过 PHP cURL 访问，部署端应允许这些登记地址的直连 HTTPS。预登记客户端使用实际的客户端 ID 与逐条回调 URI。使用客户端密钥时，在配置中保存随机密钥的 SHA-256 摘要 `secret_sha256`。
+3. 在 `LOG_DIAGNOSTICS_OAUTH_CLIENTS_JSON` 登记客户端 ID 与允许的回调 URI。URL 型客户端可将从官方地址核验的 JSON 存为该条登记的 `client_metadata_document`，让授权请求使用已登记的文档。客户端发布新元数据时重新核验并更新。在线 CIMD 和 JWKS 通过 PHP cURL 访问，部署端需能直连已登记的 HTTPS 地址。使用客户端密钥时，在配置中保存随机密钥的 SHA-256 摘要 `secret_sha256`。
 4. 在「系统日志」创建授权。REST 使用界面展示的地址和一次性披露的 Token。MCP 使用「复制接入说明」，把内容交给电脑上的 Agent 配置远程连接。管理员从浏览器选择诊断授权并确认。测试时分别记录发现、授权、工具调用及撤销后的结果。 [部署变量](../backend/.env.example) · [数据库迁移](../backend/database/migrations/20261119_add_log_diagnostics.sql) · [OpenAPI](../backend/openapi.json)
 
 OAuth 元数据由 Slim 的 GET 路由从部署配置生成。将 API 域名上的下列路径转发给 `backend/public/index.php`，然后确认两者均返回 HTTP 200 和 JSON。元数据端点供客户端公开发现，实际读取日志需要诊断授权。
@@ -185,16 +185,18 @@ OAuth 元数据由 Slim 的 GET 路由从部署配置生成。将 API 域名上�
 | `/.well-known/oauth-protected-resource/api/v1/log-diagnostics/mcp` | `resource` 为完整 MCP 地址，`authorization_servers` 包含当前发行者 |
 | `/.well-known/oauth-authorization-server/api/v1/log-diagnostics/oauth` | `issuer` 与上述发行者一致，`authorization_endpoint` 和 `token_endpoint` 位于此发行者下 |
 
-下例为 ChatGPT、Claude 和 Codex 各登记一个公开的客户端元数据（CIMD）地址。ChatGPT 使用稳定回调模式，Claude 自定义连接器选择「Use Claude’s published identity」。Codex 使用官方桌面客户端 ID 和动态回环端口。`none` 是客户端换码认证方式，管理员在 CarbonTrack 登录并确认诊断授权。 [ChatGPT OAuth 文档](https://developers.openai.com/plugins/build/auth#client-registration) · [Claude OAuth 文档](https://claude.com/docs/connectors/building/authentication#dcr-and-cimd-details) · [Codex 客户端元数据](https://chatgpt.com/oauth/codex/client.json)
+下例为 ChatGPT、Claude 和 Codex 登记各自发布的客户端 ID。ChatGPT 使用稳定回调模式，Claude 自定义连接器选择「Use Claude’s published identity」。Codex 示例预登记了官方文档的校验字段，并为 `127.0.0.1` 启用动态端口。`none` 是客户端换码认证方式，管理员在 CarbonTrack 登录并确认诊断授权。 [ChatGPT OAuth 文档](https://developers.openai.com/plugins/build/auth#client-registration) · [Claude OAuth 文档](https://claude.com/docs/connectors/building/authentication#dcr-and-cimd-details) · [Codex 客户端元数据](https://chatgpt.com/oauth/codex/client.json)
 
 以下时区适用于数据库连接读出的日志时间固定为 UTC+8 的部署。`error_logs.error_time` 的时区独立配置，默认跟随 PHP 时区。
 
 ```dotenv
 LOG_DIAGNOSTICS_DB_LOG_TIMEZONE=+08:00
-LOG_DIAGNOSTICS_OAUTH_CLIENTS_JSON='[{"id":"https://chatgpt.com/oauth/client.json","name":"ChatGPT","redirect_uris":["https://chatgpt.com/connector_platform_oauth_redirect"],"auth_method":"none"},{"id":"https://claude.ai/oauth/mcp-oauth-client-metadata","name":"Claude","redirect_uris":["https://claude.ai/api/mcp/auth_callback"],"auth_method":"none"},{"id":"https://chatgpt.com/oauth/codex/client.json","name":"Codex","redirect_uris":["http://127.0.0.1/callback"],"auth_method":"none"}]'
+LOG_DIAGNOSTICS_OAUTH_CLIENTS_JSON='[{"id":"https://chatgpt.com/oauth/client.json","name":"ChatGPT","redirect_uris":["https://chatgpt.com/connector_platform_oauth_redirect"],"auth_method":"none"},{"id":"https://claude.ai/oauth/mcp-oauth-client-metadata","name":"Claude","redirect_uris":["https://claude.ai/api/mcp/auth_callback"],"auth_method":"none"},{"id":"https://chatgpt.com/oauth/codex/client.json","name":"Codex","redirect_uris":["http://127.0.0.1/callback"],"auth_method":"none","client_metadata_document":{"client_id":"https://chatgpt.com/oauth/codex/client.json","client_name":"Codex","redirect_uris":["http://127.0.0.1/callback","http://localhost/callback"],"token_endpoint_auth_method":"none","token_endpoint_auth_methods_supported":["none"]}}]'
 ```
 
 Codex 连接只需配置 MCP 地址。此前使用 `carbontrack-codex-cli` 手动登记的 Codex，可在这条连接的 `oauth` 配置中移除曾指定的客户端 ID、回调 URL 和端口，再用 `codex mcp login carbontrack-log-diagnostics` 走自动发现。浏览器批准后，CarbonTrack 交接页会确认本次决定，随后打开客户端的回调页。 [Codex MCP OAuth](https://learn.chatgpt.com/docs/extend/mcp#oauth-client-registration)
+
+若在线读取元数据失败，按响应中的请求 ID 查关联错误日志。比如 `failure_component=oauth_metadata_http_403` 表示登记地址拒绝了服务端的请求。
 
 MySQL 5.6 部署需在 API 的 PHP 环境启用 `mysqli` 和 `mysqlnd`。REST 和 MCP 的日志读取共同使用 `LOG_DIAGNOSTICS_TIMEOUT_MS`。MySQL 5.6 的读取使用同一数据库账号的专用连接。在 Unix 上通过本地 socket 访问数据库时，专用连接复用应用连接的 socket 设置。超时后由应用主连接取消读取连接。REST 返回 HTTP 504，MCP 工具返回同一个 `query_timeout` 错误码。
 
