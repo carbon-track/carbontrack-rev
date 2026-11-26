@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import { ClipboardCopy, KeyRound } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { buttonVariants } from '@/components/ui/button-variants';
 import { useTranslation } from '../../hooks/useTranslation';
 import { logDiagnostics } from '../../lib/api/logDiagnostics';
 import { Button } from '../ui/Button';
@@ -142,8 +147,11 @@ DiagnosticCreateForm.propTypes = {
 };
 
 function SessionDetails({ id, onIssued, onChange }) {
-  const { t } = useTranslation(['admin']);
+  const { t } = useTranslation(['admin', 'common']);
   const [auditBefore, setAuditBefore] = useState(null);
+  const [confirmation, setConfirmation] = useState({ open: false, credentialId: undefined });
+  const revokeTrigger = useRef(null);
+  const sessionHeading = useRef(null);
   const detail = useQuery([sessionKey, id], () => logDiagnostics.detail(id));
   const history = useQuery([sessionKey, id, 'history', auditBefore], () => logDiagnostics.history(id, auditBefore));
   const issue = useMutation(async () => {
@@ -152,20 +160,28 @@ function SessionDetails({ id, onIssued, onChange }) {
   });
   const revoke = useMutation((credentialId) => logDiagnostics.revoke(id, credentialId), { onSuccess: onChange });
 
-  function confirmRevocation(credentialId) {
-    if (window.confirm(t(namespace + (credentialId ? 'confirmCredential' : 'confirmSession')))) {
-      revoke.mutate(credentialId);
-    }
+  function requestRevocation(event, credentialId) {
+    revokeTrigger.current = event.currentTarget;
+    setConfirmation({ open: true, credentialId });
+  }
+
+  function restoreRevocationFocus(event) {
+    event.preventDefault();
+    const trigger = revokeTrigger.current;
+    const target = trigger?.isConnected && !trigger.disabled ? trigger : sessionHeading.current;
+    target?.focus();
   }
 
   if (detail.isLoading) return <p role="status">{t(namespace + 'loading')}</p>;
   if (!detail.data) return <p role="alert">{t(namespace + 'loadError')}</p>;
   const session = detail.data;
+  const isCredentialRevocation = confirmation.credentialId !== undefined;
+  const revokeLabel = t(namespace + (isCredentialRevocation ? 'revokeCredential' : 'revoke'));
   return (
     <section className="space-y-4 rounded-lg border p-4" aria-label={session.name}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-semibold">{session.name}</h3>
+          <h3 ref={sessionHeading} tabIndex={-1} className="font-semibold">{session.name}</h3>
           <p className="text-sm text-muted-foreground">{t(namespace + 'creator', { id: session.created_by })}</p>
         </div>
         <Badge variant="outline">{t(namespace + 'states.' + session.status)}</Badge>
@@ -185,7 +201,8 @@ function SessionDetails({ id, onIssued, onChange }) {
         {session.can_issue_rest && <Button type="button" size="sm" variant="outline" disabled={issue.isLoading} onClick={() => issue.mutate()}>
           {t(namespace + 'issueRest')}
         </Button>}
-        {session.status === 'active' && <Button type="button" size="sm" variant="destructive" disabled={revoke.isLoading} onClick={() => confirmRevocation()}>
+        {session.status === 'active' && <Button type="button" size="sm" variant="destructive" aria-haspopup="dialog"
+          disabled={revoke.isLoading} onClick={(event) => requestRevocation(event)}>
           {t(namespace + 'revoke')}
         </Button>}
       </div>
@@ -198,8 +215,8 @@ function SessionDetails({ id, onIssued, onChange }) {
         {session.credentials.map((credential) => (
           <div key={credential.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-sm">
             <span>{credential.channel.toUpperCase()} #{credential.id} · {t(namespace + 'states.' + credential.status)}</span>
-            {credential.status === 'active' && <Button type="button" size="sm" variant="outline" disabled={revoke.isLoading}
-              onClick={() => confirmRevocation(credential.id)}>
+            {credential.status === 'active' && <Button type="button" size="sm" variant="outline" aria-haspopup="dialog"
+              disabled={revoke.isLoading} onClick={(event) => requestRevocation(event, credential.id)}>
               {t(namespace + 'revokeCredential')}
             </Button>}
           </div>
@@ -222,6 +239,23 @@ function SessionDetails({ id, onIssued, onChange }) {
         ))}
         <PageActions before={auditBefore} next={history.data?.next_before_id} onChange={setAuditBefore} />
       </div>
+      <AlertDialog open={confirmation.open} onOpenChange={(open) => setConfirmation((current) => ({ ...current, open }))}>
+        <AlertDialogContent onCloseAutoFocus={restoreRevocationFocus}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{revokeLabel}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(namespace + (isCredentialRevocation ? 'confirmCredential' : 'confirmSession'))}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', { ns: 'common' })}</AlertDialogCancel>
+            <AlertDialogAction className={buttonVariants({ variant: 'destructive' })}
+              disabled={!confirmation.open || revoke.isLoading} onClick={() => revoke.mutate(confirmation.credentialId)}>
+              {revokeLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

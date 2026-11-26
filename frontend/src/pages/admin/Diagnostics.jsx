@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useQuery } from 'react-query';
 import {
@@ -12,6 +12,16 @@ import {
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/textarea';
 import {
@@ -830,7 +840,7 @@ function InfoBlock({ title, value }) {
 }
 
 function RequestTester({ operation }) {
-  const { t } = useTranslation('admin');
+  const { t } = useTranslation(['admin', 'common']);
   const pathParams = useMemo(
     () => (operation.parameters || []).filter((param) => param.in === 'path'),
     [operation.parameters]
@@ -846,6 +856,9 @@ function RequestTester({ operation }) {
   const [error, setError] = useState(null);
   const [responseInfo, setResponseInfo] = useState(null);
   const [lastUrl, setLastUrl] = useState('');
+  const [pendingRequest, setPendingRequest] = useState(null);
+  const sendButtonRef = useRef(null);
+  const testerTitleRef = useRef(null);
 
   useEffect(() => {
     setParamValues(initializePathParamValues(pathParams));
@@ -858,7 +871,7 @@ function RequestTester({ operation }) {
   const previewUrl = useMemo(() => composePreviewUrl(baseUrl, resolvedPath), [baseUrl, resolvedPath]);
   const canSendBody = METHODS_WITH_BODY.has(operation.method);
 
-  const handleSendTest = async () => {
+  const handleSendTest = () => {
     setError(null);
     setResponseInfo(null);
 
@@ -919,20 +932,17 @@ function RequestTester({ operation }) {
     }
 
     const url = buildFinalUrl(baseUrl, resolvedPath, queryObject);
-    const targetIsTrusted = isTrustedAuthOrigin(url);
-
-    // Cross-origin guard (W-202): never blindly send the admin bearer token to
-    // arbitrary URLs (eg. webhook.site) and require an explicit confirmation
-    // before issuing requests outside the API origin allowlist.
-    if (!targetIsTrusted) {
-      const confirmed = typeof window !== 'undefined' && typeof window.confirm === 'function'
-        ? window.confirm(t('admin.diagnostics.tester.messages.crossOriginConfirm', { url }))
-        : false;
-      if (!confirmed) {
-        return;
-      }
+    const request = { url, method: operation.method, headerObject, bodyValue, includeAuth };
+    if (!isTrustedAuthOrigin(url)) {
+      setPendingRequest(request);
+      return;
     }
 
+    void sendTest(request);
+  };
+
+  const sendTest = async ({ url, method, headerObject, bodyValue, includeAuth }) => {
+    const targetIsTrusted = isTrustedAuthOrigin(url);
     setIsSending(true);
     try {
       const headers = Object.entries(headerObject).reduce((acc, [key, value]) => {
@@ -977,7 +987,7 @@ function RequestTester({ operation }) {
 
       const start = performance.now();
       const response = await fetch(url, {
-        method: operation.method,
+        method,
         headers,
         body: bodyPayload,
       });
@@ -1026,7 +1036,7 @@ function RequestTester({ operation }) {
     <div className="space-y-4 rounded-xl border border-border/80 bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-foreground">
+          <p ref={testerTitleRef} tabIndex={-1} className="text-sm font-semibold text-foreground">
             {t('admin.diagnostics.tester.title')}
           </p>
           <p className="text-xs text-muted-foreground">
@@ -1161,7 +1171,7 @@ function RequestTester({ operation }) {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Button type="button" onClick={handleSendTest} disabled={isSending}>
+            <Button ref={sendButtonRef} type="button" onClick={handleSendTest} disabled={isSending}>
               {isSending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1234,6 +1244,37 @@ function RequestTester({ operation }) {
           )}
         </div>
       )}
+
+      <AlertDialog open={pendingRequest !== null} onOpenChange={(open) => !open && setPendingRequest(null)}>
+        <AlertDialogContent
+          className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+          onCloseAutoFocus={(event) => {
+            const sendButton = sendButtonRef.current;
+            const target = sendButton && !sendButton.disabled ? sendButton : testerTitleRef.current;
+            if (target) {
+              event.preventDefault();
+              target.focus();
+            }
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('admin.diagnostics.tester.messages.crossOriginTitle')}</AlertDialogTitle>
+            <AlertDialogDescription className="[overflow-wrap:anywhere]">
+              {t('admin.diagnostics.tester.messages.crossOriginConfirm', { url: pendingRequest?.url ?? '' })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common:common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction disabled={isSending} onClick={() => {
+              if (pendingRequest) {
+                void sendTest(pendingRequest);
+              }
+            }}>
+              {t('admin.diagnostics.tester.actions.send')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
