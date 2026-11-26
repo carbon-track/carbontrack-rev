@@ -12,6 +12,17 @@ import {
 import { Button } from '../ui/Button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../ui/Card';
 import { Alert, AlertTitle, AlertDescription } from '../ui/Alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
+import { buttonVariants } from '../ui/button-variants';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/Input';
 import { 
@@ -33,7 +44,10 @@ export function PasskeyManagement() {
   const queryClient = useQueryClient();
   const [passkeySupport, setPasskeySupport] = useState(null);
   const [editingPasskey, setEditingPasskey] = useState(null);
+  const [passkeyToDelete, setPasskeyToDelete] = useState(null);
   const [labelDraft, setLabelDraft] = useState('');
+  const addPasskeyButton = React.useRef(null);
+  const deleteTrigger = React.useRef(null);
 
   // Check support on mount
   React.useEffect(() => {
@@ -226,6 +240,7 @@ export function PasskeyManagement() {
             </CardDescription>
           </div>
           <Button 
+            ref={addPasskeyButton}
             variant="outline" 
             size="sm" 
             onClick={() => registerMutation.mutate()}
@@ -299,10 +314,10 @@ export function PasskeyManagement() {
                       variant="ghost" 
                       size="icon" 
                       className="h-8 w-8 text-muted-foreground hover:text-red-500"
-                      onClick={() => {
-                        if (window.confirm(t('profile.passkey.deleteConfirm'))) {
-                          deleteMutation.mutate(pk.id);
-                        }
+                      aria-label={t('profile.passkey.deleteTitle')}
+                      onClick={(event) => {
+                        deleteTrigger.current = event.currentTarget;
+                        setPasskeyToDelete(pk);
                       }}
                       disabled={deleteMutation.isLoading}
                     >
@@ -315,6 +330,37 @@ export function PasskeyManagement() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={Boolean(passkeyToDelete)} onOpenChange={(open) => !open && setPasskeyToDelete(null)}>
+        <AlertDialogContent onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          const trigger = deleteTrigger.current;
+          const focusTarget = trigger?.isConnected && !trigger.disabled ? trigger : addPasskeyButton.current;
+          focusTarget?.focus();
+        }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('profile.passkey.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('profile.passkey.deleteConfirm', {
+                label: passkeyToDelete?.label || t('profile.passkey.unnamed'),
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: 'destructive' })}
+              disabled={!passkeyToDelete || deleteMutation.isLoading}
+              onClick={() => {
+                deleteTrigger.current = null;
+                deleteMutation.mutate(passkeyToDelete.id);
+              }}
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={Boolean(editingPasskey)} onOpenChange={(open) => (!open ? closeEditDialog() : null)}>
         <DialogContent>
